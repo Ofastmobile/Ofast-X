@@ -51,6 +51,7 @@ class Ofast_X_Core {
      * Load Email Module
      */
     private function load_email_module() {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email.php';
         require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-admin.php';
         
         $email_admin = new Ofast_X_Email_Admin();
@@ -58,7 +59,7 @@ class Ofast_X_Core {
         
         $this->modules['email'] = $email_admin;
         
-        error_log('Ofast-X: Email module loaded successfully');
+        Ofast_X_Logger::info('Email module loaded');
     }
     
     /**

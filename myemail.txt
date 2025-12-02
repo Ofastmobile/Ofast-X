@@ -1,0 +1,535 @@
+<?php
+/*
+Plugin Name: Ofast Emailer Pro+
+Description: Advanced email sender with scheduling, user ranges, and logs.
+Author: Olabode Oluwasesun
+Version: 2.0
+*/
+
+//part 1
+add_action('admin_menu', function() {
+    add_menu_page('Ofast Emailer', 'Ofast Emailer', 'manage_options', 'ofast-emailer-pro', 'ofast_emailer_send_page');
+    add_submenu_page('ofast-emailer-pro', 'Scheduled Emails', 'Scheduled', 'manage_options', 'ofast-scheduled-emails', 'ofast_scheduled_emails_page');
+    add_submenu_page('ofast-emailer-pro', 'Email History', 'History', 'manage_options', 'ofast-emailer-history', 'ofast_emailer_history_page');
+    add_submenu_page('ofast-emailer-pro', 'Settings', 'Settings', 'manage_options', 'ofast-emailer-settings', 'ofast_emailer_settings_page');
+});
+
+
+//part 2
+function ofast_emailer_send_page() {
+    // Get roles dynamically
+    global $wp_roles;
+    $roles = [];
+    foreach ($wp_roles->roles as $key => $role) {
+        $roles[$key] = translate_user_role($role['name']);
+    }
+
+    $result_message = '';
+
+    // Rest of your existing function code...
+
+    
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_email'])) {
+    $subject = sanitize_text_field($_POST['subject']);
+    $body = wp_kses_post($_POST['message']);
+    $selected_roles = $_POST['roles'] ?? [];
+    $send_test = isset($_POST['test_email']);
+    $schedule_time = $_POST['schedule_time'] ?? '';
+    $timestamp = $schedule_time ? strtotime($schedule_time) : time();
+
+    //Parse user ID input, including range 
+    $input_ids = preg_split('/\s*,\s*/', $_POST['user_ids'] ?? '');
+    $selected_user_ids = [];
+    foreach ($input_ids as $entry) {
+        if (strpos($entry, '-') !== false) {
+            [$start, $end] = array_map('intval', explode('-', $entry));
+            $selected_user_ids = array_merge($selected_user_ids, range($start, $end));
+        } elseif (is_numeric($entry)) {
+            $selected_user_ids[] = intval($entry);
+        }
+    }
+
+    if ($send_test) {
+        $user = wp_get_current_user();
+        $message = ofast_replace_placeholders($body, $user);
+        $headers = [
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . get_option('ofast_email_from_name', 'Ofastshop Digitals') . ' <' . get_option('ofast_email_reply_to', 'support@ofastshop.com') . '>',
+            'Reply-To: ' . get_option('ofast_email_reply_to', 'support@ofastshop.com')
+        ];
+        wp_mail($user->user_email, $subject, ofast_email_template($message), $headers);
+        $result_message = '<div class="notice notice-success"><p>âœ… Test email sent to ' . esc_html($user->user_email) . '</p></div>';
+    } else {
+        // Merge user IDs + roles
+        $total_ids = $selected_user_ids;
+        if (!empty($selected_roles)) {
+            $role_ids = get_users(['role__in' => $selected_roles, 'fields' => 'ID']);
+            $total_ids = array_unique(array_merge($total_ids, $role_ids));
+        }
+
+        if (count($total_ids) <= 50) {
+            $headers = [
+                'Content-Type: text/html; charset=UTF-8',
+                'From: ' . get_option('ofast_email_from_name', 'Ofastshop Digitals') . ' <' . get_option('ofast_email_reply_to', 'support@ofastshop.com') . '>',
+                'Reply-To: ' . get_option('ofast_email_reply_to', 'support@ofastshop.com')
+            ];
+            $sent = 0;
+            foreach (get_users(['include' => $total_ids]) as $user) {
+                $message = ofast_replace_placeholders($body, $user);
+                if (wp_mail($user->user_email, $subject, ofast_email_template($message), $headers)) {
+                    $sent++;
+                }
+            }
+
+            global $wpdb;
+            $wpdb->insert($wpdb->prefix . 'ofast_email_logs', [
+                'subject' => $subject,
+                'sent_at' => current_time('mysql'),
+                'recipient_count' => $sent,
+                'notes' => 'Immediate send'
+            ]);
+
+            $result_message = '<div class="notice notice-success"><p>âœ… Sent immediately to ' . $sent . ' user(s)</p></div>';
+        } else {
+            $chunks = array_chunk($total_ids, 40);
+            foreach ($chunks as $i => $chunk) {
+                wp_schedule_single_event(
+                    $timestamp + ($i * 3600),
+                    'ofast_scheduled_email_event',
+                    [
+                        'subject' => $subject,
+                        'body' => $body,
+                        'selected_roles' => [],
+                        'selected_user_ids' => $chunk
+                    ]
+                );
+            }
+
+            $result_message = '<div class="notice notice-success"><p>ðŸ“… ' . count($chunks) . ' batches scheduled starting ' . date('Y-m-d H:i', $timestamp) . '</p></div>';
+        }
+    }
+}
+
+    echo '<div class="wrap"><h2>ðŸ“§ Send Email</h2>' . $result_message . '
+    <form method="post" enctype="multipart/form-data">
+        <p><label><strong>Email Subject:</strong><br>
+        <input type="text" name="subject" style="width: 100%;" required></label></p>
+
+        <p><label><strong>Message Body:</strong><br>';
+        wp_editor('', 'message', [
+            'textarea_name' => 'message',
+            'media_buttons' => true,
+            'textarea_rows' => 10,
+            'editor_css' => '<style>.wp-editor-container { max-width: 100%; }</style>',
+        ]);
+    echo '</label></p>
+
+        <p><label><strong>Attachments:</strong><br>
+        <input type="file" name="attachments[]" multiple></label></p>
+
+        <p><strong>Select Roles:</strong><br>';
+        foreach ($roles as $key => $label) {
+            echo '<label><input type="checkbox" name="roles[]" value="' . esc_attr($key) . '"> ' . esc_html($label) . '</label><br>';
+        }
+    echo '</p>
+
+        <p><label><strong>User ID(s) or Ranges (e.g. 5,12,30-35):</strong><br>
+        <input type="text" name="user_ids" style="width: 100%;"></label></p>
+
+        <p>
+            <label><strong>Schedule Time (optional):</strong><br>
+            <input type="datetime-local" name="schedule_time" style="width: 250px;">
+            <small>Leave blank to send immediately</small></label>
+        </p>
+
+        <p><label><input type="checkbox" name="test_email"> Send to me as test only</label></p>
+
+        <p><button type="submit" name="send_email" class="button button-primary">ðŸš€ Send / Schedule</button></p>
+        
+    <hr><h3>ðŸ‘¥ Select Users Manually (Optional)</h3>
+
+<label>Search: <input type="text" id="user-search" style="margin-left:5px;"></label>
+<label style="margin-left:20px;">Show 
+    <select id="rows-per-page">
+        <option value="10">10</option>
+        <option value="20">20</option>
+        <option value="50">50</option>
+        <option value="all">All</option>
+    </select> users per page
+</label>
+
+<div style="overflow-x:auto; margin-top:15px; margin-bottom:10px;">
+    <table class="wp-list-table widefat striped" id="user-table">
+        <thead><tr>
+            <th><input type="checkbox" id="check-all"></th>
+            <th>S/N</th>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>User ID</th>
+            <th>Role(s)</th>
+        </tr></thead>
+        </tr></thead>
+        <tbody>';
+        
+        $users = get_users();
+        $i = 1;
+        foreach ($users as $user) {
+            $userdata = get_userdata($user->ID);
+            $roles = ($userdata && isset($userdata->roles)) ? implode(', ', $userdata->roles) : 'â€”';
+            echo '<tr>
+                <td><input type="checkbox" class="user-checkbox" value="' . esc_attr($user->ID) . '"></td>
+                <td>' . $i++ . '</td>
+                <td>' . esc_html($user->first_name) . '</td>
+                <td>' . esc_html($user->last_name) . '</td>
+                <td>' . esc_html($user->user_login) . '</td>
+                <td>' . esc_html($user->user_email) . '</td>
+                <td>' . esc_html($user->ID) . '</td>
+                <td>' . esc_html($roles) . '</td>
+            </tr>';
+        }
+        echo '</tbody></table>';
+        echo '<div id="user-pagination"></div>';
+        
+        // Add preview modal
+        echo '<div id="email-preview-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;">
+            <div style="position:relative;width:80%;max-width:800px;margin:30px auto;background:white;padding:20px;border-radius:5px;">
+                <button id="close-preview" style="position:absolute;right:10px;top:10px;background:none;border:none;font-size:20px;cursor:pointer;">Ã—</button>
+                <h3>Email Preview</h3>
+                <div id="preview-content"></div>
+            </div>
+        </div>';
+        
+        // Add JavaScript for functionality
+        echo '<script>
+        jQuery(document).ready(function($) {
+            // Pagination
+            var itemsPerPage = parseInt($("#rows-per-page").val());
+            var currentPage = 1;
+            var rows = $("#user-table tbody tr");
+            var numPages = Math.ceil(rows.length / itemsPerPage);
+
+            function showPage(page) {
+                rows.hide();
+                rows.slice((page-1) * itemsPerPage, page * itemsPerPage).show();
+            }
+
+            function updatePagination() {
+                numPages = Math.ceil(rows.length / itemsPerPage);
+                var pagination = "";
+                for(var i = 1; i <= numPages; i++) {
+                    pagination += "<button type=\'button\' class=\'page-btn\' data-page=\'" + i + "\'>" + i + "</button>";
+                }
+                $("#user-pagination").html(pagination);
+                $(".page-btn").click(function() {
+                    currentPage = parseInt($(this).data("page"));
+                    showPage(currentPage);
+                    $(".page-btn").removeAttr("disabled");
+                    $(this).attr("disabled", true);
+                });
+                showPage(1);
+                $(".page-btn[data-page=\'1\']").attr("disabled", true);
+            }
+
+            // Initial page load
+            showPage(1);
+            updatePagination();
+
+            // Handle rows-per-page change
+            $("#rows-per-page").change(function() {
+                itemsPerPage = $(this).val() === "all" ? rows.length : parseInt($(this).val());
+                updatePagination();
+            });
+
+            // Search functionality
+            $("#user-search").on("input", function() {
+                var searchTerm = $(this).val().toLowerCase();
+                rows.each(function() {
+                    var row = $(this);
+                    var match = row.text().toLowerCase().includes(searchTerm);
+                    row.toggle(match);
+                });
+                updatePagination();
+            });
+
+            // Select all functionality
+            $("#check-all").change(function() {
+                $(".user-checkbox").prop("checked", $(this).prop("checked"));
+            });
+        });
+        </script>';
+        
+    echo '</form></div>';
+}
+//part 3
+// Replace placeholders in body
+function ofast_replace_placeholders($body, $user) {
+    return str_replace(
+        ['{{user_id}}', '{{username}}', '{{user_display_name}}', '{{user_first_name}}', '{{user_last_name}}', '{{user_email}}'],
+        [$user->ID, $user->user_login, $user->display_name, $user->first_name, $user->last_name, $user->user_email],
+        $body
+    );
+}
+
+// Build responsive email template
+function ofast_email_template($content) {
+    ob_start(); ?>
+    <style>
+    @media screen and (max-width: 600px) {
+        .ofast-email-body {
+            padding: 20px 10px !important;
+        }
+    }
+    </style>
+    <div style="background:#f9f9f9;padding:30px;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;color:#333;">
+        <div class="ofast-email-body" style="max-width:600px;margin:auto;background:#fff;border-radius:8px;padding:20px 30px;line-height:1.4em;">
+            
+            <!-- Header -->
+            <div style="text-align:center;">
+                <img src="https://pub-f02915809d3846b8ab0aaedeab54dbf7.r2.dev/ofastshop/2025/01/18150519/OFASTSHOP-DIGITALS-e1728849768928.png" alt="Ofastshop Logo" style="max-width:400px;margin-bottom:10px;">
+                <h2 style="margin:0;color:#222;">Learn. Create. Earn</h2>
+                <p style="font-size:13px;color:#777;">Africa's No 1 Digital Learning Hub</p>
+            </div>
+
+            <!-- Email Content -->
+            <div style="padding:20px 10px;font-size:14px;">
+                <?php echo wpautop($content); ?>
+            </div>
+
+            <hr style="border:none;border-top:1px solid #eee;">
+
+            <!-- Footer -->
+            <div style="text-align:center;font-size:13px;color:#888;">
+                <p>Follow us:</p>
+                <p><a href="https://ofastshop.com" style="color:#ffcc00;text-decoration:none;">Ofastshop Digitals</a></p>
+                <p>
+                    <a href="https://www.facebook.com/share/1Aq5jesYSu/"><img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" width="20" style="margin: 0 5px;"></a>
+                    <a href="https://x.com/ofast_shop"><img src="https://cdn-icons-png.flaticon.com/512/3670/3670151.png" alt="X" width="20" style="margin: 0 5px;"></a>
+                    <a href="https://www.youtube.com/@OfastshopDigitals"><img src="https://cdn-icons-png.flaticon.com/512/1384/1384060.png" alt="YouTube" width="20" style="margin: 0 5px;"></a>
+                    <a href="https://whatsapp.com/channel/0029VbAdZmh9RZANtmmyYq2Q"><img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" width="20" style="margin: 0 5px;"></a>
+                </p>
+                <!--<p><a href="https://ofastshop.com" style="color:#ffcc00;text-decoration:none;">Ofastshop Digitals</a></p>-->
+                <p style="font-size:12px;color:#aaa;">Â© 2025 Ofastshop Digitals Own by <a href="https://bofastworld.net">Bofast World</a>,Nigeria</p>
+            </div>
+        </div>
+    </div>
+    <?php return ob_get_clean();
+}
+
+
+// Create email logs table (if not exists)
+register_activation_hook(__FILE__, function() {
+    global $wpdb;
+    $table = $wpdb->prefix . 'ofast_email_logs';
+    $charset = $wpdb->get_charset_collate();
+    $sql = "CREATE TABLE IF NOT EXISTS $table (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        subject TEXT,
+        sent_at DATETIME,
+        recipient_count INT,
+        notes TEXT
+    ) $charset;";
+    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+    dbDelta($sql);
+});
+
+// Handle scheduled email hook
+add_action('ofast_scheduled_email_event', function($subject, $body, $selected_roles, $selected_user_ids) {
+    $headers = [
+        'Content-Type: text/html; charset=UTF-8',
+        'From: Ofastshop Digitals <support@ofastshop.com>',
+        'Reply-To: support@ofastshop.com'
+    ];
+
+    $recipients = [];
+
+    if (!empty($selected_roles)) {
+        $recipients = get_users(['role__in' => $selected_roles]);
+    }
+
+    if (!empty($selected_user_ids)) {
+        $recipients = array_merge($recipients, get_users(['include' => $selected_user_ids]));
+    }
+
+    $sent_count = 0;
+    foreach ($recipients as $user) {
+        $final_body = ofast_replace_placeholders($body, $user);
+        $role = implode(', ', $user->roles);
+        $final_body .= '<p style="font-size:13px;color:#999;text-align:center;">Sent to a <strong>' . esc_html($role) . '</strong> on <a href="https://ofastshop.com">Ofastshop</a>.</p>';
+        if (wp_mail($user->user_email, $subject, ofast_email_template($final_body), $headers)) {
+            $sent_count++;
+        }
+    }
+
+    // Log the send
+    global $wpdb;
+    $wpdb->insert($wpdb->prefix . 'ofast_email_logs', [
+        'subject' => $subject,
+        'sent_at' => current_time('mysql'),
+        'recipient_count' => $sent_count,
+        'notes' => 'Auto scheduled'
+    ]);
+});
+
+
+//Part 6
+function ofast_dashboard_page() {
+    $roles = wp_roles()->roles;
+    $all_users = count_users();
+    echo '<div class="wrap"><h2>ðŸ“Š Ofast Dashboard</h2>';
+    echo '<div style="display:flex;flex-wrap:wrap;gap:20px;margin-top:20px;">';
+
+    echo '<div style="flex:1;min-width:180px;background:#0073aa;color:white;padding:20px;border-radius:8px;">
+        <h3 style="margin:0;">Total Users</h3>
+        <p style="font-size:24px;font-weight:bold;margin:5px 0 0;">' . esc_html($all_users['total_users']) . '</p>
+    </div>';
+
+    foreach ($all_users['avail_roles'] as $role => $count) {
+        $label = isset($roles[$role]['name']) ? $roles[$role]['name'] : ucfirst($role);
+        echo '<div style="flex:1;min-width:180px;background:#f1f1f1;padding:20px;border-radius:8px;">
+            <h4 style="margin:0;">' . esc_html($label) . '</h4>
+            <p style="font-size:20px;margin:5px 0 0;">' . esc_html($count) . '</p>
+        </div>';
+    }
+
+    echo '</div></div>';
+}
+
+// Add menu item for Dashboard
+add_action('admin_menu', function() {
+    add_menu_page('Ofast Dashboard', 'ðŸ“Š Ofast Dashboard', 'manage_options', 'ofast-dashboard', 'ofast_dashboard_page', 'dashicons-chart-bar', 2);
+}, 9);
+
+
+
+
+//part 4
+function ofast_emailer_history_page() {
+    global $wpdb;
+    $table = $wpdb->prefix . 'ofast_email_logs';
+    $logs = $wpdb->get_results("SELECT * FROM $table ORDER BY sent_at DESC LIMIT 100");
+
+    echo '<div class="wrap"><h2>ðŸ“š Email History</h2>';
+    
+    if (empty($logs)) {
+        echo '<p>No emails have been logged yet.</p>';
+    } else {
+        echo '<table class="widefat fixed striped">
+            <thead>
+                <tr>
+                    <th style="width:5%;">ID</th>
+                    <th>Subject</th>
+                    <th>Sent At</th>
+                    <th>Recipients</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>';
+        foreach ($logs as $log) {
+            echo '<tr>
+                <td>' . esc_html($log->id) . '</td>
+                <td>' . esc_html(wp_trim_words($log->subject, 12, '...')) . '</td>
+                <td>' . esc_html($log->sent_at) . '</td>
+                <td>' . esc_html($log->recipient_count) . '</td>
+                <td>' . esc_html($log->notes) . '</td>
+            </tr>';
+        }
+        echo '</tbody></table>';
+    }
+
+    echo '</div>';
+}
+
+
+//part 5
+function ofast_scheduled_emails_page() {
+    echo '<div class="wrap"><h2>ðŸ“… Scheduled Email Batches</h2>';
+
+    if (!function_exists('wp_get_scheduled_event')) {
+        echo '<p><strong>Note:</strong> WP Cron not available. Consider installing the WP Crontrol plugin for better visibility.</p>';
+        return;
+    }
+
+    $events = _get_cron_array();
+    $next_events = [];
+    foreach ($events as $timestamp => $hooks) {
+        foreach ($hooks as $hook => $jobs) {
+            if ($hook === 'ofast_scheduled_email_event') {
+                foreach ($jobs as $key => $details) {
+                    $args = $details['args'];
+                    $next_events[] = [
+                        'time' => $timestamp,
+                        'subject' => $args['subject'] ?? '[no subject]',
+                        'target_count' => count($args['selected_user_ids'] ?? []) + count(get_users(['role__in' => $args['selected_roles'] ?? [], 'fields' => 'ID'])),
+                        'job_key' => $key,
+                        'args' => $args
+                    ];
+                }
+            }
+        }
+    }
+
+    if (empty($next_events)) {
+        echo '<p>No upcoming email batches scheduled.</p>';
+    } else {
+        echo '<table class="widefat striped"><thead>
+            <tr><th>Scheduled Time</th><th>Subject</th><th>Recipients</th></tr></thead><tbody>';
+        foreach ($next_events as $event) {
+            echo '<tr>
+                <td>' . date('Y-m-d H:i:s', $event['time']) . '</td>
+                <td>' . esc_html(wp_trim_words($event['subject'], 10, '...')) . '</td>
+                <td>' . esc_html($event['target_count']) . '</td>
+            </tr>';
+        }
+        echo '</tbody></table>';
+    }
+
+    echo '</div>';
+}
+
+
+//part 7
+function ofast_emailer_settings_page() {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ofast_settings_update'])) {
+        update_option('ofast_email_logo', esc_url_raw($_POST['email_logo']));
+        update_option('ofast_email_tagline', sanitize_text_field($_POST['email_tagline']));
+        update_option('ofast_email_footer_text', sanitize_textarea_field($_POST['email_footer']));
+        update_option('ofast_email_from_name', sanitize_text_field($_POST['email_from']));
+        update_option('ofast_email_reply_to', sanitize_email($_POST['email_reply']));
+        update_option('ofast_email_social', array_map('esc_url_raw', $_POST['social'] ?? []));
+        echo '<div class="notice notice-success"><p>âœ… Settings saved!</p></div>';
+    }
+
+    $logo = get_option('ofast_email_logo', '');
+    $tagline = get_option('ofast_email_tagline', '');
+    $footer = get_option('ofast_email_footer_text', '');
+    $from = get_option('ofast_email_from_name', '');
+    $reply = get_option('ofast_email_reply_to', '');
+    $social = get_option('ofast_email_social', []);
+
+    echo '<div class="wrap"><h2>âš™ï¸ Ofast Email Settings</h2>
+    <form method="post">
+        <table class="form-table">
+            <tr><th>Logo URL</th><td><input type="url" name="email_logo" value="' . esc_attr($logo) . '" class="regular-text"></td></tr>
+            <tr><th>Tagline</th><td><input type="text" name="email_tagline" value="' . esc_attr($tagline) . '" class="regular-text"></td></tr>
+            <tr><th>Footer Text</th><td><textarea name="email_footer" rows="3" class="large-text">' . esc_textarea($footer) . '</textarea></td></tr>
+            <tr><th>From Name</th><td><input type="text" name="email_from" value="' . esc_attr($from) . '" class="regular-text"></td></tr>
+            <tr><th>Reply-to Email</th><td><input type="email" name="email_reply" value="' . esc_attr($reply) . '" class="regular-text"></td></tr>
+            <tr><th>Social Links (ordered)</th><td>';
+                $platforms = ['facebook', 'x', 'youtube', 'whatsapp'];
+                foreach ($platforms as $platform) {
+                    echo ucfirst($platform) . ': <input type="url" name="social[' . $platform . ']" value="' . esc_attr($social[$platform] ?? '') . '" class="regular-text"><br>';
+                }
+            echo '</td></tr>
+        </table>
+        <p><button type="submit" name="ofast_settings_update" class="button button-primary">ðŸ’¾ Save Settings</button></p>
+    </form></div>';
+}
+
+// End of file
+
+
+
+
+

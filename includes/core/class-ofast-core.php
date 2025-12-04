@@ -43,7 +43,10 @@ class Ofast_X_Core
      */
     private function load_modules()
     {
-        // Load Settings first
+        // Load Dashboard first (creates main "Ofast X" menu)
+        $this->load_dashboard();
+
+        // Load Settings second (adds submenu)
         $this->load_settings();
 
         // Load Security classes
@@ -57,6 +60,17 @@ class Ofast_X_Core
         if ($this->is_module_enabled('debug')) {
             $this->load_debug_indicator();
         }
+    }
+
+    /**
+     * Load Dashboard Module
+     */
+    private function load_dashboard()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/dashboard/class-ofast-dashboard.php';
+        $dashboard = new Ofast_X_Dashboard();
+        $dashboard->init();
+        $this->modules['dashboard'] = $dashboard;
     }
 
     /**
@@ -148,45 +162,11 @@ class Ofast_X_Core
      */
     private function define_admin_hooks()
     {
-        // Add main admin menu
-        add_action('admin_menu', array($this, 'add_admin_menu'));
-
         // Add admin styles
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_styles'));
     }
 
-    /**
-     * Add admin menu pages
-     */
-    public function add_admin_menu()
-    {
-        // Main Ofast X dashboard
-        add_menu_page(
-            'Ofast X Dashboard',
-            'Ofast X',
-            'manage_options',
-            'ofast-x-dashboard',
-            array($this, 'display_dashboard_page'),
-            'dashicons-admin-generic',
-            2
-        );
-    }
 
-    /**
-     * Display dashboard page
-     */
-    public function display_dashboard_page()
-    {
-        echo '<div class="wrap">';
-        echo '<h1>Ofast X Dashboard</h1>';
-        echo '<p>🎉 Plugin is working! Modules loaded:</p>';
-        echo '<ul>';
-        foreach ($this->modules as $slug => $module) {
-            echo '<li>✅ ' . esc_html(ucfirst($slug)) . ' Module</li>';
-        }
-        echo '</ul>';
-        echo '</div>';
-    }
 
     /**
      * Enqueue admin styles

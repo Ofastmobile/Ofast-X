@@ -21,6 +21,7 @@ class Ofast_X_Email_Admin
     {
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
+        add_action('wp_ajax_ofast_preview_email', array($this, 'ajax_preview_email'));
     }
 
     /**
@@ -227,9 +228,13 @@ class Ofast_X_Email_Admin
                 <small>Leave blank to send immediately. More than 40 recipients will auto-schedule.</small></label>
             </p>
 
+
             <p><label><input type="checkbox" name="test_email"> Send to me as test only</label></p>
 
-            <p><button type="submit" name="send_email" class="button button-primary">🚀 Send / Schedule</button></p>
+            <p>
+                <button type="submit" name="send_email" class="button button-primary">🚀 Send / Schedule</button>
+                <button type="button" id="preview-email-btn" class="button button-secondary" style="margin-left:10px;">👁️ Preview Email</button>
+            </p>
             
         <hr><h3>💥 Select Users Manually (Optional)</h3>
 
@@ -332,10 +337,79 @@ class Ofast_X_Email_Admin
                     $("#check-all").change(function() {
                         visibleRows.find(".user-checkbox").prop("checked", $(this).prop("checked"));
                     });
-
+        
                     updatePagination();
                 });
                 </script>';
+
+        // Preview Modal HTML
+        echo '<div id="email-preview-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:999999;overflow-y:auto;">
+            <div style="position:relative;width:90%;max-width:800px;margin:30px auto;background:white;border-radius:8px;overflow:hidden;">
+                <div style="padding:15px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+                    <h3 style="margin:0;">📧 Email Preview</h3>
+                    <button id="close-preview-modal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#64748b;">&times;</button>
+                </div>
+                <div id="preview-content" style="padding:20px;max-height:calc(100vh - 200px);overflow-y:auto;">
+                    <!-- Preview will load here -->
+                </div>
+            </div>
+        </div>';
+
+        // Preview Modal JavaScript
+        echo '<script>
+        jQuery(document).ready(function($) {
+            // Preview Email Button
+            $("#preview-email-btn").click(function(e) {
+                e.preventDefault();
+                
+                var subject = $("input[name=\'subject\']").val();
+                var message = "";
+                
+                // Get content from TinyMCE
+                if (typeof tinyMCE !== "undefined" && tinyMCE.get("message")) {
+                    message = tinyMCE.get("message").getContent();
+                } else {
+                    message = $("#message").val();
+                }
+                
+                if (!message) {
+                    alert("Please enter email content first!");
+                    return;
+                }
+                
+                // Show loading
+                $("#preview-content").html("<p style=\'text-align:center;padding:40px;\'><span class=\'spinner is-active\' style=\'float:none;\'></span><br>Generating preview...</p>");
+                $("#email-preview-modal").fadeIn();
+                
+                // AJAX to get preview
+                $.post(ajaxurl, {
+                    action: "ofast_preview_email",
+                    nonce: "' . wp_create_nonce('ofast_preview_email') . '",
+                    subject: subject,
+                    message: message
+                }, function(response) {
+                    if (response.success) {
+                        $("#preview-content").html(response.data.html);
+                    } else {
+                        $("#preview-content").html("<p style=\'color:red;\'>Error loading preview</p>");
+                    }
+                });
+            });
+            
+            // Close Modal
+            $("#close-preview-modal, #email-preview-modal").click(function(e) {
+                if (e.target === this) {
+                    $("#email-preview-modal").fadeOut();
+                }
+            });
+            
+            $(document).keyup(function(e) {
+                if (e.key === "Escape") {
+                    $("#email-preview-modal").fadeOut();
+                }
+            });
+        });
+        </script>';
 
         echo '</div></form></div>';
     }
@@ -518,74 +592,6 @@ class Ofast_X_Email_Admin
         );
     }
 
-    /**
-     * Helper: Get email template (FIX #9, #10, #11, #12, #13)
-     */
-    private function get_email_template($content)
-    {
-        $site_name = get_option('ofast_email_site_name', 'Ofastshop Digitals');
-        $company_name = get_option('ofast_email_company_name', 'Ofastshop Digitals');
-        $owner_name = get_option('ofast_email_owner_name', 'Bofast World');
-        $logo_url = get_option('ofast_email_logo', 'https://pub-f02915809d3846b8ab0aaedeab54dbf7.r2.dev/ofastshop/2025/01/18150519/OFASTSHOP-DIGITALS-e1728849768928.png');
-        $tagline = get_option('ofast_email_tagline', 'Learn. Create. Earn');
-        $subtitle = get_option('ofast_email_subtitle', 'Africa\'s No 1 Digital Learning Hub');
-        $social = get_option('ofast_email_social', []);
-
-        ob_start(); ?>
-        <style>
-            @media screen and (max-width: 600px) {
-                .ofast-email-body {
-                    padding: 15px 15px !important;
-                }
-
-                .ofast-email-outer {
-                    padding: 20px 10px !important;
-                }
-            }
-        </style>
-        <div class="ofast-email-outer" style="background:#f9f9f9;padding:30px;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;color:#333;">
-            <div class="ofast-email-body" style="max-width:600px;margin:auto;background:#fff;border-radius:8px;padding:20px 30px;line-height:1.6em;">
-
-                <!-- Header -->
-                <div style="text-align:center;">
-                    <img src="<?php echo esc_url($logo_url); ?>" alt="Logo" style="max-width:400px;margin-bottom:10px;">
-                    <h2 style="margin:5px 0 3px;color:#222;"><?php echo esc_html($tagline); ?></h2>
-                    <p style="font-size:13px;color:#777;margin-top:3px;"><?php echo esc_html($subtitle); ?></p>
-                </div>
-
-                <hr style="border:none;border-top:1px solid #eee;margin:15px 0;">
-
-                <!-- Email Content -->
-                <div style="padding:20px 10px;font-size:14px;">
-                    <?php echo wpautop($content); ?>
-                </div>
-
-                <hr style="border:none;border-top:1px solid #eee;">
-
-                <!-- Footer -->
-                <div style="text-align:center;font-size:13px;color:#888;">
-                    <p>Follow us:</p>
-                    <p><a href="https://ofastshop.com" style="color:#ffcc00;text-decoration:none;"><?php echo esc_html($site_name); ?></a></p>
-                    <p style="margin:10px 0;">
-                        <?php if (!empty($social['facebook'])): ?>
-                            <a href="<?php echo esc_url($social['facebook']); ?>" style="display:inline-block;width:32px;height:32px;background:#000;border-radius:50%;padding:6px;margin:0 4px;"><img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" width="20" style="filter:brightness(0) invert(1);"></a>
-                        <?php endif; ?>
-                        <?php if (!empty($social['x'])): ?>
-                            <a href="<?php echo esc_url($social['x']); ?>" style="display:inline-block;width:32px;height:32px;background:#000;border-radius:50%;padding:6px;margin:0 4px;"><img src="https://cdn-icons-png.flaticon.com/512/5968/5968830.png" alt="X" width="20" style="filter:brightness(0) invert(1);"></a>
-                        <?php endif; ?>
-                        <?php if (!empty($social['youtube'])): ?>
-                            <a href="<?php echo esc_url($social['youtube']); ?>" style="display:inline-block;width:32px;height:32px;background:#000;border-radius:50%;padding:6px;margin:0 4px;"><img src="https://cdn-icons-png.flaticon.com/512/1384/1384060.png" alt="YouTube" width="20" style="filter:brightness(0) invert(1);"></a>
-                        <?php endif; ?>
-                        <?php if (!empty($social['whatsapp'])): ?>
-                            <a href="<?php echo esc_url($social['whatsapp']); ?>" style="display:inline-block;width:32px;height:32px;background:#000;border-radius:50%;padding:6px;margin:0 4px;"><img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" width="20" style="filter:brightness(0) invert(1);"></a>
-                        <?php endif; ?>
-                    </p>
-                    <p style="font-size:12px;color:#aaa;">© <?php echo date('Y'); ?> <?php echo esc_html($company_name); ?> Own by <a href="https://bofastworld.net"><?php echo esc_html($owner_name); ?></a>, Nigeria</p>
-                </div>
-            </div>
-        </div>
-<?php return ob_get_clean();
-    }
 
     /**
      * Helper: Log email
@@ -599,5 +605,37 @@ class Ofast_X_Email_Admin
             'recipient_count' => $recipient_count,
             'notes' => $notes
         ]);
+    }
+
+    /**
+     * AJAX: Preview email with modern template
+     */
+    public function ajax_preview_email()
+    {
+        check_ajax_referer('ofast_preview_email', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        $subject = sanitize_text_field($_POST['subject'] ?? 'Email Preview');
+        $message = wp_kses_post($_POST['message'] ?? '');
+
+        // Load template class
+        require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-template.php';
+
+        // Get preview HTML using modern template
+        $html = Ofast_X_Email_Template::get_template($message);
+
+        wp_send_json_success(array('html' => $html));
+    }
+
+    /**
+     * Helper: Get email template using modern design
+     */
+    private function get_email_template($content)
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-template.php';
+        return Ofast_X_Email_Template::get_template($content);
     }
 }

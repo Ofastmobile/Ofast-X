@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Ofast X Activator Class
  * Handles activation and deactivation logic
@@ -8,39 +9,42 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class Ofast_X_Activator {
-    
+class Ofast_X_Activator
+{
+
     /**
      * Plugin activation
      */
-    public static function activate() {
+    public static function activate()
+    {
         // Set activation timestamp
         update_option('ofastx_activated_time', time());
         update_option('ofastx_version', OFAST_X_VERSION);
-        
+
         // Create database tables
         self::create_tables();
-        
-        // Set default options
+
+        // Set default options (including module states)
         self::set_default_options();
-        
+
         // Flush rewrite rules
         flush_rewrite_rules();
-        
+
         // Log activation
         self::log_activation();
     }
-    
+
     /**
      * Plugin deactivation
      */
-    public static function deactivate() {
+    public static function deactivate()
+    {
         // Clear scheduled events
         self::clear_scheduled_events();
-        
+
         // Flush rewrite rules
         flush_rewrite_rules();
-        
+
         // Log deactivation
         self::log_deactivation();
     }
@@ -53,13 +57,14 @@ class Ofast_X_Activator {
     /**
      * Create database tables
      */
-    private static function create_tables() {
+    private static function create_tables()
+    {
         global $wpdb;
-        
+
         $charset_collate = $wpdb->get_charset_collate();
-        
+
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        
+
         // 1. Email Logs Table
         $table_email_logs = $wpdb->prefix . 'ofast_email_logs';
         $sql_email_logs = "CREATE TABLE IF NOT EXISTS {$table_email_logs} (
@@ -74,7 +79,7 @@ class Ofast_X_Activator {
             KEY idx_status (status)
         ) {$charset_collate};";
         dbDelta($sql_email_logs);
-        
+
         // 2. Newsletter Subscribers Table
         $table_subscribers = $wpdb->prefix . 'ofast_newsletter_subscribers';
         $sql_subscribers = "CREATE TABLE IF NOT EXISTS {$table_subscribers} (
@@ -94,7 +99,7 @@ class Ofast_X_Activator {
             KEY idx_status (status)
         ) {$charset_collate};";
         dbDelta($sql_subscribers);
-        
+
         // 3. Code Snippets Table
         $table_snippets = $wpdb->prefix . 'ofast_snippets';
         $sql_snippets = "CREATE TABLE IF NOT EXISTS {$table_snippets} (
@@ -116,7 +121,7 @@ class Ofast_X_Activator {
             KEY idx_scope (scope)
         ) {$charset_collate};";
         dbDelta($sql_snippets);
-        
+
         // 4. Contact Forms Table
         $table_forms = $wpdb->prefix . 'ofast_forms';
         $sql_forms = "CREATE TABLE IF NOT EXISTS {$table_forms} (
@@ -133,7 +138,7 @@ class Ofast_X_Activator {
             KEY idx_active (active)
         ) {$charset_collate};";
         dbDelta($sql_forms);
-        
+
         // 5. Form Submissions Table
         $table_submissions = $wpdb->prefix . 'ofast_form_submissions';
         $sql_submissions = "CREATE TABLE IF NOT EXISTS {$table_submissions} (
@@ -152,7 +157,7 @@ class Ofast_X_Activator {
             KEY idx_submitted_at (submitted_at)
         ) {$charset_collate};";
         dbDelta($sql_submissions);
-        
+
         // 6. Redirects Table
         $table_redirects = $wpdb->prefix . 'ofast_redirects';
         $sql_redirects = "CREATE TABLE IF NOT EXISTS {$table_redirects} (
@@ -172,7 +177,7 @@ class Ofast_X_Activator {
             KEY idx_hits (hits)
         ) {$charset_collate};";
         dbDelta($sql_redirects);
-        
+
         // 7. Redirect Logs Table
         $table_redirect_logs = $wpdb->prefix . 'ofast_redirect_logs';
         $sql_redirect_logs = "CREATE TABLE IF NOT EXISTS {$table_redirect_logs} (
@@ -187,67 +192,84 @@ class Ofast_X_Activator {
             KEY idx_accessed_at (accessed_at)
         ) {$charset_collate};";
         dbDelta($sql_redirect_logs);
-        
+
         // Log database creation
         // Ofast_X_Logger::info('Database tables created successfully');
     }
-    
+
     /**
      * Set default plugin options
      */
-    private static function set_default_options() {
+    private static function set_default_options()
+    {
         $default_options = array(
             'ofastx_license_status' => 'inactive',
             'ofastx_license_key' => '',
-            'ofastx_modules_enabled' => array()
+            'ofastx_modules_enabled' => array(
+                'email' => true,              // Active
+                'debug' => true,              // Active
+                'smtp' => false,              // Coming soon
+                'newsletter' => false,        // Coming soon
+                'contact' => false,           // Coming soon
+                'seo' => false,               // Coming soon
+                'analytics' => false,         // Coming soon
+                'backup' => false,            // Coming soon
+                'security' => false,          // Coming soon
+                'performance' => false,       // Coming soon
+                'woocommerce' => false,       // Coming soon
+                'learndash' => false          // Coming soon
+            ),
+            'ofastx_email_retention_days' => 90
         );
-        
+
         foreach ($default_options as $key => $value) {
             if (get_option($key) === false) {
                 add_option($key, $value);
             }
         }
     }
-    
+
     /**
      * Clear scheduled events
      */
-    private static function clear_scheduled_events() {
-    // Clear email scheduler events
-    $timestamp = wp_next_scheduled('ofast_scheduled_email_event');
-    if ($timestamp) {
-        wp_unschedule_event($timestamp, 'ofast_scheduled_email_event');
+    private static function clear_scheduled_events()
+    {
+        // Clear email scheduler events
+        $timestamp = wp_next_scheduled('ofast_scheduled_email_event');
+        if ($timestamp) {
+            wp_unschedule_event($timestamp, 'ofast_scheduled_email_event');
+        }
+
+        // Clear daily cleanup
+        $timestamp = wp_next_scheduled('ofast_daily_cleanup');
+        if ($timestamp) {
+            wp_unschedule_event($timestamp, 'ofast_daily_cleanup');
+        }
+
+        // Clear license check
+        $timestamp = wp_next_scheduled('ofastx_daily_license_check');
+        if ($timestamp) {
+            wp_unschedule_event($timestamp, 'ofastx_daily_license_check');
+        }
+
+        // Ofast_X_Logger::info('Scheduled events cleared');
     }
-    
-    // Clear daily cleanup
-    $timestamp = wp_next_scheduled('ofast_daily_cleanup');
-    if ($timestamp) {
-        wp_unschedule_event($timestamp, 'ofast_daily_cleanup');
-    }
-    
-    // Clear license check
-    $timestamp = wp_next_scheduled('ofastx_daily_license_check');
-    if ($timestamp) {
-        wp_unschedule_event($timestamp, 'ofastx_daily_license_check');
-    }
-    
-    // Ofast_X_Logger::info('Scheduled events cleared');
-}
-    
+
     /**
      * Log activation
      */
-    private static function log_activation() {
+    private static function log_activation()
+    {
         // Simple activation log
         error_log('Ofast X Plugin Activated - Version: ' . OFAST_X_VERSION);
     }
-    
+
     /**
      * Log deactivation
      */
-    private static function log_deactivation() {
+    private static function log_deactivation()
+    {
         // Simple deactivation log
         error_log('Ofast X Plugin Deactivated');
     }
 }
-

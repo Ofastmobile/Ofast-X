@@ -43,13 +43,40 @@ class Ofast_X_Core
      */
     private function load_modules()
     {
-        // Load Email Module
+        // Load Settings first
+        $this->load_settings();
+
+        // Load Security classes
+        $this->load_security();
+
+        // Load modules if enabled
         if ($this->is_module_enabled('email')) {
             $this->load_email_module();
         }
 
-        // Load Debug Indicator (always enabled for now)
-        $this->load_debug_indicator();
+        if ($this->is_module_enabled('debug')) {
+            $this->load_debug_indicator();
+        }
+    }
+
+    /**
+     * Load Settings Manager
+     */
+    private function load_settings()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-settings.php';
+        $settings = new Ofast_X_Settings();
+        $settings->init();
+        $this->modules['settings'] = $settings;
+    }
+
+    /**
+     * Load Security Classes
+     */
+    private function load_security()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'includes/security/class-ofast-validator.php';
+        require_once OFAST_X_PLUGIN_DIR . 'includes/security/class-ofast-rate-limiter.php';
     }
 
     /**
@@ -58,20 +85,16 @@ class Ofast_X_Core
     private function load_email_module()
     {
         $email_file = OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email.php';
-        $email_admin_file = OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-admin.php';
 
-        // Only load if files exist
-        if (file_exists($email_file) && file_exists($email_admin_file)) {
+        // Check if main email controller exists
+        if (file_exists($email_file)) {
             require_once $email_file;
-            require_once $email_admin_file;
 
-            $email_admin = new Ofast_X_Email_Admin();
-            $email_admin->init();
+            // Initialize the main email controller (it loads admin and everything else)
+            $email_controller = new Ofast_X_Email();
+            $email_controller->init();
 
-            $this->modules['email'] = $email_admin;
-
-            // Logger might not be initialized, so skip for now
-            // Ofast_X_Logger::info('Email module loaded');
+            $this->modules['email'] = $email_controller;
         }
     }
 
@@ -93,12 +116,23 @@ class Ofast_X_Core
      */
     private function is_module_enabled($module_slug)
     {
-        $enabled_modules = get_option('ofastx_modules_enabled', array(
-            'email' => true,
-            'debug' => true
-        ));
+        // Get saved settings, or initialize with defaults
+        $enabled_modules = get_option('ofastx_modules_enabled', false);
 
-        return !empty($enabled_modules[$module_slug]);
+        // First time - save defaults to database
+        if ($enabled_modules === false) {
+            $enabled_modules = array(
+                'email' => true,
+                'debug' => true,
+                'smtp' => false,      // Will be added later
+                'newsletter' => false, // Will be added later
+                // Add more modules here as you build them
+            );
+            update_option('ofastx_modules_enabled', $enabled_modules);
+        }
+
+        // Return whether this specific module is enabled
+        return isset($enabled_modules[$module_slug]) && $enabled_modules[$module_slug];
     }
 
     /**

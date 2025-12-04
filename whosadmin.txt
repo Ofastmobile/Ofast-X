@@ -1,0 +1,93 @@
+===================================
+WHO'S THE ADMIN
+===================================
+
+
+function display_admin_users() {
+    $args = array(
+        'role'    => 'administrator',
+        'orderby' => 'registered',
+        'order'   => 'DESC',
+    );
+
+    $admin_users = get_users($args);
+
+    if ($admin_users) {
+        foreach ($admin_users as $admin_user) {
+            $first_name = $admin_user->first_name;
+            $last_name = $admin_user->last_name;
+            $email = $admin_user->user_email;
+            $full_name = trim($first_name . ' ' . $last_name);
+            $site_logo_url = get_site_icon_url(32); // Site logo at 32px
+
+            echo '<table style="width: 100%; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 5px;">';
+
+            echo '<tr><th style="text-align: left; width: 120px; padding: 6px;">Name</th>
+                      <td style="padding: 6px;">' . esc_html($full_name) . '</td></tr>';
+
+            echo '<tr><th style="text-align: left; padding: 6px;">Email</th>
+                      <td style="padding: 6px;"><a href="mailto:' . esc_attr($email) . '">' . esc_html($email) . '</a></td></tr>';
+
+            echo '<tr><th style="text-align: left; padding: 6px;">Approve</th>
+                      <td style="padding: 6px;">';
+            if ($site_logo_url) {
+                echo '<img src="' . esc_url($site_logo_url) . '" alt="Site Logo" width="32" height="32" style="border-radius: 4px;">';
+            } else {
+                echo 'No Logo';
+            }
+            echo '</td></tr>';
+
+            echo '</table>';
+        }
+    } else {
+        echo '<p>No admin users found.</p>';
+    }
+}
+
+add_action('wp_dashboard_setup', 'add_custom_dashboard_widget');
+
+function add_custom_dashboard_widget() {
+    wp_add_dashboard_widget(
+        'custom_dashboard_widget',
+        'Administrator',
+        'display_admin_users'
+    );
+}
+
+
+
+
+
+
+
+
+
+
+
+/**=======================================
+ADD DESIGNER'S DETAILS
+=======================================*/
+
+function add_support_details_widget() {
+    wp_add_dashboard_widget(
+        'support_details_widget',
+        'Designer Details',
+        'support_details_widget_content'
+    );
+}
+add_action( 'wp_dashboard_setup', 'add_support_details_widget' );
+
+function support_details_widget_content() {
+    $name = 'Bofast â™¥ï¸ World';
+    $email = 'hello@bofastworld.net';
+    $web_address = 'https://bofastworld.net';
+
+    echo '<div>';
+    echo '<p>Web Designer: ' . esc_html( $name ) . '</p>';
+    echo '<p>Email: <a href="mailto:' . esc_attr( $email ) . '">' . esc_html( $email ) . '</a></p>';
+    echo '<p>Website: <a href="' . esc_url( $web_address ) . '" target="_blank">' . esc_html( $web_address ) . '</a></p>';
+    echo '</div>';
+}
+
+
+/**let the $name, $email, $web_address have a space where admin or designer(s) can edit or input their details. meaning there will be fields for these in the settings of the plugin, together with other settings*/

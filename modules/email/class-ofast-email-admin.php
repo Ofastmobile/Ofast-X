@@ -48,6 +48,7 @@ class Ofast_X_Email_Admin
             array($this, 'render_send_page')
         );
 
+        /* Temporarily disabled - requires Action Scheduler
         add_submenu_page(
             'ofast-emailer',
             'Scheduled Emails',
@@ -56,6 +57,7 @@ class Ofast_X_Email_Admin
             'ofast-scheduled-emails',
             array($this, 'render_scheduled_page')
         );
+        */
 
         add_submenu_page(
             'ofast-emailer',
@@ -160,26 +162,29 @@ class Ofast_X_Email_Admin
                     $this->log_email($subject, $sent, 'Immediate send');
                     $result_message = '<div class="notice notice-success"><p>✅ Sent immediately to ' . $sent . ' user(s)</p></div>';
                 } else {
-                    // FIX #4: Schedule in batches of 40 users per hour
+                    // Schedule in batches of 40 users per hour using Action Scheduler
                     $chunks = array_chunk($total_ids, 40);
-                    $batch_num = 1;
+                    $scheduled_count = 0;
+
                     foreach ($chunks as $i => $chunk) {
                         $batch_time = $timestamp + ($i * 3600); // 1 hour apart
+
+                        // Use WordPress cron for scheduling
                         wp_schedule_single_event(
                             $batch_time,
-                            'ofast_scheduled_email_event',
-                            [
-                                'subject' => $subject,
-                                'body' => $body,
-                                'selected_roles' => [],
-                                'selected_user_ids' => $chunk,
-                                'batch_number' => $batch_num++,
-                                'total_batches' => count($chunks)
-                            ]
+                            'ofast_send_email_batch',
+                            array(
+                                array(
+                                    'subject' => $subject,
+                                    'body' => $body,
+                                    'user_ids' => $chunk
+                                )
+                            )
                         );
+                        $scheduled_count++;
                     }
 
-                    $result_message = '<div class="notice notice-success"><p>📅 ' . count($chunks) . ' batches scheduled (40 users/hour) starting ' . date('Y-m-d H:i', $timestamp) . '</p></div>';
+                    $result_message = '<div class="notice notice-success"><p>📅 ' . $scheduled_count . ' batches scheduled (40 users/hour) starting ' . date('Y-m-d H:i', $timestamp) . '</p></div>';
                 }
             }
         }
@@ -232,11 +237,11 @@ class Ofast_X_Email_Admin
             <p><label><input type="checkbox" name="test_email"> Send to me as test only</label></p>
 
             <p>
-                <button type="submit" name="send_email" class="button button-primary">🚀 Send / Schedule</button>
+                <button type="submit" name="send_email" class="button button-primary"> Send / Schedule</button>
                 <button type="button" id="preview-email-btn" class="button button-secondary" style="margin-left:10px;">👁️ Preview Email</button>
             </p>
             
-        <hr><h3>💥 Select Users Manually (Optional)</h3>
+        <hr><h3> Select Users Manually (Optional)</h3>
 
         <label>Search: <input type="text" id="user-search" style="margin-left:5px;"></label>
         <label style="margin-left:20px;">Show 
@@ -415,57 +420,6 @@ class Ofast_X_Email_Admin
     }
 
     /**
-     * Render scheduled emails page (FIX #4)
-     */
-    public function render_scheduled_page()
-    {
-        echo '<div class="wrap"><h2>📅 Scheduled Email Batches</h2>';
-
-        $events = _get_cron_array();
-        $next_events = [];
-
-        foreach ($events as $timestamp => $hooks) {
-            foreach ($hooks as $hook => $jobs) {
-                if ($hook === 'ofast_scheduled_email_event') {
-                    foreach ($jobs as $key => $details) {
-                        $args = $details['args'];
-                        $batch_num = $args['batch_number'] ?? 1;
-                        $total_batches = $args['total_batches'] ?? 1;
-                        $hours_from_now = round(($timestamp - time()) / 3600, 1);
-
-                        $next_events[] = [
-                            'time' => $timestamp,
-                            'subject' => $args['subject'] ?? '[no subject]',
-                            'target_count' => count($args['selected_user_ids'] ?? []),
-                            'batch_info' => "Batch $batch_num of $total_batches",
-                            'note' => $hours_from_now > 0 ? "Next in $hours_from_now hrs" : "Processing now"
-                        ];
-                    }
-                }
-            }
-        }
-
-        if (empty($next_events)) {
-            echo '<p>No upcoming email batches scheduled.</p>';
-        } else {
-            echo '<table class="widefat striped"><thead>
-                <tr><th>Scheduled Time</th><th>Subject</th><th>Recipients</th><th>Batch Info</th><th>Status</th></tr></thead><tbody>';
-            foreach ($next_events as $event) {
-                echo '<tr>
-                    <td>' . date('Y-m-d H:i:s', $event['time']) . '</td>
-                    <td>' . esc_html(wp_trim_words($event['subject'], 10, '...')) . '</td>
-                    <td>' . esc_html($event['target_count']) . '</td>
-                    <td>' . esc_html($event['batch_info']) . '</td>
-                    <td>' . esc_html($event['note']) . '</td>
-                </tr>';
-            }
-            echo '</tbody></table>';
-        }
-
-        echo '</div>';
-    }
-
-    /**
      * Render email history page
      */
     public function render_history_page()
@@ -637,5 +591,80 @@ class Ofast_X_Email_Admin
     {
         require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-template.php';
         return Ofast_X_Email_Template::get_template($content);
+    }
+
+    /**
+     * Render scheduled emails page (Action Scheduler queue view)
+     */
+    public function render_scheduled_page()
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die('You do not have sufficient permissions');
+        }
+
+        echo '<div class="wrap">';
+        echo '<h1>📅 Scheduled Email Batches</h1>';
+        echo '<p>Email batches scheduled via Action Scheduler (runs reliably every minute)</p>';
+
+        // Get all pending scheduled actions for email batches
+        $actions = as_get_scheduled_actions(array(
+            'hook' => 'ofast_send_email_batch',
+            'status' => 'pending',
+            'per_page' => 50
+        ));
+
+        if (empty($actions)) {
+            echo '<div class="notice notice-info"><p>No email batches currently scheduled.</p></div>';
+        } else {
+            echo '<table class="wp-list-table widefat fixed striped">';
+            echo '<thead><tr>';
+            echo '<th>Batch ID</th><th>Subject</th><th>Recipients</th><th>Scheduled Time</th><th>Status</th>';
+            echo '</tr></thead><tbody>';
+
+            foreach ($actions as $action_id => $action) {
+                $args = $action->get_args();
+                $subject = esc_html($args['subject'] ?? 'N/A');
+                $user_count = count($args['user_ids'] ?? []);
+                $scheduled_time = $action->get_schedule()->get_date()->format('Y-m-d H:i:s');
+
+                echo '<tr>';
+                echo '<td>' . esc_html($action_id) . '</td>';
+                echo '<td>' . $subject . '</td>';
+                echo '<td>' . $user_count . ' users</td>';
+                echo '<td>' . esc_html($scheduled_time) . '</td>';
+                echo '<td><span class="dashicons dashions-clock"></span> Pending</td>';
+                echo '</tr>';
+            }
+
+            echo '</tbody></table>';
+        }
+
+        // Show completed actions (last 10)
+        echo '<h2 style="margin-top: 30px;">Recently Completed Batches</h2>';
+        $completed = as_get_scheduled_actions(array(
+            'hook' => 'ofast_send_email_batch',
+            'status' => 'complete',
+            'per_page' => 10
+        ));
+
+        if (!empty($completed)) {
+            echo '<table class="wp-list-table widefat fixed striped">';
+            echo '<thead><tr>';
+            echo '<th>Subject</th><th>Recipients</th><th>Executed At</th>';
+            echo '</tr></thead><tbody>';
+
+            foreach ($completed as $action) {
+                $args = $action->get_args();
+                echo '<tr>';
+                echo '<td>' . esc_html($args['subject'] ?? 'N/A') . '</td>';
+                echo '<td>' . count($args['user_ids'] ?? []) . ' users</td>';
+                echo '<td>' . esc_html($action->get_schedule()->get_date()->format('Y-m-d H:i:s')) . '</td>';
+                echo '</tr>';
+            }
+
+            echo '</tbody></table>';
+        }
+
+        echo '</div>';
     }
 }

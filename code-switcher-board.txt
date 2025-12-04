@@ -1,0 +1,728 @@
+/**==========================================================================================
+ * Plugin Name: Snippets Switchboard (for Code Snippets)
+ * Description: Full-width Dashboard widget + Tools page showing Code Snippets 
+in a compact 3-column grid with dot toggles, hide/unhide, and per-snippet tags 
+(read-only modal). Shows Edit (pencil), Tags (if present), Hide, and a circular Activate/Deactivate dot.
+ * Version:     1.8.0
+ * Author:      You
+ =============================================================================================*/
+
+if (!defined('ABSPATH')) exit;
+
+class WSS_Snippets_Switchboard_Grid {
+	const OPT_HIDDEN = 'wsss_hidden_snippet_ids'; // [int id, ...]
+	const OPT_TAGS   = 'wsss_snippet_tags';       // [id => [ "item", "https://...", "tag", ... ]]
+
+	public function __construct() {
+		add_action('admin_menu',                       [$this, 'add_menu']);
+		add_action('wp_dashboard_setup',               [$this, 'add_dashboard_widget']);
+
+		add_filter('screen_layout_dashboard',          [$this, 'force_one_column']);
+		add_filter('get_user_option_screen_layout_dashboard', [$this, 'force_one_column']);
+
+		// AJAX
+		add_action('wp_ajax_wsss_toggle_snippet',      [$this, 'ajax_toggle_snippet']);
+		add_action('wp_ajax_wsss_hide_snippet',        [$this, 'ajax_hide_snippet']);
+		add_action('wp_ajax_wsss_get_hidden',          [$this, 'ajax_get_hidden']);
+		add_action('wp_ajax_wsss_get_tags',            [$this, 'ajax_get_tags']);
+
+		// Assets
+		add_action('admin_head',                       [$this, 'inline_css']);
+		add_action('admin_head-index.php',             [$this, 'inline_css_dashboard_fallback']);
+		add_action('admin_footer',                     [$this, 'inline_js']);
+	}
+
+	/* UI */
+	public function add_menu() {
+		add_management_page(
+			'Snippets Switchboard',
+			'Snippets Switchboard',
+			'manage_options',
+			'wsss-switchboard',
+			[$this, 'render_page']
+		);
+	}
+	public function add_dashboard_widget() {
+		wp_add_dashboard_widget(
+			'wsss_dashboard_widget',
+			'Snippets Switchboard',
+			[$this, 'render_widget']
+		);
+	}
+	public function force_one_column($cols) { return 1; }
+
+	public function render_page() {
+		if (!current_user_can('manage_options')) return;
+		echo '<div class="wrap"><h1>Snippets Switchboard</h1>';
+		$this->render_grid();
+		echo '</div>';
+	}
+	public function render_widget() {
+		if (!current_user_can('manage_options')) { echo 'Insufficient permissions.'; return; }
+		echo '<div class="wsss-wrap">';
+		$this->render_grid();
+		echo '</div>';
+	}
+
+	/* Data helpers */
+	private function wsss_table_exists($table) {
+		global $wpdb;
+		return (bool) $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table));
+	}
+	private function wsss_table_has_column($table, $column) {
+		global $wpdb;
+		if (!$this->wsss_table_exists($table)) return false;
+		return (bool) $wpdb->get_var($wpdb->prepare("SHOW COLUMNS FROM {$table} LIKE %s", $column));
+	}
+
+	/** Return all snippets (id, name, active) */
+	private function get_snippets() {
+		global $wpdb;
+		$table = $wpdb->prefix . 'snippets';
+
+		if ($this->wsss_table_exists($table)) {
+			$rows = $wpdb->get_results("SELECT id, name, active FROM {$table} ORDER BY name", ARRAY_A);
+			return array_map(function($r){
+				return [
+					'id'     => (int) $r['id'],
+					'name'   => (string) $r['name'],
+					'active' => (int) $r['active'],
+				];
+			}, $rows ?: []);
+		}
+
+		if (function_exists('code_snippets_get_snippets')) {
+			$list = code_snippets_get_snippets();
+			$out = [];
+			foreach ((array)$list as $snip) {
+				$is_obj = is_object($snip);
+				$out[] = [
+					'id'     => (int)   ($is_obj ? $snip->id   : ($snip['id']   ?? 0)),
+					'name'   => (string)($is_obj ? $snip->name : ($snip['name'] ?? 'Untitled')),
+					'active' => (int)   ($is_obj ? (!empty($snip->active) ? 1 : 0) : ((int)($snip['active'] ?? 0))),
+				];
+			}
+			return $out;
+		}
+		return [];
+	}
+
+	/** Read Code Snippetsâ€™ own tags for a given snippet ID (best-effort). */
+	private function get_cs_tags_for(int $id): array {
+		$tags = [];
+
+		// Try API object if present
+		if (function_exists('code_snippets_get_snippets')) {
+			$list = code_snippets_get_snippets();
+			foreach ((array)$list as $snip) {
+				$sid = is_object($snip) ? (int)$snip->id : (int)($snip['id'] ?? 0);
+				if ($sid !== $id) continue;
+
+				$raw = is_object($snip) ? ($snip->tags ?? null) : ($snip['tags'] ?? null);
+				if (is_string($raw)) {
+					$raw = trim($raw);
+					if ($raw !== '') {
+						if ($raw[0] === '[' || $raw[0] === '{') {
+							$decoded = json_decode($raw, true);
+							if (is_array($decoded)) $tags = $decoded;
+						} else {
+							$tags = array_map('trim', explode(',', $raw));
+						}
+					}
+				} elseif (is_array($raw)) {
+					$tags = $raw;
+				}
+				break;
+			}
+		}
+
+		// Try database column (wp_snippets.tags) if it exists
+		if (empty($tags)) {
+			global $wpdb;
+			$table = $wpdb->prefix . 'snippets';
+			if ($this->wsss_table_has_column($table, 'tags')) {
+				$raw = $wpdb->get_var($wpdb->prepare("SELECT tags FROM {$table} WHERE id=%d", $id));
+				if (is_string($raw) && $raw !== '') {
+					$raw = trim($raw);
+					if ($raw[0] === '[' || $raw[0] === '{') {
+						$decoded = json_decode($raw, true);
+						if (is_array($decoded)) $tags = $decoded;
+					} else {
+						$tags = array_map('trim', explode(',', $raw));
+					}
+				}
+			}
+		}
+
+		// Clean
+		$tags = array_values(array_filter(array_map(function($s){
+			return is_string($s) ? trim($s) : '';
+		}, (array)$tags)));
+
+		return $tags;
+	}
+
+	/* Our hidden + tags store */
+	private function get_hidden_ids(): array {
+		$ids = get_option(self::OPT_HIDDEN, []);
+		return array_values(array_filter(array_map('intval', is_array($ids) ? $ids : [])));
+	}
+	private function set_hidden_ids(array $ids): bool {
+		$ids = array_values(array_unique(array_map('intval', $ids)));
+		return update_option(self::OPT_HIDDEN, $ids, false);
+	}
+	private function hide_id(int $id, bool $hide = true): bool {
+		$ids = $this->get_hidden_ids();
+		if ($hide) {
+			if (!in_array($id, $ids, true)) $ids[] = $id;
+		} else {
+			$ids = array_values(array_diff($ids, [$id]));
+		}
+		return $this->set_hidden_ids($ids);
+	}
+
+	private function get_tags_map(): array {
+		$map = get_option(self::OPT_TAGS, []);
+		return is_array($map) ? $map : [];
+	}
+	private function set_tags_map(array $map): bool {
+		$clean = [];
+		foreach ($map as $id => $items) {
+			$id = (int) $id;
+			if ($id <= 0) continue;
+			$clean[$id] = array_values(array_filter(array_map(function($s){
+				$s = is_string($s) ? trim($s) : '';
+				return $s;
+			}, (array) $items)));
+		}
+		return update_option(self::OPT_TAGS, $clean, false);
+	}
+	private function get_tags_for(int $id): array {
+		$map = $this->get_tags_map();
+		return isset($map[$id]) && is_array($map[$id]) ? array_values($map[$id]) : [];
+	}
+
+	/* Activate / Deactivate */
+	private function activate_snippet($id) {
+		global $wpdb;
+		$id = (int) $id;
+		$table = $wpdb->prefix . 'snippets';
+		if ($this->wsss_table_exists($table)) {
+			return (false !== $wpdb->update($table, ['active' => 1], ['id' => $id], ['%d'], ['%d']));
+		}
+		if (function_exists('code_snippets_activate_snippet')) {
+			return (bool) code_snippets_activate_snippet($id);
+		}
+		return false;
+	}
+	private function deactivate_snippet($id) {
+		global $wpdb;
+		$id = (int) $id;
+		$table = $wpdb->prefix . 'snippets';
+		if ($this->wsss_table_exists($table)) {
+			return (false !== $wpdb->update($table, ['active' => 0], ['id' => $id], ['%d'], ['%d']));
+		}
+		if (function_exists('code_snippets_deactivate_snippet')) {
+			return (bool) code_snippets_deactivate_snippet($id);
+		}
+		return false;
+	}
+
+	/* Render */
+	private function render_grid() {
+		$snippets    = $this->get_snippets();
+		$hidden_ids  = $this->get_hidden_ids();
+
+		if (empty($snippets)) {
+			echo '<p>No snippets found (or the Code Snippets plugin data wasnâ€™t detected).</p>';
+			return;
+		}
+
+		$existing_ids = array_map(fn($r)=> (int)$r['id'], $snippets);
+		$hidden_count = count(array_values(array_intersect($hidden_ids, $existing_ids)));
+
+		echo '<div class="wsss-header">';
+		echo '  <button type="button" class="button wsss-show-hidden" aria-expanded="false" aria-controls="wsss-hidden-tray">';
+		echo '    Show hidden <span class="wsss-badge" data-count="'.$hidden_count.'">'.$hidden_count.'</span>';
+		echo '  </button>';
+		echo '</div>';
+
+		echo '<div class="wsss-grid" role="list">';
+		foreach ($snippets as $s) {
+			$id     = (int) $s['id'];
+			if (in_array($id, $hidden_ids, true)) continue;
+			$active = (int) $s['active'] === 1;
+
+			$has_any_tags = !empty($this->get_tags_for($id)) || !empty($this->get_cs_tags_for($id));
+
+			$edit_url = admin_url('admin.php?page=edit-snippet&id=' . $id);
+
+			echo '<div class="wsss-item" role="listitem" data-id="'.esc_attr($id).'" data-edit-url="'.esc_attr($edit_url).'">';
+			echo '  <div class="wsss-name" title="'.esc_attr($s['name']).'">'.esc_html($s['name']).'</div>';
+
+			echo '  <div class="wsss-actions">';
+			// EDIT (pencil)
+			echo '    <button class="wsss-icon wsss-edit" type="button" aria-label="Edit '.esc_attr($s['name']).'" data-tip="Edit"><span class="dashicons dashicons-edit"></span></button>';
+			// TAGS (only if present)
+			if ($has_any_tags) {
+				echo '    <button class="wsss-icon wsss-tags-link" type="button" aria-label="View tags for '.esc_attr($s['name']).'" data-tip="Tags"><span class="dashicons dashicons-admin-links"></span></button>';
+			}
+			// HIDE
+			echo '    <button class="wsss-icon wsss-hide" type="button" aria-label="Hide '.esc_attr($s['name']).'" data-tip="Hide"><span class="dashicons dashicons-hidden"></span></button>';
+			// TOGGLE
+			echo '    <button class="wsss-dot-toggle" role="switch" aria-checked="'.($active?'true':'false').'" data-state="'.($active?'on':'off').'" aria-label="'.($active?'Deactivate ':'Activate ').esc_attr($s['name']).'" data-tip="'.($active?'Deactivate':'Activate').'"><span class="wsss-dot"></span></button>';
+			echo '  </div>';
+
+			echo '</div>';
+		}
+		echo '</div>';
+
+		// Hidden tray
+		echo '<div id="wsss-hidden-tray" class="wsss-hidden-tray" hidden>';
+		echo '  <div class="wsss-hidden-header"><strong>Hidden snippets</strong><span class="wsss-muted">Click the eye to unhide</span></div>';
+		echo '  <div class="wsss-hidden-list" role="list"></div>';
+		echo '</div>';
+
+		// Modal (read-only tags)
+		echo '<div class="wsss-modal" id="wsss-modal" hidden aria-hidden="true" role="dialog" aria-modal="true">';
+		echo '  <div class="wsss-modal-backdrop"></div>';
+		echo '  <div class="wsss-modal-card" role="document">';
+		echo '    <div class="wsss-modal-head"><strong class="wsss-modal-title">Snippet tags</strong><button type="button" class="button-link wsss-modal-close" aria-label="Close">âœ•</button></div>';
+		echo '    <div class="wsss-modal-body">';
+		echo '      <div class="wsss-tags-view"></div>';
+		echo '    </div>';
+		echo '  </div>';
+		echo '</div>';
+	}
+
+	/* AJAX */
+	public function ajax_toggle_snippet() {
+		if (!current_user_can('manage_options')) wp_send_json_error(['message'=>'Unauthorized'], 403);
+		check_ajax_referer('wsss_toggle', 'nonce');
+
+		$id    = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+		$state = isset($_POST['state']) ? sanitize_text_field($_POST['state']) : '';
+
+		if (!$id || !in_array($state, ['on','off'], true)) {
+			wp_send_json_error(['message'=>'Bad request'], 400);
+		}
+
+		$ok = ($state === 'on') ? $this->deactivate_snippet($id) : $this->activate_snippet($id);
+		if (!$ok) wp_send_json_error(['message'=>'Toggle failed'], 500);
+
+		$new_active = ($state === 'on') ? 0 : 1;
+
+		wp_send_json_success([
+			'id'     => $id,
+			'active' => $new_active,
+			'state'  => $new_active ? 'on' : 'off',
+		]);
+	}
+
+	public function ajax_hide_snippet() {
+		if (!current_user_can('manage_options')) wp_send_json_error(['message'=>'Unauthorized'], 403);
+		check_ajax_referer('wsss_toggle', 'nonce');
+
+		$id   = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+		$mode = isset($_POST['mode']) ? sanitize_text_field($_POST['mode']) : 'hide';
+
+		if (!$id || !in_array($mode, ['hide','unhide'], true)) {
+			wp_send_json_error(['message'=>'Bad request'], 400);
+		}
+
+		$ok = $this->hide_id($id, $mode === 'hide');
+		if (!$ok) wp_send_json_error(['message'=>'Could not update hidden list'], 500);
+
+		$snippets     = $this->get_snippets();
+		$existing_ids = array_map(fn($r)=> (int)$r['id'], $snippets);
+		$hidden_ids   = $this->get_hidden_ids();
+		$count        = count(array_values(array_intersect($hidden_ids, $existing_ids)));
+
+		wp_send_json_success([
+			'id'     => $id,
+			'hidden' => ($mode === 'hide') ? 1 : 0,
+			'count'  => $count,
+		]);
+	}
+
+	public function ajax_get_hidden() {
+		if (!current_user_can('manage_options')) wp_send_json_error(['message'=>'Unauthorized'], 403);
+		check_ajax_referer('wsss_toggle', 'nonce');
+
+		$ids      = $this->get_hidden_ids();
+		$snippets = $this->get_snippets();
+		$by_id    = [];
+		foreach ($snippets as $s) $by_id[$s['id']] = $s;
+
+		$out = [];
+		foreach ($ids as $id) {
+			if (isset($by_id[$id])) {
+				$out[] = [
+					'id'     => (int) $id,
+					'name'   => (string) $by_id[$id]['name'],
+					'active' => (int) $by_id[$id]['active'],
+				];
+			}
+		}
+
+		wp_send_json_success(['hidden' => $out, 'count' => count($out)]);
+	}
+
+	public function ajax_get_tags() {
+		if (!current_user_can('manage_options')) wp_send_json_error(['message'=>'Unauthorized'], 403);
+		check_ajax_referer('wsss_toggle', 'nonce');
+
+		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+		if (!$id) wp_send_json_error(['message'=>'Bad request'], 400);
+
+		$items = array_values(array_unique(array_merge(
+			$this->get_cs_tags_for($id),
+			$this->get_tags_for($id)
+		)));
+
+		wp_send_json_success(['id' => $id, 'items' => $items]);
+	}
+
+	/* Styles & Scripts */
+	private function on_our_screen() : bool {
+		$screen = function_exists('get_current_screen') ? get_current_screen() : null;
+		if (!$screen) return false;
+		return in_array($screen->id, ['dashboard','tools_page_wsss-switchboard'], true);
+	}
+
+	public function inline_css() {
+		if (!$this->on_our_screen()) return; ?>
+		<style>
+			/* Edge-to-edge widget */
+			#wsss_dashboard_widget .inside { padding: 0; margin: 0; }
+			#wsss_dashboard_widget.postbox { border-color: #d0d7de; }
+
+			/* Header */
+			.wsss-header{ display:flex; align-items:center; justify-content:flex-end; padding:10px 12px 0; }
+			.wsss-header .wsss-badge{
+				display:inline-block; min-width:18px; padding:0 6px; margin-left:6px;
+				font-size:11px; line-height:18px; text-align:center; border-radius:999px;
+				color:#111; background:#e5e7eb; border:1px solid #d1d5db;
+			}
+
+			/* Grid */
+			.wsss-grid{
+				display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; padding:12px;
+			}
+			@media (max-width:1100px){ .wsss-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+			@media (max-width:700px){  .wsss-grid{ grid-template-columns:1fr; } }
+
+			/* Card */
+			.wsss-item{
+				display:flex; align-items:center; justify-content:space-between;
+				height:60px; padding:0 12px;
+				border:1px solid #e5e7eb; border-radius:10px; background:#fff;
+				box-shadow:0 1px 0 rgba(0,0,0,.02);
+			}
+			.wsss-item:hover{ background:#f9fafb; }
+			.wsss-name{
+				font-size:13px; font-weight:600; color:#1f2328;
+				display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+				overflow:hidden; line-height:1.2; max-height:calc(1.2em * 2);
+				padding-right:10px; word-break:break-word;
+			}
+			.wsss-actions{ display:flex; align-items:center; gap:8px; }
+
+			/* Icon buttons (22x22) + tooltips */
+			.wsss-icon{
+				width:22px; height:22px; padding:0; border-radius:6px;
+				border:1px solid #e5e7eb; background:#fff; cursor:pointer;
+				display:inline-flex; align-items:center; justify-content:center;
+				position:relative;
+			}
+			.wsss-icon:hover{ background:#f3f4f6; }
+			.wsss-icon .dashicons{ line-height:1; width:16px; height:16px; font-size:16px; }
+			/* Tooltips (14px) */
+			.wsss-icon[data-tip]:hover::after{
+				content: attr(data-tip);
+				position:absolute; bottom: calc(100% + 6px); left:50%; transform: translateX(-50%);
+				background: #111; color:#fff; font-size:14px; padding:6px 8px; border-radius:6px; white-space:nowrap;
+				box-shadow:0 2px 8px rgba(0,0,0,.18); z-index:2;
+			}
+			.wsss-icon[data-tip]:hover::before{
+				content:''; position:absolute; bottom:100%; left:50%; transform:translateX(-50%);
+				border:6px solid transparent; border-top-color:#111;
+			}
+
+			/* Dot toggle â€” perfect circle 22x22 */
+			.wsss-dot-toggle{
+				width:22px; height:22px; padding:0; box-sizing:content-box;
+				border-radius:50%; border:1px solid #d0d7de; background:#fff; cursor:pointer;
+				display:inline-flex; align-items:center; justify-content:center;
+				transition:border-color .2s, box-shadow .2s, background .2s;
+				position:relative;
+			}
+			.wsss-dot-toggle:focus{ outline:2px solid #2271b1; outline-offset:2px; }
+			.wsss-dot-toggle[aria-checked="true"]{ background:#e6ffed; border-color:#86efac; }
+			.wsss-dot{
+				width:10px; height:10px; border-radius:50%;
+				background:#cbd5e1; transition: transform .18s ease, background-color .18s ease, box-shadow .18s ease;
+			}
+			.wsss-dot-toggle[aria-checked="true"] .wsss-dot{
+				background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.18); transform:scale(1.02);
+			}
+			/* Tooltip on toggle */
+			.wsss-dot-toggle[data-tip]:hover::after{
+				content: attr(data-tip);
+				position:absolute; bottom: calc(100% + 6px); left:50%; transform: translateX(-50%);
+				background: #111; color:#fff; font-size:14px; padding:6px 8px; border-radius:6px; white-space:nowrap;
+				box-shadow:0 2px 8px rgba(0,0,0,.18); z-index:2;
+			}
+			.wsss-dot-toggle[data-tip]:hover::before{
+				content:''; position:absolute; bottom:100%; left:50%; transform:translateX(-50%);
+				border:6px solid transparent; border-top-color:#111;
+			}
+
+			/* Hidden tray */
+			.wsss-hidden-tray{
+				margin:0 12px 12px; border:1px solid #e5e7eb; border-radius:10px; background:#fff;
+				padding:10px; box-shadow:0 1px 0 rgba(0,0,0,.02);
+			}
+			.wsss-hidden-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+			.wsss-muted{ color:#6b7280; font-size:12px; }
+			.wsss-hidden-list{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+			.wsss-hidden-item{
+				display:flex; align-items:center; justify-content:space-between; height:40px; padding:0 10px;
+				border:1px dashed #e5e7eb; border-radius:8px; background:#fafafa;
+			}
+			.wsss-unhide{
+				width:22px; height:22px; border-radius:6px; border:1px solid #e5e7eb; background:#fff; cursor:pointer;
+				display:inline-flex; align-items:center; justify-content:center;
+			}
+			.wsss-unhide:hover{ background:#f3f4f6; }
+
+			/* Modal (read-only) */
+			.wsss-modal[hidden]{ display:none; }
+			.wsss-modal{ position:fixed; inset:0; z-index:100000; }
+			.wsss-modal-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.35); }
+			.wsss-modal-card{
+				position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+				width:min(720px,92vw); max-height:80vh; overflow:auto;
+				background:#fff; border-radius:12px; border:1px solid #e5e7eb;
+				box-shadow:0 20px 60px rgba(0,0,0,.2);
+			}
+			.wsss-modal-head{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #e5e7eb; }
+			.wsss-modal-body{ padding:14px 16px; display:grid; gap:12px; }
+			.wsss-tags-view{ display:flex; flex-wrap:wrap; gap:8px; }
+			.wsss-chip{
+				display:inline-flex; align-items:center; gap:6px;
+				padding:6px 10px; border-radius:999px; font-size:12px;
+				border:1px solid #e5e7eb; background:#f9fafb;
+			}
+			.wsss-chip.link{ background:#eef6ff; border-color:#cfe3ff; }
+			.wsss-chip.youtube{ background:#ffeef0; border-color:#ffcfd5; }
+		</style>
+		<?php
+	}
+
+	public function inline_css_dashboard_fallback() { ?>
+		<style>
+			#dashboard-widgets .postbox-container { width:100% !important; }
+			#dashboard-widgets #postbox-container-2,
+			#dashboard-widgets #postbox-container-3,
+			#dashboard-widgets #postbox-container-4 { display:none !important; }
+		</style>
+		<?php
+	}
+
+	public function inline_js() {
+		if (!$this->on_our_screen()) return;
+
+		$nonce = wp_create_nonce('wsss_toggle');
+		$ajax  = admin_url('admin-ajax.php'); ?>
+		<script>
+			window.WSSS = { ajax: "<?php echo esc_js($ajax); ?>", nonce: "<?php echo esc_js($nonce); ?>" };
+
+			(function($){
+
+				function updateHiddenBadge(count){
+					$('.wsss-badge').text(count).attr('data-count', count);
+				}
+
+				/* -------- Edit (go to snippet) -------- */
+				$(document).on('click', '.wsss-edit', function(){
+					const $item = $(this).closest('.wsss-item');
+					const url   = $item.data('edit-url');
+					if (url) { window.location.href = url; }
+				});
+
+				/* -------- Toggle on/off -------- */
+				$(document).on('click', '.wsss-dot-toggle', function(e){
+					e.preventDefault();
+					const $btn  = $(this);
+					const $item = $btn.closest('.wsss-item');
+					const id    = parseInt($item.data('id'), 10);
+					const state = $btn.attr('data-state'); // 'on' means currently active
+
+					$btn.prop('disabled', true);
+
+					$.post(WSSS.ajax, {
+						action: 'wsss_toggle_snippet',
+						nonce:  WSSS.nonce,
+						id:     id,
+						state:  state
+					}).done(function(res){
+						if(!res || !res.success) { alert((res && res.data && res.data.message) ? res.data.message : 'Failed.'); return; }
+						const active = !!res.data.active;
+						$btn.attr('aria-checked', active ? 'true' : 'false')
+						    .attr('data-state', res.data.state)
+						    .attr('data-tip', active ? 'Deactivate' : 'Activate')
+						    .attr('aria-label', (active ? 'Deactivate ' : 'Activate ')+$item.find('.wsss-name').text().trim());
+					}).fail(function(xhr){
+						alert('Error: ' + (xhr.responseJSON?.data?.message || xhr.statusText));
+					}).always(function(){ $btn.prop('disabled', false); });
+				});
+
+				/* -------- Hide / Unhide -------- */
+				$(document).on('click', '.wsss-hide', function(){
+					const $item = $(this).closest('.wsss-item');
+					const id    = parseInt($item.data('id'), 10);
+
+					$.post(WSSS.ajax, {
+						action: 'wsss_hide_snippet',
+						nonce:  WSSS.nonce,
+						id:     id,
+						mode:   'hide'
+					}).done(function(res){
+						if(!res || !res.success){ alert(res?.data?.message || 'Failed.'); return; }
+						updateHiddenBadge(res.data.count);
+						$item.remove();
+					}).fail(function(xhr){
+						alert('Error: ' + (xhr.responseJSON?.data?.message || xhr.statusText));
+					});
+				});
+
+				// Always reload hidden tray fresh on open
+				$(document).on('click', '.wsss-show-hidden', function(){
+					const $btn  = $(this);
+					const $tray = $('#wsss-hidden-tray');
+					const expanded = $btn.attr('aria-expanded') === 'true';
+					if (expanded) { $btn.attr('aria-expanded', 'false'); $tray.prop('hidden', true); return; }
+					$btn.attr('aria-expanded', 'true'); $tray.prop('hidden', false);
+
+					$.post(WSSS.ajax, { action:'wsss_get_hidden', nonce:WSSS.nonce })
+					.done(function(res){
+						if(!res || !res.success){ alert(res?.data?.message || 'Failed.'); return; }
+						updateHiddenBadge(res.data.count);
+						const list = res.data.hidden || [];
+						const $list = $('.wsss-hidden-list').empty();
+						if (!list.length) {
+							$list.append('<div class="wsss-muted" style="grid-column:1/-1;padding:6px 0;">Nothing hidden.</div>');
+							return;
+						}
+						list.forEach(function(s){
+							const item = $('<div class="wsss-hidden-item" role="listitem" data-id="'+s.id+'">\
+								<div class="wsss-name" title="'+s.name+'">'+s.name+'</div>\
+								<button class="wsss-unhide" type="button" aria-label="Unhide '+s.name+'" title="Unhide">\
+									<span class="dashicons dashicons-visibility"></span>\
+								</button>\
+							</div>');
+							$list.append(item);
+						});
+					}).fail(function(xhr){
+						alert('Error: ' + (xhr.responseJSON?.data?.message || xhr.statusText));
+					});
+				});
+
+				$(document).on('click', '.wsss-unhide', function(){
+					const $row = $(this).closest('.wsss-hidden-item');
+					const id   = parseInt($row.data('id'), 10);
+
+					$.post(WSSS.ajax, {
+						action: 'wsss_hide_snippet', nonce:  WSSS.nonce, id: id, mode: 'unhide'
+					}).done(function(res){
+						if(!res || !res.success){ alert(res?.data?.message || 'Failed.'); return; }
+						updateHiddenBadge(res.data.count);
+
+						const name = $row.find('.wsss-name').attr('title') || $row.find('.wsss-name').text();
+						const card = $('<div class="wsss-item" role="listitem" data-id="'+id+'" data-edit-url="<?php echo esc_js(admin_url('admin.php?page=edit-snippet&id=')); ?>'+id+'">\
+							<div class="wsss-name" title="'+name+'">'+name+'</div>\
+							<div class="wsss-actions">\
+								<button class="wsss-icon wsss-edit" type="button" aria-label="Edit '+name+'" data-tip="Edit"><span class="dashicons dashicons-edit"></span></button>\
+								<button class="wsss-icon wsss-hide" type="button" aria-label="Hide '+name+'" data-tip="Hide"><span class="dashicons dashicons-hidden"></span></button>\
+								<button class="wsss-dot-toggle" role="switch" aria-checked="false" data-state="off" aria-label="Activate '+name+'" data-tip="Activate"><span class="wsss-dot"></span></button>\
+							</div>\
+						</div>');
+						$('.wsss-grid').append(card);
+						$row.remove();
+					}).fail(function(xhr){
+						alert('Error: ' + (xhr.responseJSON?.data?.message || xhr.statusText));
+					});
+				});
+
+				/* -------- Tags (read-only modal) -------- */
+				let currentTagId = null;
+
+				function openModal(title){
+					$('#wsss-modal .wsss-modal-title').text(title);
+					$('#wsss-modal').removeAttr('hidden').attr('aria-hidden','false');
+					$('body').css('overflow','hidden');
+				}
+				function closeModal(){
+					$('#wsss-modal').attr('hidden', true).attr('aria-hidden','true');
+					$('body').css('overflow','');
+					currentTagId = null;
+				}
+				function looksLikeUrl(s){ return /^(https?:)?\/\//i.test(s); }
+				function isYouTube(s){ return /(?:youtube\.com\/watch\?v=|youtu\.be\/)/i.test(s); }
+
+				function renderTags(items){
+					const $view = $('.wsss-tags-view').empty();
+					if (!items.length) {
+						$view.append('<span class="wsss-muted">No tags.</span>');
+						return;
+					}
+					items.forEach(function(it){
+						const safe = $('<div/>').text(it).html();
+						if (looksLikeUrl(it)) {
+							const cls = isYouTube(it) ? 'youtube' : 'link';
+							$view.append('<a class="wsss-chip '+cls+'" href="'+it+'" target="_blank" rel="noopener noreferrer">'+safe+'</a>');
+						} else {
+							$view.append('<span class="wsss-chip">'+safe+'</span>');
+						}
+					});
+				}
+
+				function loadTags(id, title){
+					$.post(WSSS.ajax, { action:'wsss_get_tags', nonce:WSSS.nonce, id:id })
+					.done(function(res){
+						if(!res || !res.success){ alert(res?.data?.message || 'Failed.'); return; }
+						renderTags(res.data.items || []);
+						openModal(title);
+					}).fail(function(xhr){
+						alert('Error: ' + (xhr.responseJSON?.data?.message || xhr.statusText));
+					});
+				}
+
+				$(document).on('click', '.wsss-tags-link', function(){
+					const $item = $(this).closest('.wsss-item');
+					const id    = parseInt($item.data('id'), 10);
+					const title = $item.find('.wsss-name').text().trim();
+					currentTagId = id;
+					loadTags(id, title);
+				});
+
+				$(document).on('click', '.wsss-modal-close, .wsss-modal-backdrop', function(){ closeModal(); });
+				$(document).on('keydown', function(e){ if (e.key === 'Escape' && $('#wsss-modal').is(':visible')) { closeModal(); } });
+
+			})(jQuery);
+		</script>
+		<?php
+	}
+}
+
+new WSS_Snippets_Switchboard_Grid();
+
+
+
+
+
+/**1. let this code work only for codesnippets plugin and let there be a replica of this for our own codesnippet, meaning if user do not install codesnippets plugin they can still have this option to toggle.
+2. let there be a selector box admin that can pick more than one snippests to hide or delete, meaning there is going to be more options at the top to select , the only option there is hide  */
+
+

@@ -58,7 +58,9 @@ class Ofast_X_Settings
         $modules = $this->get_available_modules();
         $enabled_modules = array();
 
-        foreach ($modules as $slug => $name) {
+        foreach ($modules as $slug => $data) {
+            // Skip locked modules
+            if (!empty($data['locked'])) continue;
             $enabled_modules[$slug] = isset($_POST['modules'][$slug]);
         }
 
@@ -110,18 +112,25 @@ class Ofast_X_Settings
                                     </label>
                                 </th>
                                 <td>
-                                    <label class="ofast-toggle-switch">
-                                        <input
-                                            type="checkbox"
-                                            name="modules[<?php echo esc_attr($slug); ?>]"
-                                            id="module_<?php echo esc_attr($slug); ?>"
-                                            value="1"
-                                            <?php checked(!empty($enabled[$slug])); ?>>
-                                        <span class="slider"></span>
-                                    </label>
+                                    <?php if (!empty($data['locked'])): ?>
+                                        <span class="ofast-badge active">Always On</span>
+                                    <?php else: ?>
+                                        <label class="ofast-toggle-switch">
+                                            <input
+                                                type="checkbox"
+                                                name="modules[<?php echo esc_attr($slug); ?>]"
+                                                id="module_<?php echo esc_attr($slug); ?>"
+                                                value="1"
+                                                <?php checked(!empty($enabled[$slug])); ?>>
+                                            <span class="slider"></span>
+                                        </label>
+                                    <?php endif; ?>
                                     <p class="description"><?php echo esc_html($data['description']); ?></p>
-                                    <?php if (!empty($data['badge'])): ?>
-                                        <span class="ofast-badge"><?php echo esc_html($data['badge']); ?></span>
+                                    <?php if (!empty($data['status'])): ?>
+                                        <span class="ofast-badge" style="background:#d1ecf1;color:#0c5460;"><?php echo esc_html($data['status']); ?></span>
+                                    <?php endif; ?>
+                                    <?php if (!empty($data['coming_soon'])): ?>
+                                        <span class="ofast-badge coming-soon">Coming Soon</span>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -215,67 +224,72 @@ class Ofast_X_Settings
      */
     private function get_available_modules()
     {
+        $enabled = get_option('ofastx_modules_enabled', array());
+
         return array(
+            'dashboard' => array(
+                'name' => 'Dashboard Module',
+                'description' => 'Custom dashboard with user statistics',
+                'locked' => true,
+            ),
             'email' => array(
                 'name' => 'Email Module',
                 'description' => 'Send bulk emails to users with scheduling and templates',
-                'badge' => 'Active'
             ),
             'debug' => array(
                 'name' => 'Debug Indicator',
                 'description' => 'Shows debug mode indicator in admin bar',
-                'badge' => 'Active'
+            ),
+            'newsletter' => array(
+                'name' => 'Newsletter Subscriptions',
+                'description' => 'Newsletter signup forms with admin management',
+                'status' => 'Ready to integrate',
+            ),
+            'snippets' => array(
+                'name' => 'Code Snippets Manager',
+                'description' => 'Manage code snippets with toggle switches',
+                'status' => 'Ready to integrate',
+            ),
+            'admin-design' => array(
+                'name' => 'WP Admin Design',
+                'description' => 'Modern glassmorphism styling for WordPress admin',
+                'status' => 'Ready to integrate',
+            ),
+            'whos-admin' => array(
+                'name' => 'Who\'s Admin Widget',
+                'description' => 'Dashboard widget showing admin users and designer details',
+                'status' => 'Ready to integrate',
             ),
             'smtp' => array(
                 'name' => 'SMTP Configuration',
                 'description' => 'Custom SMTP settings for reliable email delivery',
-                'badge' => 'Coming Soon'
+                'coming_soon' => true,
             ),
-            'newsletter' => array(
-                'name' => 'Newsletter Manager',
-                'description' => 'Create and manage email newsletters',
-                'badge' => 'Coming Soon'
-            ),
-            'contact' => array(
+            'forms' => array(
                 'name' => 'Contact Forms',
                 'description' => 'Custom contact form builder',
-                'badge' => 'Coming Soon'
+                'coming_soon' => true,
             ),
-            'seo' => array(
-                'name' => 'SEO Optimizer',
-                'description' => 'On-page SEO tools and meta management',
-                'badge' => 'Coming Soon'
+            'redirects' => array(
+                'name' => 'Redirects Manager',
+                'description' => '301/302 redirects with import/export',
+                'coming_soon' => true,
             ),
-            'analytics' => array(
-                'name' => 'Analytics Dashboard',
-                'description' => 'Track site performance and user behavior',
-                'badge' => 'Coming Soon'
+            'google-sheets' => array(
+                'name' => 'Google Sheets Integration',
+                'description' => 'Sync form submissions to Google Sheets',
+                'coming_soon' => true,
             ),
-            'backup' => array(
-                'name' => 'Backup Manager',
-                'description' => 'Automated database and file backups',
-                'badge' => 'Coming Soon'
+            'header' => array(
+                'name' => 'Header Customizer',
+                'description' => 'Add custom code to site header',
+                'coming_soon' => true,
             ),
-            'security' => array(
-                'name' => 'Security Scanner',
-                'description' => 'Malware scanning and security hardening',
-                'badge' => 'Coming Soon'
+            'admin-url' => array(
+                'name' => 'Admin URL Customizer',
+                'description' => 'Change /wp-admin URL for security',
+                'coming_soon' => true,
             ),
-            'performance' => array(
-                'name' => 'Performance Optimizer',
-                'description' => 'Caching, minification, and speed optimization',
-                'badge' => 'Coming Soon'
-            ),
-            'woocommerce' => array(
-                'name' => 'WooCommerce Integration',
-                'description' => 'Enhanced WooCommerce features',
-                'badge' => 'Coming Soon'
-            ),
-            'learndash' => array(
-                'name' => 'LearnDash Integration',
-                'description' => 'LMS enhancements for LearnDash',
-                'badge' => 'Coming Soon'
-            )
         );
     }
 }

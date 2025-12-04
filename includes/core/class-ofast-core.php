@@ -60,6 +60,22 @@ class Ofast_X_Core
         if ($this->is_module_enabled('debug')) {
             $this->load_debug_indicator();
         }
+
+        if ($this->is_module_enabled('admin-design')) {
+            $this->load_admin_design();
+        }
+
+        if ($this->is_module_enabled('whos-admin')) {
+            $this->load_whos_admin();
+        }
+
+        if ($this->is_module_enabled('snippets')) {
+            $this->load_snippets();
+        }
+
+        if ($this->is_module_enabled('newsletter')) {
+            $this->load_newsletter();
+        }
     }
 
     /**
@@ -123,6 +139,58 @@ class Ofast_X_Core
         $debug_indicator->init();
 
         $this->modules['debug'] = $debug_indicator;
+    }
+
+    /**
+     * Load WP Admin Design Module
+     */
+    private function load_admin_design()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-design/class-ofast-admin-design.php';
+
+        $admin_design = new Ofast_X_Admin_Design();
+        $admin_design->init();
+
+        $this->modules['admin-design'] = $admin_design;
+    }
+
+    /**
+     * Load Who's Admin Module
+     */
+    private function load_whos_admin()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/whos-admin/class-ofast-whos-admin.php';
+
+        $whos_admin = new Ofast_X_Whos_Admin();
+        $whos_admin->init();
+
+        $this->modules['whos-admin'] = $whos_admin;
+    }
+
+    /**
+     * Load Code Snippets Module
+     */
+    private function load_snippets()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/snippets/class-ofast-snippets.php';
+
+        $snippets = new Ofast_X_Snippets();
+        $snippets->init();
+
+        $this->modules['snippets'] = $snippets;
+    }
+
+    /**
+     * Load Newsletter Module
+     */
+    private function load_newsletter()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/newsletter/class-ofast-newsletter.php';
+
+        $newsletter = new Ofast_X_Newsletter();
+        $newsletter->init();
+
+        $this->modules['newsletter'] = $newsletter;
     }
 
     /**

@@ -1,0 +1,202 @@
+/* Overall WP admin dashboard body */
+body.wp-admin {
+    background: linear-gradient(135deg, #eef2f3, #d9e4f5) !important;
+    font-family: "Segoe UI", sans-serif;
+}
+
+/* Dashboard widgets (cards) */
+#dashboard-widgets-wrap {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+/* Each widget box */
+.postbox {
+    background: rgba(255, 255, 255, 0.65) !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05) !important;
+    backdrop-filter: blur(6px);
+    transition: all 0.3s ease;
+}
+
+/* Hover effect */
+.postbox:hover {
+    transform: scale(1.01);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Widget title */
+.postbox .hndle {
+    background: transparent !important;
+    font-size: 1.1rem !important;
+    font-weight: 600;
+    color: #111 !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 10px 15px;
+}
+
+/* Widget content */
+.inside {
+    padding: 15px !important;
+    font-size: 0.95rem;
+    color: #333;
+}
+
+/* Make buttons more modern */
+.wp-core-ui .button-primary {
+    background-color: #1e88e5 !important;
+    border-color: #1e88e5 !important;
+    color: #fff !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    transition: all 0.2s ease;
+}
+
+.wp-core-ui .button-primary:hover {
+    background-color: #1565c0 !important;
+    border-color: #1565c0 !important;
+}
+
+/* Sidebar menu */
+#adminmenu, #adminmenu .wp-submenu, #adminmenuback, #adminmenuwrap {
+    background: #111827 !important;
+}
+
+#adminmenu .wp-has-current-submenu .wp-submenu .wp-submenu-head,
+#adminmenu a {
+    color: #ffffff !important;
+}
+
+#adminmenu .wp-has-current-submenu > a,
+#adminmenu .wp-menu-arrow,
+#adminmenu .wp-menu-open .wp-submenu,
+#adminmenu li.menu-top:hover,
+#adminmenu li.opensub > a.menu-top,
+.folded #adminmenu .wp-has-current-submenu .wp-submenu,
+#adminmenu .wp-not-current-submenu:hover {
+    background-color: #1f2937 !important;
+}
+
+/* Dashboard welcome panel */
+#welcome-panel {
+    background: rgba(255, 255, 255, 0.7) !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    border-radius: 12px;
+}
+
+/*Top Admin Bar Settings*/
+#wpadminbar {
+  background-color: #1f2937 !important;
+}
+
+#wpadminbar .ab-item, 
+#wpadminbar .ab-label {
+  color: #ffffff !important;
+}
+
+#wpadminbar .ab-item:hover {
+  color: #ffcc00 !important;
+}
+
+/*Modern notice Style*/
+.notice {
+  border-radius: 8px;
+  padding: 15px;
+  font-size: 0.95rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.notice-success {
+  background-color: #e6ffed;
+  border-left: 5px solid #28a745;
+}
+
+.notice-error {
+  background-color: #ffe6e6;
+  border-left: 5px solid #dc3545;
+}
+
+.notice-warning {
+  background-color: #fff8e6;
+  border-left: 5px solid #ffc107;
+}
+
+
+/* === Main Menu Hover: Full Box with Smooth Scrolling Gradient Border === */
+#adminmenu li.menu-top:hover > a {
+    position: relative;
+    background: #1f2937 !important;
+    color: #fff !important;
+    z-index: 1;
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+/* Outer scrolling border */
+#adminmenu li.menu-top:hover > a::before {
+    content: "";
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    width: calc(100% + 4px);
+    height: calc(100% + 4px);
+    background: linear-gradient(270deg, #06f3d1, #f9ba08, #06f3d1);
+    background-size: 600% 600%;
+    animation: movebox 5s linear infinite;
+    z-index: -1;
+    border-radius: 10px;
+}
+
+/* Inner fill to fake the hollow border */
+#adminmenu li.menu-top:hover > a::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: calc(100% - 4px);
+    height: calc(100% - 4px);
+    background: #1f2937;
+    z-index: -1;
+    border-radius: 6px;
+}
+
+/* === Submenu Hover Line Animation === */
+#adminmenu .wp-submenu li > a:hover {
+    position: relative;
+    color: #f9ba08 !important;
+}
+
+#adminmenu .wp-submenu li > a:hover::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 2px;
+    width: 100%;
+    background: linear-gradient(270deg, #06f3d1, #f9ba08, #06f3d1);
+    background-size: 400% 100%;
+    animation: scrollLine 4s linear infinite;
+}
+
+/* === Animation Keyframes === */
+@keyframes movebox {
+    0% {
+        background-position: 0% 50%;
+    }
+    100% {
+        background-position: 100% 50%;
+    }
+}
+
+@keyframes scrollLine {
+    0% {
+        background-position: 0% 0%;
+    }
+    100% {
+        background-position: 100% 0%;
+    }
+}

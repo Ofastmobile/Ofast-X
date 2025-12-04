@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plugin Name: Ofast-X
  * Plugin URI: https://ofastshop.com/ofast-x
@@ -29,19 +30,32 @@ define('OFAST_X_PLUGIN_BASENAME', plugin_basename(__FILE__));
 define('OFAST_X_PLUGIN_FILE', __FILE__);
 
 /**
+ * Load Action Scheduler (for reliable email scheduling)
+ * This replaces unreliable WordPress cron
+ * TEMPORARILY DISABLED - Action Scheduler has compatibility issues
+ */
+/*
+if (!class_exists('ActionScheduler_Versions')) {
+    require_once OFAST_X_PLUGIN_DIR . 'includes/libraries/action-scheduler/action-scheduler.php';
+}
+*/
+
+/**
  * Activation Hook
  */
 register_activation_hook(__FILE__, 'ofast_x_activate_plugin');
-function ofast_x_activate_plugin() {
+function ofast_x_activate_plugin()
+{
     require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-activator.php';
     Ofast_X_Activator::activate();
 }
 
 /**
- * Deactivation Hook
+ *  Deactivation Hook
  */
 register_deactivation_hook(__FILE__, 'ofast_x_deactivate_plugin');
-function ofast_x_deactivate_plugin() {
+function ofast_x_deactivate_plugin()
+{
     require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-activator.php';
     Ofast_X_Activator::deactivate();
 }
@@ -49,11 +63,12 @@ function ofast_x_deactivate_plugin() {
 /**
  * Initialize Plugin
  */
-function ofast_x_init_plugin() {
+function ofast_x_init_plugin()
+{
     // Load core classes
     require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-core.php';
     require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-loader.php';
-    
+
     // Initialize plugin
     $ofast_x = new Ofast_X_Core();
     $ofast_x->run();
@@ -63,7 +78,8 @@ add_action('plugins_loaded', 'ofast_x_init_plugin');
 /**
  * Load Text Domain
  */
-function ofast_x_load_textdomain() {
+function ofast_x_load_textdomain()
+{
     load_plugin_textdomain(
         'ofast-x',
         false,

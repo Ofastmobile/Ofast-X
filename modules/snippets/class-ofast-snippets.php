@@ -155,11 +155,18 @@ class Ofast_X_Snippets
             $id = isset($_POST['snippet_id']) ? intval($_POST['snippet_id']) : 0;
             $name = sanitize_text_field($_POST['snippet_name']);
             $description = isset($_POST['snippet_description']) ? wp_unslash($_POST['snippet_description']) : '';
+            $language = isset($_POST['snippet_language']) ? sanitize_text_field($_POST['snippet_language']) : 'php';
+            $scope = isset($_POST['snippet_scope']) ? sanitize_text_field($_POST['snippet_scope']) : 'global';
+            $location = isset($_POST['snippet_location']) ? sanitize_text_field($_POST['snippet_location']) : 'footer';
+            $run_once = isset($_POST['snippet_run_once']) ? 1 : 0;
             $code = wp_unslash($_POST['snippet_code']);
             $active = isset($_POST['snippet_active']) ? 1 : 0;
 
-            // Validate PHP syntax
-            $validation = $this->validate_php_code($code);
+            // Validate PHP syntax only for PHP snippets
+            $validation = true;
+            if ($language === 'php') {
+                $validation = $this->validate_php_code($code);
+            }
 
             // If validation fails, force inactive and show warning
             if ($validation !== true) {
@@ -175,6 +182,10 @@ class Ofast_X_Snippets
                 $wpdb->update($table, array(
                     'name' => $name,
                     'description' => $description,
+                    'language' => $language,
+                    'scope' => $scope,
+                    'location' => $location,
+                    'run_once' => $run_once,
                     'code' => $code,
                     'active' => $active
                 ), array('id' => $id));
@@ -189,6 +200,10 @@ class Ofast_X_Snippets
                 $wpdb->insert($table, array(
                     'name' => $name,
                     'description' => $description,
+                    'language' => $language,
+                    'scope' => $scope,
+                    'location' => $location,
+                    'run_once' => $run_once,
                     'code' => $code,
                     'active' => $active,
                     'created_at' => current_time('mysql')
@@ -238,14 +253,63 @@ class Ofast_X_Snippets
                                 <textarea name="snippet_description" id="snippet_description" rows="3" class="large-text"
                                     placeholder="Brief description of what this snippet does (optional)"><?php echo $edit_snippet ? esc_textarea($edit_snippet->description) : ''; ?></textarea>
                                 <p class="description">Optional: Add a description to help you remember what this snippet does.</p>
+                        </tr>
+                        <tr>
+                            <th><label for="snippet_language">Language</label></th>
+                            <td>
+                                <select name="snippet_language" id="snippet_language" class="regular-text">
+                                    <option value="php" <?php selected($edit_snippet ? $edit_snippet->language : 'php', 'php'); ?>>🐘 PHP</option>
+                                    <option value="javascript" <?php selected($edit_snippet ? $edit_snippet->language : '', 'javascript'); ?>>📜 JavaScript</option>
+                                    <option value="css" <?php selected($edit_snippet ? $edit_snippet->language : '', 'css'); ?>>🎨 CSS</option>
+                                    <option value="html" <?php selected($edit_snippet ? $edit_snippet->language : '', 'html'); ?>>📄 HTML</option>
+                                </select>
+                                <p class="description">Select the code language for this snippet.</p>
                             </td>
                         </tr>
                         <tr>
-                            <th><label for="snippet_code">PHP Code</label></th>
+                            <th><label for="snippet_scope">Run Location</label></th>
+                            <td>
+                                <select name="snippet_scope" id="snippet_scope" class="regular-text">
+                                    <option value="global" <?php selected($edit_snippet ? $edit_snippet->scope : 'global', 'global'); ?>>🌍 Run Everywhere</option>
+                                    <option value="admin" <?php selected($edit_snippet ? $edit_snippet->scope : '', 'admin'); ?>>🔧 Admin Only</option>
+                                    <option value="frontend" <?php selected($edit_snippet ? $edit_snippet->scope : '', 'frontend'); ?>>🖥️ Frontend Only</option>
+                                </select>
+                                <p class="description">Choose where this snippet should execute.</p>
+                            </td>
+                        </tr>
+                        <tr class="snippet-location-row">
+                            <th><label for="snippet_location">Injection Location</label></th>
+                            <td>
+                                <select name="snippet_location" id="snippet_location" class="regular-text">
+                                    <option value="header" <?php selected($edit_snippet ? $edit_snippet->location : '', 'header'); ?>>📌 Header (before &lt;/head&gt;)</option>
+                                    <option value="body" <?php selected($edit_snippet ? $edit_snippet->location : '', 'body'); ?>>📍 Body (after &lt;body&gt;)</option>
+                                    <option value="footer" <?php selected($edit_snippet ? $edit_snippet->location : 'footer', 'footer'); ?>>📎 Footer (before &lt;/body&gt;)</option>
+                                </select>
+                                <p class="description">Where to inject JS/CSS/HTML code. (PHP always runs on init)</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th><label for="snippet_run_once">Run Once</label></th>
+                            <td>
+                                <label class="ofast-toggle-switch">
+                                    <input type="checkbox" name="snippet_run_once" id="snippet_run_once" value="1" <?php checked($edit_snippet ? $edit_snippet->run_once : false); ?>>
+                                    <span class="ofast-toggle-slider"></span>
+                                    <span class="ofast-toggle-label">Execute only once, then auto-deactivate</span>
+                                </label>
+                                <p class="description">Snippet will run one time and then automatically deactivate itself.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th><label for="snippet_code">Code</label></th>
                             <td>
                                 <textarea name="snippet_code" id="snippet_code" rows="10" class="large-text code" required
-                                    placeholder="// Your PHP code here (without <?php ?> tags)"><?php echo $edit_snippet ? esc_textarea($edit_snippet->code) : ''; ?></textarea>
-                                <p class="description">Enter PHP code without opening/closing PHP tags. Be careful - bad code can break your site!</p>
+                                    placeholder="Enter your code here..."><?php echo $edit_snippet ? esc_textarea($edit_snippet->code) : ''; ?></textarea>
+                                <p class="description" id="snippet_code_help">
+                                    <span class="php-help">Enter PHP code without &lt;?php ?&gt; tags. Be careful - bad code can break your site!</span>
+                                    <span class="js-help" style="display:none;">Enter JavaScript code. Will be wrapped in &lt;script&gt; tags automatically.</span>
+                                    <span class="css-help" style="display:none;">Enter CSS code. Will be wrapped in &lt;style&gt; tags automatically.</span>
+                                    <span class="html-help" style="display:none;">Enter HTML code. Will be output directly on the page.</span>
+                                </p>
                             </td>
                         </tr>
                         <tr>
@@ -363,15 +427,47 @@ class Ofast_X_Snippets
                     <thead>
                         <tr>
                             <th style="width: 50px;">ID</th>
-                            <th style="width: 200px;">Name</th>
+                            <th style="width: 180px;">Name</th>
                             <th>Description</th>
-                            <th style="width: 100px;">Status</th>
-                            <th style="width: 150px;">Created</th>
-                            <th style="width: 150px;">Actions</th>
+                            <th style="width: 70px;">Lang</th>
+                            <th style="width: 80px;">Scope</th>
+                            <th style="width: 70px;">Inject</th>
+                            <th style="width: 80px;">Status</th>
+                            <th style="width: 100px;">Created</th>
+                            <th style="width: 130px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($snippets as $snippet): ?>
+                        <?php foreach ($snippets as $snippet):
+                            // Language badges
+                            $lang_badges = array(
+                                'php' => '🐘',
+                                'javascript' => '📜',
+                                'css' => '🎨',
+                                'html' => '📄'
+                            );
+                            $lang_display = isset($lang_badges[$snippet->language]) ? $lang_badges[$snippet->language] : '🐘';
+
+                            // Scope badges
+                            $scope_badges = array(
+                                'global' => '🌍',
+                                'admin' => '🔧',
+                                'frontend' => '🖥️'
+                            );
+                            $scope_display = isset($scope_badges[$snippet->scope]) ? $scope_badges[$snippet->scope] : '🌍';
+
+                            // Location badges
+                            $loc_badges = array(
+                                'header' => '📌',
+                                'body' => '📍',
+                                'footer' => '📎'
+                            );
+                            $loc = !empty($snippet->location) ? $snippet->location : 'footer';
+                            $loc_display = isset($loc_badges[$loc]) ? $loc_badges[$loc] : '📎';
+
+                            // Run once indicator
+                            $run_once_badge = !empty($snippet->run_once) ? ' 🔂' : '';
+                        ?>
                             <tr>
                                 <td><?php echo $snippet->id; ?></td>
                                 <td>
@@ -390,13 +486,16 @@ class Ofast_X_Snippets
                                     }
                                     ?>
                                 </td>
+                                <td><span style="font-size: 14px;" title="<?php echo esc_attr($snippet->language ?: 'php'); ?>"><?php echo $lang_display; ?></span></td>
+                                <td><span style="font-size: 14px;" title="<?php echo esc_attr($snippet->scope ?: 'global'); ?>"><?php echo $scope_display; ?></span></td>
+                                <td><span style="font-size: 14px;" title="<?php echo esc_attr($loc); ?>"><?php echo $loc_display . $run_once_badge; ?></span></td>
                                 <td>
                                     <button class="button button-small ofast-snippet-toggle <?php echo $snippet->active ? 'button-primary' : ''; ?>"
                                         data-id="<?php echo $snippet->id; ?>" data-active="<?php echo $snippet->active; ?>">
-                                        <?php echo $snippet->active ? 'Activated' : 'Deactivated'; ?>
+                                        <?php echo $snippet->active ? '✓' : '✗'; ?>
                                     </button>
                                 </td>
-                                <td><?php echo date('M j, Y', strtotime($snippet->created_at)); ?></td>
+                                <td style="font-size: 11px;"><?php echo date('M j', strtotime($snippet->created_at)); ?></td>
                                 <td>
                                     <a href="?page=ofast-snippets&edit=<?php echo $snippet->id; ?>" class="button button-small">✏️ Edit</a>
                                     <button class="button button-small button-link-delete ofast-snippet-delete"
@@ -512,6 +611,13 @@ class Ofast_X_Snippets
                         $(this).blur();
                     }
                 });
+
+                // Language selector - toggle help text
+                $('#snippet_language').on('change', function() {
+                    var lang = $(this).val();
+                    $('.php-help, .js-help, .css-help, .html-help').hide();
+                    $('.' + lang.replace('javascript', 'js') + '-help').show();
+                }).trigger('change');
             });
         </script>
 <?php
@@ -535,10 +641,10 @@ class Ofast_X_Snippets
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_snippets';
 
-        // If turning ON, validate first
+        // If turning ON, validate first (only for PHP snippets)
         if ($new_active == 1) {
-            $snippet = $wpdb->get_row($wpdb->prepare("SELECT code FROM $table WHERE id = %d", $id));
-            if ($snippet) {
+            $snippet = $wpdb->get_row($wpdb->prepare("SELECT code, language FROM $table WHERE id = %d", $id));
+            if ($snippet && ($snippet->language === 'php' || empty($snippet->language))) {
                 $validation = $this->validate_php_code($snippet->code);
                 if ($validation !== true) {
                     wp_send_json_error('Cannot activate: ' . $validation);
@@ -615,14 +721,147 @@ class Ofast_X_Snippets
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_snippets';
 
-        $snippets = $wpdb->get_results("SELECT code FROM $table WHERE active = 1");
+        // Get all active snippets with all relevant fields
+        $snippets = $wpdb->get_results("SELECT id, code, language, scope, location, run_once, executed_at FROM $table WHERE active = 1");
 
         foreach ($snippets as $snippet) {
-            try {
-                eval($snippet->code);
-            } catch (Exception $e) {
-                error_log('Ofast Snippet Error: ' . $e->getMessage());
+            // Check scope
+            $should_run = $this->should_snippet_run($snippet->scope);
+            if (!$should_run) {
+                continue;
             }
+
+            // Check run_once - if already executed, skip and deactivate
+            if ($snippet->run_once && !empty($snippet->executed_at)) {
+                $wpdb->update($table, array('active' => 0), array('id' => $snippet->id));
+                continue;
+            }
+
+            // Execute based on language
+            $language = !empty($snippet->language) ? $snippet->language : 'php';
+            $location = !empty($snippet->location) ? $snippet->location : 'footer';
+
+            switch ($language) {
+                case 'php':
+                    $this->execute_php_snippet($snippet->code, $snippet->id, $snippet->run_once);
+                    break;
+                case 'javascript':
+                    $this->execute_js_snippet($snippet->code, $location, $snippet->id, $snippet->run_once);
+                    break;
+                case 'css':
+                    $this->execute_css_snippet($snippet->code, $location, $snippet->id, $snippet->run_once);
+                    break;
+                case 'html':
+                    $this->execute_html_snippet($snippet->code, $location, $snippet->id, $snippet->run_once);
+                    break;
+            }
+        }
+    }
+
+    /**
+     * Check if snippet should run based on scope
+     */
+    private function should_snippet_run($scope)
+    {
+        $scope = !empty($scope) ? $scope : 'global';
+
+        switch ($scope) {
+            case 'admin':
+                return is_admin();
+            case 'frontend':
+                return !is_admin();
+            case 'global':
+            default:
+                return true;
+        }
+    }
+
+    /**
+     * Mark snippet as executed (for run_once)
+     */
+    private function mark_snippet_executed($snippet_id, $run_once)
+    {
+        if (!$run_once) return;
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+        $wpdb->update($table, array(
+            'executed_at' => current_time('mysql'),
+            'active' => 0
+        ), array('id' => $snippet_id));
+    }
+
+    /**
+     * Execute PHP snippet
+     */
+    private function execute_php_snippet($code, $snippet_id = 0, $run_once = false)
+    {
+        try {
+            eval($code);
+            $this->mark_snippet_executed($snippet_id, $run_once);
+        } catch (Exception $e) {
+            error_log('Ofast PHP Snippet Error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Execute JavaScript snippet
+     */
+    private function execute_js_snippet($code, $location = 'footer', $snippet_id = 0, $run_once = false)
+    {
+        $hook = $this->get_injection_hook($location, 'js');
+        $self = $this;
+
+        add_action($hook, function () use ($code, $snippet_id, $run_once, $self) {
+            echo "\n<script>\n" . $code . "\n</script>\n";
+            $self->mark_snippet_executed($snippet_id, $run_once);
+        }, 100);
+    }
+
+    /**
+     * Execute CSS snippet
+     */
+    private function execute_css_snippet($code, $location = 'header', $snippet_id = 0, $run_once = false)
+    {
+        $hook = $this->get_injection_hook($location, 'css');
+        $self = $this;
+
+        add_action($hook, function () use ($code, $snippet_id, $run_once, $self) {
+            echo "\n<style>\n" . $code . "\n</style>\n";
+            $self->mark_snippet_executed($snippet_id, $run_once);
+        }, 100);
+    }
+
+    /**
+     * Execute HTML snippet
+     */
+    private function execute_html_snippet($code, $location = 'footer', $snippet_id = 0, $run_once = false)
+    {
+        $hook = $this->get_injection_hook($location, 'html');
+        $self = $this;
+
+        add_action($hook, function () use ($code, $snippet_id, $run_once, $self) {
+            echo "\n" . $code . "\n";
+            $self->mark_snippet_executed($snippet_id, $run_once);
+        }, 100);
+    }
+
+    /**
+     * Get WordPress hook based on injection location
+     */
+    private function get_injection_hook($location, $type = 'js')
+    {
+        $is_admin = is_admin();
+
+        switch ($location) {
+            case 'header':
+                return $is_admin ? 'admin_head' : 'wp_head';
+            case 'body':
+                // wp_body_open is only available on frontend
+                return $is_admin ? 'admin_head' : 'wp_body_open';
+            case 'footer':
+            default:
+                return $is_admin ? 'admin_footer' : 'wp_footer';
         }
     }
 

@@ -33,6 +33,9 @@ class Ofast_X_Snippets
         add_action('wp_ajax_ofast_toggle_snippet', array($this, 'ajax_toggle_snippet'));
         add_action('wp_ajax_ofast_delete_snippet', array($this, 'ajax_delete_snippet'));
         add_action('wp_ajax_ofast_rename_snippet', array($this, 'ajax_rename_snippet'));
+        add_action('wp_ajax_ofast_export_snippets', array($this, 'ajax_export_snippets'));
+        add_action('wp_ajax_ofast_import_snippets', array($this, 'ajax_import_snippets'));
+        add_action('wp_ajax_ofast_bulk_action_snippets', array($this, 'ajax_bulk_action_snippets'));
 
         // Execute active snippets
         add_action('init', array($this, 'execute_snippets'), 999);
@@ -242,6 +245,27 @@ class Ofast_X_Snippets
         <div class="wrap">
             <h1>📝 Code Snippets Manager</h1>
             <p>Add PHP code snippets that run on your WordPress site. Use with caution!</p>
+
+            <!-- Action Buttons Bar -->
+            <div style="background: #f0f6fc; border: 1px solid #c3d9ed; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <a href="<?php echo admin_url('admin.php?page=ofast-snippets'); ?>" class="button button-primary" style="display: inline-flex; align-items: center; gap: 5px;">
+                    ➕ New Snippet
+                </a>
+                <select id="ofast-export-type" class="regular-text" style="width: auto;">
+                    <option value="json">Export as JSON</option>
+                    <option value="code">Export as Code</option>
+                </select>
+                <button type="button" class="button" id="ofast-export-snippets" style="display: inline-flex; align-items: center; gap: 5px;">
+                    📤 Export
+                </button>
+                <button type="button" class="button" id="ofast-import-snippets-btn" style="display: inline-flex; align-items: center; gap: 5px;">
+                    📥 Import
+                </button>
+                <input type="file" id="ofast-import-file" accept=".json" style="display: none;">
+                <span style="color: #666; font-size: 12px; margin-left: auto;">
+                    Total: <?php echo count($snippets); ?> snippet(s)
+                </span>
+            </div>
 
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
                 <h2><?php echo $editing ? 'Edit Snippet' : 'Add New Snippet'; ?></h2>
@@ -467,92 +491,100 @@ class Ofast_X_Snippets
             <?php if (empty($snippets)): ?>
                 <p style="color: #999;">No snippets yet. Add your first one above!</p>
             <?php else: ?>
-                <table class="wp-list-table widefat fixed striped">
-                    <thead>
-                        <tr>
-                            <th style="width: 50px;">ID</th>
-                            <th style="width: 180px;">Name</th>
-                            <th>Description</th>
-                            <th style="width: 70px;">Lang</th>
-                            <th style="width: 80px;">Scope</th>
-                            <th style="width: 70px;">Inject</th>
-                            <th style="width: 80px;">Status</th>
-                            <th style="width: 100px;">Created</th>
-                            <th style="width: 130px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($snippets as $snippet):
-                            // Language badges
-                            $lang_badges = array(
-                                'php' => '🐘',
-                                'javascript' => '📜',
-                                'css' => '🎨',
-                                'html' => '📄'
-                            );
-                            $lang_display = isset($lang_badges[$snippet->language]) ? $lang_badges[$snippet->language] : '🐘';
+                <!-- Search and Bulk Actions Bar -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <select id="bulk-action-select" class="regular-text" style="width: auto;">
+                            <option value="">Bulk Actions</option>
+                            <option value="activate">✓ Activate</option>
+                            <option value="deactivate">✗ Deactivate</option>
+                            <option value="delete">🗑️ Delete</option>
+                        </select>
+                        <button type="button" class="button" id="apply-bulk-action">Apply</button>
+                    </div>
+                    <div>
+                        <input type="text" id="snippet-search" placeholder="🔍 Search snippets..." style="width: 250px;">
+                    </div>
+                </div>
 
-                            // Scope badges
-                            $scope_badges = array(
-                                'global' => '🌍',
-                                'admin' => '🔧',
-                                'frontend' => '🖥️'
-                            );
-                            $scope_display = isset($scope_badges[$snippet->scope]) ? $scope_badges[$snippet->scope] : '🌍';
-
-                            // Location badges
-                            $loc_badges = array(
-                                'header' => '📌',
-                                'body' => '📍',
-                                'footer' => '📎'
-                            );
-                            $loc = !empty($snippet->location) ? $snippet->location : 'footer';
-                            $loc_display = isset($loc_badges[$loc]) ? $loc_badges[$loc] : '📎';
-
-                            // Run once indicator
-                            $run_once_badge = !empty($snippet->run_once) ? ' 🔂' : '';
-                        ?>
+                <!-- Scrollable Table Container -->
+                <div style="overflow-x: auto; max-width: 100%;">
+                    <table class="wp-list-table widefat fixed striped" id="snippets-table" style="min-width: 900px;">
+                        <thead>
                             <tr>
-                                <td><?php echo $snippet->id; ?></td>
-                                <td>
-                                    <span class="snippet-name-display" data-id="<?php echo $snippet->id; ?>">
-                                        <strong><?php echo esc_html($snippet->name); ?></strong>
-                                        <span class="edit-icon" title="Click to edit name">✏️</span>
-                                    </span>
-                                    <input type="text" class="snippet-name-edit" data-id="<?php echo $snippet->id; ?>" value="<?php echo esc_attr($snippet->name); ?>" style="display:none;">
-                                </td>
-                                <td>
-                                    <?php
-                                    if (!empty($snippet->description)) {
-                                        echo '<span style="color: #666;">' . esc_html(wp_trim_words($snippet->description, 10, '...')) . '</span>';
-                                    } else {
-                                        echo '<span style="color: #999; font-style: italic;">No description</span>';
-                                    }
-                                    ?>
-                                </td>
-                                <td><span style="font-size: 14px;" title="<?php echo esc_attr($snippet->language ?: 'php'); ?>"><?php echo $lang_display; ?></span></td>
-                                <td><span style="font-size: 14px;" title="<?php echo esc_attr($snippet->scope ?: 'global'); ?>"><?php echo $scope_display; ?></span></td>
-                                <td><span style="font-size: 14px;" title="<?php echo esc_attr($loc); ?>"><?php echo $loc_display . $run_once_badge; ?></span></td>
-                                <td>
-                                    <button class="button button-small ofast-snippet-toggle <?php echo $snippet->active ? 'button-primary' : ''; ?>"
-                                        data-id="<?php echo $snippet->id; ?>" data-active="<?php echo $snippet->active; ?>">
-                                        <?php echo $snippet->active ? '✓' : '✗'; ?>
-                                    </button>
-                                </td>
-                                <td style="font-size: 11px;"><?php echo date('M j', strtotime($snippet->created_at)); ?></td>
-                                <td>
-                                    <a href="?page=ofast-snippets&edit=<?php echo $snippet->id; ?>" class="button button-small">✏️ Edit</a>
-                                    <button class="button button-small button-link-delete ofast-snippet-delete"
-                                        data-id="<?php echo $snippet->id; ?>"
-                                        data-active="<?php echo $snippet->active; ?>"
-                                        data-name="<?php echo esc_attr($snippet->name); ?>">
-                                        🗑️ Delete
-                                    </button>
-                                </td>
+                                <th style="width: 40px;"><input type="checkbox" id="select-all-snippets"></th>
+                                <th style="width: 50px;">ID</th>
+                                <th style="width: 200px;">Name</th>
+                                <th>Description</th>
+                                <th style="width: 90px;">Language</th>
+                                <th style="width: 100px;">Scope</th>
+                                <th style="width: 80px;">Inject</th>
+                                <th style="width: 90px;">Status</th>
+                                <th style="width: 90px;">Created</th>
+                                <th style="width: 140px;">Actions</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($snippets as $snippet):
+                                // Language text labels
+                                $lang_labels = array('php' => 'PHP', 'javascript' => 'JavaScript', 'css' => 'CSS', 'html' => 'HTML');
+                                $lang = $snippet->language ?: 'php';
+                                $lang_display = isset($lang_labels[$lang]) ? $lang_labels[$lang] : 'PHP';
+
+                                // Scope text labels
+                                $scope_labels = array('global' => 'Everywhere', 'admin' => 'Admin Only', 'frontend' => 'Frontend');
+                                $scope = $snippet->scope ?: 'global';
+                                $scope_display = isset($scope_labels[$scope]) ? $scope_labels[$scope] : 'Everywhere';
+
+                                // Location text labels
+                                $loc_labels = array('header' => 'Header', 'body' => 'Body', 'footer' => 'Footer');
+                                $loc = isset($snippet->location) && !empty($snippet->location) ? $snippet->location : 'footer';
+                                $loc_display = isset($loc_labels[$loc]) ? $loc_labels[$loc] : 'Footer';
+
+                                // Status and run once
+                                $status_text = $snippet->active ? 'Active' : 'Inactive';
+                                $run_once_text = (isset($snippet->run_once) && $snippet->run_once) ? ' (Once)' : '';
+                            ?>
+                                <tr class="snippet-row" data-name="<?php echo esc_attr(strtolower($snippet->name)); ?>" data-description="<?php echo esc_attr(strtolower($snippet->description ?? '')); ?>">
+                                    <td><input type="checkbox" class="snippet-checkbox" value="<?php echo $snippet->id; ?>"></td>
+                                    <td><?php echo $snippet->id; ?></td>
+                                    <td>
+                                        <span class="snippet-name-display" data-id="<?php echo $snippet->id; ?>">
+                                            <strong><?php echo esc_html($snippet->name); ?></strong>
+                                            <span class="edit-icon" title="Click to edit name">✏️</span>
+                                        </span>
+                                        <input type="text" class="snippet-name-edit" data-id="<?php echo $snippet->id; ?>" value="<?php echo esc_attr($snippet->name); ?>" style="display:none;">
+                                    </td>
+                                    <td>
+                                        <?php if (!empty($snippet->description)) {
+                                            echo '<span style="color: #666;">' . esc_html(wp_trim_words($snippet->description, 8, '...')) . '</span>';
+                                        } else {
+                                            echo '<span style="color: #999;">—</span>';
+                                        } ?>
+                                    </td>
+                                    <td><span style="background: #f0f0f0; padding: 2px 8px; border-radius: 3px; font-size: 11px;"><?php echo $lang_display; ?></span></td>
+                                    <td><span style="font-size: 12px;"><?php echo $scope_display; ?></span></td>
+                                    <td><span style="font-size: 12px;"><?php echo $loc_display . $run_once_text; ?></span></td>
+                                    <td>
+                                        <button class="button button-small ofast-snippet-toggle <?php echo $snippet->active ? 'button-primary' : ''; ?>"
+                                            data-id="<?php echo $snippet->id; ?>" data-active="<?php echo $snippet->active; ?>"
+                                            style="min-width: 70px; font-size: 11px;">
+                                            <?php echo $status_text; ?>
+                                        </button>
+                                    </td>
+                                    <td style="font-size: 11px;"><?php echo date('M j, Y', strtotime($snippet->created_at)); ?></td>
+                                    <td>
+                                        <a href="?page=ofast-snippets&edit=<?php echo $snippet->id; ?>" class="button button-small">Edit</a>
+                                        <button class="button button-small button-link-delete ofast-snippet-delete"
+                                            data-id="<?php echo $snippet->id; ?>"
+                                            data-active="<?php echo $snippet->active; ?>"
+                                            data-name="<?php echo esc_attr($snippet->name); ?>">Delete</button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php endif; ?>
         </div>
 
@@ -716,6 +748,177 @@ class Ofast_X_Snippets
                         }
                     }
                 }).trigger('change');
+
+                // Export snippets
+                $('#ofast-export-snippets').on('click', function() {
+                    var $btn = $(this);
+                    var exportType = $('#ofast-export-type').val();
+                    $btn.prop('disabled', true).text('Exporting...');
+
+                    $.post(ajaxurl, {
+                        action: 'ofast_export_snippets',
+                        nonce: '<?php echo wp_create_nonce('ofast_export_snippets'); ?>'
+                    }, function(response) {
+                        if (response.success) {
+                            var content, filename, mimeType;
+                            var date = new Date().toISOString().split('T')[0];
+
+                            if (exportType === 'code') {
+                                // Export as readable code file
+                                var codeOutput = [];
+                                codeOutput.push('/*');
+                                codeOutput.push(' * Ofast X Code Snippets Export');
+                                codeOutput.push(' * Exported: ' + date);
+                                codeOutput.push(' * Site: ' + response.data.site_url);
+                                codeOutput.push(' * Total Snippets: ' + response.data.snippets.length);
+                                codeOutput.push(' */\n');
+
+                                response.data.snippets.forEach(function(snippet, index) {
+                                    codeOutput.push('/* ========================================');
+                                    codeOutput.push(' * Snippet #' + (index + 1) + ': ' + snippet.name);
+                                    codeOutput.push(' * Language: ' + (snippet.language || 'php').toUpperCase());
+                                    codeOutput.push(' * Scope: ' + (snippet.scope || 'global'));
+                                    codeOutput.push(' * Status: ' + (snippet.active == 1 ? 'Active' : 'Inactive'));
+                                    if (snippet.description) {
+                                        codeOutput.push(' * Description: ' + snippet.description);
+                                    }
+                                    codeOutput.push(' * ======================================== */\n');
+                                    codeOutput.push(snippet.code);
+                                    codeOutput.push('\n\n');
+                                });
+
+                                content = codeOutput.join('\n');
+                                filename = 'ofast-snippets-code-' + date + '.txt';
+                                mimeType = 'text/plain';
+                            } else {
+                                // Export as JSON
+                                content = JSON.stringify(response.data, null, 2);
+                                filename = 'ofast-snippets-' + date + '.json';
+                                mimeType = 'application/json';
+                            }
+
+                            var blob = new Blob([content], {
+                                type: mimeType
+                            });
+                            var url = URL.createObjectURL(blob);
+                            var a = document.createElement('a');
+                            a.href = url;
+                            a.download = filename;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                        } else {
+                            alert('Export failed: ' + response.data);
+                        }
+                        $btn.prop('disabled', false).html('📤 Export');
+                    });
+                });
+
+                // Import snippets - trigger file input
+                $('#ofast-import-snippets-btn').on('click', function() {
+                    $('#ofast-import-file').click();
+                });
+
+                // Handle file selection for import
+                $('#ofast-import-file').on('change', function() {
+                    var file = this.files[0];
+                    if (!file) return;
+
+                    if (!file.name.endsWith('.json')) {
+                        alert('Please select a valid JSON file');
+                        return;
+                    }
+
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            var data = JSON.parse(e.target.result);
+
+                            if (!confirm('Import ' + (data.snippets ? data.snippets.length : 0) + ' snippet(s)?\n\nNote: All imported snippets will be set to INACTIVE for safety.')) {
+                                return;
+                            }
+
+                            $.post(ajaxurl, {
+                                action: 'ofast_import_snippets',
+                                nonce: '<?php echo wp_create_nonce('ofast_import_snippets'); ?>',
+                                import_data: JSON.stringify(data)
+                            }, function(response) {
+                                if (response.success) {
+                                    alert('✅ ' + response.data.message);
+                                    location.reload();
+                                } else {
+                                    alert('❌ Import failed: ' + response.data);
+                                }
+                            });
+                        } catch (err) {
+                            alert('Invalid JSON file: ' + err.message);
+                        }
+                    };
+                    reader.readAsText(file);
+
+                    // Reset file input
+                    $(this).val('');
+                });
+
+                // Search filter
+                $('#snippet-search').on('keyup', function() {
+                    var query = $(this).val().toLowerCase();
+                    $('.snippet-row').each(function() {
+                        var name = $(this).data('name') || '';
+                        var desc = $(this).data('description') || '';
+                        if (name.indexOf(query) > -1 || desc.indexOf(query) > -1) {
+                            $(this).show();
+                        } else {
+                            $(this).hide();
+                        }
+                    });
+                });
+
+                // Select all checkbox
+                $('#select-all-snippets').on('change', function() {
+                    var checked = $(this).is(':checked');
+                    $('.snippet-checkbox:visible').prop('checked', checked);
+                });
+
+                // Bulk actions
+                $('#apply-bulk-action').on('click', function() {
+                    var action = $('#bulk-action-select').val();
+                    if (!action) {
+                        alert('Please select a bulk action');
+                        return;
+                    }
+
+                    var ids = [];
+                    $('.snippet-checkbox:checked').each(function() {
+                        ids.push($(this).val());
+                    });
+
+                    if (ids.length === 0) {
+                        alert('Please select at least one snippet');
+                        return;
+                    }
+
+                    var confirmMsg = 'Are you sure you want to ' + action + ' ' + ids.length + ' snippet(s)?';
+                    if (action === 'delete') {
+                        confirmMsg = '⚠️ WARNING: This will permanently delete ' + ids.length + ' snippet(s). Continue?';
+                    }
+
+                    if (!confirm(confirmMsg)) {
+                        return;
+                    }
+
+                    $.post(ajaxurl, {
+                        action: 'ofast_bulk_action_snippets',
+                        nonce: '<?php echo wp_create_nonce('ofast_bulk_action'); ?>',
+                        bulk_action: action,
+                        ids: ids
+                    }, function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert('Error: ' + response.data);
+                        }
+                    });
+                });
             });
         </script>
 <?php
@@ -843,6 +1046,164 @@ class Ofast_X_Snippets
         $this->log_snippet_action('RENAMED', $id, $name, $old_snippet ? "From: {$old_snippet->name}" : '');
 
         wp_send_json_success(array('name' => $name));
+    }
+
+    /**
+     * AJAX: Export all snippets
+     */
+    public function ajax_export_snippets()
+    {
+        check_ajax_referer('ofast_export_snippets', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+        $snippets = $wpdb->get_results("SELECT name, description, code, language, scope, location, target_type, target_value, run_once, active FROM $table ORDER BY id");
+
+        $export_data = array(
+            'plugin' => 'ofast-x',
+            'version' => '1.0',
+            'exported_at' => current_time('mysql'),
+            'site_url' => get_site_url(),
+            'snippets' => $snippets
+        );
+
+        // Audit log
+        $this->log_snippet_action('EXPORTED', 0, 'All Snippets', 'Count: ' . count($snippets));
+
+        wp_send_json_success($export_data);
+    }
+
+    /**
+     * AJAX: Import snippets
+     */
+    public function ajax_import_snippets()
+    {
+        check_ajax_referer('ofast_import_snippets', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        // Rate limiting
+        if (!$this->check_rate_limit('import')) {
+            wp_send_json_error('Too many requests. Please wait a moment.');
+        }
+
+        $import_data = isset($_POST['import_data']) ? wp_unslash($_POST['import_data']) : '';
+        $data = json_decode($import_data, true);
+
+        if (!$data || !isset($data['snippets']) || !is_array($data['snippets'])) {
+            wp_send_json_error('Invalid import file format');
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+        $imported = 0;
+        $skipped = 0;
+        $errors = array();
+
+        foreach ($data['snippets'] as $snippet) {
+            // Validate required fields
+            if (empty($snippet['name']) || !isset($snippet['code'])) {
+                $skipped++;
+                continue;
+            }
+
+            // Validate PHP code if language is PHP
+            $language = isset($snippet['language']) ? $snippet['language'] : 'php';
+            if ($language === 'php' && !empty($snippet['code'])) {
+                $validation = $this->validate_php_code($snippet['code']);
+                if ($validation !== true) {
+                    $errors[] = $snippet['name'] . ': ' . $validation;
+                    $skipped++;
+                    continue;
+                }
+            }
+
+            // Insert snippet (always as INACTIVE for safety)
+            $wpdb->insert($table, array(
+                'name' => sanitize_text_field($snippet['name']) . ' (imported)',
+                'description' => isset($snippet['description']) ? sanitize_textarea_field($snippet['description']) : '',
+                'code' => $snippet['code'], // Keep code as-is (validated above)
+                'language' => in_array($language, array('php', 'javascript', 'css', 'html')) ? $language : 'php',
+                'scope' => isset($snippet['scope']) ? sanitize_text_field($snippet['scope']) : 'global',
+                'location' => isset($snippet['location']) ? sanitize_text_field($snippet['location']) : 'footer',
+                'target_type' => isset($snippet['target_type']) ? sanitize_text_field($snippet['target_type']) : 'all',
+                'target_value' => isset($snippet['target_value']) ? sanitize_text_field($snippet['target_value']) : '',
+                'run_once' => isset($snippet['run_once']) ? intval($snippet['run_once']) : 0,
+                'active' => 0, // ALWAYS inactive on import
+                'created_at' => current_time('mysql')
+            ));
+
+            $imported++;
+        }
+
+        // Audit log
+        $this->log_snippet_action('IMPORTED', 0, 'Bulk Import', "Imported: {$imported}, Skipped: {$skipped}");
+
+        $message = "Imported {$imported} snippet(s)";
+        if ($skipped > 0) {
+            $message .= ", skipped {$skipped}";
+        }
+        if (!empty($errors)) {
+            $message .= "\n\nErrors:\n" . implode("\n", array_slice($errors, 0, 5));
+        }
+
+        wp_send_json_success(array('message' => $message, 'imported' => $imported, 'skipped' => $skipped));
+    }
+
+    /**
+     * AJAX: Bulk action on snippets
+     */
+    public function ajax_bulk_action_snippets()
+    {
+        check_ajax_referer('ofast_bulk_action', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        // Rate limiting
+        if (!$this->check_rate_limit('bulk_action')) {
+            wp_send_json_error('Too many requests. Please wait a moment.');
+        }
+
+        $action = isset($_POST['bulk_action']) ? sanitize_text_field($_POST['bulk_action']) : '';
+        $ids = isset($_POST['ids']) ? array_map('intval', $_POST['ids']) : array();
+
+        if (empty($action) || empty($ids)) {
+            wp_send_json_error('Invalid request');
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+        $count = 0;
+
+        foreach ($ids as $id) {
+            switch ($action) {
+                case 'activate':
+                    $wpdb->update($table, array('active' => 1), array('id' => $id));
+                    $count++;
+                    break;
+                case 'deactivate':
+                    $wpdb->update($table, array('active' => 0), array('id' => $id));
+                    $count++;
+                    break;
+                case 'delete':
+                    $wpdb->delete($table, array('id' => $id));
+                    $count++;
+                    break;
+            }
+        }
+
+        // Audit log
+        $this->log_snippet_action('BULK_' . strtoupper($action), 0, 'Bulk Action', "Count: {$count}");
+
+        wp_send_json_success(array('count' => $count));
     }
 
     /**

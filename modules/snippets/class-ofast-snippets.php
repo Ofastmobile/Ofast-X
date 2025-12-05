@@ -512,16 +512,16 @@ class Ofast_X_Snippets
                     <table class="wp-list-table widefat fixed striped" id="snippets-table" style="min-width: 900px;">
                         <thead>
                             <tr>
-                                <th style="width: 40px;"><input type="checkbox" id="select-all-snippets"></th>
-                                <th style="width: 50px;">ID</th>
-                                <th style="width: 200px;">Name</th>
-                                <th>Description</th>
-                                <th style="width: 90px;">Language</th>
-                                <th style="width: 100px;">Scope</th>
-                                <th style="width: 80px;">Inject</th>
-                                <th style="width: 90px;">Status</th>
-                                <th style="width: 90px;">Created</th>
-                                <th style="width: 140px;">Actions</th>
+                                <th style="width: 30px;"><input type="checkbox" id="select-all-snippets"></th>
+                                <th style="width: 35px;">ID</th>
+                                <th style="width: 160px;">Name</th>
+                                <th style="min-width: 200px;">Description</th>
+                                <th style="width: 80px;">Language</th>
+                                <th style="width: 90px;">Scope</th>
+                                <th style="width: 70px;">Inject</th>
+                                <th style="width: 75px;">Status</th>
+                                <th style="width: 85px;">Created</th>
+                                <th style="width: 120px;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -549,15 +549,14 @@ class Ofast_X_Snippets
                                     <td><input type="checkbox" class="snippet-checkbox" value="<?php echo $snippet->id; ?>"></td>
                                     <td><?php echo $snippet->id; ?></td>
                                     <td>
-                                        <span class="snippet-name-display" data-id="<?php echo $snippet->id; ?>">
+                                        <span class="snippet-name-display" data-id="<?php echo $snippet->id; ?>" style="cursor: pointer; color: #0073aa;" title="Click to edit">
                                             <strong><?php echo esc_html($snippet->name); ?></strong>
-                                            <span class="edit-icon" title="Click to edit name">✏️</span>
                                         </span>
-                                        <input type="text" class="snippet-name-edit" data-id="<?php echo $snippet->id; ?>" value="<?php echo esc_attr($snippet->name); ?>" style="display:none;">
+                                        <input type="text" class="snippet-name-edit" data-id="<?php echo $snippet->id; ?>" value="<?php echo esc_attr($snippet->name); ?>" style="display:none; width: 100%;">
                                     </td>
-                                    <td>
+                                    <td style="word-wrap: break-word; white-space: normal;">
                                         <?php if (!empty($snippet->description)) {
-                                            echo '<span style="color: #666;">' . esc_html(wp_trim_words($snippet->description, 8, '...')) . '</span>';
+                                            echo '<span style="color: #666;">' . esc_html($snippet->description) . '</span>';
                                         } else {
                                             echo '<span style="color: #999;">—</span>';
                                         } ?>

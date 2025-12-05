@@ -159,6 +159,8 @@ class Ofast_X_Snippets
             $scope = isset($_POST['snippet_scope']) ? sanitize_text_field($_POST['snippet_scope']) : 'global';
             $location = isset($_POST['snippet_location']) ? sanitize_text_field($_POST['snippet_location']) : 'footer';
             $run_once = isset($_POST['snippet_run_once']) ? 1 : 0;
+            $target_type = isset($_POST['snippet_target_type']) ? sanitize_text_field($_POST['snippet_target_type']) : 'all';
+            $target_value = isset($_POST['snippet_target_value']) ? sanitize_text_field($_POST['snippet_target_value']) : '';
             $code = wp_unslash($_POST['snippet_code']);
             $active = isset($_POST['snippet_active']) ? 1 : 0;
 
@@ -186,9 +188,14 @@ class Ofast_X_Snippets
                     'scope' => $scope,
                     'location' => $location,
                     'run_once' => $run_once,
+                    'target_type' => $target_type,
+                    'target_value' => $target_value,
                     'code' => $code,
                     'active' => $active
                 ), array('id' => $id));
+
+                // Audit log
+                $this->log_snippet_action('UPDATED', $id, $name, "Language: {$language}, Scope: {$scope}, Active: " . ($active ? 'Yes' : 'No'));
 
                 if ($validation === true) {
                     echo '<div class="notice notice-success"><p>✅ Snippet updated and ' . ($active ? 'activated' : 'saved') . '!</p></div>';
@@ -204,10 +211,17 @@ class Ofast_X_Snippets
                     'scope' => $scope,
                     'location' => $location,
                     'run_once' => $run_once,
+                    'target_type' => $target_type,
+                    'target_value' => $target_value,
                     'code' => $code,
                     'active' => $active,
                     'created_at' => current_time('mysql')
                 ));
+
+                $new_id = $wpdb->insert_id;
+
+                // Audit log
+                $this->log_snippet_action('CREATED', $new_id, $name, "Language: {$language}, Scope: {$scope}, Active: " . ($active ? 'Yes' : 'No'));
 
                 if ($validation === true) {
                     echo '<div class="notice notice-success"><p>✅ Snippet added and ' . ($active ? 'activated' : 'saved') . '!</p></div>';
@@ -280,19 +294,49 @@ class Ofast_X_Snippets
                         <tr class="snippet-location-row">
                             <th><label for="snippet_location">Injection Location</label></th>
                             <td>
+                                <?php $location = ($edit_snippet && isset($edit_snippet->location)) ? $edit_snippet->location : 'footer'; ?>
                                 <select name="snippet_location" id="snippet_location" class="regular-text">
-                                    <option value="header" <?php selected($edit_snippet ? $edit_snippet->location : '', 'header'); ?>>📌 Header (before &lt;/head&gt;)</option>
-                                    <option value="body" <?php selected($edit_snippet ? $edit_snippet->location : '', 'body'); ?>>📍 Body (after &lt;body&gt;)</option>
-                                    <option value="footer" <?php selected($edit_snippet ? $edit_snippet->location : 'footer', 'footer'); ?>>📎 Footer (before &lt;/body&gt;)</option>
+                                    <option value="header" <?php selected($location, 'header'); ?>>📌 Header (before &lt;/head&gt;)</option>
+                                    <option value="body" <?php selected($location, 'body'); ?>>📍 Body (after &lt;body&gt;)</option>
+                                    <option value="footer" <?php selected($location, 'footer'); ?>>📎 Footer (before &lt;/body&gt;)</option>
                                 </select>
                                 <p class="description">Where to inject JS/CSS/HTML code. (PHP always runs on init)</p>
+                            </td>
+                        </tr>
+                        <tr class="snippet-targeting-row">
+                            <th><label for="snippet_target_type">Page Targeting</label></th>
+                            <td>
+                                <select name="snippet_target_type" id="snippet_target_type" class="regular-text">
+                                    <?php $target_type = ($edit_snippet && isset($edit_snippet->target_type)) ? $edit_snippet->target_type : 'all'; ?>
+                                    <option value="all" <?php selected($target_type, 'all'); ?>>🌐 All Pages</option>
+                                    <option value="homepage" <?php selected($target_type, 'homepage'); ?>>🏠 Homepage Only</option>
+                                    <option value="post_type" <?php selected($target_type, 'post_type'); ?>>📄 Specific Post Type</option>
+                                    <option value="page_ids" <?php selected($target_type, 'page_ids'); ?>>🔢 Specific Page/Post IDs</option>
+                                    <option value="url_contains" <?php selected($target_type, 'url_contains'); ?>>🔗 URL Contains</option>
+                                </select>
+                                <p class="description">Choose which pages this snippet runs on.</p>
+                            </td>
+                        </tr>
+                        <tr class="snippet-target-value-row" style="display: none;">
+                            <th><label for="snippet_target_value">Target Value</label></th>
+                            <td>
+                                <?php $target_value = ($edit_snippet && isset($edit_snippet->target_value)) ? $edit_snippet->target_value : ''; ?>
+                                <input type="text" name="snippet_target_value" id="snippet_target_value" class="regular-text"
+                                    value="<?php echo esc_attr($target_value); ?>"
+                                    placeholder="">
+                                <p class="description target-help">
+                                    <span class="post-type-help" style="display:none;">Enter post type: <code>product</code>, <code>post</code>, <code>page</code></span>
+                                    <span class="page-ids-help" style="display:none;">Enter comma-separated IDs: <code>1, 5, 23</code></span>
+                                    <span class="url-contains-help" style="display:none;">Enter URL keyword: <code>/shop/</code>, <code>checkout</code></span>
+                                </p>
                             </td>
                         </tr>
                         <tr>
                             <th><label for="snippet_run_once">Run Once</label></th>
                             <td>
+                                <?php $run_once = ($edit_snippet && isset($edit_snippet->run_once)) ? $edit_snippet->run_once : false; ?>
                                 <label class="ofast-toggle-switch">
-                                    <input type="checkbox" name="snippet_run_once" id="snippet_run_once" value="1" <?php checked($edit_snippet ? $edit_snippet->run_once : false); ?>>
+                                    <input type="checkbox" name="snippet_run_once" id="snippet_run_once" value="1" <?php checked($run_once); ?>>
                                     <span class="ofast-toggle-slider"></span>
                                     <span class="ofast-toggle-label">Execute only once, then auto-deactivate</span>
                                 </label>
@@ -612,11 +656,65 @@ class Ofast_X_Snippets
                     }
                 });
 
-                // Language selector - toggle help text
+                // Language selector - toggle help text AND injection location visibility
                 $('#snippet_language').on('change', function() {
                     var lang = $(this).val();
+
+                    // Toggle help text
                     $('.php-help, .js-help, .css-help, .html-help').hide();
                     $('.' + lang.replace('javascript', 'js') + '-help').show();
+
+                    // Show/hide injection location row (only relevant for JS/CSS/HTML, not PHP)
+                    if (lang === 'php') {
+                        $('.snippet-location-row').hide();
+                    } else {
+                        $('.snippet-location-row').show();
+
+                        // Auto-select best default injection location based on language
+                        // Only change if not editing an existing snippet with a set location
+                        var $location = $('#snippet_location');
+                        if (!$location.data('user-set')) {
+                            if (lang === 'css') {
+                                $location.val('header'); // CSS best in header to prevent FOUC
+                            } else {
+                                $location.val('footer'); // JS/HTML best in footer
+                            }
+                        }
+                    }
+                }).trigger('change');
+
+                // Mark location as user-set when manually changed
+                $('#snippet_location').on('change', function() {
+                    $(this).data('user-set', true);
+                });
+
+                // Page Targeting - show/hide target value field
+                $('#snippet_target_type').on('change', function() {
+                    var type = $(this).val();
+                    var $valueRow = $('.snippet-target-value-row');
+                    var $input = $('#snippet_target_value');
+
+                    // Hide all help texts
+                    $('.post-type-help, .page-ids-help, .url-contains-help').hide();
+
+                    if (type === 'all' || type === 'homepage') {
+                        $valueRow.hide();
+                        $input.val('');
+                    } else {
+                        $valueRow.show();
+
+                        // Show appropriate help and placeholder
+                        if (type === 'post_type') {
+                            $('.post-type-help').show();
+                            $input.attr('placeholder', 'e.g., product, post, page');
+                        } else if (type === 'page_ids') {
+                            $('.page-ids-help').show();
+                            $input.attr('placeholder', 'e.g., 1, 5, 23, 100');
+                        } else if (type === 'url_contains') {
+                            $('.url-contains-help').show();
+                            $input.attr('placeholder', 'e.g., /shop/, checkout, product');
+                        }
+                    }
                 }).trigger('change');
             });
         </script>
@@ -634,6 +732,11 @@ class Ofast_X_Snippets
             wp_send_json_error('Unauthorized');
         }
 
+        // Rate limiting
+        if (!$this->check_rate_limit('toggle')) {
+            wp_send_json_error('Too many requests. Please wait a moment.');
+        }
+
         $id = intval($_POST['id']);
         $current_active = intval($_POST['active']);
         $new_active = $current_active ? 0 : 1;
@@ -641,10 +744,12 @@ class Ofast_X_Snippets
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_snippets';
 
+        // Get snippet info for logging
+        $snippet = $wpdb->get_row($wpdb->prepare("SELECT name, code, language FROM $table WHERE id = %d", $id));
+
         // If turning ON, validate first (only for PHP snippets)
-        if ($new_active == 1) {
-            $snippet = $wpdb->get_row($wpdb->prepare("SELECT code, language FROM $table WHERE id = %d", $id));
-            if ($snippet && ($snippet->language === 'php' || empty($snippet->language))) {
+        if ($new_active == 1 && $snippet) {
+            if ($snippet->language === 'php' || empty($snippet->language)) {
                 $validation = $this->validate_php_code($snippet->code);
                 if ($validation !== true) {
                     wp_send_json_error('Cannot activate: ' . $validation);
@@ -657,6 +762,14 @@ class Ofast_X_Snippets
             $table,
             array('active' => $new_active),
             array('id' => $id)
+        );
+
+        // Audit log
+        $this->log_snippet_action(
+            $new_active ? 'ACTIVATED' : 'DEACTIVATED',
+            $id,
+            $snippet ? $snippet->name : '',
+            ''
         );
 
         wp_send_json_success(array('active' => $new_active));
@@ -673,13 +786,23 @@ class Ofast_X_Snippets
             wp_send_json_error('Unauthorized');
         }
 
+        // Rate limiting
+        if (!$this->check_rate_limit('delete')) {
+            wp_send_json_error('Too many requests. Please wait a moment.');
+        }
+
         $id = intval($_POST['id']);
 
         global $wpdb;
-        $wpdb->delete(
-            $wpdb->prefix . 'ofast_snippets',
-            array('id' => $id)
-        );
+        $table = $wpdb->prefix . 'ofast_snippets';
+
+        // Get name for logging before delete
+        $snippet = $wpdb->get_row($wpdb->prepare("SELECT name FROM $table WHERE id = %d", $id));
+
+        $wpdb->delete($table, array('id' => $id));
+
+        // Audit log
+        $this->log_snippet_action('DELETED', $id, $snippet ? $snippet->name : 'Unknown', '');
 
         wp_send_json_success();
     }
@@ -695,6 +818,11 @@ class Ofast_X_Snippets
             wp_send_json_error('Unauthorized');
         }
 
+        // Rate limiting
+        if (!$this->check_rate_limit('rename')) {
+            wp_send_json_error('Too many requests. Please wait a moment.');
+        }
+
         $id = intval($_POST['id']);
         $name = sanitize_text_field($_POST['name']);
 
@@ -704,11 +832,15 @@ class Ofast_X_Snippets
         }
 
         global $wpdb;
-        $wpdb->update(
-            $wpdb->prefix . 'ofast_snippets',
-            array('name' => $name),
-            array('id' => $id)
-        );
+        $table = $wpdb->prefix . 'ofast_snippets';
+
+        // Get old name for logging
+        $old_snippet = $wpdb->get_row($wpdb->prepare("SELECT name FROM $table WHERE id = %d", $id));
+
+        $wpdb->update($table, array('name' => $name), array('id' => $id));
+
+        // Audit log
+        $this->log_snippet_action('RENAMED', $id, $name, $old_snippet ? "From: {$old_snippet->name}" : '');
 
         wp_send_json_success(array('name' => $name));
     }
@@ -722,13 +854,23 @@ class Ofast_X_Snippets
         $table = $wpdb->prefix . 'ofast_snippets';
 
         // Get all active snippets with all relevant fields
-        $snippets = $wpdb->get_results("SELECT id, code, language, scope, location, run_once, executed_at FROM $table WHERE active = 1");
+        $snippets = $wpdb->get_results("SELECT id, code, language, scope, location, target_type, target_value, run_once, executed_at FROM $table WHERE active = 1");
 
         foreach ($snippets as $snippet) {
-            // Check scope
+            // Check scope (admin/frontend/global)
             $should_run = $this->should_snippet_run($snippet->scope);
             if (!$should_run) {
                 continue;
+            }
+
+            // Check page targeting (only on frontend, skip for admin)
+            if (!is_admin()) {
+                $target_type = !empty($snippet->target_type) ? $snippet->target_type : 'all';
+                $target_value = !empty($snippet->target_value) ? $snippet->target_value : '';
+
+                if (!$this->should_run_on_page($target_type, $target_value)) {
+                    continue;
+                }
             }
 
             // Check run_once - if already executed, skip and deactivate
@@ -774,6 +916,49 @@ class Ofast_X_Snippets
             default:
                 return true;
         }
+    }
+
+    /**
+     * Check if snippet should run on current page based on targeting
+     */
+    private function should_run_on_page($target_type, $target_value)
+    {
+        // All pages - always run
+        if ($target_type === 'all' || empty($target_type)) {
+            return true;
+        }
+
+        // Homepage only
+        if ($target_type === 'homepage') {
+            return is_front_page() || is_home();
+        }
+
+        // Specific post type
+        if ($target_type === 'post_type') {
+            $post_types = array_map('trim', explode(',', $target_value));
+            return is_singular($post_types);
+        }
+
+        // Specific page/post IDs
+        if ($target_type === 'page_ids') {
+            $ids = array_map('intval', array_map('trim', explode(',', $target_value)));
+            $current_id = get_queried_object_id();
+            return in_array($current_id, $ids);
+        }
+
+        // URL contains
+        if ($target_type === 'url_contains') {
+            $current_url = $_SERVER['REQUEST_URI'];
+            $patterns = array_map('trim', explode(',', $target_value));
+            foreach ($patterns as $pattern) {
+                if (!empty($pattern) && strpos($current_url, $pattern) !== false) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        return true; // Default: run
     }
 
     /**
@@ -883,6 +1068,44 @@ class Ofast_X_Snippets
             return 'Do not include <?php tags in your code';
         }
 
+        // SECURITY: Check for dangerous functions
+        $dangerous_functions = array(
+            'exec' => 'Execute system commands',
+            'shell_exec' => 'Execute shell commands',
+            'system' => 'Execute system commands',
+            'passthru' => 'Execute commands and output',
+            'popen' => 'Open process pipe',
+            'proc_open' => 'Execute command via process',
+            'pcntl_exec' => 'Execute program',
+            'eval' => 'Execute arbitrary PHP (nested eval not allowed)',
+            'assert' => 'Execute code as assertion',
+            'create_function' => 'Create anonymous function (deprecated)',
+            'unlink' => 'Delete files',
+            'rmdir' => 'Remove directories',
+            'rename' => 'Rename/move files',
+            'copy' => 'Copy files',
+            'file_put_contents' => 'Write to files',
+            'fwrite' => 'Write to file handle',
+            'fputs' => 'Write to file handle',
+            'fopen' => 'Open files (with write mode)',
+            'curl_exec' => 'Execute external requests',
+            'base64_decode' => 'Decode obfuscated code',
+            'preg_replace' => 'Can execute code with /e modifier',
+            'include' => 'Include external files',
+            'include_once' => 'Include external files',
+            'require' => 'Include external files',
+            'require_once' => 'Include external files',
+        );
+
+        $code_lower = strtolower($code);
+        foreach ($dangerous_functions as $func => $reason) {
+            // Check for function calls with ( after function name
+            $pattern = '/\b' . preg_quote($func, '/') . '\s*\(/i';
+            if (preg_match($pattern, $code)) {
+                return "🚨 Security blocked: '{$func}()' is not allowed. Reason: {$reason}";
+            }
+        }
+
         // Try to validate using token_get_all
         $test_code = '<?php ' . $code;
 
@@ -937,5 +1160,85 @@ class Ofast_X_Snippets
         }
 
         return true; // Valid!
+    }
+
+    /**
+     * SECURITY: Log snippet actions for audit trail
+     */
+    private function log_snippet_action($action, $snippet_id, $snippet_name = '', $details = '')
+    {
+        $user = wp_get_current_user();
+        $log_entry = sprintf(
+            '[%s] SNIPPET %s: ID=%d, Name="%s", User=%s (ID:%d), IP=%s %s',
+            current_time('Y-m-d H:i:s'),
+            strtoupper($action),
+            $snippet_id,
+            $snippet_name,
+            $user->user_login,
+            $user->ID,
+            $this->get_client_ip(),
+            $details ? "| {$details}" : ''
+        );
+
+        // Log to WordPress debug log
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[OFAST_SNIPPETS] ' . $log_entry);
+        }
+
+        // Also store in options for admin viewing
+        $logs = get_option('ofast_snippet_audit_log', array());
+        array_unshift($logs, array(
+            'time' => current_time('mysql'),
+            'action' => $action,
+            'snippet_id' => $snippet_id,
+            'snippet_name' => $snippet_name,
+            'user_id' => $user->ID,
+            'user_login' => $user->user_login,
+            'ip' => $this->get_client_ip(),
+            'details' => $details
+        ));
+
+        // Keep only last 100 entries
+        $logs = array_slice($logs, 0, 100);
+        update_option('ofast_snippet_audit_log', $logs);
+    }
+
+    /**
+     * Get client IP address
+     */
+    private function get_client_ip()
+    {
+        $ip_keys = array('HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP', 'REMOTE_ADDR');
+        foreach ($ip_keys as $key) {
+            if (!empty($_SERVER[$key])) {
+                $ip = explode(',', $_SERVER[$key]);
+                return trim($ip[0]);
+            }
+        }
+        return 'Unknown';
+    }
+
+    /**
+     * SECURITY: Rate limiting check
+     * Returns true if action is allowed, false if rate limited
+     */
+    private function check_rate_limit($action = 'snippet_action')
+    {
+        $user_id = get_current_user_id();
+        $transient_key = "ofast_rate_{$action}_{$user_id}";
+        $attempts = get_transient($transient_key);
+
+        if ($attempts === false) {
+            // First attempt
+            set_transient($transient_key, 1, 60); // 60 second window
+            return true;
+        }
+
+        if ($attempts >= 30) { // Max 30 actions per minute
+            return false;
+        }
+
+        set_transient($transient_key, $attempts + 1, 60);
+        return true;
     }
 }

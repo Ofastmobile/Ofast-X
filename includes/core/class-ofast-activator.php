@@ -112,6 +112,8 @@ class Ofast_X_Activator
             tags TEXT,
             scope ENUM('global', 'admin', 'frontend') DEFAULT 'global',
             location ENUM('header', 'body', 'footer') DEFAULT 'footer',
+            target_type ENUM('all', 'homepage', 'post_type', 'page_ids', 'url_contains') DEFAULT 'all',
+            target_value TEXT,
             run_once TINYINT(1) DEFAULT 0,
             executed_at DATETIME DEFAULT NULL,
             priority INT(11) DEFAULT 10,

@@ -36,6 +36,8 @@ class Ofast_X_Snippets
         add_action('wp_ajax_ofast_export_snippets', array($this, 'ajax_export_snippets'));
         add_action('wp_ajax_ofast_import_snippets', array($this, 'ajax_import_snippets'));
         add_action('wp_ajax_ofast_bulk_action_snippets', array($this, 'ajax_bulk_action_snippets'));
+        add_action('wp_ajax_ofast_import_from_plugin', array($this, 'ajax_import_from_plugin'));
+        add_action('wp_ajax_ofast_use_library_template', array($this, 'ajax_use_library_template'));
 
         // Execute active snippets
         add_action('init', array($this, 'execute_snippets'), 999);
@@ -164,6 +166,7 @@ class Ofast_X_Snippets
             $run_once = isset($_POST['snippet_run_once']) ? 1 : 0;
             $target_type = isset($_POST['snippet_target_type']) ? sanitize_text_field($_POST['snippet_target_type']) : 'all';
             $target_value = isset($_POST['snippet_target_value']) ? sanitize_text_field($_POST['snippet_target_value']) : '';
+            $category = isset($_POST['snippet_category']) ? sanitize_text_field($_POST['snippet_category']) : '';
             $code = wp_unslash($_POST['snippet_code']);
             $active = isset($_POST['snippet_active']) ? 1 : 0;
 
@@ -193,6 +196,7 @@ class Ofast_X_Snippets
                     'run_once' => $run_once,
                     'target_type' => $target_type,
                     'target_value' => $target_value,
+                    'category' => $category,
                     'code' => $code,
                     'active' => $active
                 ), array('id' => $id));
@@ -216,6 +220,7 @@ class Ofast_X_Snippets
                     'run_once' => $run_once,
                     'target_type' => $target_type,
                     'target_value' => $target_value,
+                    'category' => $category,
                     'code' => $code,
                     'active' => $active,
                     'created_at' => current_time('mysql')
@@ -267,6 +272,109 @@ class Ofast_X_Snippets
                 </span>
             </div>
 
+            <?php
+            // Detect other snippet plugins
+            $other_plugins = $this->detect_other_snippet_plugins();
+            if (!empty($other_plugins)):
+            ?>
+                <!-- Import from Other Plugins -->
+                <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                    <h3 style="margin-top: 0; color: #856404;">🔄 Import from Other Plugins</h3>
+                    <p style="color: #856404; margin-bottom: 15px;">We detected other snippet plugins on your site. You can import their snippets here.</p>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <?php foreach ($other_plugins as $plugin): ?>
+                            <div style="background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 12px; min-width: 200px;">
+                                <strong><?php echo esc_html($plugin['name']); ?></strong>
+                                <p style="margin: 5px 0; color: #666; font-size: 12px;">
+                                    <?php echo intval($plugin['count']); ?> snippet(s) available
+                                </p>
+                                <button type="button" class="button ofast-import-from-plugin"
+                                    data-plugin="<?php echo esc_attr($plugin['slug']); ?>"
+                                    style="width: 100%;">
+                                    Import All
+                                </button>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <p style="color: #856404; font-size: 11px; margin-top: 10px; margin-bottom: 0;">
+                        ⚠️ All imported snippets will be set to <strong>INACTIVE</strong> for safety. Review and activate manually.
+                    </p>
+                </div>
+            <?php endif; ?>
+
+            <!-- Snippet Library -->
+            <?php
+            $library_file = plugin_dir_path(__FILE__) . 'library/snippets.json';
+            $library = null;
+            if (file_exists($library_file)) {
+                $library = json_decode(file_get_contents($library_file), true);
+            }
+
+            if ($library && !empty($library['snippets'])):
+            ?>
+                <div style="background: #f0f6fc; border: 1px solid #c3d9ed; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; color: #1d4ed8;">📚 Snippet Library</h3>
+                        <button type="button" class="button" id="toggle-library">Show Templates</button>
+                    </div>
+
+                    <div id="snippet-library" style="display: none;">
+                        <p style="color: #1e40af; margin-bottom: 15px;">Pre-made snippets ready to use. Click "Use Template" to add to your snippets.</p>
+
+                        <!-- Category Filter -->
+                        <div style="margin-bottom: 15px;">
+                            <button type="button" class="button library-cat-filter active" data-cat="all">All (<?php echo count($library['snippets']); ?>)</button>
+                            <?php
+                            $cat_counts = array();
+                            foreach ($library['snippets'] as $s) {
+                                $cat = $s['category'];
+                                $cat_counts[$cat] = isset($cat_counts[$cat]) ? $cat_counts[$cat] + 1 : 1;
+                            }
+                            foreach ($library['categories'] as $cat):
+                                $count = isset($cat_counts[$cat]) ? $cat_counts[$cat] : 0;
+                                if ($count > 0):
+                            ?>
+                                    <button type="button" class="button library-cat-filter" data-cat="<?php echo esc_attr($cat); ?>"><?php echo esc_html($cat); ?> (<?php echo $count; ?>)</button>
+                            <?php endif;
+                            endforeach; ?>
+                        </div>
+
+                        <!-- Template Cards -->
+                        <div id="library-templates" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">
+                            <?php foreach ($library['snippets'] as $index => $template): ?>
+                                <div class="library-template" data-category="<?php echo esc_attr($template['category']); ?>"
+                                    style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 15px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                                        <strong style="color: #1e40af;"><?php echo esc_html($template['name']); ?></strong>
+                                        <span style="background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 3px; font-size: 10px;">
+                                            <?php echo esc_html($template['category']); ?>
+                                        </span>
+                                    </div>
+                                    <p style="color: #666; font-size: 12px; margin-bottom: 10px;"><?php echo esc_html($template['description']); ?></p>
+                                    <div style="display: flex; gap: 5px; align-items: center; margin-bottom: 10px;">
+                                        <span style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 10px;">
+                                            <?php echo strtoupper($template['language']); ?>
+                                        </span>
+                                        <span style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 10px;">
+                                            <?php echo ucfirst($template['scope']); ?>
+                                        </span>
+                                    </div>
+                                    <details style="margin-bottom: 10px;">
+                                        <summary style="cursor: pointer; color: #0073aa; font-size: 12px;">Preview Code</summary>
+                                        <pre style="background: #1e1e1e; color: #d4d4d4; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin-top: 8px; max-height: 200px;"><?php echo esc_html($template['code']); ?></pre>
+                                    </details>
+                                    <button type="button" class="button button-primary use-library-template"
+                                        data-index="<?php echo $index; ?>"
+                                        style="width: 100%;">
+                                        Use Template
+                                    </button>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
                 <h2><?php echo $editing ? 'Edit Snippet' : 'Add New Snippet'; ?></h2>
                 <form method="post">
@@ -291,6 +399,26 @@ class Ofast_X_Snippets
                                 <textarea name="snippet_description" id="snippet_description" rows="3" class="large-text"
                                     placeholder="Brief description of what this snippet does (optional)"><?php echo $edit_snippet ? esc_textarea($edit_snippet->description) : ''; ?></textarea>
                                 <p class="description">Optional: Add a description to help you remember what this snippet does.</p>
+                        </tr>
+                        <tr>
+                            <th><label for="snippet_category">Category</label></th>
+                            <td>
+                                <?php
+                                // Get existing categories for autocomplete
+                                $existing_categories = $wpdb->get_col("SELECT DISTINCT category FROM {$wpdb->prefix}ofast_snippets WHERE category != '' ORDER BY category");
+                                $current_category = ($edit_snippet && isset($edit_snippet->category)) ? $edit_snippet->category : '';
+                                ?>
+                                <input type="text" name="snippet_category" id="snippet_category" class="regular-text"
+                                    value="<?php echo esc_attr($current_category); ?>"
+                                    placeholder="e.g., WooCommerce, Security, Performance"
+                                    list="snippet_categories_list">
+                                <datalist id="snippet_categories_list">
+                                    <?php foreach ($existing_categories as $cat): ?>
+                                        <option value="<?php echo esc_attr($cat); ?>">
+                                        <?php endforeach; ?>
+                                </datalist>
+                                <p class="description">Type to search existing categories or create a new one.</p>
+                            </td>
                         </tr>
                         <tr>
                             <th><label for="snippet_language">Language</label></th>
@@ -501,6 +629,19 @@ class Ofast_X_Snippets
                             <option value="delete">🗑️ Delete</option>
                         </select>
                         <button type="button" class="button" id="apply-bulk-action">Apply</button>
+
+                        <!-- Category Filter -->
+                        <?php
+                        $all_categories = $wpdb->get_col("SELECT DISTINCT category FROM {$wpdb->prefix}ofast_snippets WHERE category != '' ORDER BY category");
+                        if (!empty($all_categories)):
+                        ?>
+                            <select id="category-filter" style="width: auto;">
+                                <option value="">All Categories</option>
+                                <?php foreach ($all_categories as $cat): ?>
+                                    <option value="<?php echo esc_attr($cat); ?>"><?php echo esc_html($cat); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        <?php endif; ?>
                     </div>
                     <div>
                         <input type="text" id="snippet-search" placeholder="🔍 Search snippets..." style="width: 250px;">
@@ -509,19 +650,19 @@ class Ofast_X_Snippets
 
                 <!-- Scrollable Table Container -->
                 <div style="overflow-x: auto; max-width: 100%;">
-                    <table class="wp-list-table widefat fixed striped" id="snippets-table" style="min-width: 900px;">
+                    <table class="wp-list-table widefat fixed striped" id="snippets-table" style="min-width: 1000px;">
                         <thead>
                             <tr>
                                 <th style="width: 30px;"><input type="checkbox" id="select-all-snippets"></th>
                                 <th style="width: 35px;">ID</th>
-                                <th style="width: 160px;">Name</th>
-                                <th style="min-width: 200px;">Description</th>
-                                <th style="width: 80px;">Language</th>
-                                <th style="width: 90px;">Scope</th>
-                                <th style="width: 70px;">Inject</th>
-                                <th style="width: 75px;">Status</th>
-                                <th style="width: 85px;">Created</th>
-                                <th style="width: 120px;">Actions</th>
+                                <th style="width: 200px;">Name</th>
+                                <th style="width: 100px;">Category</th>
+                                <th>Description</th>
+                                <th style="width: 75px;">Language</th>
+                                <th style="width: 85px;">Scope</th>
+                                <th style="width: 65px;">Inject</th>
+                                <th style="width: 70px;">Status</th>
+                                <th style="width: 80px;">Created</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -544,15 +685,29 @@ class Ofast_X_Snippets
                                 // Status and run once
                                 $status_text = $snippet->active ? 'Active' : 'Inactive';
                                 $run_once_text = (isset($snippet->run_once) && $snippet->run_once) ? ' (Once)' : '';
+
+                                // Category
+                                $snippet_category = isset($snippet->category) ? $snippet->category : '';
                             ?>
-                                <tr class="snippet-row" data-name="<?php echo esc_attr(strtolower($snippet->name)); ?>" data-description="<?php echo esc_attr(strtolower($snippet->description ?? '')); ?>">
+                                <tr class="snippet-row" data-name="<?php echo esc_attr(strtolower($snippet->name)); ?>" data-description="<?php echo esc_attr(strtolower($snippet->description ?? '')); ?>" data-category="<?php echo esc_attr($snippet_category); ?>">
                                     <td><input type="checkbox" class="snippet-checkbox" value="<?php echo $snippet->id; ?>"></td>
                                     <td><?php echo $snippet->id; ?></td>
                                     <td>
-                                        <span class="snippet-name-display" data-id="<?php echo $snippet->id; ?>" style="cursor: pointer; color: #0073aa;" title="Click to edit">
+                                        <span class="snippet-name-display" data-id="<?php echo $snippet->id; ?>" style="cursor: pointer; color: #0073aa;" title="Click to rename">
                                             <strong><?php echo esc_html($snippet->name); ?></strong>
                                         </span>
                                         <input type="text" class="snippet-name-edit" data-id="<?php echo $snippet->id; ?>" value="<?php echo esc_attr($snippet->name); ?>" style="display:none; width: 100%;">
+                                        <div class="row-actions" style="margin-top: 3px; font-size: 12px;">
+                                            <a href="?page=ofast-snippets&edit=<?php echo $snippet->id; ?>">Edit</a> |
+                                            <a href="#" class="ofast-snippet-delete" data-id="<?php echo $snippet->id; ?>" data-active="<?php echo $snippet->active; ?>" data-name="<?php echo esc_attr($snippet->name); ?>" style="color: #b32d2e;">Delete</a>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <?php if (!empty($snippet_category)): ?>
+                                            <span style="background: #e7f3ff; color: #0073aa; padding: 2px 8px; border-radius: 3px; font-size: 11px;"><?php echo esc_html($snippet_category); ?></span>
+                                        <?php else: ?>
+                                            <span style="color: #999;">—</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td style="word-wrap: break-word; white-space: normal;">
                                         <?php if (!empty($snippet->description)) {
@@ -567,18 +722,11 @@ class Ofast_X_Snippets
                                     <td>
                                         <button class="button button-small ofast-snippet-toggle <?php echo $snippet->active ? 'button-primary' : ''; ?>"
                                             data-id="<?php echo $snippet->id; ?>" data-active="<?php echo $snippet->active; ?>"
-                                            style="min-width: 70px; font-size: 11px;">
+                                            style="min-width: 60px; font-size: 11px;">
                                             <?php echo $status_text; ?>
                                         </button>
                                     </td>
                                     <td style="font-size: 11px;"><?php echo date('M j, Y', strtotime($snippet->created_at)); ?></td>
-                                    <td>
-                                        <a href="?page=ofast-snippets&edit=<?php echo $snippet->id; ?>" class="button button-small">Edit</a>
-                                        <button class="button button-small button-link-delete ofast-snippet-delete"
-                                            data-id="<?php echo $snippet->id; ?>"
-                                            data-active="<?php echo $snippet->active; ?>"
-                                            data-name="<?php echo esc_attr($snippet->name); ?>">Delete</button>
-                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -860,17 +1008,38 @@ class Ofast_X_Snippets
 
                 // Search filter
                 $('#snippet-search').on('keyup', function() {
-                    var query = $(this).val().toLowerCase();
+                    filterSnippets();
+                });
+
+                // Category filter
+                $('#category-filter').on('change', function() {
+                    filterSnippets();
+                });
+
+                // Combined filter function
+                function filterSnippets() {
+                    var query = $('#snippet-search').val();
+                    query = query ? query.toLowerCase() : '';
+
+                    var categoryFilter = $('#category-filter');
+                    var category = categoryFilter.length ? categoryFilter.val() : '';
+
                     $('.snippet-row').each(function() {
-                        var name = $(this).data('name') || '';
-                        var desc = $(this).data('description') || '';
-                        if (name.indexOf(query) > -1 || desc.indexOf(query) > -1) {
-                            $(this).show();
+                        var $row = $(this);
+                        var name = String($row.attr('data-name') || '').toLowerCase();
+                        var desc = String($row.attr('data-description') || '').toLowerCase();
+                        var cat = String($row.attr('data-category') || '');
+
+                        var matchesText = (query === '' || name.indexOf(query) > -1 || desc.indexOf(query) > -1);
+                        var matchesCategory = (category === '' || category === undefined || cat === category);
+
+                        if (matchesText && matchesCategory) {
+                            $row.show();
                         } else {
-                            $(this).hide();
+                            $row.hide();
                         }
                     });
-                });
+                }
 
                 // Select all checkbox
                 $('#select-all-snippets').on('change', function() {
@@ -918,6 +1087,86 @@ class Ofast_X_Snippets
                         }
                     });
                 });
+
+                // Import from other plugin
+                $(document).on('click', '.ofast-import-from-plugin', function() {
+                    var $btn = $(this);
+                    var plugin = $btn.data('plugin');
+
+                    if (!confirm('Import all snippets from ' + plugin + '?\n\nAll snippets will be imported as INACTIVE. You can review and activate them manually.')) {
+                        return;
+                    }
+
+                    $btn.prop('disabled', true).text('Importing...');
+
+                    $.post(ajaxurl, {
+                        action: 'ofast_import_from_plugin',
+                        nonce: '<?php echo wp_create_nonce('ofast_import_plugin'); ?>',
+                        plugin: plugin
+                    }, function(response) {
+                        if (response.success) {
+                            alert('✅ ' + response.data.message);
+                            location.reload();
+                        } else {
+                            alert('❌ Import failed: ' + response.data);
+                            $btn.prop('disabled', false).text('Import All');
+                        }
+                    });
+                });
+
+                // Toggle Library visibility
+                $('#toggle-library').on('click', function() {
+                    var $lib = $('#snippet-library');
+                    var $btn = $(this);
+                    if ($lib.is(':visible')) {
+                        $lib.slideUp();
+                        $btn.text('Show Templates');
+                    } else {
+                        $lib.slideDown();
+                        $btn.text('Hide Templates');
+                    }
+                });
+
+                // Library category filter
+                $('.library-cat-filter').on('click', function() {
+                    var cat = $(this).data('cat');
+                    $('.library-cat-filter').removeClass('button-primary active');
+                    $(this).addClass('button-primary active');
+
+                    if (cat === 'all') {
+                        $('.library-template').show();
+                    } else {
+                        $('.library-template').each(function() {
+                            if ($(this).data('category') === cat) {
+                                $(this).show();
+                            } else {
+                                $(this).hide();
+                            }
+                        });
+                    }
+                });
+
+                // Use Library Template
+                $(document).on('click', '.use-library-template', function() {
+                    var $btn = $(this);
+                    var index = $btn.data('index');
+
+                    $btn.prop('disabled', true).text('Adding...');
+
+                    $.post(ajaxurl, {
+                        action: 'ofast_use_library_template',
+                        nonce: '<?php echo wp_create_nonce('ofast_use_template'); ?>',
+                        index: index
+                    }, function(response) {
+                        if (response.success) {
+                            alert('✅ ' + response.data.message);
+                            location.reload();
+                        } else {
+                            alert('❌ Failed: ' + response.data);
+                            $btn.prop('disabled', false).text('Use Template');
+                        }
+                    });
+                });
             });
         </script>
 <?php
@@ -952,9 +1201,17 @@ class Ofast_X_Snippets
         // If turning ON, validate first (only for PHP snippets)
         if ($new_active == 1 && $snippet) {
             if ($snippet->language === 'php' || empty($snippet->language)) {
+                // Check syntax first
                 $validation = $this->validate_php_code($snippet->code);
                 if ($validation !== true) {
                     wp_send_json_error('Cannot activate: ' . $validation);
+                    return;
+                }
+
+                // Check for function name conflicts
+                $conflict_check = $this->check_function_conflicts($snippet->code);
+                if ($conflict_check !== true) {
+                    wp_send_json_error('Cannot activate: ' . $conflict_check);
                     return;
                 }
             }
@@ -1156,6 +1413,61 @@ class Ofast_X_Snippets
     }
 
     /**
+     * AJAX: Use library template
+     */
+    public function ajax_use_library_template()
+    {
+        check_ajax_referer('ofast_use_template', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        $index = isset($_POST['index']) ? intval($_POST['index']) : -1;
+
+        // Load library
+        $library_file = plugin_dir_path(__FILE__) . 'library/snippets.json';
+        if (!file_exists($library_file)) {
+            wp_send_json_error('Library file not found');
+        }
+
+        $library = json_decode(file_get_contents($library_file), true);
+        if (!$library || !isset($library['snippets'][$index])) {
+            wp_send_json_error('Template not found');
+        }
+
+        $template = $library['snippets'][$index];
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+
+        // Insert as inactive
+        $result = $wpdb->insert($table, array(
+            'name' => $template['name'],
+            'description' => $template['description'],
+            'code' => $template['code'],
+            'language' => $template['language'],
+            'scope' => $template['scope'],
+            'category' => $template['category'],
+            'active' => 0,
+            'location' => 'footer',
+            'created_at' => current_time('mysql')
+        ));
+
+        if ($result === false) {
+            wp_send_json_error('Failed to add template');
+        }
+
+        // Log
+        $this->log_snippet_action('TEMPLATE_USED', $wpdb->insert_id, $template['name'], "Category: {$template['category']}");
+
+        wp_send_json_success(array(
+            'message' => "'{$template['name']}' added! It's set to INACTIVE - review and activate when ready.",
+            'id' => $wpdb->insert_id
+        ));
+    }
+
+    /**
      * AJAX: Bulk action on snippets
      */
     public function ajax_bulk_action_snippets()
@@ -1203,6 +1515,179 @@ class Ofast_X_Snippets
         $this->log_snippet_action('BULK_' . strtoupper($action), 0, 'Bulk Action', "Count: {$count}");
 
         wp_send_json_success(array('count' => $count));
+    }
+
+    /**
+     * Detect other snippet plugins installed on the site
+     */
+    private function detect_other_snippet_plugins()
+    {
+        global $wpdb;
+        $plugins = array();
+
+        // Check for Code Snippets plugin (uses wp_snippets table)
+        $code_snippets_table = $wpdb->prefix . 'snippets';
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$code_snippets_table'");
+        if ($table_exists) {
+            $count = $wpdb->get_var("SELECT COUNT(*) FROM $code_snippets_table");
+            if ($count > 0) {
+                $plugins[] = array(
+                    'name' => 'Code Snippets',
+                    'slug' => 'code-snippets',
+                    'count' => intval($count)
+                );
+            }
+        }
+
+        // Check for WPCode plugin (uses custom post type 'wpcode')
+        $wpcode_count = $wpdb->get_var(
+            "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'wpcode' AND post_status IN ('publish', 'draft')"
+        );
+        if ($wpcode_count > 0) {
+            $plugins[] = array(
+                'name' => 'WPCode',
+                'slug' => 'wpcode',
+                'count' => intval($wpcode_count)
+            );
+        }
+
+        return $plugins;
+    }
+
+    /**
+     * AJAX: Import snippets from another plugin
+     */
+    public function ajax_import_from_plugin()
+    {
+        check_ajax_referer('ofast_import_plugin', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        // Rate limiting
+        if (!$this->check_rate_limit('import_plugin')) {
+            wp_send_json_error('Too many requests. Please wait a moment.');
+        }
+
+        $plugin = isset($_POST['plugin']) ? sanitize_text_field($_POST['plugin']) : '';
+        if (empty($plugin)) {
+            wp_send_json_error('Invalid plugin');
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+        $imported = 0;
+        $skipped = 0;
+        $errors = array();
+
+        if ($plugin === 'code-snippets') {
+            // Import from Code Snippets plugin
+            $source_table = $wpdb->prefix . 'snippets';
+            $snippets = $wpdb->get_results("SELECT * FROM $source_table");
+
+            foreach ($snippets as $snippet) {
+                // Validate PHP code
+                if (!empty($snippet->code)) {
+                    $validation = $this->validate_php_code($snippet->code);
+                    if ($validation !== true) {
+                        $errors[] = $snippet->name . ': ' . $validation;
+                        $skipped++;
+                        continue;
+                    }
+                }
+
+                // Map scope
+                $scope = 'global';
+                if (isset($snippet->scope)) {
+                    if ($snippet->scope === 'admin' || $snippet->scope === 2) {
+                        $scope = 'admin';
+                    } elseif ($snippet->scope === 'front-end' || $snippet->scope === 1) {
+                        $scope = 'frontend';
+                    }
+                }
+
+                $wpdb->insert($table, array(
+                    'name' => sanitize_text_field($snippet->name) . ' (from Code Snippets)',
+                    'description' => isset($snippet->desc) ? sanitize_textarea_field($snippet->desc) : '',
+                    'code' => $snippet->code,
+                    'language' => 'php',
+                    'scope' => $scope,
+                    'location' => 'footer',
+                    'target_type' => 'all',
+                    'target_value' => '',
+                    'run_once' => 0,
+                    'active' => 0, // Always inactive
+                    'created_at' => current_time('mysql')
+                ));
+                $imported++;
+            }
+        } elseif ($plugin === 'wpcode') {
+            // Import from WPCode plugin
+            $posts = $wpdb->get_results(
+                "SELECT p.*, pm.meta_value as code_type 
+                 FROM {$wpdb->posts} p 
+                 LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_wpcode_code_type'
+                 WHERE p.post_type = 'wpcode' AND p.post_status IN ('publish', 'draft')"
+            );
+
+            foreach ($posts as $post) {
+                // Get the code content from post_content or meta
+                $code = $post->post_content;
+                $code_meta = get_post_meta($post->ID, '_wpcode_snippet_code', true);
+                if (!empty($code_meta)) {
+                    $code = $code_meta;
+                }
+
+                // Determine language
+                $language = 'php';
+                $code_type = isset($post->code_type) ? $post->code_type : get_post_meta($post->ID, '_wpcode_code_type', true);
+                if ($code_type === 'js' || $code_type === 'javascript') {
+                    $language = 'javascript';
+                } elseif ($code_type === 'css') {
+                    $language = 'css';
+                } elseif ($code_type === 'html' || $code_type === 'text') {
+                    $language = 'html';
+                }
+
+                // Validate PHP code only
+                if ($language === 'php' && !empty($code)) {
+                    $validation = $this->validate_php_code($code);
+                    if ($validation !== true) {
+                        $errors[] = $post->post_title . ': ' . $validation;
+                        $skipped++;
+                        continue;
+                    }
+                }
+
+                $wpdb->insert($table, array(
+                    'name' => sanitize_text_field($post->post_title) . ' (from WPCode)',
+                    'description' => sanitize_textarea_field($post->post_excerpt),
+                    'code' => $code,
+                    'language' => $language,
+                    'scope' => 'global',
+                    'location' => 'footer',
+                    'target_type' => 'all',
+                    'target_value' => '',
+                    'run_once' => 0,
+                    'active' => 0, // Always inactive
+                    'created_at' => current_time('mysql')
+                ));
+                $imported++;
+            }
+        } else {
+            wp_send_json_error('Unknown plugin: ' . $plugin);
+        }
+
+        // Audit log
+        $this->log_snippet_action('IMPORTED_FROM_PLUGIN', 0, $plugin, "Imported: {$imported}, Skipped: {$skipped}");
+
+        $message = "Imported {$imported} snippet(s) from {$plugin}";
+        if ($skipped > 0) {
+            $message .= ", skipped {$skipped} (security/syntax issues)";
+        }
+
+        wp_send_json_success(array('message' => $message, 'imported' => $imported, 'skipped' => $skipped, 'errors' => array_slice($errors, 0, 5)));
     }
 
     /**
@@ -1334,6 +1819,40 @@ class Ofast_X_Snippets
             'executed_at' => current_time('mysql'),
             'active' => 0
         ), array('id' => $snippet_id));
+    }
+
+    /**
+     * Check for function name conflicts
+     * Returns true if no conflicts, error message string if conflicts found
+     */
+    private function check_function_conflicts($code)
+    {
+        // Extract function names from the code
+        $function_names = array();
+
+        // Match "function function_name(" patterns
+        if (preg_match_all('/function\s+([a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*)\s*\(/i', $code, $matches)) {
+            $function_names = $matches[1];
+        }
+
+        if (empty($function_names)) {
+            return true; // No named functions = no conflicts possible
+        }
+
+        $conflicts = array();
+        foreach ($function_names as $func_name) {
+            // Check if function already exists
+            if (function_exists($func_name)) {
+                $conflicts[] = $func_name;
+            }
+        }
+
+        if (!empty($conflicts)) {
+            $conflict_list = implode(', ', $conflicts);
+            return "Function conflict detected! These functions already exist: {$conflict_list}. This may be caused by another plugin (Code Snippets, WPCode, etc.) or another active snippet using the same function names. Deactivate the conflicting snippet/plugin first, or rename the functions in this code.";
+        }
+
+        return true;
     }
 
     /**

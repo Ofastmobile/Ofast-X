@@ -109,6 +109,7 @@ class Ofast_X_Activator
             code LONGTEXT NOT NULL,
             language ENUM('php', 'javascript', 'css', 'html') DEFAULT 'php',
             active TINYINT(1) DEFAULT 0,
+            category VARCHAR(100) DEFAULT '',
             tags TEXT,
             scope ENUM('global', 'admin', 'frontend') DEFAULT 'global',
             location ENUM('header', 'body', 'footer') DEFAULT 'footer',
@@ -123,7 +124,8 @@ class Ofast_X_Activator
             PRIMARY KEY (id),
             KEY idx_active (active),
             KEY idx_language (language),
-            KEY idx_scope (scope)
+            KEY idx_scope (scope),
+            KEY idx_category (category)
         ) {$charset_collate};";
         dbDelta($sql_snippets);
 

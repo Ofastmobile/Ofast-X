@@ -32,6 +32,7 @@ class Ofast_X_Snippets
         // AJAX handlers
         add_action('wp_ajax_ofast_toggle_snippet', array($this, 'ajax_toggle_snippet'));
         add_action('wp_ajax_ofast_delete_snippet', array($this, 'ajax_delete_snippet'));
+        add_action('wp_ajax_ofast_rename_snippet', array($this, 'ajax_rename_snippet'));
 
         // Execute active snippets
         add_action('init', array($this, 'execute_snippets'), 999);
@@ -153,6 +154,7 @@ class Ofast_X_Snippets
 
             $id = isset($_POST['snippet_id']) ? intval($_POST['snippet_id']) : 0;
             $name = sanitize_text_field($_POST['snippet_name']);
+            $description = isset($_POST['snippet_description']) ? wp_unslash($_POST['snippet_description']) : '';
             $code = wp_unslash($_POST['snippet_code']);
             $active = isset($_POST['snippet_active']) ? 1 : 0;
 
@@ -172,6 +174,7 @@ class Ofast_X_Snippets
                 // Update
                 $wpdb->update($table, array(
                     'name' => $name,
+                    'description' => $description,
                     'code' => $code,
                     'active' => $active
                 ), array('id' => $id));
@@ -185,6 +188,7 @@ class Ofast_X_Snippets
                 // Insert
                 $wpdb->insert($table, array(
                     'name' => $name,
+                    'description' => $description,
                     'code' => $code,
                     'active' => $active,
                     'created_at' => current_time('mysql')
@@ -226,6 +230,14 @@ class Ofast_X_Snippets
                                 <input type="text" name="snippet_name" id="snippet_name" class="regular-text" required
                                     value="<?php echo $edit_snippet ? esc_attr($edit_snippet->name) : ''; ?>"
                                     placeholder="e.g., Custom Header Code">
+                            </td>
+                        </tr>
+                        <tr>
+                            <th><label for="snippet_description">Description</label></th>
+                            <td>
+                                <textarea name="snippet_description" id="snippet_description" rows="3" class="large-text"
+                                    placeholder="Brief description of what this snippet does (optional)"><?php echo $edit_snippet ? esc_textarea($edit_snippet->description) : ''; ?></textarea>
+                                <p class="description">Optional: Add a description to help you remember what this snippet does.</p>
                             </td>
                         </tr>
                         <tr>
@@ -315,6 +327,31 @@ class Ofast_X_Snippets
                 .ofast-toggle-label {
                     font-weight: 500;
                 }
+
+                /* Inline editing styles */
+                .snippet-name-display {
+                    cursor: pointer;
+                    position: relative;
+                    display: inline-block;
+                }
+
+                .snippet-name-display .edit-icon {
+                    opacity: 0;
+                    margin-left: 8px;
+                    font-size: 14px;
+                    transition: opacity 0.2s;
+                }
+
+                .snippet-name-display:hover .edit-icon {
+                    opacity: 0.6;
+                }
+
+                .snippet-name-edit {
+                    width: 300px;
+                    padding: 4px 8px;
+                    border: 1px solid #2271b1;
+                    border-radius: 3px;
+                }
             </style>
 
             <h2>Saved Snippets (<?php echo count($snippets); ?>)</h2>
@@ -326,7 +363,8 @@ class Ofast_X_Snippets
                     <thead>
                         <tr>
                             <th style="width: 50px;">ID</th>
-                            <th>Name</th>
+                            <th style="width: 200px;">Name</th>
+                            <th>Description</th>
                             <th style="width: 100px;">Status</th>
                             <th style="width: 150px;">Created</th>
                             <th style="width: 150px;">Actions</th>
@@ -336,11 +374,26 @@ class Ofast_X_Snippets
                         <?php foreach ($snippets as $snippet): ?>
                             <tr>
                                 <td><?php echo $snippet->id; ?></td>
-                                <td><strong><?php echo esc_html($snippet->name); ?></strong></td>
+                                <td>
+                                    <span class="snippet-name-display" data-id="<?php echo $snippet->id; ?>">
+                                        <strong><?php echo esc_html($snippet->name); ?></strong>
+                                        <span class="edit-icon" title="Click to edit name">✏️</span>
+                                    </span>
+                                    <input type="text" class="snippet-name-edit" data-id="<?php echo $snippet->id; ?>" value="<?php echo esc_attr($snippet->name); ?>" style="display:none;">
+                                </td>
+                                <td>
+                                    <?php
+                                    if (!empty($snippet->description)) {
+                                        echo '<span style="color: #666;">' . esc_html(wp_trim_words($snippet->description, 10, '...')) . '</span>';
+                                    } else {
+                                        echo '<span style="color: #999; font-style: italic;">No description</span>';
+                                    }
+                                    ?>
+                                </td>
                                 <td>
                                     <button class="button button-small ofast-snippet-toggle <?php echo $snippet->active ? 'button-primary' : ''; ?>"
                                         data-id="<?php echo $snippet->id; ?>" data-active="<?php echo $snippet->active; ?>">
-                                        <?php echo $snippet->active ? '✓ Activated' : '✗ Deactivated'; ?>
+                                        <?php echo $snippet->active ? 'Activated' : 'Deactivated'; ?>
                                     </button>
                                 </td>
                                 <td><?php echo date('M j, Y', strtotime($snippet->created_at)); ?></td>
@@ -380,7 +433,7 @@ class Ofast_X_Snippets
                         if (response.success) {
                             var newActive = response.data.active;
                             $btn.data('active', newActive);
-                            $btn.html(newActive ? '✓ Activated' : '✗ Deactivated');
+                            $btn.html(newActive ? 'Activated' : 'Deactivated');
                             $btn.toggleClass('button-primary', newActive);
                         }
                     }).always(function() {
@@ -416,6 +469,48 @@ class Ofast_X_Snippets
                             });
                         }
                     });
+                });
+
+                // Inline title editing
+                $(document).on('click', '.snippet-name-display', function() {
+                    var $display = $(this);
+                    var $input = $display.siblings('.snippet-name-edit');
+                    $display.hide();
+                    $input.show().focus().select();
+                });
+
+                $(document).on('blur', '.snippet-name-edit', function() {
+                    var $input = $(this);
+                    var $display = $input.siblings('.snippet-name-display');
+                    var id = $input.data('id');
+                    var newName = $input.val().trim();
+
+                    if (newName === '') {
+                        $input.hide();
+                        $display.show();
+                        return;
+                    }
+
+                    // Save via AJAX
+                    $.post(ajaxurl, {
+                        action: 'ofast_rename_snippet',
+                        nonce: '<?php echo wp_create_nonce('ofast_snippet_rename'); ?>',
+                        id: id,
+                        name: newName
+                    }, function(response) {
+                        if (response.success) {
+                            $display.find('strong').text(newName);
+                            $input.val(newName);
+                        }
+                        $input.hide();
+                        $display.show();
+                    });
+                });
+
+                $(document).on('keypress', '.snippet-name-edit', function(e) {
+                    if (e.which === 13) { // Enter key
+                        $(this).blur();
+                    }
                 });
             });
         </script>
@@ -481,6 +576,35 @@ class Ofast_X_Snippets
         );
 
         wp_send_json_success();
+    }
+
+    /**
+     * AJAX: Rename snippet
+     */
+    public function ajax_rename_snippet()
+    {
+        check_ajax_referer('ofast_snippet_rename', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        $id = intval($_POST['id']);
+        $name = sanitize_text_field($_POST['name']);
+
+        if (empty($name)) {
+            wp_send_json_error('Name cannot be empty');
+            return;
+        }
+
+        global $wpdb;
+        $wpdb->update(
+            $wpdb->prefix . 'ofast_snippets',
+            array('name' => $name),
+            array('id' => $id)
+        );
+
+        wp_send_json_success(array('name' => $name));
     }
 
     /**

@@ -280,15 +280,35 @@ class Ofast_X_Settings
                 'description' => 'Sync form submissions to Google Sheets',
                 'coming_soon' => true,
             ),
-            'header' => array(
-                'name' => 'Header Customizer',
-                'description' => 'Add custom code to site header',
-                'coming_soon' => true,
+            'user-roles' => array(
+                'name' => 'User Role Manager',
+                'description' => 'Assign multiple roles to WordPress users',
+                'status' => 'Ready to integrate',
             ),
             'admin-url' => array(
                 'name' => 'Admin URL Customizer',
-                'description' => 'Change /wp-admin URL for security',
+                'description' => 'Hide /wp-admin behind a secret custom URL for security',
+                'status' => 'Ready to integrate',
+            ),
+            'duplicate-content' => array(
+                'name' => 'Content Duplicator',
+                'description' => 'Duplicate posts and pages with one click',
+                'status' => 'Ready to integrate',
+            ),
+            'content-order' => array(
+                'name' => 'Content Ordering',
+                'description' => 'Drag-and-drop reorder for posts and pages',
                 'coming_soon' => true,
+            ),
+            'menu-editor' => array(
+                'name' => 'Admin Menu Editor',
+                'description' => 'Reorder and rename WordPress admin menu items',
+                'coming_soon' => true,
+            ),
+            'admin-footer' => array(
+                'name' => 'Custom Admin Footer',
+                'description' => 'Add custom branding text to admin footer',
+                'status' => 'Ready to integrate',
             ),
         );
     }

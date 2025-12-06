@@ -76,6 +76,22 @@ class Ofast_X_Core
         if ($this->is_module_enabled('newsletter')) {
             $this->load_newsletter();
         }
+
+        if ($this->is_module_enabled('user-roles')) {
+            $this->load_user_roles();
+        }
+
+        if ($this->is_module_enabled('admin-url')) {
+            $this->load_admin_url();
+        }
+
+        if ($this->is_module_enabled('admin-footer')) {
+            $this->load_admin_footer();
+        }
+
+        if ($this->is_module_enabled('duplicate-content')) {
+            $this->load_duplicate_content();
+        }
     }
 
     /**
@@ -191,6 +207,58 @@ class Ofast_X_Core
         $newsletter->init();
 
         $this->modules['newsletter'] = $newsletter;
+    }
+
+    /**
+     * Load User Roles Module
+     */
+    private function load_user_roles()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/user-roles/class-ofast-user-roles.php';
+
+        $user_roles = new Ofast_X_User_Roles();
+        $user_roles->init();
+
+        $this->modules['user-roles'] = $user_roles;
+    }
+
+    /**
+     * Load Admin URL Customizer Module
+     */
+    private function load_admin_url()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-url/class-ofast-admin-url.php';
+
+        $admin_url = new Ofast_X_Admin_Url();
+        $admin_url->init();
+
+        $this->modules['admin-url'] = $admin_url;
+    }
+
+    /**
+     * Load Admin Footer Module
+     */
+    private function load_admin_footer()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-footer/class-ofast-admin-footer.php';
+
+        $admin_footer = new Ofast_X_Admin_Footer();
+        $admin_footer->init();
+
+        $this->modules['admin-footer'] = $admin_footer;
+    }
+
+    /**
+     * Load Content Duplicator Module
+     */
+    private function load_duplicate_content()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/duplicate-content/class-ofast-duplicate-content.php';
+
+        $duplicate = new Ofast_X_Duplicate_Content();
+        $duplicate->init();
+
+        $this->modules['duplicate-content'] = $duplicate;
     }
 
     /**

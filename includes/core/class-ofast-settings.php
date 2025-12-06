@@ -303,7 +303,7 @@ class Ofast_X_Settings
             'menu-editor' => array(
                 'name' => 'Admin Menu Editor',
                 'description' => 'Reorder and rename WordPress admin menu items',
-                'coming_soon' => true,
+                'status' => 'Ready to integrate',
             ),
             'admin-footer' => array(
                 'name' => 'Custom Admin Footer',

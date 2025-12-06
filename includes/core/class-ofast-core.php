@@ -92,6 +92,10 @@ class Ofast_X_Core
         if ($this->is_module_enabled('duplicate-content')) {
             $this->load_duplicate_content();
         }
+
+        if ($this->is_module_enabled('menu-editor')) {
+            $this->load_menu_editor();
+        }
     }
 
     /**
@@ -259,6 +263,19 @@ class Ofast_X_Core
         $duplicate->init();
 
         $this->modules['duplicate-content'] = $duplicate;
+    }
+
+    /**
+     * Load Menu Editor Module
+     */
+    private function load_menu_editor()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/menu-editor/class-ofast-menu-editor.php';
+
+        $menu_editor = new Ofast_X_Menu_Editor();
+        $menu_editor->init();
+
+        $this->modules['menu-editor'] = $menu_editor;
     }
 
     /**

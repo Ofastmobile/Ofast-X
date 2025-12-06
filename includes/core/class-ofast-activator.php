@@ -200,6 +200,20 @@ class Ofast_X_Activator
         ) {$charset_collate};";
         dbDelta($sql_redirect_logs);
 
+        // 8. Snippet Revisions Table (for revision history)
+        $table_snippet_revisions = $wpdb->prefix . 'ofast_snippet_revisions';
+        $sql_snippet_revisions = "CREATE TABLE IF NOT EXISTS {$table_snippet_revisions} (
+            id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            snippet_id BIGINT(20) UNSIGNED NOT NULL,
+            code LONGTEXT NOT NULL,
+            changed_at DATETIME NOT NULL,
+            changed_by BIGINT(20) UNSIGNED,
+            PRIMARY KEY (id),
+            KEY idx_snippet_id (snippet_id),
+            KEY idx_changed_at (changed_at)
+        ) {$charset_collate};";
+        dbDelta($sql_snippet_revisions);
+
         // Log database creation
         // Ofast_X_Logger::info('Database tables created successfully');
     }

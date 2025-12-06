@@ -38,6 +38,8 @@ class Ofast_X_Snippets
         add_action('wp_ajax_ofast_bulk_action_snippets', array($this, 'ajax_bulk_action_snippets'));
         add_action('wp_ajax_ofast_import_from_plugin', array($this, 'ajax_import_from_plugin'));
         add_action('wp_ajax_ofast_use_library_template', array($this, 'ajax_use_library_template'));
+        add_action('wp_ajax_ofast_get_revisions', array($this, 'ajax_get_revisions'));
+        add_action('wp_ajax_ofast_restore_revision', array($this, 'ajax_restore_revision'));
 
         // Execute active snippets
         add_action('init', array($this, 'execute_snippets'), 999);
@@ -167,6 +169,12 @@ class Ofast_X_Snippets
             $target_type = isset($_POST['snippet_target_type']) ? sanitize_text_field($_POST['snippet_target_type']) : 'all';
             $target_value = isset($_POST['snippet_target_value']) ? sanitize_text_field($_POST['snippet_target_value']) : '';
             $category = isset($_POST['snippet_category']) ? sanitize_text_field($_POST['snippet_category']) : '';
+
+            // Process tags - convert comma-separated to JSON array
+            $tags_raw = isset($_POST['snippet_tags']) ? sanitize_text_field($_POST['snippet_tags']) : '';
+            $tags_array = array_filter(array_map('trim', explode(',', $tags_raw)));
+            $tags_json = !empty($tags_array) ? json_encode(array_values($tags_array)) : '';
+
             $code = wp_unslash($_POST['snippet_code']);
             $active = isset($_POST['snippet_active']) ? 1 : 0;
 
@@ -186,6 +194,12 @@ class Ofast_X_Snippets
             }
 
             if ($id > 0) {
+                // Get old code to save as revision (only if code changed)
+                $old_snippet = $wpdb->get_row($wpdb->prepare("SELECT code FROM $table WHERE id = %d", $id));
+                if ($old_snippet && $old_snippet->code !== $code) {
+                    $this->save_revision($id, $old_snippet->code);
+                }
+
                 // Update
                 $wpdb->update($table, array(
                     'name' => $name,
@@ -197,6 +211,7 @@ class Ofast_X_Snippets
                     'target_type' => $target_type,
                     'target_value' => $target_value,
                     'category' => $category,
+                    'tags' => $tags_json,
                     'code' => $code,
                     'active' => $active
                 ), array('id' => $id));
@@ -221,6 +236,7 @@ class Ofast_X_Snippets
                     'target_type' => $target_type,
                     'target_value' => $target_value,
                     'category' => $category,
+                    'tags' => $tags_json,
                     'code' => $code,
                     'active' => $active,
                     'created_at' => current_time('mysql')
@@ -421,6 +437,42 @@ class Ofast_X_Snippets
                             </td>
                         </tr>
                         <tr>
+                            <th><label for="snippet_tags">Tags</label></th>
+                            <td>
+                                <?php
+                                // Get existing tags for autocomplete
+                                $existing_tags = array();
+                                $all_tags_raw = $wpdb->get_col("SELECT DISTINCT tags FROM {$wpdb->prefix}ofast_snippets WHERE tags != '' AND tags IS NOT NULL");
+                                foreach ($all_tags_raw as $tags_json) {
+                                    $tags_arr = json_decode($tags_json, true);
+                                    if (is_array($tags_arr)) {
+                                        $existing_tags = array_merge($existing_tags, $tags_arr);
+                                    }
+                                }
+                                $existing_tags = array_unique(array_filter($existing_tags));
+                                sort($existing_tags);
+
+                                $current_tags = '';
+                                if ($edit_snippet && !empty($edit_snippet->tags)) {
+                                    $tags_arr = json_decode($edit_snippet->tags, true);
+                                    if (is_array($tags_arr)) {
+                                        $current_tags = implode(', ', $tags_arr);
+                                    }
+                                }
+                                ?>
+                                <input type="text" name="snippet_tags" id="snippet_tags" class="regular-text"
+                                    value="<?php echo esc_attr($current_tags); ?>"
+                                    placeholder="e.g., woocommerce, hooks, filter"
+                                    list="snippet_tags_list">
+                                <datalist id="snippet_tags_list">
+                                    <?php foreach ($existing_tags as $tag): ?>
+                                        <option value="<?php echo esc_attr($tag); ?>">
+                                        <?php endforeach; ?>
+                                </datalist>
+                                <p class="description">Comma-separated tags for easier filtering. Example: security, login, performance</p>
+                            </td>
+                        </tr>
+                        <tr>
                             <th><label for="snippet_language">Language</label></th>
                             <td>
                                 <select name="snippet_language" id="snippet_language" class="regular-text">
@@ -526,6 +578,9 @@ class Ofast_X_Snippets
                             💾 <?php echo $editing ? 'Update Snippet' : 'Add Snippet'; ?>
                         </button>
                         <?php if ($editing): ?>
+                            <button type="button" class="button" id="view-history-btn" data-snippet-id="<?php echo $editing; ?>" style="margin-left: 10px;">
+                                📜 View History
+                            </button>
                             <a href="<?php echo admin_url('admin.php?page=ofast-snippets'); ?>" class="button">Cancel</a>
                         <?php endif; ?>
                     </p>
@@ -644,7 +699,7 @@ class Ofast_X_Snippets
                         <?php endif; ?>
                     </div>
                     <div>
-                        <input type="text" id="snippet-search" placeholder="🔍 Search snippets..." style="width: 250px;">
+                        <input type="text" id="snippet-search" placeholder="🔍 Search name, description, code, tags..." style="width: 300px;">
                     </div>
                 </div>
 
@@ -688,11 +743,25 @@ class Ofast_X_Snippets
 
                                 // Category
                                 $snippet_category = isset($snippet->category) ? $snippet->category : '';
+
+                                // Check for potential duplicates (only for PHP and inactive snippets)
+                                $duplicate_warning = array('has_duplicate' => false, 'reasons' => array());
+                                if (!$snippet->active && ($snippet->language === 'php' || empty($snippet->language))) {
+                                    $duplicate_warning = $this->get_potential_duplicates($snippet->id, $snippet->name, $snippet->code);
+                                }
                             ?>
-                                <tr class="snippet-row" data-name="<?php echo esc_attr(strtolower($snippet->name)); ?>" data-description="<?php echo esc_attr(strtolower($snippet->description ?? '')); ?>" data-category="<?php echo esc_attr($snippet_category); ?>">
+                                <tr class="snippet-row"
+                                    data-name="<?php echo esc_attr(strtolower($snippet->name)); ?>"
+                                    data-description="<?php echo esc_attr(strtolower($snippet->description ?? '')); ?>"
+                                    data-category="<?php echo esc_attr($snippet_category); ?>"
+                                    data-code="<?php echo esc_attr(strtolower(substr($snippet->code, 0, 2000))); ?>"
+                                    data-tags="<?php echo esc_attr(strtolower($snippet->tags ?? '')); ?>">
                                     <td><input type="checkbox" class="snippet-checkbox" value="<?php echo $snippet->id; ?>"></td>
                                     <td><?php echo $snippet->id; ?></td>
                                     <td>
+                                        <?php if ($duplicate_warning['has_duplicate']): ?>
+                                            <span class="duplicate-warning" title="<?php echo esc_attr(implode(' | ', $duplicate_warning['reasons'])); ?>" style="display: inline-block; width: 10px; height: 10px; background: #dc3545; border-radius: 50%; margin-right: 5px; cursor: help; vertical-align: middle;" data-tooltip="<?php echo esc_attr(implode("\n", $duplicate_warning['reasons'])); ?>"></span>
+                                        <?php endif; ?>
                                         <span class="snippet-name-display" data-id="<?php echo $snippet->id; ?>" style="cursor: pointer; color: #0073aa;" title="Click to rename">
                                             <strong><?php echo esc_html($snippet->name); ?></strong>
                                         </span>
@@ -710,11 +779,25 @@ class Ofast_X_Snippets
                                         <?php endif; ?>
                                     </td>
                                     <td style="word-wrap: break-word; white-space: normal;">
-                                        <?php if (!empty($snippet->description)) {
+                                        <?php
+                                        if (!empty($snippet->description)) {
                                             echo '<span style="color: #666;">' . esc_html($snippet->description) . '</span>';
                                         } else {
                                             echo '<span style="color: #999;">—</span>';
-                                        } ?>
+                                        }
+
+                                        // Display tags as badges
+                                        if (!empty($snippet->tags)) {
+                                            $tags_arr = json_decode($snippet->tags, true);
+                                            if (!empty($tags_arr) && is_array($tags_arr)) {
+                                                echo '<div style="margin-top: 5px;">';
+                                                foreach ($tags_arr as $tag) {
+                                                    echo '<span style="background: #f0e6ff; color: #5b21b6; padding: 1px 6px; border-radius: 3px; font-size: 10px; margin-right: 4px; display: inline-block; margin-bottom: 2px;">' . esc_html($tag) . '</span>';
+                                                }
+                                                echo '</div>';
+                                            }
+                                        }
+                                        ?>
                                     </td>
                                     <td><span style="background: #f0f0f0; padding: 2px 8px; border-radius: 3px; font-size: 11px;"><?php echo $lang_display; ?></span></td>
                                     <td><span style="font-size: 12px;"><?php echo $scope_display; ?></span></td>
@@ -1029,8 +1112,10 @@ class Ofast_X_Snippets
                         var name = String($row.attr('data-name') || '').toLowerCase();
                         var desc = String($row.attr('data-description') || '').toLowerCase();
                         var cat = String($row.attr('data-category') || '');
+                        var code = String($row.attr('data-code') || '').toLowerCase();
+                        var tags = String($row.attr('data-tags') || '').toLowerCase();
 
-                        var matchesText = (query === '' || name.indexOf(query) > -1 || desc.indexOf(query) > -1);
+                        var matchesText = (query === '' || name.indexOf(query) > -1 || desc.indexOf(query) > -1 || code.indexOf(query) > -1 || tags.indexOf(query) > -1);
                         var matchesCategory = (category === '' || category === undefined || cat === category);
 
                         if (matchesText && matchesCategory) {
@@ -1164,6 +1249,101 @@ class Ofast_X_Snippets
                         } else {
                             alert('❌ Failed: ' + response.data);
                             $btn.prop('disabled', false).text('Use Template');
+                        }
+                    });
+                });
+
+                // View History Button
+                $('#view-history-btn').on('click', function() {
+                    var snippetId = $(this).data('snippet-id');
+
+                    // Show loading modal
+                    if (!$('#revision-modal').length) {
+                        $('body').append(`
+                            <div id="revision-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:100000; overflow-y:auto; padding:20px;">
+                                <div style="max-width:800px; margin:50px auto; background:#fff; border-radius:8px; box-shadow:0 10px 50px rgba(0,0,0,0.3);">
+                                    <div style="padding:20px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;">
+                                        <h2 style="margin:0;">📜 Revision History</h2>
+                                        <button type="button" id="close-revision-modal" class="button">&times; Close</button>
+                                    </div>
+                                    <div id="revision-content" style="padding:20px;">Loading...</div>
+                                </div>
+                            </div>
+                        `);
+
+                        $(document).on('click', '#close-revision-modal', function() {
+                            $('#revision-modal').fadeOut();
+                        });
+                    }
+
+                    $('#revision-modal').fadeIn();
+
+                    $.post(ajaxurl, {
+                        action: 'ofast_get_revisions',
+                        nonce: '<?php echo wp_create_nonce('ofast_get_revisions'); ?>',
+                        snippet_id: snippetId
+                    }, function(response) {
+                        if (response.success) {
+                            var revisions = response.data.revisions;
+                            var html = '';
+
+                            if (revisions.length === 0) {
+                                html = '<p style="text-align:center; color:#666; padding:40px;">No revisions yet. Revisions are created when you edit and save code.</p>';
+                            } else {
+                                html = '<p style="color:#666; margin-bottom:15px;">Click "Preview" to view code, "Restore" to revert to that version.</p>';
+                                html += '<table class="widefat striped">';
+                                html += '<thead><tr><th>Date</th><th>Changed By</th><th style="width:200px;">Actions</th></tr></thead>';
+                                html += '<tbody>';
+
+                                revisions.forEach(function(rev) {
+                                    html += '<tr>';
+                                    html += '<td>' + rev.changed_at + '</td>';
+                                    html += '<td>' + (rev.user_name || 'Unknown') + '</td>';
+                                    html += '<td>';
+                                    html += '<button type="button" class="button button-small preview-revision" data-code="' + encodeURIComponent(rev.code) + '">👁 Preview</button> ';
+                                    html += '<button type="button" class="button button-small restore-revision" data-id="' + rev.id + '">↩ Restore</button>';
+                                    html += '</td>';
+                                    html += '</tr>';
+                                });
+
+                                html += '</tbody></table>';
+                            }
+
+                            $('#revision-content').html(html);
+                        } else {
+                            $('#revision-content').html('<p style="color:red;">Error loading revisions</p>');
+                        }
+                    });
+                });
+
+                // Preview revision
+                $(document).on('click', '.preview-revision', function() {
+                    var code = decodeURIComponent($(this).data('code'));
+                    alert('=== REVISION CODE ===\n\n' + code.substring(0, 2000) + (code.length > 2000 ? '\n\n... (truncated)' : ''));
+                });
+
+                // Restore revision
+                $(document).on('click', '.restore-revision', function() {
+                    if (!confirm('Restore this revision? Current code will be saved as a new revision and snippet will be set to INACTIVE for safety.')) {
+                        return;
+                    }
+
+                    var $btn = $(this);
+                    var revisionId = $btn.data('id');
+
+                    $btn.prop('disabled', true).text('Restoring...');
+
+                    $.post(ajaxurl, {
+                        action: 'ofast_restore_revision',
+                        nonce: '<?php echo wp_create_nonce('ofast_restore_revision'); ?>',
+                        revision_id: revisionId
+                    }, function(response) {
+                        if (response.success) {
+                            alert('✅ ' + response.data.message);
+                            location.reload();
+                        } else {
+                            alert('❌ Failed: ' + response.data);
+                            $btn.prop('disabled', false).text('↩ Restore');
                         }
                     });
                 });
@@ -1853,6 +2033,188 @@ class Ofast_X_Snippets
         }
 
         return true;
+    }
+
+    /**
+     * Extract function names from PHP code
+     */
+    private function extract_function_names($code)
+    {
+        $function_names = array();
+        if (preg_match_all('/function\s+([a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*)\s*\(/i', $code, $matches)) {
+            $function_names = $matches[1];
+        }
+        return $function_names;
+    }
+
+    /**
+     * Check for potential duplicates within our snippets table
+     * Returns array with 'has_duplicate' boolean and 'reasons' array
+     */
+    private function get_potential_duplicates($snippet_id, $snippet_name, $snippet_code)
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+
+        $result = array(
+            'has_duplicate' => false,
+            'reasons' => array()
+        );
+
+        // Get all other snippets
+        $other_snippets = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, name, code, active FROM $table WHERE id != %d",
+            $snippet_id
+        ));
+
+        if (empty($other_snippets)) {
+            return $result;
+        }
+
+        // Check for same name
+        foreach ($other_snippets as $other) {
+            if (strtolower(trim($other->name)) === strtolower(trim($snippet_name))) {
+                $result['has_duplicate'] = true;
+                $status = $other->active ? 'ACTIVE' : 'inactive';
+                $result['reasons'][] = "Same name as snippet #{$other->id} ({$status})";
+            }
+        }
+
+        // Extract function names from this snippet
+        $my_functions = $this->extract_function_names($snippet_code);
+
+        if (!empty($my_functions)) {
+            foreach ($other_snippets as $other) {
+                $other_functions = $this->extract_function_names($other->code);
+                $overlap = array_intersect($my_functions, $other_functions);
+
+                if (!empty($overlap)) {
+                    $result['has_duplicate'] = true;
+                    $status = $other->active ? 'ACTIVE' : 'inactive';
+                    $result['reasons'][] = "Shares functions (" . implode(', ', $overlap) . ") with snippet #{$other->id} ({$status})";
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Save a revision of snippet code
+     */
+    private function save_revision($snippet_id, $code)
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippet_revisions';
+
+        // Limit to last 10 revisions per snippet
+        $count = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $table WHERE snippet_id = %d",
+            $snippet_id
+        ));
+
+        if ($count >= 10) {
+            // Delete oldest revision
+            $wpdb->query($wpdb->prepare(
+                "DELETE FROM $table WHERE snippet_id = %d ORDER BY changed_at ASC LIMIT 1",
+                $snippet_id
+            ));
+        }
+
+        // Save new revision
+        $wpdb->insert($table, array(
+            'snippet_id' => $snippet_id,
+            'code' => $code,
+            'changed_at' => current_time('mysql'),
+            'changed_by' => get_current_user_id()
+        ));
+    }
+
+    /**
+     * Get revisions for a snippet
+     */
+    private function get_revisions($snippet_id)
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippet_revisions';
+
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT r.*, u.display_name as user_name 
+             FROM $table r 
+             LEFT JOIN {$wpdb->users} u ON r.changed_by = u.ID 
+             WHERE r.snippet_id = %d 
+             ORDER BY r.changed_at DESC",
+            $snippet_id
+        ));
+    }
+
+    /**
+     * AJAX: Get snippet revisions
+     */
+    public function ajax_get_revisions()
+    {
+        check_ajax_referer('ofast_get_revisions', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        $snippet_id = intval($_POST['snippet_id']);
+        $revisions = $this->get_revisions($snippet_id);
+
+        wp_send_json_success(array('revisions' => $revisions));
+    }
+
+    /**
+     * AJAX: Restore snippet revision
+     */
+    public function ajax_restore_revision()
+    {
+        check_ajax_referer('ofast_restore_revision', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        $revision_id = intval($_POST['revision_id']);
+
+        global $wpdb;
+        $rev_table = $wpdb->prefix . 'ofast_snippet_revisions';
+        $snippet_table = $wpdb->prefix . 'ofast_snippets';
+
+        // Get revision
+        $revision = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $rev_table WHERE id = %d",
+            $revision_id
+        ));
+
+        if (!$revision) {
+            wp_send_json_error('Revision not found');
+        }
+
+        // Save current code as a new revision before restoring
+        $current_snippet = $wpdb->get_row($wpdb->prepare(
+            "SELECT code FROM $snippet_table WHERE id = %d",
+            $revision->snippet_id
+        ));
+
+        if ($current_snippet) {
+            $this->save_revision($revision->snippet_id, $current_snippet->code);
+        }
+
+        // Restore the revision code (set inactive for safety)
+        $wpdb->update(
+            $snippet_table,
+            array('code' => $revision->code, 'active' => 0),
+            array('id' => $revision->snippet_id)
+        );
+
+        $this->log_snippet_action('RESTORED_REVISION', $revision->snippet_id, '', "From revision #{$revision_id}");
+
+        wp_send_json_success(array(
+            'message' => 'Revision restored! Snippet set to inactive for safety.',
+            'code' => $revision->code
+        ));
     }
 
     /**

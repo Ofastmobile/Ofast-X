@@ -87,3 +87,29 @@ function ofast_x_load_textdomain()
     );
 }
 add_action('plugins_loaded', 'ofast_x_load_textdomain');
+
+/**
+ * Add Settings link to plugins page
+ */
+function ofast_x_plugin_action_links($links)
+{
+    $settings_link = '<a href="' . admin_url('admin.php?page=ofast-settings') . '">Settings</a>';
+    array_unshift($links, $settings_link);
+    return $links;
+}
+add_filter('plugin_action_links_' . plugin_basename(__FILE__), 'ofast_x_plugin_action_links');
+
+/**
+ * Redirect to settings page on activation
+ */
+function ofast_x_activation_redirect()
+{
+    if (get_option('ofast_x_do_activation_redirect', false)) {
+        delete_option('ofast_x_do_activation_redirect');
+        if (!isset($_GET['activate-multi'])) {
+            wp_safe_redirect(admin_url('admin.php?page=ofast-settings'));
+            exit;
+        }
+    }
+}
+add_action('admin_init', 'ofast_x_activation_redirect');

@@ -32,6 +32,9 @@ class Ofast_X_Activator
 
         // Log activation
         self::log_activation();
+
+        // Set redirect flag for first-time activation
+        add_option('ofast_x_do_activation_redirect', true);
     }
 
     /**

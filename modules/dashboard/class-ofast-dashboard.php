@@ -18,6 +18,8 @@ class Ofast_X_Dashboard
     public function init()
     {
         add_action('admin_menu', array($this, 'add_dashboard_menu'));
+        // Add Chat Us menu at very end (priority 9999)
+        add_action('admin_menu', array($this, 'add_chat_menu'), 9999);
     }
 
     /**
@@ -46,6 +48,53 @@ class Ofast_X_Dashboard
     }
 
     /**
+     * Add Chat Us menu at the very end - direct link, no page
+     */
+    public function add_chat_menu()
+    {
+        global $submenu;
+
+        $whatsapp_number = '2348069727836';
+        $message = urlencode('Hello! I need help with Ofast X plugin.');
+        $whatsapp_url = 'https://wa.me/' . $whatsapp_number . '?text=' . $message;
+
+        // Add external link directly to submenu array (bypasses WordPress page creation)
+        $submenu['ofast-dashboard'][] = array(
+            'Chat Us',
+            'read',
+            $whatsapp_url
+        );
+
+        // Add CSS for button styling
+        add_action('admin_head', array($this, 'chat_button_styles'));
+    }
+
+    /**
+     * Add Chat Us button styles
+     */
+    public function chat_button_styles()
+    {
+?>
+        <style>
+            #adminmenu .toplevel_page_ofast-dashboard ul.wp-submenu a[href*="wa.me"] {
+                background: #25D366 !important;
+                color: #fff !important;
+                border-radius: 10px !important;
+                padding: 8px 12px !important;
+                margin: 5px 10px !important;
+                display: inline-block !important;
+                transition: all 0.3s ease !important;
+            }
+
+            #adminmenu .toplevel_page_ofast-dashboard ul.wp-submenu a[href*="wa.me"]:hover {
+                background: #128C7E !important;
+                transform: scale(1.05) !important;
+            }
+        </style>
+    <?php
+    }
+
+    /**
      * Render dashboard page with user role statistics
      */
     public function render_dashboard()
@@ -58,7 +107,7 @@ class Ofast_X_Dashboard
         $all_users = count_users();
         $loaded_modules = $this->get_loaded_modules();
 
-?>
+    ?>
         <div class="wrap">
             <h1>📊 Ofast X Dashboard</h1>
             <p class="description">Overview of your site's users and active modules</p>

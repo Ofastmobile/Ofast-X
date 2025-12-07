@@ -213,12 +213,12 @@ class Ofast_X_Email_Template
 
 
                         <div class="email-content">
-                            <?php echo wpautop($content); ?>
+                            <?php echo wp_kses_post(wpautop($content)); ?>
                         </div>
 
                         <?php if ($options['highlight_box'] && $options['highlight_content']): ?>
                             <div class="highlight-box">
-                                <?php echo wpautop($options['highlight_content']); ?>
+                                <?php echo wp_kses_post(wpautop($options['highlight_content'])); ?>
                             </div>
                         <?php endif; ?>
 

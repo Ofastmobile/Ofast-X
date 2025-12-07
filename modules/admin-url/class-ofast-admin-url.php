@@ -50,16 +50,33 @@ class Ofast_X_Admin_Url
         // Register security hooks (login attempt tracking, lockout)
         $this->register_security_hooks();
 
-        // Check for emergency key in URL
-        if (isset($_GET['ofast_emergency']) && $_GET['ofast_emergency'] === $this->emergency_key) {
-            // Valid emergency access - set a cookie for 1 hour
-            setcookie('ofast_admin_bypass', $this->emergency_key, time() + 3600, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
-            return;
+        // Check for emergency key in URL (timing-safe comparison)
+        if (isset($_GET['ofast_emergency']) && !empty($this->emergency_key)) {
+            $provided_key = sanitize_text_field($_GET['ofast_emergency']);
+            if (hash_equals($this->emergency_key, $provided_key)) {
+                // ONE-TIME USE: Rotate the key immediately after use
+                $new_key = $this->rotate_emergency_key();
+
+                // Set bypass cookie with OLD key hash (for this session only)
+                $session_token = wp_generate_password(32, false);
+                setcookie('ofast_admin_bypass', $session_token, time() + 3600, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+
+                // Store session token temporarily
+                set_transient('ofast_bypass_session_' . md5($session_token), true, HOUR_IN_SECONDS);
+
+                // Send email with new key
+                $this->send_new_emergency_key_email($new_key);
+
+                return;
+            }
         }
 
-        // Check for bypass cookie
-        if (isset($_COOKIE['ofast_admin_bypass']) && $_COOKIE['ofast_admin_bypass'] === $this->emergency_key) {
-            return;
+        // Check for bypass cookie (session-based, not key-based)
+        if (isset($_COOKIE['ofast_admin_bypass'])) {
+            $session_token = $_COOKIE['ofast_admin_bypass'];
+            if (get_transient('ofast_bypass_session_' . md5($session_token))) {
+                return;
+            }
         }
 
         // Register custom URL handler
@@ -222,6 +239,72 @@ Ofast X Security Module
 
         $headers = array('Content-Type: text/plain; charset=UTF-8');
 
+        wp_mail($admin_email, $subject, $message, $headers);
+    }
+
+    /**
+     * Rotate emergency key (one-time use security)
+     */
+    private function rotate_emergency_key()
+    {
+        $new_key = wp_generate_password(32, false);
+        update_option('ofast_admin_emergency_key', $new_key);
+        $this->emergency_key = $new_key;
+
+        // Log the rotation
+        $this->log_security_event('emergency_key_rotated', array(
+            'time' => current_time('mysql'),
+            'ip' => $this->get_client_ip()
+        ));
+
+        return $new_key;
+    }
+
+    /**
+     * Send email with new emergency key after rotation
+     */
+    private function send_new_emergency_key_email($new_key)
+    {
+        $admin_email = get_option('admin_email');
+        $site_name = get_bloginfo('name');
+        $site_url = home_url();
+        $custom_url = trailingslashit($site_url) . $this->custom_slug;
+        $new_emergency_url = wp_login_url() . '?ofast_emergency=' . $new_key;
+
+        $subject = "[{$site_name}] Your Emergency Key Has Been Rotated (One-Time Use)";
+
+        $message = "
+=================================================
+ EMERGENCY KEY ROTATED - NEW KEY GENERATED
+=================================================
+
+Your emergency bypass URL was just used. For security, a NEW 
+key has been generated. The old key no longer works.
+
+--------------------------------------------------
+ YOUR NEW EMERGENCY BYPASS URL:
+--------------------------------------------------
+{$new_emergency_url}
+
+ IMPORTANT: This is a ONE-TIME USE key. After you use it,
+a new key will be generated and emailed to you.
+
+--------------------------------------------------
+ YOUR CUSTOM LOGIN URL (unchanged):
+--------------------------------------------------
+{$custom_url}
+
+--------------------------------------------------
+ SECURITY INFO:
+--------------------------------------------------
+• Time: " . current_time('mysql') . "
+• This email confirms the old key was used successfully
+• Save this email - the new key is only sent once
+
+--------------------------------------------------
+";
+
+        $headers = array('Content-Type: text/plain; charset=UTF-8');
         wp_mail($admin_email, $subject, $message, $headers);
     }
 
@@ -402,7 +485,8 @@ Ofast X Security Module
                                     Copy
                                 </button>
                                 <p class="description" style="color: #dc3545;">
-                                    Use only if locked out. Grants 1-hour bypass access.
+                                    <strong>⚠️ ONE-TIME USE:</strong> After using this link, a NEW key is generated and emailed to you.<br>
+                                    The old key becomes invalid immediately. Grants 1-hour bypass access.
                                 </p>
                             </td>
                         </tr>

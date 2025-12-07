@@ -165,9 +165,13 @@ class Ofast_X_Newsletter
 
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_newsletter_subscribers';
-        $name = sanitize_text_field($_POST['subscriber_name']);
+
+        // SECURITY: Remove newlines from name to prevent email header injection
+        $name = str_replace(array("\r", "\n", "\t"), '', sanitize_text_field($_POST['subscriber_name']));
         $email = sanitize_email($_POST['subscriber_email']);
-        $ip = $_SERVER['REMOTE_ADDR'];
+
+        // SECURITY: Better IP detection (handles proxies)
+        $ip = $this->get_client_ip();
 
         if (empty($name) || empty($email) || !is_email($email)) {
             wp_redirect(add_query_arg('newsletter', 'invalid', wp_get_referer()));
@@ -190,7 +194,8 @@ class Ofast_X_Newsletter
 
         if ($inserted) {
             $admin_email = get_option('admin_email');
-            wp_mail($admin_email, 'New Newsletter Subscriber',  "Name: $name\nEmail: $email", array('Content-Type: text/html'));
+            // SECURITY: Escape content in email body
+            wp_mail($admin_email, 'New Newsletter Subscriber', "Name: " . esc_html($name) . "\nEmail: " . esc_html($email), array('Content-Type: text/html'));
             wp_redirect(add_query_arg('newsletter', 'success', wp_get_referer()));
             exit;
         } else {
@@ -270,5 +275,34 @@ class Ofast_X_Newsletter
             <?php endif; ?>
         </div>
 <?php
+    }
+
+    /**
+     * SECURITY: Get real client IP (handles proxies)
+     */
+    private function get_client_ip()
+    {
+        $ip_headers = array(
+            'HTTP_CF_CONNECTING_IP',     // Cloudflare
+            'HTTP_X_FORWARDED_FOR',      // Proxies
+            'HTTP_X_REAL_IP',            // Nginx
+            'REMOTE_ADDR'                // Default
+        );
+
+        foreach ($ip_headers as $header) {
+            if (!empty($_SERVER[$header])) {
+                $ip = $_SERVER[$header];
+                // X-Forwarded-For can contain multiple IPs, take the first
+                if (strpos($ip, ',') !== false) {
+                    $ip = trim(explode(',', $ip)[0]);
+                }
+                // Validate IP format
+                if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                    return $ip;
+                }
+            }
+        }
+
+        return '0.0.0.0';
     }
 }

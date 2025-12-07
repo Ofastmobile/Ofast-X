@@ -69,6 +69,9 @@ function ofast_x_init_plugin()
     require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-core.php';
     require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-loader.php';
 
+    // Load security hardening (early load for headers)
+    require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-security-hardening.php';
+
     // Initialize plugin
     $ofast_x = new Ofast_X_Core();
     $ofast_x->run();

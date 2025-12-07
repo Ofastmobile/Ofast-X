@@ -100,6 +100,10 @@ class Ofast_X_Core
         if ($this->is_module_enabled('content-order')) {
             $this->load_content_order();
         }
+
+        if ($this->is_module_enabled('redirects')) {
+            $this->load_redirects();
+        }
     }
 
     /**
@@ -347,5 +351,16 @@ class Ofast_X_Core
         $content_order = new Ofast_X_Content_Order();
         $content_order->init();
         $this->modules['content-order'] = $content_order;
+    }
+
+    /**
+     * Load Redirects Module
+     */
+    private function load_redirects()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/redirects/class-ofast-redirects.php';
+        $redirects = new Ofast_X_Redirects();
+        $redirects->init();
+        $this->modules['redirects'] = $redirects;
     }
 }

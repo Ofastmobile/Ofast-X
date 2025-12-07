@@ -46,6 +46,59 @@ class Ofast_X_Snippets
 
         // Show runtime error notices
         add_action('admin_notices', array($this, 'show_runtime_error_notice'));
+
+        // Enqueue CodeMirror for code editor
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_codemirror'));
+    }
+
+    /**
+     * Enqueue CodeMirror for the snippet editor
+     */
+    public function enqueue_codemirror($hook)
+    {
+        // Only on our snippets page
+        if ($hook !== 'ofast-x_page_ofast-snippets') {
+            return;
+        }
+
+        // WordPress CodeMirror settings for PHP
+        $settings = wp_enqueue_code_editor(array(
+            'type' => 'application/x-httpd-php',
+            'codemirror' => array(
+                'lineNumbers' => true,
+                'lineWrapping' => true,
+                'indentUnit' => 4,
+                'tabSize' => 4,
+                'indentWithTabs' => false,
+                'autoCloseBrackets' => true,
+                'matchBrackets' => true,
+                'autoCloseTags' => true,
+                'foldGutter' => true,
+                'gutters' => array('CodeMirror-linenumbers', 'CodeMirror-foldgutter'),
+                'extraKeys' => array(
+                    'Ctrl-/' => 'toggleComment',
+                    'Cmd-/' => 'toggleComment',
+                    'Ctrl-Space' => 'autocomplete',
+                ),
+            ),
+        ));
+
+        // If CodeMirror is disabled, bail
+        if (false === $settings) {
+            return;
+        }
+
+        // Also enqueue for JS
+        wp_enqueue_code_editor(array('type' => 'text/javascript'));
+
+        // Also enqueue for CSS
+        wp_enqueue_code_editor(array('type' => 'text/css'));
+
+        // Also enqueue for HTML
+        wp_enqueue_code_editor(array('type' => 'text/html'));
+
+        // Pass settings to our script
+        wp_localize_script('code-editor', 'ofastCodeMirrorSettings', $settings);
     }
 
     /**
@@ -429,7 +482,7 @@ class Ofast_X_Snippets
 
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
                 <h2><?php echo $editing ? 'Edit Snippet' : 'Add New Snippet'; ?></h2>
-                <form method="post">
+                <form method="post" class="ofast-snippet-form">
                     <?php wp_nonce_field('ofast_snippet_save', '_wpnonce'); ?>
 
                     <?php if ($editing): ?>
@@ -624,6 +677,140 @@ class Ofast_X_Snippets
             </div>
 
             <style>
+                /* Minimal Form Layout */
+                .ofast-snippet-form {
+                    max-width: 900px;
+                }
+
+                .ofast-snippet-form .form-table {
+                    margin-top: 15px;
+                }
+
+                .ofast-snippet-form .form-table th {
+                    width: 120px;
+                    padding: 12px 10px 12px 0;
+                    font-weight: 500;
+                    font-size: 13px;
+                    color: #1e1e1e;
+                }
+
+                .ofast-snippet-form .form-table td {
+                    padding: 10px 0;
+                }
+
+                .ofast-snippet-form input[type="text"],
+                .ofast-snippet-form select {
+                    max-width: 400px;
+                    width: 100%;
+                    padding: 8px 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    transition: border-color 0.2s, box-shadow 0.2s;
+                }
+
+                .ofast-snippet-form input[type="text"]:focus,
+                .ofast-snippet-form select:focus {
+                    border-color: #2271b1;
+                    box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.1);
+                    outline: none;
+                }
+
+                .ofast-snippet-form textarea#snippet_description {
+                    max-width: 500px;
+                    width: 100%;
+                    padding: 10px 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 6px;
+                    font-size: 13px;
+                    resize: vertical;
+                    min-height: 60px;
+                    font-family: inherit;
+                }
+
+                .ofast-snippet-form textarea#snippet_description:focus {
+                    border-color: #2271b1;
+                    box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.1);
+                    outline: none;
+                }
+
+                .ofast-snippet-form .description {
+                    color: #666;
+                    font-size: 12px;
+                    margin-top: 6px;
+                }
+
+                /* CodeMirror Styling */
+                .ofast-snippet-form .CodeMirror {
+                    max-width: 100%;
+                    border: 1px solid #ddd;
+                    border-radius: 8px;
+                    font-size: 13px;
+                    line-height: 1.5;
+                    height: 300px;
+                    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+                }
+
+                .ofast-snippet-form .CodeMirror-focused {
+                    border-color: #2271b1;
+                    box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.1);
+                }
+
+                .ofast-snippet-form .CodeMirror-gutters {
+                    background: #f8f9fa;
+                    border-right: 1px solid #e5e5e5;
+                    border-radius: 8px 0 0 8px;
+                }
+
+                .ofast-snippet-form .CodeMirror-linenumber {
+                    color: #999;
+                    font-size: 11px;
+                }
+
+                /* Submit Area */
+                .ofast-snippet-form .submit {
+                    border-top: 1px solid #eee;
+                    padding-top: 20px;
+                    margin-top: 10px;
+                }
+
+                /* Responsive Styles */
+                @media screen and (max-width: 782px) {
+
+                    .ofast-snippet-form .form-table th,
+                    .ofast-snippet-form .form-table td {
+                        display: block;
+                        width: 100%;
+                        padding: 8px 0;
+                    }
+
+                    .ofast-snippet-form .form-table th {
+                        padding-bottom: 4px;
+                    }
+
+                    .ofast-snippet-form input[type="text"],
+                    .ofast-snippet-form select,
+                    .ofast-snippet-form textarea#snippet_description {
+                        max-width: 100%;
+                    }
+
+                    .ofast-snippet-form .CodeMirror {
+                        height: 250px;
+                    }
+                }
+
+                @media screen and (max-width: 480px) {
+                    .ofast-snippet-form .CodeMirror {
+                        height: 200px;
+                        font-size: 12px;
+                    }
+
+                    .ofast-snippet-form .submit .button {
+                        width: 100%;
+                        margin-bottom: 10px;
+                    }
+                }
+
                 /* Modern Toggle Switch */
                 .ofast-toggle-switch {
                     display: flex;
@@ -856,6 +1043,59 @@ class Ofast_X_Snippets
 
         <script>
             jQuery(document).ready(function($) {
+                // Initialize CodeMirror on the code textarea
+                var cmEditor = null;
+                var $codeTextarea = $('#snippet_code');
+
+                if ($codeTextarea.length && typeof wp !== 'undefined' && wp.codeEditor) {
+                    // Get language-specific settings
+                    var language = $('#snippet_language').val() || 'php';
+                    var mimeTypes = {
+                        'php': 'application/x-httpd-php',
+                        'javascript': 'text/javascript',
+                        'css': 'text/css',
+                        'html': 'text/html'
+                    };
+
+                    // Initialize CodeMirror
+                    cmEditor = wp.codeEditor.initialize($codeTextarea, {
+                        codemirror: {
+                            mode: mimeTypes[language] || 'application/x-httpd-php',
+                            lineNumbers: true,
+                            lineWrapping: true,
+                            indentUnit: 4,
+                            tabSize: 4,
+                            indentWithTabs: false,
+                            autoCloseBrackets: true,
+                            matchBrackets: true,
+                            autoCloseTags: true,
+                            extraKeys: {
+                                'Ctrl-/': 'toggleComment',
+                                'Cmd-/': 'toggleComment',
+                                'Tab': function(cm) {
+                                    cm.replaceSelection('    ', 'end');
+                                }
+                            }
+                        }
+                    });
+
+                    // Switch CodeMirror mode when language changes
+                    $('#snippet_language').on('change', function() {
+                        var newLang = $(this).val();
+                        var newMode = mimeTypes[newLang] || 'application/x-httpd-php';
+                        if (cmEditor && cmEditor.codemirror) {
+                            cmEditor.codemirror.setOption('mode', newMode);
+                        }
+                    });
+
+                    // Make sure CodeMirror content syncs back to textarea before form submit
+                    $('form').on('submit', function() {
+                        if (cmEditor && cmEditor.codemirror) {
+                            cmEditor.codemirror.save();
+                        }
+                    });
+                }
+
                 // Toggle snippet
                 $(document).on('click', '.ofast-snippet-toggle', function(e) {
                     e.preventDefault();
@@ -1021,9 +1261,16 @@ class Ofast_X_Snippets
                     var exportType = $('#ofast-export-type').val();
                     $btn.prop('disabled', true).text('Exporting...');
 
+                    // Collect selected snippet IDs (from checkboxes if any are checked)
+                    var selectedIds = [];
+                    $('.snippet-checkbox:checked').each(function() {
+                        selectedIds.push($(this).val());
+                    });
+
                     $.post(ajaxurl, {
                         action: 'ofast_export_snippets',
-                        nonce: '<?php echo wp_create_nonce('ofast_export_snippets'); ?>'
+                        nonce: '<?php echo wp_create_nonce('ofast_export_snippets'); ?>',
+                        ids: selectedIds
                     }, function(response) {
                         if (response.success) {
                             var content, filename, mimeType;
@@ -1272,22 +1519,88 @@ class Ofast_X_Snippets
                     var $btn = $(this);
                     var index = $btn.data('index');
 
+                    useTemplate($btn, index, false);
+                });
+
+                // Function to use template (handles duplicates)
+                function useTemplate($btn, index, forceCopy) {
                     $btn.prop('disabled', true).text('Adding...');
 
                     $.post(ajaxurl, {
                         action: 'ofast_use_library_template',
                         nonce: '<?php echo wp_create_nonce('ofast_use_template'); ?>',
-                        index: index
+                        index: index,
+                        force_copy: forceCopy ? 1 : 0
                     }, function(response) {
                         if (response.success) {
-                            alert(response.data.message);
-                            location.reload();
+                            // Check if duplicate found
+                            if (response.data.duplicate) {
+                                // Show custom modal with options
+                                showDuplicateModal(response.data, $btn, index);
+                            } else {
+                                // Normal success
+                                alert(response.data.message);
+                                location.reload();
+                            }
                         } else {
                             alert('Failed: ' + response.data);
                             $btn.prop('disabled', false).text('Use Template');
                         }
                     });
-                });
+                }
+
+                // Custom modal for duplicate template choice
+                function showDuplicateModal(data, $btn, index) {
+                    // Remove existing modal if any
+                    $('#ofast-duplicate-modal').remove();
+
+                    var modalHtml = `
+                        <div id="ofast-duplicate-modal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:100000; display:flex; align-items:center; justify-content:center;">
+                            <div style="background:#fff; border-radius:12px; padding:0; max-width:450px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                                <div style="padding:20px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                                    <h3 style="margin:0; color:#1d2327;">Template Already Exists</h3>
+                                    <button type="button" class="close-duplicate-modal" style="background:none; border:none; font-size:24px; cursor:pointer; color:#999;">&times;</button>
+                                </div>
+                                <div style="padding:25px;">
+                                    <p style="margin:0 0 20px; color:#50575e;">"<strong>${data.existing_name}</strong>" already exists in your snippets.</p>
+                                    <p style="margin:0 0 25px; color:#666;">What would you like to do?</p>
+                                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                        <button type="button" class="button button-primary edit-existing-btn" style="flex:1; min-width:120px;">Edit Existing</button>
+                                        <button type="button" class="button create-copy-btn" style="flex:1; min-width:120px;">Create Copy</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    $('body').append(modalHtml);
+
+                    var $modal = $('#ofast-duplicate-modal');
+
+                    // Close modal on X click or outside click
+                    $modal.on('click', '.close-duplicate-modal', function() {
+                        $modal.remove();
+                        $btn.prop('disabled', false).text('Use Template');
+                    });
+
+                    $modal.on('click', function(e) {
+                        if (e.target === this) {
+                            $modal.remove();
+                            $btn.prop('disabled', false).text('Use Template');
+                        }
+                    });
+
+                    // Edit existing
+                    $modal.on('click', '.edit-existing-btn', function() {
+                        window.location.href = '?page=ofast-snippets&edit=' + data.existing_id;
+                    });
+
+                    // Create copy
+                    $modal.on('click', '.create-copy-btn', function() {
+                        $modal.remove();
+                        useTemplate($btn, index, true);
+                    });
+                }
 
                 // View History Button
                 $('#view-history-btn').on('click', function() {
@@ -1533,7 +1846,24 @@ class Ofast_X_Snippets
 
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_snippets';
-        $snippets = $wpdb->get_results("SELECT name, description, code, language, scope, location, target_type, target_value, run_once, active FROM $table ORDER BY id");
+
+        // Check if specific IDs were passed (selected snippets)
+        $selected_ids = isset($_POST['ids']) ? array_map('intval', (array)$_POST['ids']) : array();
+        $selected_ids = array_filter($selected_ids); // Remove zeros
+
+        if (!empty($selected_ids)) {
+            // Export only selected snippets
+            $placeholders = implode(',', array_fill(0, count($selected_ids), '%d'));
+            $snippets = $wpdb->get_results($wpdb->prepare(
+                "SELECT name, description, code, language, scope, location, target_type, target_value, run_once, active FROM $table WHERE id IN ($placeholders) ORDER BY id",
+                $selected_ids
+            ));
+            $export_label = count($selected_ids) . ' Selected Snippets';
+        } else {
+            // Export all snippets
+            $snippets = $wpdb->get_results("SELECT name, description, code, language, scope, location, target_type, target_value, run_once, active FROM $table ORDER BY id");
+            $export_label = 'All Snippets';
+        }
 
         $export_data = array(
             'plugin' => 'ofast-x',
@@ -1544,7 +1874,7 @@ class Ofast_X_Snippets
         );
 
         // Audit log
-        $this->log_snippet_action('EXPORTED', 0, 'All Snippets', 'Count: ' . count($snippets));
+        $this->log_snippet_action('EXPORTED', 0, $export_label, 'Count: ' . count($snippets));
 
         wp_send_json_success($export_data);
     }
@@ -1640,6 +1970,7 @@ class Ofast_X_Snippets
         }
 
         $index = isset($_POST['index']) ? intval($_POST['index']) : -1;
+        $force_copy = isset($_POST['force_copy']) ? (bool)$_POST['force_copy'] : false;
 
         // Load library
         $library_file = plugin_dir_path(__FILE__) . 'library/snippets.json';
@@ -1657,9 +1988,39 @@ class Ofast_X_Snippets
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_snippets';
 
+        // Check if snippet with same name already exists
+        $existing = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, name FROM $table WHERE name = %s",
+            $template['name']
+        ));
+
+        if ($existing && !$force_copy) {
+            // Return info about existing snippet - let frontend ask user
+            wp_send_json_success(array(
+                'duplicate' => true,
+                'existing_id' => $existing->id,
+                'existing_name' => $existing->name,
+                'message' => "'{$template['name']}' already exists. Would you like to edit the existing one or create a copy?"
+            ));
+            return;
+        }
+
+        // Determine the name (add "Copy" suffix if duplicate and force_copy)
+        $snippet_name = $template['name'];
+        if ($existing && $force_copy) {
+            // Find a unique name
+            $copy_num = 1;
+            $new_name = $snippet_name . ' (Copy)';
+            while ($wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table WHERE name = %s", $new_name))) {
+                $copy_num++;
+                $new_name = $snippet_name . ' (Copy ' . $copy_num . ')';
+            }
+            $snippet_name = $new_name;
+        }
+
         // Insert as inactive
         $result = $wpdb->insert($table, array(
-            'name' => $template['name'],
+            'name' => $snippet_name,
             'description' => $template['description'],
             'code' => $template['code'],
             'language' => $template['language'],
@@ -1671,14 +2032,14 @@ class Ofast_X_Snippets
         ));
 
         if ($result === false) {
-            wp_send_json_error('Failed to add template');
+            wp_send_json_error('Failed to add template: ' . $wpdb->last_error);
         }
 
         // Log
-        $this->log_snippet_action('TEMPLATE_USED', $wpdb->insert_id, $template['name'], "Category: {$template['category']}");
+        $this->log_snippet_action('TEMPLATE_USED', $wpdb->insert_id, $snippet_name, "Category: {$template['category']}");
 
         wp_send_json_success(array(
-            'message' => "'{$template['name']}' added! It's set to INACTIVE - review and activate when ready.",
+            'message' => "'{$snippet_name}' added! It's set to INACTIVE - review and activate when ready.",
             'id' => $wpdb->insert_id
         ));
     }

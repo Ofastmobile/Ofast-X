@@ -307,40 +307,58 @@ class Ofast_X_Snippets
                     echo '<div class="notice notice-info"><p>Snippet saved (inactive for safety)</p></div>';
                 }
             } else {
-                // Insert
-                $result = $wpdb->insert($table, array(
-                    'name' => $name,
-                    'description' => $description,
-                    'language' => $language,
-                    'scope' => $scope,
-                    'location' => $location,
-                    'run_once' => $run_once,
-                    'target_type' => $target_type,
-                    'target_value' => $target_value,
-                    'category' => $category,
-                    'tags' => $tags_json,
-                    'code' => $code,
-                    'active' => $active,
-                    'created_at' => current_time('mysql')
-                ));
-
-                // Debug logging for live server issues
-                if ($result === false) {
-                    error_log('Ofast Snippet Save Error: ' . $wpdb->last_error);
-                    echo '<div class="notice notice-error"><p><strong>Database Error:</strong> ' . esc_html($wpdb->last_error) . '</p></div>';
-                    return;
-                }
-
-                $new_id = $wpdb->insert_id;
-
-                // Audit log
-                $this->log_snippet_action('CREATED', $new_id, $name, "Language: {$language}, Scope: {$scope}, Active: " . ($active ? 'Yes' : 'No'));
-
-                if ($validation === true) {
-                    echo '<div class="notice notice-success"><p>Snippet added and ' . ($active ? 'activated' : 'saved') . '!</p></div>';
+                // DUPLICATE CHECK: Prevent saving snippets with same name
+                $existing_name = $wpdb->get_row($wpdb->prepare("SELECT id, name FROM $table WHERE name = %s", $name));
+                if ($existing_name) {
+                    echo '<div class="notice notice-error is-dismissible"><p><strong>Duplicate Name:</strong> A snippet named "' . esc_html($name) . '" already exists. Please use a different name or edit the existing snippet.</p></div>';
+                    // Don't redirect, let form stay with data so user can fix
                 } else {
-                    echo '<div class="notice notice-info"><p>Snippet saved (inactive for safety)</p></div>';
-                }
+                    // DUPLICATE CODE CHECK: Prevent saving snippets with same code
+                    $code_hash = md5(trim($code));
+                    $existing_code = $wpdb->get_row($wpdb->prepare(
+                        "SELECT id, name FROM $table WHERE MD5(TRIM(code)) = %s",
+                        $code_hash
+                    ));
+                    if ($existing_code) {
+                        echo '<div class="notice notice-error is-dismissible"><p><strong>Duplicate Code:</strong> This exact code already exists in snippet "' . esc_html($existing_code->name) . '" (ID: ' . $existing_code->id . '). Edit the existing snippet instead of creating a duplicate.</p></div>';
+                        // Don't save, let user decide
+                    } else {
+                        // Insert
+                        $result = $wpdb->insert($table, array(
+                            'name' => $name,
+                            'description' => $description,
+                            'language' => $language,
+                            'scope' => $scope,
+                            'location' => $location,
+                            'run_once' => $run_once,
+                            'target_type' => $target_type,
+                            'target_value' => $target_value,
+                            'category' => $category,
+                            'tags' => $tags_json,
+                            'code' => $code,
+                            'active' => $active,
+                            'created_at' => current_time('mysql')
+                        ));
+
+                        // Debug logging for live server issues
+                        if ($result === false) {
+                            error_log('Ofast Snippet Save Error: ' . $wpdb->last_error);
+                            echo '<div class="notice notice-error"><p><strong>Database Error:</strong> ' . esc_html($wpdb->last_error) . '</p></div>';
+                            return;
+                        }
+
+                        $new_id = $wpdb->insert_id;
+
+                        // Audit log
+                        $this->log_snippet_action('CREATED', $new_id, $name, "Language: {$language}, Scope: {$scope}, Active: " . ($active ? 'Yes' : 'No'));
+
+                        if ($validation === true) {
+                            echo '<div class="notice notice-success"><p>Snippet added and ' . ($active ? 'activated' : 'saved') . '!</p></div>';
+                        } else {
+                            echo '<div class="notice notice-info"><p>Snippet saved (inactive for safety)</p></div>';
+                        }
+                    } // End of !$existing_code else block
+                } // End of !$existing_name else block
             }
         }
 
@@ -960,8 +978,8 @@ class Ofast_X_Snippets
                                 $loc = isset($snippet->location) && !empty($snippet->location) ? $snippet->location : 'footer';
                                 $loc_display = isset($loc_labels[$loc]) ? $loc_labels[$loc] : 'Footer';
 
-                                // Status and run once
-                                $status_text = $snippet->active ? 'Active' : 'Inactive';
+                                // Status and run once - button shows ACTION to take
+                                $status_text = $snippet->active ? 'Deactivate' : 'Activate';
                                 $run_once_text = (isset($snippet->run_once) && $snippet->run_once) ? ' (Once)' : '';
 
                                 // Category
@@ -1114,7 +1132,7 @@ class Ofast_X_Snippets
                         if (response.success) {
                             var newActive = response.data.active;
                             $btn.data('active', newActive);
-                            $btn.html(newActive ? 'Activated' : 'Deactivated');
+                            $btn.html(newActive ? 'Deactivate' : 'Activate');
                             $btn.toggleClass('button-primary', newActive);
                         }
                     }).always(function() {
@@ -1926,6 +1944,17 @@ class Ofast_X_Snippets
                 }
             }
 
+            // DUPLICATE CODE CHECK: Skip if exact code already exists
+            $code_hash = md5(trim($snippet['code']));
+            $existing_code = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM $table WHERE MD5(TRIM(code)) = %s",
+                $code_hash
+            ));
+            if ($existing_code) {
+                $skipped++;
+                continue;
+            }
+
             // Insert snippet (always as INACTIVE for safety)
             $wpdb->insert($table, array(
                 'name' => sanitize_text_field($snippet['name']) . ' (imported)',
@@ -2184,6 +2213,17 @@ class Ofast_X_Snippets
                     }
                 }
 
+                // DUPLICATE CODE CHECK: Skip if exact code already exists
+                $code_hash = md5(trim($snippet->code));
+                $existing_code = $wpdb->get_var($wpdb->prepare(
+                    "SELECT id FROM $table WHERE MD5(TRIM(code)) = %s",
+                    $code_hash
+                ));
+                if ($existing_code) {
+                    $skipped++;
+                    continue;
+                }
+
                 $wpdb->insert($table, array(
                     'name' => sanitize_text_field($snippet->name) . ' (from Code Snippets)',
                     'description' => isset($snippet->desc) ? sanitize_textarea_field($snippet->desc) : '',
@@ -2235,6 +2275,17 @@ class Ofast_X_Snippets
                         $skipped++;
                         continue;
                     }
+                }
+
+                // DUPLICATE CODE CHECK: Skip if exact code already exists
+                $code_hash = md5(trim($code));
+                $existing_code = $wpdb->get_var($wpdb->prepare(
+                    "SELECT id FROM $table WHERE MD5(TRIM(code)) = %s",
+                    $code_hash
+                ));
+                if ($existing_code) {
+                    $skipped++;
+                    continue;
                 }
 
                 $wpdb->insert($table, array(
@@ -2751,7 +2802,99 @@ class Ofast_X_Snippets
             'include_once' => 'Include external files',
             'require' => 'Include external files',
             'require_once' => 'Include external files',
+            // CRASH-CAUSING FUNCTIONS
+            'exit' => 'Terminates WordPress execution',
+            'die' => 'Terminates WordPress execution',
+            'sleep' => 'Causes server delays/timeouts',
+            'usleep' => 'Causes server delays/timeouts',
+            'set_time_limit' => 'Can cause infinite execution',
+            'ini_set' => 'Can modify PHP configuration',
+            'mail' => 'Can be used for spam (use wp_mail instead)',
+            'header' => 'Can cause header errors (use wp_redirect instead)',
+            'setcookie' => 'Can cause header errors',
+            'session_start' => 'Can conflict with WordPress sessions',
+            'ob_start' => 'Can break output buffering',
+            'ob_end_clean' => 'Can break output buffering',
+            'ob_end_flush' => 'Can break output buffering',
+            'error_reporting' => 'Can hide critical errors',
+            'restore_error_handler' => 'Can disable error handling',
+            'register_shutdown_function' => 'Can interfere with WordPress shutdown',
+            'define' => 'Can conflict with WordPress constants',
+            'constant' => 'Can expose sensitive constants',
         );
+
+        // INFINITE LOOP DETECTION - Check for while(true), while(1), for(;;)
+        $infinite_loop_patterns = array(
+            '/while\s*\(\s*true\s*\)/i' => 'while(true) infinite loop',
+            '/while\s*\(\s*1\s*\)/i' => 'while(1) infinite loop',
+            '/while\s*\(\s*!\s*false\s*\)/i' => 'while(!false) infinite loop',
+            '/for\s*\(\s*;\s*;\s*\)/' => 'for(;;) infinite loop',
+            '/while\s*\(\s*\$[a-z_]+\s*=\s*\$[a-z_]+\s*\)/i' => 'Self-referential while condition',
+        );
+
+        foreach ($infinite_loop_patterns as $pattern => $reason) {
+            if (preg_match($pattern, $code)) {
+                return "Crash prevention: {$reason} detected. This would freeze or crash your site.";
+            }
+        }
+
+        // MEMORY EXHAUSTION DETECTION
+        $memory_patterns = array(
+            '/str_repeat\s*\(.{0,50}\d{6,}/i' => 'str_repeat with very large number can exhaust memory',
+            '/array_fill\s*\(.{0,50}\d{6,}/i' => 'array_fill with very large number can exhaust memory',
+            '/range\s*\(.{0,30}\d{7,}/i' => 'range() with large numbers can exhaust memory',
+        );
+
+        foreach ($memory_patterns as $pattern => $reason) {
+            if (preg_match($pattern, $code)) {
+                return "Memory protection: {$reason}";
+            }
+        }
+
+        // RECURSIVE FUNCTION DETECTION
+        // Extract function names and check if they call themselves without exit conditions
+        if (preg_match_all('/function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/i', $code, $func_matches)) {
+            foreach ($func_matches[1] as $func_name) {
+                // Check if function calls itself
+                $self_call_pattern = '/function\s+' . preg_quote($func_name, '/') . '\s*\([^)]*\)\s*\{[^}]*' . preg_quote($func_name, '/') . '\s*\(/is';
+                if (preg_match($self_call_pattern, $code)) {
+                    // Check if there's a clear exit condition (if/return before the recursive call)
+                    $safe_recursion = '/function\s+' . preg_quote($func_name, '/') . '\s*\([^)]*\)\s*\{[^}]*(if\s*\([^)]+\)\s*\{?\s*return|if\s*\([^)]+\)\s*return)/is';
+                    if (!preg_match($safe_recursion, $code)) {
+                        return "Crash prevention: Function '{$func_name}' appears to be recursive without a clear exit condition. This could cause a stack overflow and crash your site.";
+                    }
+                }
+            }
+        }
+
+        // DANGEROUS SQL DETECTION
+        $dangerous_sql = array(
+            '/\bDROP\s+(TABLE|DATABASE|INDEX)/i' => 'DROP TABLE/DATABASE - Destroys data permanently',
+            '/\bTRUNCATE\s+TABLE/i' => 'TRUNCATE TABLE - Deletes all data from table',
+            '/\bDELETE\s+FROM\s+\w+\s*(;|$)/i' => 'DELETE without WHERE - Deletes all rows',
+            '/\bALTER\s+TABLE/i' => 'ALTER TABLE - Can break database structure',
+            '/\bCREATE\s+(TABLE|DATABASE)/i' => 'CREATE TABLE/DATABASE - Should use WordPress dbDelta()',
+            '/\$wpdb\s*->\s*query\s*\(\s*["\']?\s*DELETE/i' => 'Raw DELETE query - Use $wpdb->delete() instead',
+        );
+
+        foreach ($dangerous_sql as $pattern => $reason) {
+            if (preg_match($pattern, $code)) {
+                return "Database protection: {$reason}";
+            }
+        }
+
+        // UNLIMITED SELECT - BLOCK to prevent memory exhaustion on large tables
+        // Detects SELECT * FROM without LIMIT in get_results
+        if (preg_match('/\$wpdb\s*->\s*get_results\s*\(\s*["\'][^"\']*SELECT\s+\*\s+FROM[^"\']*["\'](?![^)]*LIMIT)/i', $code)) {
+            return "Database protection: SELECT * FROM without LIMIT can crash your site on large tables. Add LIMIT clause (e.g., LIMIT 100).";
+        }
+
+        // Also check for raw SQL variables without LIMIT
+        if (preg_match('/["\']SELECT\s+\*\s+FROM\s+\w+["\']\s*(?!.*LIMIT)/i', $code)) {
+            if (!preg_match('/LIMIT\s+\d+/i', $code)) {
+                return "Database protection: SELECT * FROM without LIMIT can crash your site on large tables. Add LIMIT clause.";
+            }
+        }
 
         $code_lower = strtolower($code);
         foreach ($dangerous_functions as $func => $reason) {

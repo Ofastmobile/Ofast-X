@@ -47,6 +47,9 @@ class Ofast_X_Admin_Url
         // Customize logout redirect - go to home page instead of login page (which would 404)
         add_filter('logout_redirect', array($this, 'custom_logout_redirect'), 10, 3);
 
+        // Register security hooks (login attempt tracking, lockout)
+        $this->register_security_hooks();
+
         // Check for emergency key in URL
         if (isset($_GET['ofast_emergency']) && $_GET['ofast_emergency'] === $this->emergency_key) {
             // Valid emergency access - set a cookie for 1 hour
@@ -143,6 +146,15 @@ class Ofast_X_Admin_Url
 
         // Save enabled state
         update_option('ofast_admin_url_enabled', isset($_POST['protection_enabled']) ? 1 : 0);
+
+        // Save security settings
+        $max_attempts = isset($_POST['max_attempts']) ? max(1, min(20, intval($_POST['max_attempts']))) : 5;
+        $lockout_duration = isset($_POST['lockout_duration']) ? max(1, min(1440, intval($_POST['lockout_duration']))) : 15;
+        $ip_whitelist = isset($_POST['ip_whitelist']) ? sanitize_textarea_field($_POST['ip_whitelist']) : '';
+
+        update_option('ofast_security_max_attempts', $max_attempts);
+        update_option('ofast_security_lockout_duration', $lockout_duration);
+        update_option('ofast_security_ip_whitelist', $ip_whitelist);
     }
 
     /**
@@ -406,6 +418,51 @@ Ofast X Security Module
                     <?php endif; ?>
                 </table>
 
+                <!-- Security Settings Section -->
+                <h2 style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">Login Security Settings</h2>
+                <p>Configure brute force protection to prevent unauthorized login attempts.</p>
+
+                <?php
+                $max_attempts = get_option('ofast_security_max_attempts', 5);
+                $lockout_duration = get_option('ofast_security_lockout_duration', 15);
+                $ip_whitelist = get_option('ofast_security_ip_whitelist', '');
+                ?>
+
+                <table class="form-table">
+                    <tr>
+                        <th><label for="max_attempts">Max Failed Attempts</label></th>
+                        <td>
+                            <input type="number" name="max_attempts" id="max_attempts"
+                                value="<?php echo esc_attr($max_attempts); ?>"
+                                min="1" max="20" style="width: 80px;">
+                            <span>attempts before lockout</span>
+                            <p class="description">How many failed login attempts before an IP is locked out (default: 5)</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><label for="lockout_duration">Lockout Duration</label></th>
+                        <td>
+                            <input type="number" name="lockout_duration" id="lockout_duration"
+                                value="<?php echo esc_attr($lockout_duration); ?>"
+                                min="1" max="1440" style="width: 80px;">
+                            <span>minutes</span>
+                            <p class="description">How long an IP stays locked out (default: 15 minutes, max: 24 hours)</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><label for="ip_whitelist">IP Whitelist</label></th>
+                        <td>
+                            <textarea name="ip_whitelist" id="ip_whitelist" rows="4" class="large-text code"
+                                placeholder="192.168.1.1&#10;10.0.0.1"><?php echo esc_textarea($ip_whitelist); ?></textarea>
+                            <p class="description">
+                                One IP address per line. These IPs will never be locked out.<br>
+                                Your current IP: <code><?php echo esc_html($this->get_client_ip()); ?></code>
+                                <button type="button" class="button button-small" onclick="document.getElementById('ip_whitelist').value += '\n<?php echo esc_attr($this->get_client_ip()); ?>'; this.disabled=true; this.textContent='Added!';">Add My IP</button>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
                 <p class="submit">
                     <button type="submit" name="ofast_save_admin_url" class="button button-primary button-large">
                         Save Changes
@@ -423,5 +480,227 @@ Ofast X Security Module
             </div>
         </div>
 <?php
+    }
+
+    /**
+     * SECURITY: Check if IP is locked out
+     */
+    private function is_ip_locked_out($ip)
+    {
+        $lockout_data = get_transient('ofast_login_lockout_' . md5($ip));
+        if ($lockout_data) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * SECURITY: Get failed login attempts for IP
+     */
+    private function get_failed_attempts($ip)
+    {
+        $attempts = get_transient('ofast_login_attempts_' . md5($ip));
+        return $attempts ? intval($attempts) : 0;
+    }
+
+    /**
+     * SECURITY: Record failed login attempt
+     */
+    public function record_failed_login($username)
+    {
+        $ip = $this->get_client_ip();
+
+        // Check if IP is whitelisted - skip tracking
+        if ($this->is_ip_whitelisted($ip)) {
+            return;
+        }
+
+        // Get configurable settings
+        $max_attempts = get_option('ofast_security_max_attempts', 5);
+        $lockout_duration = get_option('ofast_security_lockout_duration', 15);
+
+        $attempts = $this->get_failed_attempts($ip) + 1;
+
+        // Store attempts (expires based on lockout duration)
+        set_transient('ofast_login_attempts_' . md5($ip), $attempts, $lockout_duration * MINUTE_IN_SECONDS);
+
+        // Log the attempt
+        $this->log_security_event('failed_login', array(
+            'username' => $username,
+            'ip' => $ip,
+            'attempts' => $attempts
+        ));
+
+        // If max attempts reached, lockout the IP
+        if ($attempts >= $max_attempts) {
+            set_transient('ofast_login_lockout_' . md5($ip), time(), $lockout_duration * MINUTE_IN_SECONDS);
+
+            // Send alert email
+            $this->send_security_alert($ip, $username, $attempts);
+        }
+    }
+
+    /**
+     * SECURITY: Check if IP is in whitelist
+     */
+    private function is_ip_whitelisted($ip)
+    {
+        $whitelist = get_option('ofast_security_ip_whitelist', '');
+        if (empty($whitelist)) {
+            return false;
+        }
+
+        $whitelisted_ips = array_filter(array_map('trim', explode("\n", $whitelist)));
+        return in_array($ip, $whitelisted_ips);
+    }
+
+    /**
+     * SECURITY: Clear failed attempts on successful login
+     */
+    public function record_successful_login($user_login, $user)
+    {
+        $ip = $this->get_client_ip();
+
+        // Clear attempts
+        delete_transient('ofast_login_attempts_' . md5($ip));
+        delete_transient('ofast_login_lockout_' . md5($ip));
+
+        // Log successful login
+        $this->log_security_event('successful_login', array(
+            'username' => $user_login,
+            'ip' => $ip,
+            'user_id' => $user->ID
+        ));
+    }
+
+    /**
+     * SECURITY: Get client IP address
+     */
+    private function get_client_ip()
+    {
+        $ip = '';
+        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+            $ip = $_SERVER['HTTP_CLIENT_IP'];
+        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $ip = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0];
+        } else {
+            $ip = $_SERVER['REMOTE_ADDR'];
+        }
+        return sanitize_text_field($ip);
+    }
+
+    /**
+     * SECURITY: Log security events
+     */
+    private function log_security_event($event_type, $data)
+    {
+        $log = get_option('ofast_security_log', array());
+
+        // Keep only last 100 events
+        if (count($log) >= 100) {
+            $log = array_slice($log, -99);
+        }
+
+        $log[] = array(
+            'type' => $event_type,
+            'data' => $data,
+            'timestamp' => current_time('mysql'),
+        );
+
+        update_option('ofast_security_log', $log);
+    }
+
+    /**
+     * SECURITY: Send alert email for suspicious activity
+     */
+    private function send_security_alert($ip, $username, $attempts)
+    {
+        $admin_email = get_option('admin_email');
+        $site_name = get_bloginfo('name');
+        $site_url = home_url();
+
+        $subject = "[Security Alert] {$site_name} - Multiple Failed Login Attempts";
+
+        $message = "
+SECURITY ALERT - Multiple Failed Login Attempts
+================================================
+
+Someone has attempted to login to your WordPress site multiple times without success.
+
+DETAILS:
+--------
+• IP Address: {$ip}
+• Username Attempted: {$username}
+• Number of Attempts: {$attempts}
+• Time: " . current_time('F j, Y \a\t g:i a') . "
+• Site: {$site_url}
+
+ACTION TAKEN:
+-------------
+This IP address has been temporarily blocked from logging in for 15 minutes.
+
+RECOMMENDATIONS:
+----------------
+1. If this is you, wait 15 minutes and try again
+2. If this is NOT you, consider:
+   - Changing your password
+   - Enabling two-factor authentication
+   - Checking for other suspicious activity
+
+--
+Ofast X Security Module
+{$site_url}
+";
+
+        $headers = array('Content-Type: text/plain; charset=UTF-8');
+        wp_mail($admin_email, $subject, $message, $headers);
+    }
+
+    /**
+     * SECURITY: Check lockout before login
+     */
+    public function check_lockout_before_auth($user, $username, $password)
+    {
+        if (empty($username)) {
+            return $user;
+        }
+
+        $ip = $this->get_client_ip();
+
+        // Whitelisted IPs bypass lockout
+        if ($this->is_ip_whitelisted($ip)) {
+            return $user;
+        }
+
+        if ($this->is_ip_locked_out($ip)) {
+            $this->log_security_event('blocked_attempt', array(
+                'ip' => $ip,
+                'username' => $username
+            ));
+
+            $lockout_duration = get_option('ofast_security_lockout_duration', 15);
+
+            return new WP_Error(
+                'ofast_locked_out',
+                '<strong>Security Lockout:</strong> Too many failed login attempts. Please try again in ' . $lockout_duration . ' minutes.'
+            );
+        }
+
+        return $user;
+    }
+
+    /**
+     * Register security hooks (call this from init)
+     */
+    public function register_security_hooks()
+    {
+        // Hook into failed logins
+        add_action('wp_login_failed', array($this, 'record_failed_login'));
+
+        // Hook into successful logins
+        add_action('wp_login', array($this, 'record_successful_login'), 10, 2);
+
+        // Check lockout before authentication
+        add_filter('authenticate', array($this, 'check_lockout_before_auth'), 30, 3);
     }
 }

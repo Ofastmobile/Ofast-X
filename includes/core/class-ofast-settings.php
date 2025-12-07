@@ -235,30 +235,32 @@ class Ofast_X_Settings
             'email' => array(
                 'name' => 'Email Module',
                 'description' => 'Send bulk emails to users with scheduling and templates',
+                'status' => 'Integrated',
             ),
             'debug' => array(
                 'name' => 'Debug Indicator',
                 'description' => 'Shows debug mode indicator in admin bar',
+                'status' => 'Integrated',
             ),
             'newsletter' => array(
                 'name' => 'Newsletter Subscriptions',
                 'description' => 'Newsletter signup forms with admin management',
-                'status' => 'Ready to integrate',
+                'coming_soon' => true,
             ),
             'snippets' => array(
                 'name' => 'Code Snippets Manager',
                 'description' => 'Manage code snippets with toggle switches',
-                'status' => 'Ready to integrate',
+                'status' => 'Integrated',
             ),
             'admin-design' => array(
                 'name' => 'WP Admin Design',
                 'description' => 'Modern glassmorphism styling for WordPress admin',
-                'status' => 'Ready to integrate',
+                'status' => 'Integrated',
             ),
             'whos-admin' => array(
                 'name' => 'Who\'s Admin Widget',
                 'description' => 'Dashboard widget showing admin users and designer details',
-                'status' => 'Ready to integrate',
+                'status' => 'Integrated',
             ),
             'smtp' => array(
                 'name' => 'SMTP Configuration',
@@ -272,8 +274,8 @@ class Ofast_X_Settings
             ),
             'redirects' => array(
                 'name' => 'Redirects Manager',
-                'description' => '301/302 redirects with import/export',
-                'coming_soon' => true,
+                'description' => '301/302/307 redirects with import/export and activate toggle',
+                'status' => 'Integrated',
             ),
             'google-sheets' => array(
                 'name' => 'Google Sheets Integration',
@@ -283,32 +285,32 @@ class Ofast_X_Settings
             'user-roles' => array(
                 'name' => 'User Role Manager',
                 'description' => 'Assign multiple roles to WordPress users',
-                'status' => 'Ready to integrate',
+                'status' => 'Integrated',
             ),
             'admin-url' => array(
                 'name' => 'Admin URL Customizer',
                 'description' => 'Hide /wp-admin behind a secret custom URL for security',
-                'status' => 'Ready to integrate',
+                'status' => 'Integrated',
             ),
             'duplicate-content' => array(
                 'name' => 'Content Duplicator',
                 'description' => 'Duplicate posts and pages with one click',
-                'status' => 'Ready to integrate',
+                'status' => 'Integrated',
             ),
             'content-order' => array(
                 'name' => 'Content Ordering',
                 'description' => 'Drag-and-drop reorder for posts and pages',
-                'coming_soon' => true,
+                'status' => 'Integrated',
             ),
             'menu-editor' => array(
                 'name' => 'Admin Menu Editor',
                 'description' => 'Reorder and rename WordPress admin menu items',
-                'status' => 'Ready to integrate',
+                'status' => 'Integrated',
             ),
             'admin-footer' => array(
                 'name' => 'Custom Admin Footer',
                 'description' => 'Add custom branding text to admin footer',
-                'status' => 'Ready to integrate',
+                'status' => 'Integrated',
             ),
         );
     }

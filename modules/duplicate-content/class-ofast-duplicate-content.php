@@ -205,7 +205,7 @@ class Ofast_X_Duplicate_Content
 ?>
         <div class="notice notice-success is-dismissible">
             <p>
-                ✅ Content duplicated successfully!
+                Content duplicated successfully!
                 <?php if ($edit_link): ?>
                     <a href="<?php echo esc_url($edit_link); ?>">Edit the duplicate</a>
                 <?php endif; ?>

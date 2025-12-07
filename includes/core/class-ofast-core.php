@@ -96,6 +96,10 @@ class Ofast_X_Core
         if ($this->is_module_enabled('menu-editor')) {
             $this->load_menu_editor();
         }
+
+        if ($this->is_module_enabled('content-order')) {
+            $this->load_content_order();
+        }
     }
 
     /**
@@ -332,5 +336,16 @@ class Ofast_X_Core
             array(),
             OFAST_X_VERSION
         );
+    }
+
+    /**
+     * Load Content Order Module
+     */
+    private function load_content_order()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/content-order/class-ofast-content-order.php';
+        $content_order = new Ofast_X_Content_Order();
+        $content_order->init();
+        $this->modules['content-order'] = $content_order;
     }
 }

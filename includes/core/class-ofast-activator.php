@@ -24,6 +24,9 @@ class Ofast_X_Activator
         // Create database tables
         self::create_tables();
 
+        // Upgrade tables - add any missing columns for existing installations
+        self::upgrade_tables();
+
         // Set default options (including module states)
         self::set_default_options();
 
@@ -295,5 +298,47 @@ class Ofast_X_Activator
     {
         // Simple deactivation log
         error_log('Ofast X Plugin Deactivated');
+    }
+
+    /**
+     * Upgrade tables - add missing columns for existing installations
+     */
+    private static function upgrade_tables()
+    {
+        global $wpdb;
+
+        // Snippets table upgrades
+        $table_snippets = $wpdb->prefix . 'ofast_snippets';
+
+        // Check if table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_snippets}'");
+        if (!$table_exists) {
+            return;
+        }
+
+        // Get existing columns
+        $columns = $wpdb->get_col("DESCRIBE {$table_snippets}", 0);
+
+        // List of columns that should exist
+        $required_columns = array(
+            'location' => "ALTER TABLE {$table_snippets} ADD COLUMN location ENUM('header', 'body', 'footer') DEFAULT 'footer' AFTER scope",
+            'target_type' => "ALTER TABLE {$table_snippets} ADD COLUMN target_type ENUM('all', 'homepage', 'post_type', 'page_ids', 'url_contains') DEFAULT 'all' AFTER location",
+            'target_value' => "ALTER TABLE {$table_snippets} ADD COLUMN target_value TEXT AFTER target_type",
+            'run_once' => "ALTER TABLE {$table_snippets} ADD COLUMN run_once TINYINT(1) DEFAULT 0 AFTER target_value",
+            'executed_at' => "ALTER TABLE {$table_snippets} ADD COLUMN executed_at DATETIME DEFAULT NULL AFTER run_once",
+            'priority' => "ALTER TABLE {$table_snippets} ADD COLUMN priority INT(11) DEFAULT 10 AFTER executed_at",
+            'category' => "ALTER TABLE {$table_snippets} ADD COLUMN category VARCHAR(100) DEFAULT '' AFTER active",
+            'tags' => "ALTER TABLE {$table_snippets} ADD COLUMN tags TEXT AFTER category",
+            'updated_at' => "ALTER TABLE {$table_snippets} ADD COLUMN updated_at DATETIME AFTER created_at",
+            'created_by' => "ALTER TABLE {$table_snippets} ADD COLUMN created_by BIGINT(20) AFTER updated_at",
+        );
+
+        // Add missing columns
+        foreach ($required_columns as $column => $alter_sql) {
+            if (!in_array($column, $columns)) {
+                $wpdb->query($alter_sql);
+                error_log("Ofast X: Added missing column '{$column}' to {$table_snippets}");
+            }
+        }
     }
 }

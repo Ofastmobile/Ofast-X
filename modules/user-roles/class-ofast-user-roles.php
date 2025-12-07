@@ -53,7 +53,7 @@ class Ofast_X_User_Roles
         $user_roles = $user->roles;
 
 ?>
-        <h3>🎭 User Roles (Multiple Selection)</h3>
+        <h3>User Roles (Multiple Selection)</h3>
         <p class="description">Assign one or more roles to this user.</p>
 
         <table class="form-table" role="presentation">
@@ -72,7 +72,7 @@ class Ofast_X_User_Roles
                         <?php endforeach; ?>
                     </div>
                     <p class="description" style="margin-top: 10px;">
-                        ⚠️ At least one role is required. If no roles are selected, the user will be assigned "Subscriber".
+                        At least one role is required. If no roles are selected, the user will be assigned "Subscriber".
                     </p>
                 </td>
             </tr>

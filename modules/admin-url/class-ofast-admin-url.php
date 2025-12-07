@@ -44,6 +44,9 @@ class Ofast_X_Admin_Url
             return;
         }
 
+        // Customize logout redirect - go to home page instead of login page (which would 404)
+        add_filter('logout_redirect', array($this, 'custom_logout_redirect'), 10, 3);
+
         // Check for emergency key in URL
         if (isset($_GET['ofast_emergency']) && $_GET['ofast_emergency'] === $this->emergency_key) {
             // Valid emergency access - set a cookie for 1 hour
@@ -154,19 +157,19 @@ class Ofast_X_Admin_Url
         $custom_url = trailingslashit($site_url) . $custom_slug;
         $emergency_url = wp_login_url() . '?ofast_emergency=' . $emergency_key;
 
-        $subject = "[{$site_name}] ⚠️ Admin URL Changed - Save This Email!";
+        $subject = "[{$site_name}] Admin URL Changed - Save This Email!";
 
         $message = "
 =================================================
-🔐 ADMIN URL SECURITY UPDATE
+ ADMIN URL SECURITY UPDATE
 =================================================
 
 Your WordPress admin URL has been changed for security purposes.
 
-⚠️ IMPORTANT: Save this email! You need these URLs to log in.
+ IMPORTANT: Save this email! You need these URLs to log in.
 
 --------------------------------------------------
-🔗 YOUR NEW LOGIN URL:
+ YOUR NEW LOGIN URL:
 --------------------------------------------------
 {$custom_url}
 
@@ -174,15 +177,15 @@ Use this URL to access your WordPress dashboard.
 The default /wp-admin and /wp-login.php are now hidden.
 
 --------------------------------------------------
-🆘 EMERGENCY BACKUP LOGIN:
+ EMERGENCY BACKUP LOGIN:
 --------------------------------------------------
 {$emergency_url}
 
-⚡ Use this ONLY if you forget your custom URL or get locked out.
+ Use this ONLY if you forget your custom URL or get locked out.
 This emergency link bypasses protection for 1 hour.
 
 --------------------------------------------------
-🔧 PERMANENT BYPASS (Developer Option):
+ PERMANENT BYPASS (Developer Option):
 --------------------------------------------------
 If you ever get locked out completely, add this line to your wp-config.php file:
 
@@ -191,7 +194,7 @@ define('OFAST_DISABLE_ADMIN_PROTECTION', true);
 This will disable the protection until you remove it.
 
 --------------------------------------------------
-📌 SUMMARY:
+ SUMMARY:
 --------------------------------------------------
 • Custom Login URL: {$custom_url}
 • Emergency URL: {$emergency_url}
@@ -215,13 +218,18 @@ Ofast X Security Module
      */
     public function handle_custom_url()
     {
-        $request_uri = $_SERVER['REQUEST_URI'];
-        $custom_slug = '/' . $this->custom_slug;
+        // Get the request path without query string
+        $request_uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $request_uri = rtrim($request_uri, '/');
+        $custom_slug = '/' . trim($this->custom_slug, '/');
 
         // Check if accessing custom login URL
-        if (strpos($request_uri, $custom_slug) === 0 || $request_uri === $custom_slug) {
-            // Allow access to wp-login.php
-            require_once ABSPATH . 'wp-login.php';
+        if ($request_uri === $custom_slug || str_ends_with($request_uri, $custom_slug)) {
+            // Set a cookie to allow admin access
+            setcookie('ofast_custom_login', '1', time() + 3600, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+
+            // Redirect to wp-login.php
+            wp_redirect(wp_login_url());
             exit;
         }
     }
@@ -232,6 +240,11 @@ Ofast X Security Module
     public function block_default_access()
     {
         $request_uri = $_SERVER['REQUEST_URI'];
+
+        // Allow if custom login cookie is set
+        if (isset($_COOKIE['ofast_custom_login'])) {
+            return;
+        }
 
         // Allow AJAX requests
         if (strpos($request_uri, 'admin-ajax.php') !== false) {
@@ -245,6 +258,11 @@ Ofast X Security Module
 
         // Allow Cron
         if (strpos($request_uri, 'wp-cron.php') !== false) {
+            return;
+        }
+
+        // Allow logout action (must be able to logout!)
+        if (isset($_GET['action']) && $_GET['action'] === 'logout') {
             return;
         }
 
@@ -287,6 +305,15 @@ Ofast X Security Module
     }
 
     /**
+     * Custom logout redirect - send to home page instead of login (which 404s)
+     */
+    public function custom_logout_redirect($redirect_to, $requested_redirect_to, $user)
+    {
+        // Redirect to home page after logout
+        return home_url('/');
+    }
+
+    /**
      * Render settings page
      */
     public function render_settings_page()
@@ -302,12 +329,12 @@ Ofast X Security Module
         settings_errors('ofast_admin_url');
 ?>
         <div class="wrap">
-            <h1>🔐 Admin URL Security</h1>
+            <h1>Admin URL Security</h1>
             <p class="description">Hide your WordPress login page behind a secret custom URL.</p>
 
             <!-- Warning Box -->
             <div style="background: #fff; border: 1px solid #dc3545; border-radius: 8px; padding: 15px; margin: 20px 0;">
-                <h3 style="margin-top: 0; color: #dc3545;">⚠️ Important Warning</h3>
+                <h3 style="margin-top: 0; color: #dc3545;">Important Warning</h3>
                 <ul style="color: #dc3545; margin-bottom: 0;">
                     <li>When you enable this, the default <code>/wp-admin</code> and <code>/wp-login.php</code> URLs will return 404 errors</li>
                     <li>You MUST remember your custom URL to log in</li>
@@ -363,7 +390,7 @@ Ofast X Security Module
                                     Copy
                                 </button>
                                 <p class="description" style="color: #dc3545;">
-                                    ⚡ Use only if locked out. Grants 1-hour bypass access.
+                                    Use only if locked out. Grants 1-hour bypass access.
                                 </p>
                             </td>
                         </tr>
@@ -371,7 +398,7 @@ Ofast X Security Module
                             <th>Resend Email</th>
                             <td>
                                 <button type="submit" name="resend_email" class="button">
-                                    📧 Resend Login Details to Admin
+                                    Resend Login Details to Admin
                                 </button>
                                 <p class="description">Sends the custom URL and emergency link to <?php echo esc_html(get_option('admin_email')); ?></p>
                             </td>
@@ -381,14 +408,14 @@ Ofast X Security Module
 
                 <p class="submit">
                     <button type="submit" name="ofast_save_admin_url" class="button button-primary button-large">
-                        💾 Save Changes
+                        Save Changes
                     </button>
                 </p>
             </form>
 
             <!-- Bypass Instructions -->
             <div style="background: #f0f6fc; border: 1px solid #c3d9ed; border-radius: 8px; padding: 15px; margin-top: 20px;">
-                <h3 style="margin-top: 0; color: #1d4ed8;">🔧 Recovery Options</h3>
+                <h3 style="margin-top: 0; color: #1d4ed8;">Recovery Options</h3>
                 <p><strong>Option 1: Emergency URL</strong> - Use the emergency bypass URL (valid for 1 hour per use)</p>
                 <p><strong>Option 2: wp-config.php</strong> - Add this line to your wp-config.php file:</p>
                 <pre style="background: #fff; padding: 10px; border-radius: 4px; overflow-x: auto;">define('OFAST_DISABLE_ADMIN_PROTECTION', true);</pre>

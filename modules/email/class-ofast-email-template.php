@@ -33,8 +33,6 @@ class Ofast_X_Email_Template
 
         // Override with passed options
         $options = wp_parse_args($options, array(
-            'show_emoji' => false,
-            'emoji' => '🎉',
             'highlight_box' => false,
             'highlight_content' => '',
             'cta_button' => false,
@@ -107,10 +105,7 @@ class Ofast_X_Email_Template
                     color: #334155;
                 }
 
-                .emoji-greeting {
-                    font-size: 32px;
-                    margin-bottom: 15px;
-                }
+
 
                 .highlight-box {
                     background: linear-gradient(135deg, rgba(<?php echo self::hex_to_rgb($accent_color); ?>, 0.1) 0%, rgba(<?php echo self::hex_to_rgb($primary_color); ?>, 0.1) 100%);
@@ -215,9 +210,7 @@ class Ofast_X_Email_Template
 
                     <!-- Body -->
                     <div class="email-body">
-                        <?php if ($options['show_emoji']): ?>
-                            <div class="emoji-greeting"><?php echo $options['emoji']; ?></div>
-                        <?php endif; ?>
+
 
                         <div class="email-content">
                             <?php echo wpautop($content); ?>

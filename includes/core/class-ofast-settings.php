@@ -87,12 +87,12 @@ class Ofast_X_Settings
 
 ?>
         <div class="wrap">
-            <h1>⚙️ Ofast X Settings</h1>
+            <h1>Ofast X Settings</h1>
             <p class="description">Enable or disable plugin modules. Only enabled modules will load.</p>
 
             <?php if ($saved): ?>
                 <div class="notice notice-success is-dismissible">
-                    <p>✅ Settings saved successfully!</p>
+                    <p>Settings saved successfully!</p>
                 </div>
             <?php endif; ?>
 
@@ -100,7 +100,7 @@ class Ofast_X_Settings
                 <?php wp_nonce_field('ofast_settings_save', '_wpnonce'); ?>
 
                 <div class="card" style="max-width: 800px; margin-top: 20px;">
-                    <h2 style="margin-top: 0;">📦 Module Management</h2>
+                    <h2 style="margin-top: 0;">Module Management</h2>
                     <p>Toggle modules on/off to customize your installation.</p>
 
                     <table class="form-table">
@@ -140,7 +140,7 @@ class Ofast_X_Settings
 
                 <p class="submit">
                     <button type="submit" name="ofast_save_settings" class="button button-primary button-large">
-                        💾 Save Settings
+                        Save Settings
                     </button>
                 </p>
             </form>

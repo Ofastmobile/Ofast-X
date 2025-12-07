@@ -65,16 +65,16 @@ class Ofast_X_Newsletter
         if (isset($_GET['newsletter'])) {
             switch ($_GET['newsletter']) {
                 case 'success':
-                    $message = '<div class="ofast-newsletter-success">✅ Successfully subscribed!</div>';
+                    $message = '<div class="ofast-newsletter-success">Successfully subscribed!</div>';
                     break;
                 case 'exists':
-                    $message = '<div class="ofast-newsletter-error">⚠️ Email already subscribed.</div>';
+                    $message = '<div class="ofast-newsletter-error">Email already subscribed.</div>';
                     break;
                 case 'invalid':
-                    $message = '<div class="ofast-newsletter-error">❌ Invalid email or name.</div>';
+                    $message = '<div class="ofast-newsletter-error">Invalid email or name.</div>';
                     break;
                 case 'error':
-                    $message = '<div class="ofast-newsletter-error">❌ Error. Try again.</div>';
+                    $message = '<div class="ofast-newsletter-error">Error. Try again.</div>';
                     break;
             }
         }
@@ -146,7 +146,7 @@ class Ofast_X_Newsletter
                 <input type="hidden" name="action" value="ofast_newsletter_submit">
                 <input type="text" name="subscriber_name" placeholder="Your Name" required>
                 <input type="email" name="subscriber_email" placeholder="Your Email" required>
-                <button type="submit">📧 <?php echo esc_html($atts['button_text']); ?></button>
+                <button type="submit"><?php echo esc_html($atts['button_text']); ?></button>
             </form>
             <p style="font-size:12px;color:#999;margin-top:10px;text-align:center;">We respect your privacy.</p>
         </div>
@@ -190,7 +190,7 @@ class Ofast_X_Newsletter
 
         if ($inserted) {
             $admin_email = get_option('admin_email');
-            wp_mail($admin_email, '🎉 New Newsletter Subscriber',  "Name: $name\nEmail: $email", array('Content-Type: text/html'));
+            wp_mail($admin_email, 'New Newsletter Subscriber',  "Name: $name\nEmail: $email", array('Content-Type: text/html'));
             wp_redirect(add_query_arg('newsletter', 'success', wp_get_referer()));
             exit;
         } else {
@@ -225,17 +225,17 @@ class Ofast_X_Newsletter
         if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
             check_admin_referer('delete_subscriber_' . $_GET['id']);
             $wpdb->delete($table, array('id' => intval($_GET['id'])));
-            echo '<div class="notice notice-success"><p>✅ Deleted!</p></div>';
+            echo '<div class="notice notice-success"><p>Deleted!</p></div>';
         }
 
         $subscribers = $wpdb->get_results("SELECT * FROM $table ORDER BY subscribed_at DESC");
         $total = count($subscribers);
     ?>
         <div class="wrap">
-            <h1>📧 Newsletter Subscribers (<?php echo $total; ?>)</h1>
-            <p><a href="?page=ofast-newsletter&action=export" class="button button-primary">📥 Export CSV</a></p>
+            <h1>Newsletter Subscribers (<?php echo $total; ?>)</h1>
+            <p><a href="?page=ofast-newsletter&action=export" class="button button-primary">Export CSV</a></p>
             <div style="background:#f0f8ff;padding:15px;border-left:4px solid #1e88e5;margin:20px 0;border-radius:5px;">
-                <h3 style="margin-top:0;">📝 Add Newsletter Form</h3>
+                <h3 style="margin-top:0;">Add Newsletter Form</h3>
                 <code style="background:white;padding:10px;display:block;border-radius:5px;">[ofast_newsletter title="Subscribe Now"]</code>
             </div>
             <?php if ($subscribers): ?>
@@ -260,7 +260,7 @@ class Ofast_X_Newsletter
                                 <td><span style="padding:3px 8px;background:#e6ffed;border:1px solid #28a745;border-radius:3px;font-size:11px;"><?php echo $sub->status; ?></span></td>
                                 <td><?php echo esc_html($sub->ip_address); ?></td>
                                 <td><?php echo date('M j, Y', strtotime($sub->subscribed_at)); ?></td>
-                                <td><a href="<?php echo wp_nonce_url('?page=ofast-newsletter&action=delete&id=' . $sub->id, 'delete_subscriber_' . $sub->id); ?>" class="button button-small" onclick="return confirm('Delete?')">🗑️</a></td>
+                                <td><a href="<?php echo wp_nonce_url('?page=ofast-newsletter&action=delete&id=' . $sub->id, 'delete_subscriber_' . $sub->id); ?>" class="button button-small" onclick="return confirm('Delete?')">Delete</a></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>

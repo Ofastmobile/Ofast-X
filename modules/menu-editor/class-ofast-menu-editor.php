@@ -250,7 +250,7 @@ class Ofast_X_Menu_Editor
                         ?>
                             <tr class="menu-item-row <?php echo $is_hidden ? 'row-hidden' : ''; ?>" data-slug="<?php echo esc_attr($slug); ?>">
                                 <td class="drag-handle" style="cursor: move; text-align: center; color: #999; font-size: 16px;">
-                                    ☰
+                                    <span class="dashicons dashicons-menu"></span>
                                 </td>
                                 <td>
                                     <strong><?php echo esc_html($name); ?></strong>
@@ -306,7 +306,7 @@ class Ofast_X_Menu_Editor
             <div style="background: #f0f6fc; border: 1px solid #c3d9ed; border-radius: 8px; padding: 15px; margin-top: 20px; max-width: 800px;">
                 <h3 style="margin-top: 0;">Tips</h3>
                 <ul style="margin-bottom: 0;">
-                    <li><strong>Drag & Drop:</strong> Use the ☰ handle to drag rows and reorder.</li>
+                    <li><strong>Drag & Drop:</strong> Use the <span class="dashicons dashicons-menu" style="font-size: 16px; vertical-align: middle;"></span> handle to drag rows and reorder.</li>
                     <li><strong>Custom Name:</strong> Leave empty to keep the original name.</li>
                     <li><strong>Hidden:</strong> Check to hide the menu. Uncheck and save to show it again.</li>
                     <li><strong>Important:</strong> Click <strong>Save Menu Changes</strong> after reordering!</li>

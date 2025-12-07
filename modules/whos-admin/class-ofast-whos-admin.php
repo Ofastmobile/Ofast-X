@@ -39,14 +39,14 @@ class Ofast_X_Whos_Admin
         // Administrator widget
         wp_add_dashboard_widget(
             'ofast_admin_users_widget',
-            '👤 Administrator',
+            'Administrator',
             array($this, 'render_admin_users_widget')
         );
 
         // Designer Details widget
         wp_add_dashboard_widget(
             'ofast_designer_details_widget',
-            '🎨 Designer Details',
+            'Designer Details',
             array($this, 'render_designer_widget')
         );
     }
@@ -106,11 +106,10 @@ class Ofast_X_Whos_Admin
         $website = get_option('ofast_designer_website', 'https://example.com');
 
         echo '<div style="padding: 10px;">';
-        echo '<p style="margin: 8px 0;"><strong>💼 Designer:</strong> ' . esc_html($name) . '</p>';
-        echo '<p style="margin: 8px 0;"><strong>📧 Email:</strong> <a href="mailto:' . esc_attr($email) . '" style="color: #1e88e5; text-decoration: none;">' . esc_html($email) . '</a></p>';
-        echo '<p style="margin: 8px 0;"><strong>🌐 Website:</strong> <a href="' . esc_url($website) . '" target="_blank" style="color: #1e88e5; text-decoration: none;">' . esc_html($website) . '</a></p>';
+        echo '<p style="margin: 8px 0;"><strong>Designer:</strong> ' . esc_html($name) . '</p>';
+        echo '<p style="margin: 8px 0;"><strong>Email:</strong> <a href="mailto:' . esc_attr($email) . '" style="color: #1e88e5; text-decoration: none;">' . esc_html($email) . '</a></p>';
+        echo '<p style="margin: 8px 0;"><strong>Website:</strong> <a href="' . esc_url($website) . '" target="_blank" style="color: #1e88e5; text-decoration: none;">' . esc_html($website) . '</a></p>';
         echo '<hr style="margin: 15px 0; border: none; border-top: 1px solid #eee;">';
-        echo '<p style="text-align: center; margin: 10px 0;"><a href="' . admin_url('admin.php?page=ofast-whos-admin-settings') . '" class="button button-small">⚙️ Edit Details</a></p>';
         echo '</div>';
     }
 
@@ -170,12 +169,12 @@ class Ofast_X_Whos_Admin
 
 ?>
         <div class="wrap">
-            <h1>🎨 Who's Admin - Designer Details</h1>
+            <h1>Who's Admin - Designer Details</h1>
             <p>Set your designer/developer information to display in the dashboard widget.</p>
 
             <?php if ($saved): ?>
                 <div class="notice notice-success is-dismissible">
-                    <p>✅ Designer details saved successfully!</p>
+                    <p>Designer details saved successfully!</p>
                 </div>
             <?php endif; ?>
 
@@ -213,7 +212,7 @@ class Ofast_X_Whos_Admin
                 </table>
 
                 <p class="submit">
-                    <button type="submit" name="ofast_whos_admin_save" class="button button-primary">💾 Save Designer Details</button>
+                    <button type="submit" name="ofast_whos_admin_save" class="button button-primary">Save Designer Details</button>
                 </p>
             </form>
         </div>

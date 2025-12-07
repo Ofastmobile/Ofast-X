@@ -139,7 +139,7 @@ class Ofast_X_Email_Admin
                 $message = $this->replace_placeholders($body, $user);
                 $headers = $this->get_email_headers();
                 wp_mail($user->user_email, $subject, $this->get_email_template($message), $headers);
-                $result_message = '<div class="notice notice-success"><p>✅ Test email sent to ' . esc_html($user->user_email) . '</p></div>';
+                $result_message = '<div class="notice notice-success"><p>Test email sent to ' . esc_html($user->user_email) . '</p></div>';
             } else {
                 // Merge user IDs + roles
                 $total_ids = $selected_user_ids;
@@ -160,7 +160,7 @@ class Ofast_X_Email_Admin
                     }
 
                     $this->log_email($subject, $sent, 'Immediate send');
-                    $result_message = '<div class="notice notice-success"><p>✅ Sent immediately to ' . $sent . ' user(s)</p></div>';
+                    $result_message = '<div class="notice notice-success"><p>Sent immediately to ' . $sent . ' user(s)</p></div>';
                 } else {
                     // Schedule in batches of 40 users per hour using Action Scheduler
                     $chunks = array_chunk($total_ids, 40);
@@ -184,7 +184,7 @@ class Ofast_X_Email_Admin
                         $scheduled_count++;
                     }
 
-                    $result_message = '<div class="notice notice-success"><p>📅 ' . $scheduled_count . ' batches scheduled (40 users/hour) starting ' . date('Y-m-d H:i', $timestamp) . '</p></div>';
+                    $result_message = '<div class="notice notice-success"><p>' . $scheduled_count . ' batches scheduled (40 users/hour) starting ' . date('Y-m-d H:i', $timestamp) . '</p></div>';
                 }
             }
         }
@@ -198,7 +198,7 @@ class Ofast_X_Email_Admin
      */
     private function render_send_form($result_message, $roles)
     {
-        echo '<div class="wrap"><h2>📧 Send Email</h2>' . $result_message . '
+        echo '<div class="wrap"><h2>Send Email</h2>' . $result_message . '
         <form method="post" enctype="multipart/form-data" id="email-form">
             <p><label><strong>Email Subject:</strong><br>
             <input type="text" name="subject" style="width: 100%;" required></label></p>
@@ -238,7 +238,7 @@ class Ofast_X_Email_Admin
 
             <p>
                 <button type="submit" name="send_email" class="button button-primary"> Send / Schedule</button>
-                <button type="button" id="preview-email-btn" class="button button-secondary" style="margin-left:10px;">👁️ Preview Email</button>
+                <button type="button" id="preview-email-btn" class="button button-secondary" style="margin-left:10px;">Preview Email</button>
             </p>
             
         <hr><h3> Select Users Manually (Optional)</h3>
@@ -351,7 +351,7 @@ class Ofast_X_Email_Admin
         echo '<div id="email-preview-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:999999;overflow-y:auto;">
             <div style="position:relative;width:90%;max-width:800px;margin:30px auto;background:white;border-radius:8px;overflow:hidden;">
                 <div style="padding:15px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
-                    <h3 style="margin:0;">📧 Email Preview</h3>
+                    <h3 style="margin:0;">Email Preview</h3>
                     <button id="close-preview-modal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#64748b;">&times;</button>
                 </div>
                 <div id="preview-content" style="padding:20px;max-height:calc(100vh - 200px);overflow-y:auto;">
@@ -428,7 +428,7 @@ class Ofast_X_Email_Admin
         $table = $wpdb->prefix . 'ofast_email_logs';
         $logs = $wpdb->get_results("SELECT * FROM $table ORDER BY sent_at DESC LIMIT 100");
 
-        echo '<div class="wrap"><h2>📚 Email History</h2>';
+        echo '<div class="wrap"><h2>Email History</h2>';
 
         if (empty($logs)) {
             echo '<p>No emails have been logged yet.</p>';
@@ -474,7 +474,7 @@ class Ofast_X_Email_Admin
             update_option('ofast_email_from_name', sanitize_text_field($_POST['email_from']));
             update_option('ofast_email_reply_to', sanitize_email($_POST['email_reply']));
             update_option('ofast_email_social', array_map('esc_url_raw', $_POST['social'] ?? []));
-            echo '<div class="notice notice-success"><p>✅ Settings saved!</p></div>';
+            echo '<div class="notice notice-success"><p>Settings saved!</p></div>';
         }
 
         $logo = get_option('ofast_email_logo', '');
@@ -487,7 +487,7 @@ class Ofast_X_Email_Admin
         $reply = get_option('ofast_email_reply_to', 'support@ofastshop.com');
         $social = get_option('ofast_email_social', []);
 
-        echo '<div class="wrap"><h2>⚙️ Ofast Email Settings</h2>
+        echo '<div class="wrap"><h2>Ofast Email Settings</h2>
         <form method="post">
             <h3>Email Template Branding</h3>
             <table class="form-table">
@@ -518,7 +518,7 @@ class Ofast_X_Email_Admin
         }
         echo '</td></tr>
             </table>
-            <p><button type="submit" name="ofast_settings_update" class="button button-primary">💾 Save Settings</button></p>
+            <p><button type="submit" name="ofast_settings_update" class="button button-primary">Save Settings</button></p>
         </form></div>';
     }
 
@@ -603,7 +603,7 @@ class Ofast_X_Email_Admin
         }
 
         echo '<div class="wrap">';
-        echo '<h1>📅 Scheduled Email Batches</h1>';
+        echo '<h1>Scheduled Email Batches</h1>';
         echo '<p>Email batches scheduled via Action Scheduler (runs reliably every minute)</p>';
 
         // Get all pending scheduled actions for email batches

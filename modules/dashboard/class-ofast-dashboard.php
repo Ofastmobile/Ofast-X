@@ -109,7 +109,7 @@ class Ofast_X_Dashboard
 
     ?>
         <div class="wrap">
-            <h1>📊 Ofast X Dashboard</h1>
+            <h1>Ofast X Dashboard</h1>
             <p class="description">Overview of your site's users and active modules</p>
 
             <!-- User Statistics -->
@@ -135,11 +135,11 @@ class Ofast_X_Dashboard
             <!-- Module Status -->
             <h2 style="margin-top:40px;">Active Modules</h2>
             <div class="card" style="max-width:600px">
-                <h3 style="margin-top:0;">🎉 Plugin is working! Modules loaded:</h3>
+                <h3 style="margin-top:0;">Plugin is working! Modules loaded:</h3>
                 <ul style="list-style:none;padding:0;">
                     <?php foreach ($loaded_modules as $module): ?>
                         <li style="padding:8px 0;border-bottom:1px solid #eee;">
-                            ✅ <?php echo esc_html($module); ?>
+                            <?php echo esc_html($module); ?>
                         </li>
                     <?php endforeach; ?>
                 </ul>
@@ -168,7 +168,13 @@ class Ofast_X_Dashboard
             'security' => 'Security Scanner',
             'performance' => 'Performance Optimizer',
             'woocommerce' => 'WooCommerce Integration',
-            'learndash' => 'LearnDash Integration'
+            'learndash' => 'LearnDash Integration',
+            'user-roles' => 'User Roles Manager',
+            'admin-url' => 'Admin URL Customizer',
+            'admin-footer' => 'Custom Admin Footer',
+            'duplicate-content' => 'Content Duplicator',
+            'menu-editor' => 'Admin Menu Editor',
+            'content-order' => 'Content Ordering'
         );
 
         $loaded = array();

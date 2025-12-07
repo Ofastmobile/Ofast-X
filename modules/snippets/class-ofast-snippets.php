@@ -43,6 +43,9 @@ class Ofast_X_Snippets
 
         // Execute active snippets
         add_action('init', array($this, 'execute_snippets'), 999);
+
+        // Show runtime error notices
+        add_action('admin_notices', array($this, 'show_runtime_error_notice'));
     }
 
     /**
@@ -52,7 +55,7 @@ class Ofast_X_Snippets
     {
         wp_add_dashboard_widget(
             'ofast_snippets_widget',
-            '📝 Code Snippets',
+            'Code Snippets',
             array($this, 'render_dashboard_widget')
         );
     }
@@ -93,12 +96,24 @@ class Ofast_X_Snippets
         echo '<tbody>';
 
         foreach ($snippets as $snippet) {
+            // Validate snippet code
+            $validation_result = $this->validate_php_code($snippet->code);
+            $has_error = ($validation_result !== true);
+
             $active_class = $snippet->active ? 'button-primary' : '';
+
+            // Add error indicator if validation fails
+            $error_indicator = $has_error ? ' <span style="color: red; font-size: 16px;" title="' . esc_attr($validation_result) . '">● </span>' : '';
+
             echo '<tr>';
-            echo '<td><strong>' . esc_html($snippet->name) . '</strong></td>';
+            echo '<td>' . $error_indicator . '<strong>' . esc_html($snippet->name) . '</strong>';
+            if ($has_error) {
+                echo '<br><small style="color: #dc3545;">' . esc_html($validation_result) . '</small>';
+            }
+            echo '</td>';
             echo '<td style="text-align: center;">';
-            echo '<button class="button button-small ofast-snippet-toggle ' . $active_class . '" data-id="' . $snippet->id . '" data-active="' . $snippet->active . '">';
-            echo $snippet->active ? '✓ ON' : '✗ OFF';
+            echo '<button class="button button-small ofast-snippet-toggle ' . $active_class . '" data-id="' . $snippet->id . '" data-active="' . $snippet->active . '" data-has-error="' . ($has_error ? '1' : '0') . '">';
+            echo $snippet->active ? 'ON' : 'OFF';
             echo '</button>';
             echo '</td>';
             echo '</tr>';
@@ -117,6 +132,13 @@ class Ofast_X_Snippets
                     var $btn = $(this);
                     var id = $btn.data('id');
                     var active = $btn.data('active');
+                    var hasError = $btn.data('has-error');
+
+                    // Prevent activation if has errors
+                    if (active == 0 && hasError == 1) {
+                        alert('Cannot activate this snippet: it contains syntax errors.\n\nPlease fix the errors first from the Code Snippets management page.');
+                        return;
+                    }
 
                     $btn.prop('disabled', true);
 
@@ -129,7 +151,7 @@ class Ofast_X_Snippets
                         if (response.success) {
                             var newActive = response.data.active;
                             $btn.data('active', newActive);
-                            $btn.html(newActive ? '✓ ON' : '✗ OFF');
+                            $btn.html(newActive ? 'ON' : 'OFF');
                             $btn.toggleClass('button-primary', newActive);
                         } else {
                             alert('Error: ' + response.data);
@@ -188,7 +210,7 @@ class Ofast_X_Snippets
             if ($validation !== true) {
                 $active = 0; // Force inactive for safety
                 echo '<div class="notice notice-warning is-dismissible"><p>';
-                echo '<strong>⚠️ Code Saved But NOT Activated:</strong> ' . esc_html($validation);
+                echo '<strong>Code Saved But NOT Activated:</strong> ' . esc_html($validation);
                 echo '<br><em>Fix the syntax error and try activating again.</em>';
                 echo '</p></div>';
             }
@@ -201,7 +223,7 @@ class Ofast_X_Snippets
                 }
 
                 // Update
-                $wpdb->update($table, array(
+                $result = $wpdb->update($table, array(
                     'name' => $name,
                     'description' => $description,
                     'language' => $language,
@@ -216,17 +238,24 @@ class Ofast_X_Snippets
                     'active' => $active
                 ), array('id' => $id));
 
+                // Debug logging for live server issues
+                if ($result === false) {
+                    error_log('Ofast Snippet Update Error: ' . $wpdb->last_error);
+                    echo '<div class="notice notice-error"><p><strong>Database Error:</strong> ' . esc_html($wpdb->last_error) . '</p></div>';
+                    return;
+                }
+
                 // Audit log
                 $this->log_snippet_action('UPDATED', $id, $name, "Language: {$language}, Scope: {$scope}, Active: " . ($active ? 'Yes' : 'No'));
 
                 if ($validation === true) {
-                    echo '<div class="notice notice-success"><p>✅ Snippet updated and ' . ($active ? 'activated' : 'saved') . '!</p></div>';
+                    echo '<div class="notice notice-success"><p>Snippet updated and ' . ($active ? 'activated' : 'saved') . '!</p></div>';
                 } else {
-                    echo '<div class="notice notice-info"><p>💾 Snippet saved (inactive for safety)</p></div>';
+                    echo '<div class="notice notice-info"><p>Snippet saved (inactive for safety)</p></div>';
                 }
             } else {
                 // Insert
-                $wpdb->insert($table, array(
+                $result = $wpdb->insert($table, array(
                     'name' => $name,
                     'description' => $description,
                     'language' => $language,
@@ -242,15 +271,22 @@ class Ofast_X_Snippets
                     'created_at' => current_time('mysql')
                 ));
 
+                // Debug logging for live server issues
+                if ($result === false) {
+                    error_log('Ofast Snippet Save Error: ' . $wpdb->last_error);
+                    echo '<div class="notice notice-error"><p><strong>Database Error:</strong> ' . esc_html($wpdb->last_error) . '</p></div>';
+                    return;
+                }
+
                 $new_id = $wpdb->insert_id;
 
                 // Audit log
                 $this->log_snippet_action('CREATED', $new_id, $name, "Language: {$language}, Scope: {$scope}, Active: " . ($active ? 'Yes' : 'No'));
 
                 if ($validation === true) {
-                    echo '<div class="notice notice-success"><p>✅ Snippet added and ' . ($active ? 'activated' : 'saved') . '!</p></div>';
+                    echo '<div class="notice notice-success"><p>Snippet added and ' . ($active ? 'activated' : 'saved') . '!</p></div>';
                 } else {
-                    echo '<div class="notice notice-info"><p>💾 Snippet saved (inactive for safety)</p></div>';
+                    echo '<div class="notice notice-info"><p>Snippet saved (inactive for safety)</p></div>';
                 }
             }
         }
@@ -264,23 +300,23 @@ class Ofast_X_Snippets
 
     ?>
         <div class="wrap">
-            <h1>📝 Code Snippets Manager</h1>
+            <h1>Code Snippets Manager</h1>
             <p>Add PHP code snippets that run on your WordPress site. Use with caution!</p>
 
             <!-- Action Buttons Bar -->
             <div style="background: #f0f6fc; border: 1px solid #c3d9ed; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <a href="<?php echo admin_url('admin.php?page=ofast-snippets'); ?>" class="button button-primary" style="display: inline-flex; align-items: center; gap: 5px;">
-                    ➕ New Snippet
+                    New Snippet
                 </a>
                 <select id="ofast-export-type" class="regular-text" style="width: auto;">
                     <option value="json">Export as JSON</option>
                     <option value="code">Export as Code</option>
                 </select>
                 <button type="button" class="button" id="ofast-export-snippets" style="display: inline-flex; align-items: center; gap: 5px;">
-                    📤 Export
+                    Export
                 </button>
                 <button type="button" class="button" id="ofast-import-snippets-btn" style="display: inline-flex; align-items: center; gap: 5px;">
-                    📥 Import
+                    Import
                 </button>
                 <input type="file" id="ofast-import-file" accept=".json" style="display: none;">
                 <span style="color: #666; font-size: 12px; margin-left: auto;">
@@ -295,7 +331,7 @@ class Ofast_X_Snippets
             ?>
                 <!-- Import from Other Plugins -->
                 <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-                    <h3 style="margin-top: 0; color: #856404;">🔄 Import from Other Plugins</h3>
+                    <h3 style="margin-top: 0; color: #856404;">Import from Other Plugins</h3>
                     <p style="color: #856404; margin-bottom: 15px;">We detected other snippet plugins on your site. You can import their snippets here.</p>
                     <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                         <?php foreach ($other_plugins as $plugin): ?>
@@ -313,7 +349,7 @@ class Ofast_X_Snippets
                         <?php endforeach; ?>
                     </div>
                     <p style="color: #856404; font-size: 11px; margin-top: 10px; margin-bottom: 0;">
-                        ⚠️ All imported snippets will be set to <strong>INACTIVE</strong> for safety. Review and activate manually.
+                        All imported snippets will be set to <strong>INACTIVE</strong> for safety. Review and activate manually.
                     </p>
                 </div>
             <?php endif; ?>
@@ -330,7 +366,7 @@ class Ofast_X_Snippets
             ?>
                 <div style="background: #f0f6fc; border: 1px solid #c3d9ed; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h3 style="margin: 0; color: #1d4ed8;">📚 Snippet Library</h3>
+                        <h3 style="margin: 0; color: #1d4ed8;">Snippet Library</h3>
                         <button type="button" class="button" id="toggle-library">Show Templates</button>
                     </div>
 
@@ -476,10 +512,10 @@ class Ofast_X_Snippets
                             <th><label for="snippet_language">Language</label></th>
                             <td>
                                 <select name="snippet_language" id="snippet_language" class="regular-text">
-                                    <option value="php" <?php selected($edit_snippet ? $edit_snippet->language : 'php', 'php'); ?>>🐘 PHP</option>
-                                    <option value="javascript" <?php selected($edit_snippet ? $edit_snippet->language : '', 'javascript'); ?>>📜 JavaScript</option>
-                                    <option value="css" <?php selected($edit_snippet ? $edit_snippet->language : '', 'css'); ?>>🎨 CSS</option>
-                                    <option value="html" <?php selected($edit_snippet ? $edit_snippet->language : '', 'html'); ?>>📄 HTML</option>
+                                    <option value="php" <?php selected($edit_snippet ? $edit_snippet->language : 'php', 'php'); ?>>PHP</option>
+                                    <option value="javascript" <?php selected($edit_snippet ? $edit_snippet->language : '', 'javascript'); ?>>JavaScript</option>
+                                    <option value="css" <?php selected($edit_snippet ? $edit_snippet->language : '', 'css'); ?>>CSS</option>
+                                    <option value="html" <?php selected($edit_snippet ? $edit_snippet->language : '', 'html'); ?>>HTML</option>
                                 </select>
                                 <p class="description">Select the code language for this snippet.</p>
                             </td>
@@ -488,9 +524,9 @@ class Ofast_X_Snippets
                             <th><label for="snippet_scope">Run Location</label></th>
                             <td>
                                 <select name="snippet_scope" id="snippet_scope" class="regular-text">
-                                    <option value="global" <?php selected($edit_snippet ? $edit_snippet->scope : 'global', 'global'); ?>>🌍 Run Everywhere</option>
-                                    <option value="admin" <?php selected($edit_snippet ? $edit_snippet->scope : '', 'admin'); ?>>🔧 Admin Only</option>
-                                    <option value="frontend" <?php selected($edit_snippet ? $edit_snippet->scope : '', 'frontend'); ?>>🖥️ Frontend Only</option>
+                                    <option value="global" <?php selected($edit_snippet ? $edit_snippet->scope : 'global', 'global'); ?>>Run Everywhere</option>
+                                    <option value="admin" <?php selected($edit_snippet ? $edit_snippet->scope : '', 'admin'); ?>>Admin Only</option>
+                                    <option value="frontend" <?php selected($edit_snippet ? $edit_snippet->scope : '', 'frontend'); ?>>Frontend Only</option>
                                 </select>
                                 <p class="description">Choose where this snippet should execute.</p>
                             </td>
@@ -500,9 +536,9 @@ class Ofast_X_Snippets
                             <td>
                                 <?php $location = ($edit_snippet && isset($edit_snippet->location)) ? $edit_snippet->location : 'footer'; ?>
                                 <select name="snippet_location" id="snippet_location" class="regular-text">
-                                    <option value="header" <?php selected($location, 'header'); ?>>📌 Header (before &lt;/head&gt;)</option>
-                                    <option value="body" <?php selected($location, 'body'); ?>>📍 Body (after &lt;body&gt;)</option>
-                                    <option value="footer" <?php selected($location, 'footer'); ?>>📎 Footer (before &lt;/body&gt;)</option>
+                                    <option value="header" <?php selected($location, 'header'); ?>>Header (before &lt;/head&gt;)</option>
+                                    <option value="body" <?php selected($location, 'body'); ?>>Body (after &lt;body&gt;)</option>
+                                    <option value="footer" <?php selected($location, 'footer'); ?>>Footer (before &lt;/body&gt;)</option>
                                 </select>
                                 <p class="description">Where to inject JS/CSS/HTML code. (PHP always runs on init)</p>
                             </td>
@@ -512,11 +548,11 @@ class Ofast_X_Snippets
                             <td>
                                 <select name="snippet_target_type" id="snippet_target_type" class="regular-text">
                                     <?php $target_type = ($edit_snippet && isset($edit_snippet->target_type)) ? $edit_snippet->target_type : 'all'; ?>
-                                    <option value="all" <?php selected($target_type, 'all'); ?>>🌐 All Pages</option>
-                                    <option value="homepage" <?php selected($target_type, 'homepage'); ?>>🏠 Homepage Only</option>
-                                    <option value="post_type" <?php selected($target_type, 'post_type'); ?>>📄 Specific Post Type</option>
-                                    <option value="page_ids" <?php selected($target_type, 'page_ids'); ?>>🔢 Specific Page/Post IDs</option>
-                                    <option value="url_contains" <?php selected($target_type, 'url_contains'); ?>>🔗 URL Contains</option>
+                                    <option value="all" <?php selected($target_type, 'all'); ?>>All Pages</option>
+                                    <option value="homepage" <?php selected($target_type, 'homepage'); ?>>Homepage Only</option>
+                                    <option value="post_type" <?php selected($target_type, 'post_type'); ?>>Specific Post Type</option>
+                                    <option value="page_ids" <?php selected($target_type, 'page_ids'); ?>>Specific Page/Post IDs</option>
+                                    <option value="url_contains" <?php selected($target_type, 'url_contains'); ?>>URL Contains</option>
                                 </select>
                                 <p class="description">Choose which pages this snippet runs on.</p>
                             </td>
@@ -575,11 +611,11 @@ class Ofast_X_Snippets
 
                     <p class="submit">
                         <button type="submit" name="ofast_save_snippet" class="button button-primary">
-                            💾 <?php echo $editing ? 'Update Snippet' : 'Add Snippet'; ?>
+                            <?php echo $editing ? 'Update Snippet' : 'Add Snippet'; ?>
                         </button>
                         <?php if ($editing): ?>
                             <button type="button" class="button" id="view-history-btn" data-snippet-id="<?php echo $editing; ?>" style="margin-left: 10px;">
-                                📜 View History
+                                View History
                             </button>
                             <a href="<?php echo admin_url('admin.php?page=ofast-snippets'); ?>" class="button">Cancel</a>
                         <?php endif; ?>
@@ -679,9 +715,9 @@ class Ofast_X_Snippets
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <select id="bulk-action-select" class="regular-text" style="width: auto;">
                             <option value="">Bulk Actions</option>
-                            <option value="activate">✓ Activate</option>
-                            <option value="deactivate">✗ Deactivate</option>
-                            <option value="delete">🗑️ Delete</option>
+                            <option value="activate">Activate</option>
+                            <option value="deactivate">Deactivate</option>
+                            <option value="delete">Delete</option>
                         </select>
                         <button type="button" class="button" id="apply-bulk-action">Apply</button>
 
@@ -699,7 +735,7 @@ class Ofast_X_Snippets
                         <?php endif; ?>
                     </div>
                     <div>
-                        <input type="text" id="snippet-search" placeholder="🔍 Search name, description, code, tags..." style="width: 300px;">
+                        <input type="text" id="snippet-search" placeholder="Search name, description, code, tags..." style="width: 300px;">
                     </div>
                 </div>
 
@@ -856,7 +892,7 @@ class Ofast_X_Snippets
 
                     // Stronger warning for active snippets
                     var message = active == 1 ?
-                        '⚠️ WARNING: "' + name + '" is ACTIVE and currently running!\n\nDeleting it will stop it from running.\n\nAre you sure you want to delete this active snippet?' :
+                        'WARNING: "' + name + '" is ACTIVE and currently running!\n\nDeleting it will stop it from running.\n\nAre you sure you want to delete this active snippet?' :
                         'Are you sure you want to delete "' + name + '"?';
 
                     if (!confirm(message)) {
@@ -1039,7 +1075,7 @@ class Ofast_X_Snippets
                         } else {
                             alert('Export failed: ' + response.data);
                         }
-                        $btn.prop('disabled', false).html('📤 Export');
+                        $btn.prop('disabled', false).html('Export');
                     });
                 });
 
@@ -1073,10 +1109,10 @@ class Ofast_X_Snippets
                                 import_data: JSON.stringify(data)
                             }, function(response) {
                                 if (response.success) {
-                                    alert('✅ ' + response.data.message);
+                                    alert(response.data.message);
                                     location.reload();
                                 } else {
-                                    alert('❌ Import failed: ' + response.data);
+                                    alert('Import failed: ' + response.data);
                                 }
                             });
                         } catch (err) {
@@ -1190,10 +1226,10 @@ class Ofast_X_Snippets
                         plugin: plugin
                     }, function(response) {
                         if (response.success) {
-                            alert('✅ ' + response.data.message);
+                            alert(response.data.message);
                             location.reload();
                         } else {
-                            alert('❌ Import failed: ' + response.data);
+                            alert('Import failed: ' + response.data);
                             $btn.prop('disabled', false).text('Import All');
                         }
                     });
@@ -1244,10 +1280,10 @@ class Ofast_X_Snippets
                         index: index
                     }, function(response) {
                         if (response.success) {
-                            alert('✅ ' + response.data.message);
+                            alert(response.data.message);
                             location.reload();
                         } else {
-                            alert('❌ Failed: ' + response.data);
+                            alert('Failed: ' + response.data);
                             $btn.prop('disabled', false).text('Use Template');
                         }
                     });
@@ -1263,7 +1299,7 @@ class Ofast_X_Snippets
                             <div id="revision-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:100000; overflow-y:auto; padding:20px;">
                                 <div style="max-width:800px; margin:50px auto; background:#fff; border-radius:8px; box-shadow:0 10px 50px rgba(0,0,0,0.3);">
                                     <div style="padding:20px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;">
-                                        <h2 style="margin:0;">📜 Revision History</h2>
+                                        <h2 style="margin:0;">Revision History</h2>
                                         <button type="button" id="close-revision-modal" class="button">&times; Close</button>
                                     </div>
                                     <div id="revision-content" style="padding:20px;">Loading...</div>
@@ -1300,8 +1336,8 @@ class Ofast_X_Snippets
                                     html += '<td>' + rev.changed_at + '</td>';
                                     html += '<td>' + (rev.user_name || 'Unknown') + '</td>';
                                     html += '<td>';
-                                    html += '<button type="button" class="button button-small preview-revision" data-code="' + encodeURIComponent(rev.code) + '">👁 Preview</button> ';
-                                    html += '<button type="button" class="button button-small restore-revision" data-id="' + rev.id + '">↩ Restore</button>';
+                                    html += '<button type="button" class="button button-small preview-revision" data-code="' + encodeURIComponent(rev.code) + '">Preview</button> ';
+                                    html += '<button type="button" class="button button-small restore-revision" data-id="' + rev.id + '">Restore</button>';
                                     html += '</td>';
                                     html += '</tr>';
                                 });
@@ -1339,11 +1375,11 @@ class Ofast_X_Snippets
                         revision_id: revisionId
                     }, function(response) {
                         if (response.success) {
-                            alert('✅ ' + response.data.message);
+                            alert(response.data.message);
                             location.reload();
                         } else {
-                            alert('❌ Failed: ' + response.data);
-                            $btn.prop('disabled', false).text('↩ Restore');
+                            alert('Failed: ' + response.data);
+                            $btn.prop('disabled', false).text('Restore');
                         }
                     });
                 });
@@ -2218,15 +2254,32 @@ class Ofast_X_Snippets
     }
 
     /**
-     * Execute PHP snippet
+     * Execute PHP snippet with enhanced error handling
      */
     private function execute_php_snippet($code, $snippet_id = 0, $run_once = false)
     {
+        // Set custom error handler to catch runtime errors
+        set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+            throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+        });
+
         try {
+            // Execute the snippet
             eval($code);
+
+            // Mark as executed if successful
             $this->mark_snippet_executed($snippet_id, $run_once);
-        } catch (Exception $e) {
-            error_log('Ofast PHP Snippet Error: ' . $e->getMessage());
+        } catch (Throwable $e) {
+            // Log the error
+            error_log('Ofast Snippet Runtime Error (ID: ' . $snippet_id . '): ' . $e->getMessage());
+
+            // Auto-deactivate the problematic snippet
+            if ($snippet_id > 0) {
+                $this->auto_deactivate_snippet($snippet_id, $e->getMessage());
+            }
+        } finally {
+            // Always restore the error handler
+            restore_error_handler();
         }
     }
 
@@ -2300,8 +2353,9 @@ class Ofast_X_Snippets
         // Check for common syntax errors
         $code = trim($code);
 
+        // Allow empty code (for saving templates/drafts)
         if (empty($code)) {
-            return 'Code cannot be empty';
+            return true;
         }
 
         // Check for opening PHP tags (not allowed)
@@ -2457,6 +2511,77 @@ class Ofast_X_Snippets
             }
         }
         return 'Unknown';
+    }
+
+    /**
+     * Auto-deactivate snippet on runtime error
+     */
+    private function auto_deactivate_snippet($snippet_id, $error_message = '')
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+
+        // Get snippet details before deactivating
+        $snippet = $wpdb->get_row($wpdb->prepare(
+            "SELECT name, code FROM $table WHERE id = %d",
+            $snippet_id
+        ));
+
+        if (!$snippet) {
+            return;
+        }
+
+        // Deactivate the snippet
+        $wpdb->update(
+            $table,
+            array('active' => 0),
+            array('id' => $snippet_id)
+        );
+
+        // Log the auto-deactivation
+        $this->log_snippet_action(
+            'AUTO_DEACTIVATED',
+            $snippet_id,
+            $snippet->name,
+            'Runtime error: ' . substr($error_message, 0, 200)
+        );
+
+        // Store error for admin notice
+        $failed_snippets = get_transient('ofast_failed_snippets') ?: array();
+        $failed_snippets[] = array(
+            'id' => $snippet_id,
+            'name' => $snippet->name,
+            'error' => $error_message,
+            'time' => current_time('mysql')
+        );
+        set_transient('ofast_failed_snippets', $failed_snippets, DAY_IN_SECONDS);
+
+        // Show admin notice on next page load
+        add_action('admin_notices', array($this, 'show_runtime_error_notice'));
+    }
+
+    /**
+     * Show admin notice for runtime errors
+     */
+    public function show_runtime_error_notice()
+    {
+        $failed_snippets = get_transient('ofast_failed_snippets');
+
+        if (empty($failed_snippets)) {
+            return;
+        }
+
+        foreach ($failed_snippets as $failed) {
+            echo '<div class="notice notice-error is-dismissible">';
+            echo '<p><strong>⚠️ Snippet Auto-Deactivated:</strong> ';
+            echo '"' . esc_html($failed['name']) . '" encountered a runtime error and was automatically deactivated for safety.</p>';
+            echo '<p><strong>Error:</strong> ' . esc_html($failed['error']) . '</p>';
+            echo '<p><a href="' . admin_url('admin.php?page=ofast-snippets&edit=' . $failed['id']) . '" class="button">Fix Snippet</a></p>';
+            echo '</div>';
+        }
+
+        // Clear the transient after showing
+        delete_transient('ofast_failed_snippets');
     }
 
     /**

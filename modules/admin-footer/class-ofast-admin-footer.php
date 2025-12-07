@@ -142,7 +142,7 @@ class Ofast_X_Admin_Footer
         settings_errors('ofast_admin_footer');
 ?>
         <div class="wrap">
-            <h1>📝 Custom Admin Footer</h1>
+            <h1>Custom Admin Footer</h1>
             <p class="description">Customize the footer text shown at the bottom of WordPress admin pages.</p>
 
             <form method="post" action="">
@@ -183,7 +183,7 @@ class Ofast_X_Admin_Footer
 
                 <!-- Preview Box -->
                 <div style="background: #f0f0f1; border: 1px solid #c3c4c7; border-radius: 4px; padding: 15px; margin: 20px 0; max-width: 800px;">
-                    <h3 style="margin-top: 0;">👁 Preview</h3>
+                    <h3 style="margin-top: 0;">Preview</h3>
                     <div style="display: flex; justify-content: space-between; background: #fff; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
                         <span id="preview-left"><?php echo !empty($settings['left_text']) ? wp_kses_post($settings['left_text']) : '<em style="color:#999">Thank you for creating with WordPress.</em>'; ?></span>
                         <span id="preview-right"><?php echo !empty($settings['right_text']) ? esc_html($settings['right_text']) : (!empty($settings['hide_wp_version']) ? '' : '<em style="color:#999">Version X.X</em>'); ?></span>
@@ -192,7 +192,7 @@ class Ofast_X_Admin_Footer
 
                 <p class="submit">
                     <button type="submit" name="ofast_save_admin_footer" class="button button-primary button-large">
-                        💾 Save Footer Settings
+                        Save Footer Settings
                     </button>
                 </p>
             </form>

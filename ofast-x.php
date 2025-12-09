@@ -29,16 +29,6 @@ define('OFAST_X_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('OFAST_X_PLUGIN_BASENAME', plugin_basename(__FILE__));
 define('OFAST_X_PLUGIN_FILE', __FILE__);
 
-/**
- * Load Action Scheduler (for reliable email scheduling)
- * This replaces unreliable WordPress cron
- * TEMPORARILY DISABLED - Action Scheduler has compatibility issues
- */
-/*
-if (!class_exists('ActionScheduler_Versions')) {
-    require_once OFAST_X_PLUGIN_DIR . 'includes/libraries/action-scheduler/action-scheduler.php';
-}
-*/
 
 /**
  * Activation Hook

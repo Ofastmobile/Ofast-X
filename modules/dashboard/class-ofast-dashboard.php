@@ -173,8 +173,7 @@ class Ofast_X_Dashboard
             'admin-url' => 'Admin URL Customizer',
             'admin-footer' => 'Custom Admin Footer',
             'duplicate-content' => 'Content Duplicator',
-            'menu-editor' => 'Admin Menu Editor',
-            'content-order' => 'Content Ordering'
+            'menu-editor' => 'Admin Menu Editor'
         );
 
         $loaded = array();

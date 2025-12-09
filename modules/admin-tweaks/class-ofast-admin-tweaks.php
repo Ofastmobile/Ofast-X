@@ -73,14 +73,8 @@ class Ofast_X_Admin_Tweaks
      */
     public function add_id_column($columns)
     {
-        $new_columns = array();
-        foreach ($columns as $key => $value) {
-            if ($key === 'title') {
-                $new_columns['post_id'] = 'ID';
-            }
-            $new_columns[$key] = $value;
-        }
-        return $new_columns;
+        $columns['post_id'] = 'ID';
+        return $columns;
     }
 
     /**
@@ -89,7 +83,7 @@ class Ofast_X_Admin_Tweaks
     public function render_id_column($column, $post_id)
     {
         if ($column === 'post_id') {
-            echo '<code style="background:#f0f0f1;padding:2px 6px;border-radius:3px;font-size:12px;">' . $post_id . '</code>';
+            echo '<code style="background:#f0f0f1;padding:1px 4px;border-radius:2px;font-size:11px;">' . $post_id . '</code>';
         }
     }
 
@@ -100,7 +94,7 @@ class Ofast_X_Admin_Tweaks
     {
         $screen = get_current_screen();
         if ($screen && in_array($screen->id, array('edit-post', 'edit-page'))) {
-            echo '<style>.column-post_id { width: 50px; }</style>';
+            echo '<style>.column-post_id { width: 40px !important; text-align: center; }</style>';
         }
     }
     /**

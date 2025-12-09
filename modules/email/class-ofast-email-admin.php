@@ -152,14 +152,19 @@ class Ofast_X_Email_Admin
                 if (count($total_ids) <= 40) {
                     $sent = 0;
                     $headers = $this->get_email_headers();
+                    $sample_body = ''; // Store one sample for log
                     foreach (get_users(['include' => $total_ids]) as $user) {
                         $message = $this->replace_placeholders($body, $user);
-                        if (wp_mail($user->user_email, $subject, $this->get_email_template($message), $headers)) {
+                        $full_body = $this->get_email_template($message);
+                        if (empty($sample_body)) {
+                            $sample_body = $full_body; // Store first email as sample
+                        }
+                        if (wp_mail($user->user_email, $subject, $full_body, $headers)) {
                             $sent++;
                         }
                     }
 
-                    $this->log_email($subject, $sent, 'Immediate send');
+                    $this->log_email($subject, $sent, 'Immediate send', $sample_body);
                     $result_message = '<div class="notice notice-success"><p>Sent immediately to ' . $sent . ' user(s)</p></div>';
                 } else {
                     // Schedule in batches of 40 users per hour using Action Scheduler
@@ -318,7 +323,7 @@ class Ofast_X_Email_Admin
                             var disabled = i === currentPage ? " disabled" : "";
                             pagination += "<button type=\'button\' class=\'button page-btn\' data-page=\'" + i + "\'" + disabled + ">" + i + "</button> ";
                         }
-                        $("#user-pagination").html(visibleRows.length + " users | " + pagination);
+                        $("#user-pagination").html(pagination);
                         
                         $(".page-btn").click(function() {
                             currentPage = parseInt($(this).data("page"));
@@ -428,35 +433,88 @@ class Ofast_X_Email_Admin
         $table = $wpdb->prefix . 'ofast_email_logs';
         $logs = $wpdb->get_results("SELECT * FROM $table ORDER BY sent_at DESC LIMIT 100");
 
-        echo '<div class="wrap"><h2>Email History</h2>';
+?>
+        <div class="wrap">
+            <h2>Email History</h2>
+            <p>View sent emails and preview their content.</p>
 
-        if (empty($logs)) {
-            echo '<p>No emails have been logged yet.</p>';
-        } else {
-            echo '<table class="widefat fixed striped">
-                <thead>
-                    <tr>
-                        <th style="width:5%;">ID</th>
-                        <th>Subject</th>
-                        <th>Sent At</th>
-                        <th>Recipients</th>
-                        <th>Notes</th>
-                    </tr>
-                </thead>
-                <tbody>';
-            foreach ($logs as $log) {
-                echo '<tr>
-                    <td>' . esc_html($log->id) . '</td>
-                    <td>' . esc_html(wp_trim_words($log->subject, 12, '...')) . '</td>
-                    <td>' . esc_html($log->sent_at) . '</td>
-                    <td>' . esc_html($log->recipient_count) . '</td>
-                    <td>' . esc_html($log->notes) . '</td>
-                </tr>';
-            }
-            echo '</tbody></table>';
-        }
+            <?php if (empty($logs)): ?>
+                <p>No emails have been logged yet.</p>
+            <?php else: ?>
+                <table class="widefat fixed striped">
+                    <thead>
+                        <tr>
+                            <th style="width:5%;">ID</th>
+                            <th>Subject</th>
+                            <th style="width:15%;">Sent At</th>
+                            <th style="width:8%;">Recipients</th>
+                            <th style="width:10%;">Status</th>
+                            <th style="width:15%;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($logs as $log): ?>
+                            <tr>
+                                <td><?php echo esc_html($log->id); ?></td>
+                                <td><?php echo esc_html(wp_trim_words($log->subject, 12, '...')); ?></td>
+                                <td><?php echo esc_html($log->sent_at); ?></td>
+                                <td><?php echo esc_html($log->recipient_count); ?></td>
+                                <td>
+                                    <?php
+                                    $status = $log->status ?? 'sent';
+                                    $status_class = $status === 'failed' ? 'color: #dc2626;' : ($status === 'scheduled' ? 'color: #f59e0b;' : 'color: #10b981;');
+                                    ?>
+                                    <span style="<?php echo $status_class; ?> font-weight: 500;">
+                                        <?php echo esc_html(ucfirst($status)); ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <?php if (!empty($log->body)): ?>
+                                        <button type="button" class="button button-small preview-email-btn"
+                                            data-content="<?php echo esc_attr(base64_encode($log->body)); ?>">
+                                            Preview
+                                        </button>
+                                    <?php else: ?>
+                                        <span style="color: #9ca3af;">No preview</span>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
+        </div>
 
-        echo '</div>';
+        <!-- Email Preview Modal -->
+        <div id="emailer-preview-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100000;">
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border-radius: 8px; width: 90%; max-width: 700px; max-height: 80vh; overflow: hidden;">
+                <div style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0;">Email Preview</h3>
+                    <button type="button" id="close-emailer-preview" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+                </div>
+                <iframe id="emailer-preview-frame" style="width: 100%; height: 60vh; border: none;"></iframe>
+            </div>
+        </div>
+
+        <script>
+            jQuery(document).ready(function($) {
+                // Preview email
+                $('.preview-email-btn').on('click', function() {
+                    var content = atob($(this).data('content'));
+                    var iframe = document.getElementById('emailer-preview-frame');
+                    iframe.srcdoc = content;
+                    $('#emailer-preview-modal').fadeIn(200);
+                });
+
+                // Close modal
+                $('#close-emailer-preview, #emailer-preview-modal').on('click', function(e) {
+                    if (e.target === this || $(this).attr('id') === 'close-emailer-preview') {
+                        $('#emailer-preview-modal').fadeOut(200);
+                    }
+                });
+            });
+        </script>
+<?php
     }
 
     /**
@@ -550,11 +608,12 @@ class Ofast_X_Email_Admin
     /**
      * Helper: Log email
      */
-    private function log_email($subject, $recipient_count, $notes)
+    private function log_email($subject, $recipient_count, $notes, $body = '')
     {
         global $wpdb;
         $wpdb->insert($wpdb->prefix . 'ofast_email_logs', [
             'subject' => $subject,
+            'body' => $body,
             'sent_at' => current_time('mysql'),
             'recipient_count' => $recipient_count,
             'notes' => $notes

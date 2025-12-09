@@ -86,7 +86,7 @@ class Ofast_X_Settings
         $saved = isset($_GET['settings_saved']);
 
 ?>
-        <div class="wrap">
+        <div class="wrap ofast-settings-wrap">
             <h1>Ofast X Settings</h1>
             <p class="description">Enable or disable plugin modules. Only enabled modules will load.</p>
 
@@ -99,61 +99,155 @@ class Ofast_X_Settings
             <form method="post" action="">
                 <?php wp_nonce_field('ofast_settings_save', '_wpnonce'); ?>
 
-                <div class="card" style="max-width: 800px; margin-top: 20px;">
-                    <h2 style="margin-top: 0;">Module Management</h2>
-                    <p>Toggle modules on/off to customize your installation.</p>
-
-                    <table class="form-table">
-                        <?php foreach ($modules as $slug => $data): ?>
-                            <tr>
-                                <th scope="row">
-                                    <label for="module_<?php echo esc_attr($slug); ?>">
-                                        <?php echo esc_html($data['name']); ?>
+                <div class="ofast-modules-grid">
+                    <?php foreach ($modules as $slug => $data):
+                        $is_locked = !empty($data['locked']);
+                        $is_coming_soon = !empty($data['coming_soon']);
+                        $is_enabled = !empty($enabled[$slug]);
+                        $card_class = $is_enabled ? 'enabled' : '';
+                        if ($is_locked) $card_class = 'locked';
+                        if ($is_coming_soon) $card_class = 'coming-soon';
+                    ?>
+                        <div class="ofast-module-card <?php echo esc_attr($card_class); ?>">
+                            <div class="module-header">
+                                <h3><?php echo esc_html($data['name']); ?></h3>
+                                <?php if ($is_locked): ?>
+                                    <span class="ofast-badge active">Always On</span>
+                                <?php elseif ($is_coming_soon): ?>
+                                    <span class="ofast-badge coming-soon">Coming Soon</span>
+                                <?php elseif ($is_enabled): ?>
+                                    <span class="ofast-badge integrated">Integrated</span>
+                                <?php else: ?>
+                                    <span class="ofast-badge not-integrated">Not Integrated</span>
+                                <?php endif; ?>
+                            </div>
+                            <p class="module-description"><?php echo esc_html($data['description']); ?></p>
+                            <div class="module-footer">
+                                <?php if ($is_locked): ?>
+                                    <span class="always-active">Core Module</span>
+                                <?php elseif ($is_coming_soon): ?>
+                                    <span class="coming-soon-text">Available Soon</span>
+                                <?php else: ?>
+                                    <label class="ofast-toggle-switch">
+                                        <input
+                                            type="checkbox"
+                                            name="modules[<?php echo esc_attr($slug); ?>]"
+                                            id="module_<?php echo esc_attr($slug); ?>"
+                                            value="1"
+                                            <?php checked($is_enabled); ?>>
+                                        <span class="slider"></span>
                                     </label>
-                                </th>
-                                <td>
-                                    <?php if (!empty($data['locked'])): ?>
-                                        <span class="ofast-badge active">Always On</span>
-                                    <?php else: ?>
-                                        <label class="ofast-toggle-switch">
-                                            <input
-                                                type="checkbox"
-                                                name="modules[<?php echo esc_attr($slug); ?>]"
-                                                id="module_<?php echo esc_attr($slug); ?>"
-                                                value="1"
-                                                <?php checked(!empty($enabled[$slug])); ?>>
-                                            <span class="slider"></span>
-                                        </label>
-                                    <?php endif; ?>
-                                    <p class="description"><?php echo esc_html($data['description']); ?></p>
-                                    <?php if (!empty($data['status'])): ?>
-                                        <span class="ofast-badge" style="background:#d1ecf1;color:#0c5460;"><?php echo esc_html($data['status']); ?></span>
-                                    <?php endif; ?>
-                                    <?php if (!empty($data['coming_soon'])): ?>
-                                        <span class="ofast-badge coming-soon">Coming Soon</span>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </table>
+                                    <span class="toggle-label"><?php echo $is_enabled ? 'Enabled' : 'Disabled'; ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
 
-                <p class="submit">
-                    <button type="submit" name="ofast_save_settings" class="button button-primary button-large">
-                        Save Settings
+                <p class="submit" style="margin-top: 30px;">
+                    <button type="submit" name="ofast_save_settings" class="button button-primary button-hero">
+                        Save All Settings
                     </button>
                 </p>
             </form>
+
+            <?php
+            // Allow modules to add their own settings sections
+            do_action('ofast_settings_after_modules');
+            ?>
         </div>
 
         <style>
-            /* Toggle Switch Styling */
+            .ofast-settings-wrap {
+                max-width: 1200px;
+            }
+
+            .ofast-modules-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                gap: 20px;
+                margin-top: 25px;
+            }
+
+            .ofast-module-card {
+                background: #fff;
+                border: 1px solid #e5e7eb;
+                border-radius: 12px;
+                padding: 20px;
+                transition: all 0.3s ease;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .ofast-module-card:hover {
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                transform: translateY(-2px);
+            }
+
+            .ofast-module-card.enabled {
+                border-color: #10b981;
+                background: linear-gradient(to bottom, #f0fdf4, #fff);
+            }
+
+            .ofast-module-card.locked {
+                border-color: #6366f1;
+                background: linear-gradient(to bottom, #eef2ff, #fff);
+            }
+
+            .ofast-module-card.coming-soon {
+                opacity: 0.7;
+                border-style: dashed;
+            }
+
+            .module-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 10px;
+                gap: 10px;
+            }
+
+            .module-header h3 {
+                margin: 0;
+                font-size: 15px;
+                font-weight: 600;
+                color: #1e293b;
+            }
+
+            .module-description {
+                color: #64748b;
+                font-size: 13px;
+                line-height: 1.5;
+                margin: 0 0 15px 0;
+                flex-grow: 1;
+            }
+
+            .module-footer {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding-top: 15px;
+                border-top: 1px solid #f1f5f9;
+            }
+
+            .toggle-label {
+                font-size: 12px;
+                color: #64748b;
+            }
+
+            .always-active,
+            .coming-soon-text {
+                font-size: 12px;
+                color: #64748b;
+                font-style: italic;
+            }
+
+            /* Toggle Switch */
             .ofast-toggle-switch {
                 position: relative;
                 display: inline-block;
-                width: 50px;
+                width: 44px;
                 height: 24px;
-                margin-right: 10px;
             }
 
             .ofast-toggle-switch input {
@@ -169,8 +263,8 @@ class Ofast_X_Settings
                 left: 0;
                 right: 0;
                 bottom: 0;
-                background-color: #ccc;
-                transition: .4s;
+                background-color: #cbd5e1;
+                transition: .3s;
                 border-radius: 24px;
             }
 
@@ -182,40 +276,72 @@ class Ofast_X_Settings
                 left: 3px;
                 bottom: 3px;
                 background-color: white;
-                transition: .4s;
+                transition: .3s;
                 border-radius: 50%;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
             }
 
             .ofast-toggle-switch input:checked+.slider {
-                background-color: #2271b1;
+                background-color: #10b981;
             }
 
             .ofast-toggle-switch input:checked+.slider:before {
-                transform: translateX(26px);
+                transform: translateX(20px);
             }
 
+            /* Badges */
             .ofast-badge {
                 display: inline-block;
-                background: #f0f0f1;
-                color: #50575e;
-                padding: 2px 8px;
-                border-radius: 3px;
-                font-size: 11px;
+                padding: 3px 8px;
+                border-radius: 6px;
+                font-size: 10px;
                 font-weight: 600;
                 text-transform: uppercase;
-                margin-left: 10px;
+                letter-spacing: 0.5px;
+                white-space: nowrap;
+            }
+
+            .ofast-badge.integrated {
+                background: #dbeafe;
+                color: #1e40af;
             }
 
             .ofast-badge.coming-soon {
-                background: #fff3cd;
-                color: #856404;
+                background: #fef3c7;
+                color: #92400e;
             }
 
             .ofast-badge.active {
-                background: #d1e7dd;
-                color: #0f5132;
+                background: #ede9fe;
+                color: #6d28d9;
+            }
+
+            .button-hero {
+                padding: 12px 30px !important;
+                height: auto !important;
+                font-size: 14px !important;
             }
         </style>
+
+        <script>
+            jQuery(document).ready(function($) {
+                // Update toggle label when checkbox changes
+                $('.ofast-toggle-switch input').on('change', function() {
+                    var label = $(this).closest('.module-footer').find('.toggle-label');
+                    var card = $(this).closest('.ofast-module-card');
+                    var badge = card.find('.module-header .ofast-badge');
+                    if (this.checked) {
+                        label.text('Enabled');
+                        card.addClass('enabled');
+                        badge.removeClass('not-integrated').addClass('integrated').text('Integrated');
+                    } else {
+                        label.text('Disabled');
+                        card.removeClass('enabled');
+                        badge.removeClass('integrated').addClass('not-integrated').text('Not Integrated');
+                    }
+                });
+            });
+        </script>
 <?php
     }
 
@@ -245,7 +371,7 @@ class Ofast_X_Settings
             'newsletter' => array(
                 'name' => 'Newsletter Subscriptions',
                 'description' => 'Newsletter signup forms with admin management',
-                'coming_soon' => true,
+                'status' => 'Integrated',
             ),
             'snippets' => array(
                 'name' => 'Code Snippets Manager',
@@ -264,8 +390,8 @@ class Ofast_X_Settings
             ),
             'smtp' => array(
                 'name' => 'SMTP Configuration',
-                'description' => 'Custom SMTP settings for reliable email delivery',
-                'coming_soon' => true,
+                'description' => 'Custom SMTP settings for reliable email delivery (Zoho, Gmail, SendGrid, Mailgun)',
+                'status' => 'Integrated',
             ),
             'forms' => array(
                 'name' => 'Contact Forms',
@@ -310,7 +436,10 @@ class Ofast_X_Settings
             'admin-footer' => array(
                 'name' => 'Custom Admin Footer',
                 'description' => 'Add custom branding text to admin footer',
-                'status' => 'Integrated',
+            ),
+            'admin-tweaks' => array(
+                'name' => 'Admin Tweaks',
+                'description' => 'Quick admin customizations: ID columns, infinite scroll, hide admin bar, remove WP logo, rename howdy',
             ),
         );
     }

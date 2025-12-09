@@ -104,6 +104,16 @@ class Ofast_X_Core
         if ($this->is_module_enabled('redirects')) {
             $this->load_redirects();
         }
+
+        // Load SMTP module (always load - it controls wp_mail)
+        if ($this->is_module_enabled('smtp')) {
+            $this->load_smtp();
+        }
+
+        // Load Admin Tweaks module
+        if ($this->is_module_enabled('admin-tweaks')) {
+            $this->load_admin_tweaks();
+        }
     }
 
     /**
@@ -299,7 +309,7 @@ class Ofast_X_Core
             $enabled_modules = array(
                 'email' => true,
                 'debug' => true,
-                'smtp' => false,      // Will be added later
+                'smtp' => true,        // SMTP module for reliable email delivery
                 'newsletter' => false, // Will be added later
                 // Add more modules here as you build them
             );
@@ -362,5 +372,27 @@ class Ofast_X_Core
         $redirects = new Ofast_X_Redirects();
         $redirects->init();
         $this->modules['redirects'] = $redirects;
+    }
+
+    /**
+     * Load SMTP Module
+     */
+    private function load_smtp()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/smtp/class-ofast-smtp.php';
+        $smtp = Ofast_X_SMTP::get_instance();
+        $smtp->init();
+        $this->modules['smtp'] = $smtp;
+    }
+
+    /**
+     * Load Admin Tweaks Module
+     */
+    private function load_admin_tweaks()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-tweaks/class-ofast-admin-tweaks.php';
+        $admin_tweaks = new Ofast_X_Admin_Tweaks();
+        $admin_tweaks->init();
+        $this->modules['admin-tweaks'] = $admin_tweaks;
     }
 }

@@ -128,15 +128,16 @@ class Ofast_X_User_Roles
     }
 
     /**
-     * Add roles column to users list
+     * Add ID and roles columns to users list
      */
     public function add_roles_column($columns)
     {
-        // Insert after username
+        // Insert ID and roles after username
         $new_columns = array();
         foreach ($columns as $key => $value) {
             $new_columns[$key] = $value;
             if ($key === 'username') {
+                $new_columns['user_id'] = 'ID';
                 $new_columns['ofast_roles'] = 'Roles';
             }
         }
@@ -148,10 +149,16 @@ class Ofast_X_User_Roles
     }
 
     /**
-     * Render roles column content
+     * Render ID and roles column content
      */
     public function render_roles_column($output, $column_name, $user_id)
     {
+        // Handle User ID column
+        if ($column_name === 'user_id') {
+            return '<code style="background: #f0f0f1; color: #1e293b; padding: 4px 10px; border-radius: 4px; font-size: 13px; font-weight: 600;">' . esc_html($user_id) . '</code>';
+        }
+
+        // Handle Roles column
         if ($column_name !== 'ofast_roles') {
             return $output;
         }

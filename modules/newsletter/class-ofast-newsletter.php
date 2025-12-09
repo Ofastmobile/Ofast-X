@@ -235,14 +235,45 @@ class Ofast_X_Newsletter
 
         $subscribers = $wpdb->get_results("SELECT * FROM $table ORDER BY subscribed_at DESC");
         $total = count($subscribers);
+
+        // Handle Turnstile settings save
+        if (isset($_POST['ofast_save_turnstile']) && wp_verify_nonce($_POST['turnstile_nonce'], 'ofast_turnstile_save')) {
+            update_option('ofast_turnstile_site_key', sanitize_text_field($_POST['turnstile_site_key']));
+            update_option('ofast_turnstile_secret_key', sanitize_text_field($_POST['turnstile_secret_key']));
+            echo '<div class="notice notice-success"><p>Turnstile settings saved!</p></div>';
+        }
+
+        $site_key = get_option('ofast_turnstile_site_key', '');
+        $secret_key = get_option('ofast_turnstile_secret_key', '');
     ?>
         <div class="wrap">
             <h1>Newsletter Subscribers (<?php echo $total; ?>)</h1>
             <p><a href="?page=ofast-newsletter&action=export" class="button button-primary">Export CSV</a></p>
-            <div style="background:#f0f8ff;padding:15px;border-left:4px solid #1e88e5;margin:20px 0;border-radius:5px;">
-                <h3 style="margin-top:0;">Add Newsletter Form</h3>
-                <code style="background:white;padding:10px;display:block;border-radius:5px;">[ofast_newsletter title="Subscribe Now"]</code>
+
+            <!-- Two column layout for shortcode and turnstile -->
+            <div style="display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 300px; background:#f0f8ff;padding:15px;border-left:4px solid #1e88e5;border-radius:5px;">
+                    <h3 style="margin-top:0;">Add Newsletter Form</h3>
+                    <code style="background:white;padding:10px;display:block;border-radius:5px;">[ofast_newsletter title="Subscribe Now"]</code>
+                </div>
+                <div style="flex: 1; min-width: 300px; background:#fff8e1;padding:15px;border-left:4px solid #ff9800;border-radius:5px;">
+                    <h3 style="margin-top:0;">Turnstile Spam Protection</h3>
+                    <form method="post">
+                        <?php wp_nonce_field('ofast_turnstile_save', 'turnstile_nonce'); ?>
+                        <p>
+                            <label><strong>Site Key:</strong></label><br>
+                            <input type="text" name="turnstile_site_key" value="<?php echo esc_attr($site_key); ?>" style="width: 100%; max-width: 300px;" placeholder="Enter Cloudflare Turnstile Site Key">
+                        </p>
+                        <p>
+                            <label><strong>Secret Key:</strong></label><br>
+                            <input type="password" name="turnstile_secret_key" value="<?php echo esc_attr($secret_key); ?>" style="width: 100%; max-width: 300px;" placeholder="Enter Turnstile Secret Key">
+                        </p>
+                        <button type="submit" name="ofast_save_turnstile" class="button button-secondary">Save Keys</button>
+                        <p style="font-size: 11px; color: #666; margin-top: 8px;">Get keys from <a href="https://dash.cloudflare.com/?to=/:account/turnstile" target="_blank">Cloudflare Turnstile</a></p>
+                    </form>
+                </div>
             </div>
+
             <?php if ($subscribers): ?>
                 <table class="wp-list-table widefat fixed striped">
                     <thead>

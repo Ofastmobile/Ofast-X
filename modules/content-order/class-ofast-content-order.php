@@ -95,7 +95,12 @@ class Ofast_X_Content_Order
         }
 
         $post_type = isset($_GET['post_type']) ? sanitize_key($_GET['post_type']) : 'post';
-        $post_types = get_post_types(array('public' => true), 'objects');
+
+        // Only allow posts and pages
+        $allowed_types = array('post', 'page');
+        if (!in_array($post_type, $allowed_types)) {
+            $post_type = 'post';
+        }
 
         // Get posts
         $posts = get_posts(array(
@@ -108,50 +113,44 @@ class Ofast_X_Content_Order
 
 ?>
         <div class="wrap">
-            <h1>📋 Content Order</h1>
+            <h1>Content Order</h1>
             <p>Drag and drop to reorder your content. Changes are saved automatically.</p>
 
-            <div class="ofast-order-controls" style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px;">
-                <label for="post_type_selector">
-                    <strong>Content Type:</strong>
-                </label>
-                <select id="post_type_selector" style="margin: 0 10px;">
-                    <?php foreach ($post_types as $pt): ?>
-                        <option value="<?php echo esc_attr($pt->name); ?>" <?php selected($post_type, $pt->name); ?>>
-                            <?php echo esc_html($pt->labels->name); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-
-                <button type="button" class="button" id="reset-order-btn">Reset to Default Order</button>
-
-                <div class="save-status" style="display: inline-block; margin-left: 15px; color: #46b450; font-weight: 500;"></div>
-            </div>
+            <!-- Tabs Navigation -->
+            <nav class="nav-tab-wrapper" style="margin-bottom: 20px;">
+                <a href="?page=ofast-content-order&post_type=post"
+                    class="nav-tab <?php echo $post_type === 'post' ? 'nav-tab-active' : ''; ?>">
+                    Posts
+                </a>
+                <a href="?page=ofast-content-order&post_type=page"
+                    class="nav-tab <?php echo $post_type === 'page' ? 'nav-tab-active' : ''; ?>">
+                    Pages
+                </a>
+                <button type="button" class="button" id="reset-order-btn" style="margin-left: auto; float: right;">
+                    Reset to Default Order
+                </button>
+                <div class="save-status" style="display: inline-block; margin-left: 15px; float: right; color: #46b450; font-weight: 500; line-height: 30px;"></div>
+            </nav>
 
             <?php if (empty($posts)): ?>
                 <div style="background: #f9f9f9; padding: 40px; text-align: center; border-radius: 8px;">
-                    <p style="color: #999; font-size: 16px;">No <?php echo esc_html($post_types[$post_type]->labels->name); ?> found.</p>
+                    <p style="color: #999; font-size: 16px;">No <?php echo $post_type === 'post' ? 'posts' : 'pages'; ?> found.</p>
                 </div>
             <?php else: ?>
-                <div id="sortable-posts" class="ofast-sortable-list">
+                <div id="sortable-posts" class="ofast-sortable-list" data-post-type="<?php echo esc_attr($post_type); ?>">
                     <?php foreach ($posts as $post): ?>
                         <?php $this->render_post_item($post); ?>
                     <?php endforeach; ?>
                 </div>
 
                 <p style="margin-top: 20px; color: #666;">
-                    <strong>💡 Tip:</strong> Grab the ☰ icon and drag to reorder. Changes save automatically!
+                    <strong>Tip:</strong> Grab the handle and drag to reorder. Changes save automatically!
                 </p>
             <?php endif; ?>
         </div>
 
         <script>
             jQuery(document).ready(function($) {
-                // Handle post type change
-                $('#post_type_selector').on('change', function() {
-                    window.location.href = '?page=ofast-content-order&post_type=' + $(this).val();
-                });
-
                 // Handle reset
                 $('#reset-order-btn').on('click', function() {
                     if (!confirm('Reset all items to default order (by date)? This cannot be undone.')) {
@@ -191,7 +190,9 @@ class Ofast_X_Content_Order
 
     ?>
         <div class="ofast-post-item <?php echo $status_class; ?>" data-id="<?php echo $post->ID; ?>">
-            <span class="drag-handle">☰</span>
+            <span class="drag-handle">&#9776;</span>
+
+            <code class="post-id" style="background: #f0f0f1; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin-right: 10px; min-width: 50px; text-align: center;"><?php echo $post->ID; ?></code>
 
             <?php if ($thumbnail): ?>
                 <div class="post-thumbnail"><?php echo $thumbnail; ?></div>
@@ -201,7 +202,7 @@ class Ofast_X_Content_Order
                 <strong class="post-title"><?php echo esc_html($post->post_title ?: '(No title)'); ?></strong>
                 <span class="post-meta">
                     <span class="post-status"><?php echo esc_html($status_label); ?></span>
-                    • <?php echo human_time_diff(strtotime($post->post_date), current_time('timestamp')); ?> ago
+                    - <?php echo human_time_diff(strtotime($post->post_date), current_time('timestamp')); ?> ago
                 </span>
             </div>
 

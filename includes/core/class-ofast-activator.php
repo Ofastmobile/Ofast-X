@@ -76,6 +76,7 @@ class Ofast_X_Activator
         $sql_email_logs = "CREATE TABLE IF NOT EXISTS {$table_email_logs} (
             id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             subject VARCHAR(255) NOT NULL,
+            body LONGTEXT,
             sent_at DATETIME NOT NULL,
             recipient_count INT(11) NOT NULL DEFAULT 0,
             status ENUM('sent', 'scheduled', 'failed') DEFAULT 'sent',

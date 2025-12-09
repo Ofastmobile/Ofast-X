@@ -423,11 +423,6 @@ class Ofast_X_Settings
                 'description' => 'Duplicate posts and pages with one click',
                 'status' => 'Integrated',
             ),
-            'content-order' => array(
-                'name' => 'Content Ordering',
-                'description' => 'Drag-and-drop reorder for posts and pages',
-                'status' => 'Integrated',
-            ),
             'menu-editor' => array(
                 'name' => 'Admin Menu Editor',
                 'description' => 'Reorder and rename WordPress admin menu items',

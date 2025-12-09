@@ -30,6 +30,7 @@ class Ofast_X_Admin_Tweaks
             add_action('manage_posts_custom_column', array($this, 'render_id_column'), 10, 2);
             add_filter('manage_pages_columns', array($this, 'add_id_column'));
             add_action('manage_pages_custom_column', array($this, 'render_id_column'), 10, 2);
+            add_action('admin_head', array($this, 'add_id_column_css'));
         }
 
         // Infinity Media Scroll
@@ -88,10 +89,20 @@ class Ofast_X_Admin_Tweaks
     public function render_id_column($column, $post_id)
     {
         if ($column === 'post_id') {
-            echo '<code style="background: #f0f0f1; padding: 3px 8px; border-radius: 4px;">' . $post_id . '</code>';
+            echo '<code style="background:#f0f0f1;padding:2px 6px;border-radius:3px;font-size:12px;">' . $post_id . '</code>';
         }
     }
 
+    /**
+     * Add CSS for narrow ID column
+     */
+    public function add_id_column_css()
+    {
+        $screen = get_current_screen();
+        if ($screen && in_array($screen->id, array('edit-post', 'edit-page'))) {
+            echo '<style>.column-post_id { width: 50px; }</style>';
+        }
+    }
     /**
      * Hide admin bar by specific roles
      */

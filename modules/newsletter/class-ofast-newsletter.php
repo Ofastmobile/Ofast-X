@@ -73,6 +73,9 @@ class Ofast_X_Newsletter
                 case 'invalid':
                     $message = '<div class="ofast-newsletter-error">Invalid email or name.</div>';
                     break;
+                case 'spam':
+                    $message = '<div class="ofast-newsletter-error">Spam verification failed. Please try again.</div>';
+                    break;
                 case 'error':
                     $message = '<div class="ofast-newsletter-error">Error. Try again.</div>';
                     break;
@@ -146,6 +149,18 @@ class Ofast_X_Newsletter
                 <input type="hidden" name="action" value="ofast_newsletter_submit">
                 <input type="text" name="subscriber_name" placeholder="Your Name" required>
                 <input type="email" name="subscriber_email" placeholder="Your Email" required>
+                <?php
+                // Render Turnstile widget if configured
+                if (class_exists('Ofast_X_Turnstile')) {
+                    $turnstile = Ofast_X_Turnstile::get_instance();
+                    if ($turnstile->is_configured()) {
+                        echo '<div style="margin: 15px 0;">';
+                        echo $turnstile->render_widget('newsletter');
+                        echo '</div>';
+                        echo Ofast_X_Turnstile::render_script();
+                    }
+                }
+                ?>
                 <button type="submit"><?php echo esc_html($atts['button_text']); ?></button>
             </form>
             <p style="font-size:12px;color:#999;margin-top:10px;text-align:center;">We respect your privacy.</p>
@@ -161,6 +176,19 @@ class Ofast_X_Newsletter
     {
         if (!isset($_POST['ofast_newsletter_nonce']) || !wp_verify_nonce($_POST['ofast_newsletter_nonce'], 'ofast_newsletter_action')) {
             wp_die('Security check failed');
+        }
+
+        // Verify Turnstile if configured
+        if (class_exists('Ofast_X_Turnstile')) {
+            $turnstile = Ofast_X_Turnstile::get_instance();
+            if ($turnstile->is_configured()) {
+                $token = isset($_POST['cf-turnstile-response']) ? $_POST['cf-turnstile-response'] : '';
+                $result = $turnstile->verify($token);
+                if (!$result['success']) {
+                    wp_redirect(add_query_arg('newsletter', 'spam', wp_get_referer()));
+                    exit;
+                }
+            }
         }
 
         global $wpdb;
@@ -193,9 +221,22 @@ class Ofast_X_Newsletter
         ));
 
         if ($inserted) {
-            $admin_email = get_option('admin_email');
-            // SECURITY: Escape content in email body
-            wp_mail($admin_email, 'New Newsletter Subscriber', "Name: " . esc_html($name) . "\nEmail: " . esc_html($email), array('Content-Type: text/html'));
+            // Dispatch notification via Notification Hub (Email, WhatsApp, Google Sheets)
+            if (class_exists('Ofast_X_Notification_Hub')) {
+                Ofast_X_Notification_Hub::dispatch(
+                    Ofast_X_Notification_Hub::EVENT_NEWSLETTER_SUBSCRIPTION,
+                    array(
+                        'email' => $email,
+                        'name' => $name,
+                        'ip' => $ip,
+                        'source' => wp_get_referer() ? wp_get_referer() : 'direct'
+                    )
+                );
+            } else {
+                // Fallback to direct email if hub not available
+                $admin_email = get_option('admin_email');
+                wp_mail($admin_email, 'New Newsletter Subscriber', "Name: " . esc_html($name) . "\nEmail: " . esc_html($email), array('Content-Type: text/html'));
+            }
             wp_redirect(add_query_arg('newsletter', 'success', wp_get_referer()));
             exit;
         } else {
@@ -236,41 +277,32 @@ class Ofast_X_Newsletter
         $subscribers = $wpdb->get_results("SELECT * FROM $table ORDER BY subscribed_at DESC");
         $total = count($subscribers);
 
-        // Handle Turnstile settings save
-        if (isset($_POST['ofast_save_turnstile']) && wp_verify_nonce($_POST['turnstile_nonce'], 'ofast_turnstile_save')) {
-            update_option('ofast_turnstile_site_key', sanitize_text_field($_POST['turnstile_site_key']));
-            update_option('ofast_turnstile_secret_key', sanitize_text_field($_POST['turnstile_secret_key']));
-            echo '<div class="notice notice-success"><p>Turnstile settings saved!</p></div>';
-        }
-
-        $site_key = get_option('ofast_turnstile_site_key', '');
-        $secret_key = get_option('ofast_turnstile_secret_key', '');
+        // Check Turnstile status
+        $turnstile_configured = class_exists('Ofast_X_Turnstile') && Ofast_X_Turnstile::get_instance()->is_configured();
     ?>
         <div class="wrap">
             <h1>Newsletter Subscribers (<?php echo $total; ?>)</h1>
             <p><a href="?page=ofast-newsletter&action=export" class="button button-primary">Export CSV</a></p>
 
-            <!-- Two column layout for shortcode and turnstile -->
+            <!-- Two column layout for shortcode and turnstile status -->
             <div style="display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap;">
                 <div style="flex: 1; min-width: 300px; background:#f0f8ff;padding:15px;border-left:4px solid #1e88e5;border-radius:5px;">
                     <h3 style="margin-top:0;">Add Newsletter Form</h3>
                     <code style="background:white;padding:10px;display:block;border-radius:5px;">[ofast_newsletter title="Subscribe Now"]</code>
                 </div>
-                <div style="flex: 1; min-width: 300px; background:#fff8e1;padding:15px;border-left:4px solid #ff9800;border-radius:5px;">
-                    <h3 style="margin-top:0;">Turnstile Spam Protection</h3>
-                    <form method="post">
-                        <?php wp_nonce_field('ofast_turnstile_save', 'turnstile_nonce'); ?>
-                        <p>
-                            <label><strong>Site Key:</strong></label><br>
-                            <input type="text" name="turnstile_site_key" value="<?php echo esc_attr($site_key); ?>" style="width: 100%; max-width: 300px;" placeholder="Enter Cloudflare Turnstile Site Key">
-                        </p>
-                        <p>
-                            <label><strong>Secret Key:</strong></label><br>
-                            <input type="password" name="turnstile_secret_key" value="<?php echo esc_attr($secret_key); ?>" style="width: 100%; max-width: 300px;" placeholder="Enter Turnstile Secret Key">
-                        </p>
-                        <button type="submit" name="ofast_save_turnstile" class="button button-secondary">Save Keys</button>
-                        <p style="font-size: 11px; color: #666; margin-top: 8px;">Get keys from <a href="https://dash.cloudflare.com/?to=/:account/turnstile" target="_blank">Cloudflare Turnstile</a></p>
-                    </form>
+                <div style="flex: 1; min-width: 300px; background:<?php echo $turnstile_configured ? '#e8f5e9' : '#fff8e1'; ?>;padding:15px;border-left:4px solid <?php echo $turnstile_configured ? '#4caf50' : '#ff9800'; ?>;border-radius:5px;">
+                    <h3 style="margin-top:0;">
+                        🛡️ Spam Protection
+                        <?php if ($turnstile_configured): ?>
+                            <span style="color:#4caf50;font-size:14px;font-weight:normal;">✓ Active</span>
+                        <?php else: ?>
+                            <span style="color:#ff9800;font-size:14px;font-weight:normal;">⚠ Not Configured</span>
+                        <?php endif; ?>
+                    </h3>
+                    <p style="margin-bottom:10px;"><?php echo $turnstile_configured ? 'Cloudflare Turnstile is protecting your forms.' : 'Configure Turnstile to protect against spam bots.'; ?></p>
+                    <a href="<?php echo admin_url('admin.php?page=ofast-settings'); ?>" class="button button-secondary">
+                        <?php echo $turnstile_configured ? 'View Settings' : 'Configure Turnstile'; ?>
+                    </a>
                 </div>
             </div>
 

@@ -152,6 +152,27 @@ class Ofast_X_Settings
             </form>
 
             <?php
+            // Render Turnstile settings
+            if (class_exists('Ofast_X_Turnstile')) {
+                echo '<div style="margin-top: 40px;">';
+                echo '<h2>Security Settings</h2>';
+                Ofast_X_Turnstile::get_instance()->render_settings_form();
+                echo '</div>';
+            }
+
+            // Render WhatsApp settings
+            if (class_exists('Ofast_X_WhatsApp')) {
+                echo '<div style="margin-top: 40px;">';
+                echo '<h2>Notification Channels</h2>';
+                Ofast_X_WhatsApp::get_instance()->render_settings_form();
+                echo '</div>';
+            }
+
+            // Render Google Sheets settings
+            if (class_exists('Ofast_X_Google_Sheets')) {
+                Ofast_X_Google_Sheets::get_instance()->render_settings_form();
+            }
+
             // Allow modules to add their own settings sections
             do_action('ofast_settings_after_modules');
             ?>
@@ -395,8 +416,8 @@ class Ofast_X_Settings
             ),
             'forms' => array(
                 'name' => 'Contact Forms',
-                'description' => 'Custom contact form builder',
-                'coming_soon' => true,
+                'description' => 'Custom contact form builder with multi-channel notifications',
+                'status' => 'Integrated',
             ),
             'redirects' => array(
                 'name' => 'Redirects Manager',
@@ -406,7 +427,7 @@ class Ofast_X_Settings
             'google-sheets' => array(
                 'name' => 'Google Sheets Integration',
                 'description' => 'Sync form submissions to Google Sheets',
-                'coming_soon' => true,
+                'status' => 'Integrated',
             ),
             'user-roles' => array(
                 'name' => 'User Role Manager',

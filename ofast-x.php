@@ -62,6 +62,21 @@ function ofast_x_init_plugin()
     // Load security hardening (early load for headers)
     require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-security-hardening.php';
 
+    // Load Turnstile spam protection
+    require_once OFAST_X_PLUGIN_DIR . 'includes/security/class-ofast-turnstile.php';
+
+    // Load Notification Hub (central dispatcher)
+    require_once OFAST_X_PLUGIN_DIR . 'includes/notifications/class-ofast-notification-hub.php';
+
+    // Load WhatsApp integration
+    require_once OFAST_X_PLUGIN_DIR . 'modules/whatsapp/class-ofast-whatsapp.php';
+
+    // Load Google Sheets integration
+    require_once OFAST_X_PLUGIN_DIR . 'modules/google-sheets/class-ofast-google-sheets.php';
+
+    // Load Contact Forms module
+    require_once OFAST_X_PLUGIN_DIR . 'modules/forms/class-ofast-forms.php';
+
     // Initialize plugin
     $ofast_x = new Ofast_X_Core();
     $ofast_x->run();

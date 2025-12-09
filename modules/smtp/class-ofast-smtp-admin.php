@@ -354,7 +354,7 @@ class Ofast_X_SMTP_Admin
                         } else {
                             alert('✗ Failed: ' + (response.data.message || response.data));
                         }
-                        $btn.prop('disabled', false).text('📧 Send Test Email');
+                        $btn.prop('disabled', false).text('Send Test Email');
                     });
                 });
             });
@@ -595,6 +595,18 @@ class Ofast_X_SMTP_Admin
                         <p style="color: #f59e0b;"><strong>Note:</strong> New accounts start in sandbox mode (verify recipients first).</p>
                     </div>
                 </details>
+            </div>
+
+            <!-- DNS Checker Section -->
+            <div style="margin-top: 30px;">
+                <h2>Email Authentication (DNS)</h2>
+                <?php
+                // Load and render DNS Checker
+                if (file_exists(OFAST_X_PLUGIN_DIR . 'modules/smtp/class-ofast-smtp-dns.php')) {
+                    require_once OFAST_X_PLUGIN_DIR . 'modules/smtp/class-ofast-smtp-dns.php';
+                    Ofast_X_SMTP_DNS::get_instance()->render_checker_ui();
+                }
+                ?>
             </div>
         </div>
     <?php

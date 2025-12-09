@@ -221,6 +221,25 @@ class Ofast_X_Activator
         ) {$charset_collate};";
         dbDelta($sql_snippet_revisions);
 
+        // 9. Notification Log Table
+        $table_notification_log = $wpdb->prefix . 'ofast_notification_log';
+        $sql_notification_log = "CREATE TABLE IF NOT EXISTS {$table_notification_log} (
+            id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            event_type VARCHAR(50) NOT NULL,
+            channel VARCHAR(30) NOT NULL,
+            recipient VARCHAR(255),
+            status ENUM('sent', 'failed', 'skipped', 'logged') DEFAULT 'logged',
+            message LONGTEXT,
+            response TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_event_type (event_type),
+            KEY idx_channel (channel),
+            KEY idx_status (status),
+            KEY idx_created_at (created_at)
+        ) {$charset_collate};";
+        dbDelta($sql_notification_log);
+
         // Log database creation
         // Ofast_X_Logger::info('Database tables created successfully');
     }

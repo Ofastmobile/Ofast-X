@@ -363,6 +363,11 @@ class Ofast_X_Google_Sheets
      */
     public function render_settings_form()
     {
+        // SECURITY: Verify user has admin capability
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to access this page.'));
+        }
+
         // Handle form submission
         if (isset($_POST['ofast_save_gsheets']) && wp_verify_nonce($_POST['gsheets_nonce'], 'ofast_gsheets_save')) {
             self::save_settings(array(

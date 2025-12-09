@@ -27,6 +27,28 @@ class Ofast_X_Forms_Submissions
             wp_send_json_error(array('message' => 'Security check failed. Please refresh and try again.'));
         }
 
+        // SECURITY: Honeypot check - hidden field should be empty
+        if (!empty($_POST['ofast_hp_field'])) {
+            // Log spam attempt silently
+            error_log('Ofast Forms: Honeypot triggered from IP: ' . $this->get_client_ip());
+            wp_send_json_error(array('message' => 'Submission failed. Please try again.'));
+        }
+
+        // SECURITY: Rate limiting - max 5 submissions per IP per hour
+        $ip = $this->get_client_ip();
+        $rate_limit_key = 'ofast_form_rate_' . md5($ip);
+        $submissions = get_transient($rate_limit_key);
+
+        if ($submissions === false) {
+            $submissions = 0;
+        }
+
+        if ($submissions >= 5) {
+            wp_send_json_error(array('message' => 'Too many submissions. Please try again later.'));
+        }
+
+        set_transient($rate_limit_key, $submissions + 1, HOUR_IN_SECONDS);
+
         // Get form
         $forms = Ofast_X_Forms::get_instance();
         $form = $forms->get_form($form_id);
@@ -196,14 +218,27 @@ class Ofast_X_Forms_Submissions
      */
     public function render_admin_page()
     {
+        // SECURITY: Verify user has admin capability
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to access this page.'));
+        }
+
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_form_submissions';
         $forms_table = $wpdb->prefix . 'ofast_forms';
 
-        // Handle actions
+        // Handle actions with security checks
         if (isset($_GET['action']) && isset($_GET['id'])) {
             $id = absint($_GET['id']);
-            switch ($_GET['action']) {
+            $action = sanitize_text_field($_GET['action']);
+
+            // SECURITY: Verify nonce for ALL actions
+            $nonce_action = 'submission_action_' . $id;
+            if (!wp_verify_nonce($_GET['_wpnonce'] ?? '', $nonce_action)) {
+                wp_die(__('Security check failed. Please try again.'));
+            }
+
+            switch ($action) {
                 case 'mark_read':
                     $wpdb->update($table, array('status' => 'read', 'read_at' => current_time('mysql')), array('id' => $id));
                     break;
@@ -211,11 +246,13 @@ class Ofast_X_Forms_Submissions
                     $wpdb->update($table, array('status' => 'spam'), array('id' => $id));
                     break;
                 case 'delete':
-                    if (wp_verify_nonce($_GET['_wpnonce'] ?? '', 'delete_submission_' . $id)) {
-                        $wpdb->delete($table, array('id' => $id));
-                    }
+                    $wpdb->delete($table, array('id' => $id));
                     break;
             }
+
+            // Redirect to remove action from URL
+            wp_safe_redirect(remove_query_arg(array('action', 'id', '_wpnonce')));
+            exit;
         }
 
         // Get submissions
@@ -307,12 +344,16 @@ class Ofast_X_Forms_Submissions
                                 </td>
                                 <td><?php echo date('M j, Y g:i a', strtotime($sub->submitted_at)); ?></td>
                                 <td>
+                                    <?php
+                                    $nonce = wp_create_nonce('submission_action_' . $sub->id);
+                                    $base_url = add_query_arg(array('id' => $sub->id, '_wpnonce' => $nonce));
+                                    ?>
                                     <a href="#" class="view-submission" data-id="<?php echo $sub->id; ?>" data-data="<?php echo esc_attr(wp_json_encode($data)); ?>">View</a> |
                                     <?php if ($sub->status === 'unread'): ?>
-                                        <a href="<?php echo add_query_arg(array('action' => 'mark_read', 'id' => $sub->id)); ?>">Mark Read</a> |
+                                        <a href="<?php echo esc_url(add_query_arg('action', 'mark_read', $base_url)); ?>">Mark Read</a> |
                                     <?php endif; ?>
-                                    <a href="<?php echo add_query_arg(array('action' => 'mark_spam', 'id' => $sub->id)); ?>" style="color:orange;">Spam</a> |
-                                    <a href="<?php echo wp_nonce_url(add_query_arg(array('action' => 'delete', 'id' => $sub->id)), 'delete_submission_' . $sub->id); ?>" style="color:red;" onclick="return confirm('Delete this submission?');">Delete</a>
+                                    <a href="<?php echo esc_url(add_query_arg('action', 'mark_spam', $base_url)); ?>" style="color:orange;">Spam</a> |
+                                    <a href="<?php echo esc_url(add_query_arg('action', 'delete', $base_url)); ?>" style="color:red;" onclick="return confirm('Delete this submission?');">Delete</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

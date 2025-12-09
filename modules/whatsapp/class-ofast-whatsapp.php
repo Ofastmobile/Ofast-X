@@ -360,6 +360,11 @@ class Ofast_X_WhatsApp
      */
     public function render_settings_form()
     {
+        // SECURITY: Verify user has admin capability
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to access this page.'));
+        }
+
         // Handle save
         if (isset($_POST['ofast_save_whatsapp']) && wp_verify_nonce($_POST['whatsapp_nonce'], 'ofast_whatsapp_save')) {
             self::save_settings(array(

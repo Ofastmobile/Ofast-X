@@ -47,6 +47,11 @@ class Ofast_X_Forms_Render
                 <input type="hidden" name="ofast_input_border" value="<?php echo $input_border; ?>">
                 <input type="hidden" name="ofast_input_focus" value="<?php echo $input_focus; ?>">
 
+                <!-- SECURITY: Honeypot field - hidden from users, catches bots -->
+                <div style="position:absolute;left:-9999px;top:-9999px;" aria-hidden="true">
+                    <input type="text" name="ofast_hp_field" value="" tabindex="-1" autocomplete="off">
+                </div>
+
                 <div class="ofast-fields-container" style="display: flex; flex-wrap: wrap; gap: 0 20px;">
                     <?php foreach ($fields as $field): ?>
                         <?php $this->render_field($field, $form_id, $label_size, $input_border); ?>

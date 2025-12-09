@@ -230,6 +230,11 @@ class Ofast_X_Turnstile
      */
     public function render_settings_form()
     {
+        // SECURITY: Verify user has admin capability
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to access this page.'));
+        }
+
         // Handle form submission
         if (isset($_POST['ofast_save_turnstile']) && wp_verify_nonce($_POST['turnstile_nonce'], 'ofast_turnstile_save')) {
             self::save_keys(

@@ -36,6 +36,11 @@ class Ofast_X_Forms_Builder
      */
     public function render()
     {
+        // SECURITY: Verify user has admin capability
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to access this page.'));
+        }
+
         // Check if editing existing form
         if (isset($_GET['id'])) {
             $this->form_id = absint($_GET['id']);

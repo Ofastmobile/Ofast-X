@@ -348,9 +348,27 @@ class Ofast_X_Forms_Builder
                 gap: 10px;
             }
 
+            .ofast-form-builder .field-actions {
+                display: flex;
+                gap: 10px;
+            }
+
+            .ofast-form-builder .duplicate-field {
+                color: #2271b1;
+                cursor: pointer;
+            }
+
+            .ofast-form-builder .duplicate-field:hover {
+                text-decoration: underline;
+            }
+
             .ofast-form-builder .remove-field {
                 color: red;
                 cursor: pointer;
+            }
+
+            .ofast-form-builder .remove-field:hover {
+                text-decoration: underline;
             }
         </style>
 
@@ -375,6 +393,22 @@ class Ofast_X_Forms_Builder
                     $(this).closest('.field-row').remove();
                 });
 
+                // Duplicate field
+                $(document).on('click', '.duplicate-field', function() {
+                    var $row = $(this).closest('.field-row');
+                    var $clone = $row.clone();
+
+                    // Update all name attributes with new index
+                    $clone.find('[name]').each(function() {
+                        var name = $(this).attr('name');
+                        name = name.replace(/\[\d+\]/, '[' + fieldIndex + ']');
+                        $(this).attr('name', name);
+                    });
+
+                    $row.after($clone);
+                    fieldIndex++;
+                });
+
                 // Sortable
                 $('#form-fields-container').sortable({
                     handle: '.field-header',
@@ -388,6 +422,23 @@ class Ofast_X_Forms_Builder
                     var hasOptions = ['select', 'radio', 'checkbox'].includes(type);
                     $row.find('.field-options').toggle(hasOptions);
                     $row.find('.field-type-badge').text(type);
+                });
+
+                // Sync color picker with text input
+                $('input[type="color"]').on('input change', function() {
+                    var target = $(this).attr('name');
+                    var $text = $(this).siblings('.color-text');
+                    if ($text.length) {
+                        $text.val($(this).val());
+                    }
+                });
+
+                // Sync text input with color picker
+                $('.color-text').on('input change', function() {
+                    var val = $(this).val();
+                    if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                        $(this).siblings('input[type="color"]').val(val);
+                    }
                 });
 
                 // Preview functionality
@@ -417,6 +468,9 @@ class Ofast_X_Forms_Builder
                     var html = '<div style="max-width:' + formWidth + 'px;margin:0 auto;">';
                     html += '<div style="background:' + formBg + ';padding:30px;border-radius:' + formRadius + 'px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">';
 
+                    // Fields container with flex
+                    html += '<div style="display:flex;flex-wrap:wrap;gap:0 20px;">';
+
                     // Generate fields
                     $('#form-fields-container .field-row').each(function() {
                         var label = $(this).find('input[name*="[label]"]').val() || '';
@@ -424,10 +478,12 @@ class Ofast_X_Forms_Builder
                         var type = $(this).find('.field-type-input').val() || 'text';
                         var required = $(this).find('input[name*="[required]"]').is(':checked');
                         var options = $(this).find('textarea[name*="[options]"]').val() || '';
+                        var width = $(this).find('select[name*="[width]"]').val() || 'full';
 
                         if (type === 'hidden') return;
 
-                        html += '<div style="margin-bottom:20px;">';
+                        var fieldWidth = width === 'half' ? 'calc(50% - 10px)' : '100%';
+                        html += '<div style="margin-bottom:20px;width:' + fieldWidth + ';flex:0 0 ' + fieldWidth + ';box-sizing:border-box;">';
                         if (label) {
                             html += '<label style="display:block;font-weight:600;font-size:' + labelSize + 'px;margin-bottom:8px;">';
                             html += label;
@@ -471,6 +527,9 @@ class Ofast_X_Forms_Builder
                         }
                         html += '</div>';
                     });
+
+                    // Close fields container
+                    html += '</div>';
 
                     // Submit button
                     var successMsg = $('input[name="settings[success_message]"]').val() || 'Thank you! Your message has been sent.';
@@ -526,32 +585,47 @@ class Ofast_X_Forms_Builder
         $placeholder = $field['placeholder'] ?? '';
         $required = !empty($field['required']);
         $options = $field['options'] ?? '';
+        $width = $field['width'] ?? 'full';
         $show_options = in_array($type, array('select', 'radio', 'checkbox'));
     ?>
         <div class="field-row">
             <div class="field-header">
                 <span class="field-type-badge"><?php echo esc_html($type); ?></span>
-                <span class="remove-field">Remove</span>
+                <div class="field-actions">
+                    <span class="duplicate-field">Duplicate</span>
+                    <span class="remove-field">Remove</span>
+                </div>
             </div>
             <div class="field-content">
-                <div>
-                    <label>Label</label>
-                    <input type="text" name="fields[<?php echo $index; ?>][label]" value="<?php echo esc_attr($label); ?>" class="widefat" placeholder="Field Label">
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:2;">
+                        <label>Label</label>
+                        <input type="text" name="fields[<?php echo $index; ?>][label]" value="<?php echo esc_attr($label); ?>" class="widefat" placeholder="Field Label">
+                    </div>
+                    <div style="flex:1;">
+                        <label>Width</label>
+                        <select name="fields[<?php echo $index; ?>][width]" class="widefat">
+                            <option value="full" <?php selected($width, 'full'); ?>>Full Width</option>
+                            <option value="half" <?php selected($width, 'half'); ?>>Half Width</option>
+                        </select>
+                    </div>
                 </div>
                 <div>
                     <label>Placeholder</label>
                     <input type="text" name="fields[<?php echo $index; ?>][placeholder]" value="<?php echo esc_attr($placeholder); ?>" class="widefat" placeholder="Placeholder text">
                 </div>
-                <div>
-                    <label>Type</label>
-                    <select name="fields[<?php echo $index; ?>][type]" class="field-type-input widefat">
-                        <?php foreach ($this->field_types as $t => $l): ?>
-                            <option value="<?php echo $t; ?>" <?php selected($type, $t); ?>><?php echo $l; ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div>
-                    <label><input type="checkbox" name="fields[<?php echo $index; ?>][required]" value="1" <?php checked($required); ?>> Required</label>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:2;">
+                        <label>Type</label>
+                        <select name="fields[<?php echo $index; ?>][type]" class="field-type-input widefat">
+                            <?php foreach ($this->field_types as $t => $l): ?>
+                                <option value="<?php echo $t; ?>" <?php selected($type, $t); ?>><?php echo $l; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div style="flex:1; display:flex; align-items:flex-end; padding-bottom:5px;">
+                        <label><input type="checkbox" name="fields[<?php echo $index; ?>][required]" value="1" <?php checked($required); ?>> Required</label>
+                    </div>
                 </div>
                 <div class="field-options" style="<?php echo $show_options ? '' : 'display:none;'; ?>">
                     <label>Options (one per line)</label>

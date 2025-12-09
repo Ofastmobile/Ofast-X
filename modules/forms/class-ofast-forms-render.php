@@ -47,9 +47,11 @@ class Ofast_X_Forms_Render
                 <input type="hidden" name="ofast_input_border" value="<?php echo $input_border; ?>">
                 <input type="hidden" name="ofast_input_focus" value="<?php echo $input_focus; ?>">
 
-                <?php foreach ($fields as $field): ?>
-                    <?php $this->render_field($field, $form_id, $label_size, $input_border); ?>
-                <?php endforeach; ?>
+                <div class="ofast-fields-container" style="display: flex; flex-wrap: wrap; gap: 0 20px;">
+                    <?php foreach ($fields as $field): ?>
+                        <?php $this->render_field($field, $form_id, $label_size, $input_border); ?>
+                    <?php endforeach; ?>
+                </div>
 
                 <?php
                 // Add Turnstile if configured
@@ -87,6 +89,14 @@ class Ofast_X_Forms_Render
 
             .ofast-form-wrapper .ofast-form-field {
                 margin-bottom: 20px;
+            }
+
+            /* Responsive: stack half-width fields on mobile */
+            @media (max-width: 600px) {
+                .ofast-form-wrapper .ofast-width-half {
+                    width: 100% !important;
+                    flex: 0 0 100% !important;
+                }
             }
 
             .ofast-form-wrapper .ofast-form-field label {
@@ -274,17 +284,21 @@ class Ofast_X_Forms_Render
         $placeholder = $field['placeholder'] ?? '';
         $required = !empty($field['required']);
         $options = $field['options'] ?? '';
+        $width = $field['width'] ?? 'full';
         $field_name = 'fields[' . sanitize_title($label) . ']';
 
         $input_style = 'width:100%; padding:12px 15px; border:1px solid ' . $input_border . '; border-radius:5px; font-size:16px; box-sizing:border-box;';
         $label_style = 'display:block; font-weight:600; font-size:' . $label_size . 'px; margin-bottom:8px;';
+
+        // Calculate field width for flexbox
+        $field_width = $width === 'half' ? 'calc(50% - 10px)' : '100%';
 
         if ($type === 'hidden') {
             echo '<input type="hidden" name="' . esc_attr($field_name) . '" value="' . esc_attr($placeholder) . '">';
             return;
         }
     ?>
-        <div class="ofast-form-field ofast-field-<?php echo $type; ?>" style="margin-bottom: 20px;">
+        <div class="ofast-form-field ofast-field-<?php echo $type; ?> ofast-width-<?php echo $width; ?>" style="margin-bottom: 20px; width: <?php echo $field_width; ?>; flex: 0 0 <?php echo $field_width; ?>; box-sizing: border-box;">
             <?php if ($label): ?>
                 <label style="<?php echo $label_style; ?>">
                     <?php echo esc_html($label); ?>

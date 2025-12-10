@@ -2,7 +2,7 @@
 
 /**
  * Ofast X - Google Sheets Integration
- * Logs form submissions to Google Sheets via Sheets API v4
+ * Sync form submissions and events to Google Sheets
  */
 
 if (!defined('ABSPATH')) {
@@ -12,13 +12,11 @@ if (!defined('ABSPATH')) {
 class Ofast_X_Google_Sheets
 {
     private static $instance = null;
-
-    // Settings
-    private $enabled;
-    private $credentials; // Service Account JSON
-    private $spreadsheet_id;
-    private $access_token;
-    private $token_expires;
+    private $enabled = false;
+    private $spreadsheet_id = '';
+    private $credentials = array();
+    private $access_token = null;
+    private $token_expires = 0;
 
     /**
      * Get singleton instance
@@ -44,37 +42,30 @@ class Ofast_X_Google_Sheets
      */
     private function load_settings()
     {
-        $this->enabled = get_option('ofast_gsheets_enabled', false);
-        $this->spreadsheet_id = get_option('ofast_gsheets_spreadsheet_id', '');
+        $settings = get_option('ofast_google_sheets', array());
 
-        // Load credentials (encrypted JSON)
-        $encrypted_creds = get_option('ofast_gsheets_credentials', '');
-        if (!empty($encrypted_creds)) {
+        $this->enabled = !empty($settings['enabled']);
+        $this->spreadsheet_id = isset($settings['spreadsheet_id']) ? $settings['spreadsheet_id'] : '';
+
+        // Load and decrypt credentials
+        if (!empty($settings['credentials'])) {
             if (class_exists('Ofast_X_Security_Hardening')) {
-                $decrypted = Ofast_X_Security_Hardening::decrypt_option($encrypted_creds);
-                if (!empty($decrypted)) {
+                $decrypted = Ofast_X_Security_Hardening::decrypt_option($settings['credentials']);
+                if ($decrypted) {
                     $this->credentials = json_decode($decrypted, true);
                 }
             } else {
-                $this->credentials = json_decode($encrypted_creds, true);
+                $this->credentials = json_decode($settings['credentials'], true);
             }
-        }
-
-        // Load cached access token
-        $token_data = get_transient('ofast_gsheets_access_token');
-        if ($token_data) {
-            $this->access_token = $token_data['token'];
-            $this->token_expires = $token_data['expires'];
         }
     }
 
     /**
-     * Check if Google Sheets is configured
+     * Check if configured properly
      */
     public function is_configured()
     {
         return $this->enabled &&
-            !empty($this->credentials) &&
             !empty($this->spreadsheet_id) &&
             isset($this->credentials['client_email']) &&
             isset($this->credentials['private_key']);
@@ -93,269 +84,162 @@ class Ofast_X_Google_Sheets
      */
     public static function save_settings($data)
     {
-        update_option('ofast_gsheets_enabled', !empty($data['enabled']));
+        $settings = array(
+            'enabled' => !empty($data['enabled']),
+            'spreadsheet_id' => sanitize_text_field($data['spreadsheet_id'] ?? ''),
+        );
 
-        if (isset($data['spreadsheet_id'])) {
-            update_option('ofast_gsheets_spreadsheet_id', sanitize_text_field($data['spreadsheet_id']));
-        }
+        // Handle credentials JSON
+        if (!empty($data['credentials'])) {
+            $json = $data['credentials'];
 
-        // Handle credential file upload or text input
-        if (!empty($data['credentials_json'])) {
-            $creds = json_decode($data['credentials_json'], true);
-            if ($creds && isset($creds['client_email'])) {
+            // Validate JSON
+            $decoded = json_decode($json, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                // Encrypt before storing
                 if (class_exists('Ofast_X_Security_Hardening')) {
-                    update_option(
-                        'ofast_gsheets_credentials',
-                        Ofast_X_Security_Hardening::encrypt_option($data['credentials_json'])
-                    );
+                    $settings['credentials'] = Ofast_X_Security_Hardening::encrypt_option($json);
                 } else {
-                    update_option('ofast_gsheets_credentials', $data['credentials_json']);
+                    $settings['credentials'] = $json;
                 }
+            }
+        } else {
+            // Keep existing credentials
+            $existing = get_option('ofast_google_sheets', array());
+            if (!empty($existing['credentials'])) {
+                $settings['credentials'] = $existing['credentials'];
             }
         }
 
-        // Clear token cache when settings change
-        delete_transient('ofast_gsheets_access_token');
-
-        // Reset instance to reload settings
-        self::$instance = null;
+        update_option('ofast_google_sheets', $settings);
     }
 
     /**
-     * Get OAuth2 access token using service account JWT
+     * Append a row to the spreadsheet
+     */
+    public function append_row($sheet_name, $values)
+    {
+        if (!$this->is_configured()) {
+            return array('success' => false, 'error' => 'Google Sheets not configured');
+        }
+
+        // Sanitize sheet name - remove special characters that could cause issues
+        $sheet_name = preg_replace('/[^a-zA-Z0-9\s\-_]/', '', $sheet_name);
+        if (empty($sheet_name)) {
+            $sheet_name = 'Sheet1';
+        }
+
+        // Sanitize all values in the row
+        $sanitized_values = array();
+        foreach ($values as $value) {
+            if (is_array($value)) {
+                $value = implode(', ', array_map('sanitize_text_field', $value));
+            } else {
+                $value = sanitize_text_field($value);
+            }
+            // Limit each cell to prevent abuse
+            $sanitized_values[] = mb_substr($value, 0, 1000);
+        }
+
+        $token = $this->get_access_token();
+        if (!$token) {
+            return array('success' => false, 'error' => 'Failed to get access token');
+        }
+
+        $range = $sheet_name . '!A:Z';
+        $url = sprintf(
+            'https://sheets.googleapis.com/v4/spreadsheets/%s/values/%s:append?valueInputOption=USER_ENTERED',
+            rawurlencode($this->spreadsheet_id),
+            urlencode($range)
+        );
+
+        $response = wp_remote_post($url, array(
+            'headers' => array(
+                'Authorization' => 'Bearer ' . $token,
+                'Content-Type' => 'application/json',
+            ),
+            'body' => json_encode(array(
+                'values' => array($sanitized_values)
+            )),
+            'timeout' => 30,
+        ));
+
+        if (is_wp_error($response)) {
+            return array('success' => false, 'error' => $response->get_error_message());
+        }
+
+        $code = wp_remote_retrieve_response_code($response);
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+
+        if ($code >= 200 && $code < 300) {
+            return array('success' => true, 'updates' => $body['updates'] ?? null);
+        }
+
+        $error = isset($body['error']['message']) ? $body['error']['message'] : 'Unknown error';
+        return array('success' => false, 'error' => $error);
+    }
+
+    /**
+     * Get OAuth access token using service account
      */
     private function get_access_token()
     {
         // Return cached token if still valid
-        if ($this->access_token && $this->token_expires > time()) {
+        if ($this->access_token && time() < $this->token_expires - 60) {
             return $this->access_token;
         }
 
-        if (!$this->credentials) {
-            return false;
+        if (empty($this->credentials['private_key']) || empty($this->credentials['client_email'])) {
+            return null;
         }
 
-        // Build JWT
-        $header = json_encode(array('alg' => 'RS256', 'typ' => 'JWT'));
+        // Create JWT
+        $header = base64_encode(json_encode(array('alg' => 'RS256', 'typ' => 'JWT')));
         $now = time();
-        $claim = json_encode(array(
+        $claims = array(
             'iss' => $this->credentials['client_email'],
             'scope' => 'https://www.googleapis.com/auth/spreadsheets',
             'aud' => 'https://oauth2.googleapis.com/token',
             'exp' => $now + 3600,
             'iat' => $now
-        ));
-
-        // Encode JWT parts
-        $base64_header = $this->base64url_encode($header);
-        $base64_claim = $this->base64url_encode($claim);
-        $signature_input = $base64_header . '.' . $base64_claim;
+        );
+        $payload = base64_encode(json_encode($claims));
 
         // Sign with private key
-        $private_key = $this->credentials['private_key'];
-        $signature = '';
-        if (!openssl_sign($signature_input, $signature, $private_key, OPENSSL_ALGO_SHA256)) {
-            return false;
+        $signing_input = $header . '.' . $payload;
+        $private_key = openssl_pkey_get_private($this->credentials['private_key']);
+
+        if (!$private_key) {
+            return null;
         }
 
-        $jwt = $signature_input . '.' . $this->base64url_encode($signature);
+        openssl_sign($signing_input, $signature, $private_key, OPENSSL_ALGO_SHA256);
+        $signature_b64 = str_replace(array('+', '/', '='), array('-', '_', ''), base64_encode($signature));
+
+        $jwt = $signing_input . '.' . $signature_b64;
 
         // Exchange JWT for access token
         $response = wp_remote_post('https://oauth2.googleapis.com/token', array(
-            'timeout' => 15,
             'body' => array(
                 'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
                 'assertion' => $jwt
-            )
+            ),
+            'timeout' => 30,
         ));
 
         if (is_wp_error($response)) {
-            return false;
+            return null;
         }
 
         $body = json_decode(wp_remote_retrieve_body($response), true);
 
-        if (isset($body['access_token'])) {
+        if (!empty($body['access_token'])) {
             $this->access_token = $body['access_token'];
-            $this->token_expires = time() + ($body['expires_in'] ?? 3600) - 60;
-
-            // Cache the token
-            set_transient('ofast_gsheets_access_token', array(
-                'token' => $this->access_token,
-                'expires' => $this->token_expires
-            ), 3500);
-
+            $this->token_expires = $now + ($body['expires_in'] ?? 3600);
             return $this->access_token;
         }
 
-        return false;
-    }
-
-    /**
-     * Append row to a sheet
-     * 
-     * @param string $event_type The event type (determines which sheet to use)
-     * @param array $row Array of values for the row
-     * @return array ['success' => bool, 'error' => string|null]
-     */
-    public function append_row($event_type, $row)
-    {
-        if (!$this->is_configured()) {
-            return array(
-                'success' => false,
-                'error' => 'Google Sheets not configured',
-                'skipped' => true
-            );
-        }
-
-        $token = $this->get_access_token();
-        if (!$token) {
-            return array(
-                'success' => false,
-                'error' => 'Failed to get access token'
-            );
-        }
-
-        // Map event type to sheet name
-        $sheet_name = $this->get_sheet_name($event_type);
-
-        // Build API URL
-        $url = sprintf(
-            'https://sheets.googleapis.com/v4/spreadsheets/%s/values/%s:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS',
-            $this->spreadsheet_id,
-            urlencode($sheet_name . '!A1')
-        );
-
-        $response = wp_remote_post($url, array(
-            'timeout' => 15,
-            'headers' => array(
-                'Authorization' => 'Bearer ' . $token,
-                'Content-Type' => 'application/json'
-            ),
-            'body' => json_encode(array(
-                'values' => array($row)
-            ))
-        ));
-
-        if (is_wp_error($response)) {
-            return array(
-                'success' => false,
-                'error' => $response->get_error_message()
-            );
-        }
-
-        $status_code = wp_remote_retrieve_response_code($response);
-        $body = json_decode(wp_remote_retrieve_body($response), true);
-
-        if ($status_code === 200) {
-            return array(
-                'success' => true,
-                'updated_range' => isset($body['updates']['updatedRange']) ? $body['updates']['updatedRange'] : null
-            );
-        }
-
-        $error = isset($body['error']['message']) ? $body['error']['message'] : 'Unknown error';
-        return array(
-            'success' => false,
-            'error' => $error
-        );
-    }
-
-    /**
-     * Get sheet name for event type
-     */
-    private function get_sheet_name($event_type)
-    {
-        $sheet_names = get_option('ofast_gsheets_sheet_names', array());
-
-        $defaults = array(
-            'newsletter_subscription' => 'Subscribers',
-            'contact_form' => 'Contacts',
-            'woocommerce_order' => 'Orders',
-            'custom' => 'Data'
-        );
-
-        return isset($sheet_names[$event_type]) ? $sheet_names[$event_type] : (isset($defaults[$event_type]) ? $defaults[$event_type] : 'Sheet1');
-    }
-
-    /**
-     * Test connection to Google Sheets
-     */
-    public function test_connection()
-    {
-        if (!$this->is_configured()) {
-            return array(
-                'success' => false,
-                'error' => 'Google Sheets not configured'
-            );
-        }
-
-        $token = $this->get_access_token();
-        if (!$token) {
-            return array(
-                'success' => false,
-                'error' => 'Failed to get access token. Check credentials.'
-            );
-        }
-
-        // Try to get spreadsheet info
-        $url = sprintf(
-            'https://sheets.googleapis.com/v4/spreadsheets/%s?fields=properties.title,sheets.properties.title',
-            $this->spreadsheet_id
-        );
-
-        $response = wp_remote_get($url, array(
-            'timeout' => 15,
-            'headers' => array(
-                'Authorization' => 'Bearer ' . $token
-            )
-        ));
-
-        if (is_wp_error($response)) {
-            return array(
-                'success' => false,
-                'error' => $response->get_error_message()
-            );
-        }
-
-        $status_code = wp_remote_retrieve_response_code($response);
-        $body = json_decode(wp_remote_retrieve_body($response), true);
-
-        if ($status_code === 200) {
-            $sheets = array();
-            if (isset($body['sheets'])) {
-                foreach ($body['sheets'] as $sheet) {
-                    $sheets[] = $sheet['properties']['title'];
-                }
-            }
-            return array(
-                'success' => true,
-                'spreadsheet_title' => isset($body['properties']['title']) ? $body['properties']['title'] : 'Unknown',
-                'sheets' => $sheets
-            );
-        }
-
-        $error = isset($body['error']['message']) ? $body['error']['message'] : 'Unknown error';
-        return array(
-            'success' => false,
-            'error' => $error
-        );
-    }
-
-    /**
-     * Base64 URL encode
-     */
-    private function base64url_encode($data)
-    {
-        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
-    }
-
-    /**
-     * Get spreadsheet ID
-     */
-    public function get_spreadsheet_id()
-    {
-        return $this->spreadsheet_id;
+        return null;
     }
 
     /**
@@ -363,107 +247,112 @@ class Ofast_X_Google_Sheets
      */
     public function render_settings_form()
     {
-        // SECURITY: Verify user has admin capability
-        if (!current_user_can('manage_options')) {
-            wp_die(__('You do not have sufficient permissions to access this page.'));
-        }
+        // Handle form submission with security checks
+        if (isset($_POST['ofast_save_google_sheets'])) {
+            // Verify capability first
+            if (!current_user_can('manage_options')) {
+                wp_die('Permission denied');
+            }
 
-        // Handle form submission
-        if (isset($_POST['ofast_save_gsheets']) && wp_verify_nonce($_POST['gsheets_nonce'], 'ofast_gsheets_save')) {
-            self::save_settings(array(
-                'enabled' => isset($_POST['gsheets_enabled']),
-                'spreadsheet_id' => $_POST['spreadsheet_id'],
-                'credentials_json' => isset($_POST['credentials_json']) ? $_POST['credentials_json'] : ''
-            ));
+            // Verify nonce
+            if (!wp_verify_nonce($_POST['sheets_nonce'] ?? '', 'ofast_sheets_save')) {
+                wp_die('Security check failed');
+            }
 
-            // Reload settings
+            self::save_settings($_POST);
             $this->load_settings();
-
             echo '<div class="notice notice-success"><p>Google Sheets settings saved!</p></div>';
         }
 
-        // Handle test connection
-        if (isset($_POST['ofast_test_gsheets']) && wp_verify_nonce($_POST['gsheets_nonce'], 'ofast_gsheets_save')) {
-            $result = $this->test_connection();
-            if ($result['success']) {
-                $sheets_list = implode(', ', $result['sheets']);
-                echo '<div class="notice notice-success"><p>✓ Connected to "' . esc_html($result['spreadsheet_title']) . '"<br>Sheets: ' . esc_html($sheets_list) . '</p></div>';
-            } else {
-                echo '<div class="notice notice-error"><p>✗ Connection failed: ' . esc_html($result['error']) . '</p></div>';
-            }
-        }
-
-        $is_configured = $this->is_configured();
+        $settings = get_option('ofast_google_sheets', array());
+        $has_credentials = !empty($settings['credentials']);
 ?>
-        <div class="ofast-settings-card" style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="margin-top: 0;">
-                Google Sheets Logging
-            </h3>
-            <p style="color: #666; margin-bottom: 15px;">
-                Automatically log form submissions to a Google Spreadsheet.
-                <?php if ($is_configured): ?>
-                    <span style="color: #46b450;">✓ Configured</span>
-                <?php else: ?>
-                    <span style="color: #dc3232;">✗ Not configured</span>
+        <h3>Google Sheets Integration</h3>
+        <p>Sync form submissions to Google Sheets automatically.</p>
+
+        <form method="post">
+            <?php wp_nonce_field('ofast_sheets_save', 'sheets_nonce'); ?>
+
+            <table class="form-table">
+                <tr>
+                    <th scope="row">Enable</th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="enabled" value="1" <?php checked($this->enabled); ?>>
+                            Enable Google Sheets integration
+                        </label>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">Spreadsheet ID</th>
+                    <td>
+                        <input type="text" name="spreadsheet_id" value="<?php echo esc_attr($this->spreadsheet_id); ?>" class="regular-text">
+                        <p class="description">
+                            Find this in your spreadsheet URL: docs.google.com/spreadsheets/d/<strong>SPREADSHEET_ID</strong>/edit
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">Service Account Credentials</th>
+                    <td>
+                        <?php if ($has_credentials): ?>
+                            <p style="color:green;margin-bottom:10px;">Credentials are stored (encrypted)</p>
+                        <?php endif; ?>
+                        <textarea name="credentials" rows="6" class="large-text code" placeholder="Paste your service account JSON here..."><?php echo $has_credentials ? '' : ''; ?></textarea>
+                        <p class="description">
+                            <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Create a service account</a>
+                            and paste the JSON key here. Remember to share your spreadsheet with the service account email.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+
+            <p>
+                <button type="submit" name="ofast_save_google_sheets" class="button button-primary">Save Google Sheets Settings</button>
+                <?php if ($this->is_configured()): ?>
+                    <button type="button" class="button" onclick="testGoogleSheets()">Test Connection</button>
                 <?php endif; ?>
             </p>
-            <form method="post">
-                <?php wp_nonce_field('ofast_gsheets_save', 'gsheets_nonce'); ?>
-                <table class="form-table" style="margin: 0;">
-                    <tr>
-                        <th scope="row" style="padding: 10px 0;">Enable Google Sheets</th>
-                        <td style="padding: 10px 0;">
-                            <label>
-                                <input type="checkbox"
-                                    name="gsheets_enabled"
-                                    value="1"
-                                    <?php checked($this->enabled); ?>>
-                                Enable Google Sheets logging
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row" style="padding: 10px 0;">Spreadsheet ID</th>
-                        <td style="padding: 10px 0;">
-                            <input type="text"
-                                name="spreadsheet_id"
-                                value="<?php echo esc_attr($this->spreadsheet_id); ?>"
-                                class="regular-text"
-                                placeholder="1BxiMVs0XRA5n...">
-                            <p class="description">The ID from your Google Sheets URL</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row" style="padding: 10px 0;">Service Account JSON</th>
-                        <td style="padding: 10px 0;">
-                            <textarea name="credentials_json"
-                                rows="4"
-                                class="large-text code"
-                                placeholder='<?php echo $is_configured ? "Credentials saved (paste new to replace)" : "Paste your service account JSON here..."; ?>'></textarea>
-                            <p class="description">
-                                Get from
-                                <a href="https://console.cloud.google.com/iam-admin/serviceaccounts" target="_blank">Google Cloud Console</a>
-                                → Create Service Account → Keys → Add Key → JSON
-                            </p>
-                        </td>
-                    </tr>
-                </table>
-                <?php if ($is_configured): ?>
-                    <div style="background: #f0f8ff; padding: 15px; border-radius: 5px; margin-top: 15px;">
-                        <strong>Sheet Names (auto-created if needed):</strong>
-                        <ul style="margin: 10px 0 0 20px;">
-                            <li>Newsletter → "Subscribers" sheet</li>
-                            <li>Contact Form → "Contacts" sheet</li>
-                            <li>WooCommerce → "Orders" sheet</li>
-                        </ul>
-                    </div>
-                <?php endif; ?>
-                <p style="margin-top: 15px;">
-                    <button type="submit" name="ofast_save_gsheets" class="button button-primary">Save Settings</button>
-                    <button type="submit" name="ofast_test_gsheets" class="button" style="margin-left: 10px;">Test Connection</button>
-                </p>
-            </form>
-        </div>
+        </form>
+
+        <script>
+            function testGoogleSheets() {
+                jQuery.post(ajaxurl, {
+                    action: 'ofast_test_google_sheets',
+                    nonce: '<?php echo wp_create_nonce('ofast_test_sheets'); ?>'
+                }, function(response) {
+                    if (response.success) {
+                        alert('Connection successful!');
+                    } else {
+                        alert('Connection failed: ' + response.data);
+                    }
+                });
+            }
+        </script>
 <?php
+    }
+
+    /**
+     * Test connection via AJAX
+     */
+    public function ajax_test_connection()
+    {
+        check_ajax_referer('ofast_test_sheets', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Permission denied');
+        }
+
+        $result = $this->append_row('Test', array(
+            date('Y-m-d H:i:s'),
+            'Connection Test',
+            'Success'
+        ));
+
+        if ($result['success']) {
+            wp_send_json_success('Connected!');
+        } else {
+            wp_send_json_error($result['error']);
+        }
     }
 }

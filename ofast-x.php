@@ -77,6 +77,9 @@ function ofast_x_init_plugin()
     // Load Contact Forms module
     require_once OFAST_X_PLUGIN_DIR . 'modules/forms/class-ofast-forms.php';
 
+    // Load Content Ordering module
+    require_once OFAST_X_PLUGIN_DIR . 'modules/content-ordering/class-ofast-content-ordering.php';
+
     // Initialize plugin
     $ofast_x = new Ofast_X_Core();
     $ofast_x->run();

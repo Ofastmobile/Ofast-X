@@ -111,6 +111,16 @@ class Ofast_X_Core
         if ($this->is_module_enabled('admin-tweaks')) {
             $this->load_admin_tweaks();
         }
+
+        // Load Notification Channels module
+        if ($this->is_module_enabled('notification-channels')) {
+            $this->load_notification_channels();
+        }
+
+        // Load Spam Protection module
+        if ($this->is_module_enabled('spam-protection')) {
+            $this->load_spam_protection();
+        }
     }
 
     /**
@@ -380,5 +390,27 @@ class Ofast_X_Core
         $admin_tweaks = new Ofast_X_Admin_Tweaks();
         $admin_tweaks->init();
         $this->modules['admin-tweaks'] = $admin_tweaks;
+    }
+
+    /**
+     * Load Notification Channels Module
+     */
+    private function load_notification_channels()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/notification-channels/class-ofast-notification-channels.php';
+        $notification_channels = new Ofast_X_Notification_Channels();
+        $notification_channels->init();
+        $this->modules['notification-channels'] = $notification_channels;
+    }
+
+    /**
+     * Load Spam Protection Module
+     */
+    private function load_spam_protection()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/spam-protection/class-ofast-spam-protection.php';
+        $spam_protection = new Ofast_X_Spam_Protection();
+        $spam_protection->init();
+        $this->modules['spam-protection'] = $spam_protection;
     }
 }

@@ -238,7 +238,7 @@ class Ofast_X_Notification_Hub
      */
     private function send_to_sheets($event_type, $data)
     {
-        // Check if Google Sheets module is configured
+        // Check if Google Sheets module is available
         if (!class_exists('Ofast_X_Google_Sheets')) {
             return array(
                 'success' => false,

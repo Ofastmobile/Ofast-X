@@ -166,6 +166,14 @@ class Ofast_X_WhatsApp
             return array('success' => false, 'error' => 'Invalid phone number');
         }
 
+        // Sanitize and limit message length to prevent abuse
+        $message = sanitize_textarea_field($message);
+        $message = mb_substr($message, 0, 1600); // WhatsApp message limit
+
+        if (empty($message)) {
+            return array('success' => false, 'error' => 'Empty message');
+        }
+
         if ($this->provider === self::PROVIDER_TERMII) {
             return $this->send_via_termii($to, $message);
         } else {

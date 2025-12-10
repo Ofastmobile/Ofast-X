@@ -63,9 +63,24 @@ class Ofast_X_Admin_Tweaks
             add_filter('admin_bar_menu', array($this, 'rename_howdy'), 25);
         }
 
-        // Add settings section to Ofast X Settings page
-        add_action('ofast_settings_after_modules', array($this, 'render_settings_section'));
+        // Add admin menu page
+        add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'save_settings'));
+    }
+
+    /**
+     * Add admin menu
+     */
+    public function add_admin_menu()
+    {
+        add_submenu_page(
+            'ofast-dashboard',
+            'Admin Tweaks',
+            'Admin Tweaks',
+            'manage_options',
+            'ofast-admin-tweaks',
+            array($this, 'render_page')
+        );
     }
 
     /**
@@ -191,16 +206,20 @@ class Ofast_X_Admin_Tweaks
     }
 
     /**
-     * Render settings section on Ofast X Settings page
+     * Render admin tweaks settings page
      */
-    public function render_settings_section()
+    public function render_page()
     {
+        if (!current_user_can('manage_options')) {
+            wp_die('Permission denied');
+        }
+
         $settings = get_option('ofast_admin_tweaks', array());
         $roles = wp_roles()->roles;
 ?>
-        <div class="ofast-admin-tweaks-section" style="margin-top: 30px; padding: 20px; background: #fff; border: 1px solid #ddd; border-radius: 8px;">
-            <h2 style="margin-top: 0;">Quick Admin Tweaks</h2>
-            <p style="color: #666;">These settings don't require separate menus - just toggle them here.</p>
+        <div class="wrap">
+            <h1>Admin Tweaks</h1>
+            <p>Quick admin customizations to make WordPress work your way.</p>
 
             <form method="post">
                 <?php wp_nonce_field('ofast_admin_tweaks_save', 'admin_tweaks_nonce'); ?>

@@ -152,27 +152,6 @@ class Ofast_X_Settings
             </form>
 
             <?php
-            // Render Turnstile settings
-            if (class_exists('Ofast_X_Turnstile')) {
-                echo '<div style="margin-top: 40px;">';
-                echo '<h2>Security Settings</h2>';
-                Ofast_X_Turnstile::get_instance()->render_settings_form();
-                echo '</div>';
-            }
-
-            // Render WhatsApp settings
-            if (class_exists('Ofast_X_WhatsApp')) {
-                echo '<div style="margin-top: 40px;">';
-                echo '<h2>Notification Channels</h2>';
-                Ofast_X_WhatsApp::get_instance()->render_settings_form();
-                echo '</div>';
-            }
-
-            // Render Google Sheets settings
-            if (class_exists('Ofast_X_Google_Sheets')) {
-                Ofast_X_Google_Sheets::get_instance()->render_settings_form();
-            }
-
             // Allow modules to add their own settings sections
             do_action('ofast_settings_after_modules');
             ?>
@@ -424,11 +403,6 @@ class Ofast_X_Settings
                 'description' => '301/302/307 redirects with import/export and activate toggle',
                 'status' => 'Integrated',
             ),
-            'google-sheets' => array(
-                'name' => 'Google Sheets Integration',
-                'description' => 'Sync form submissions to Google Sheets',
-                'status' => 'Integrated',
-            ),
             'user-roles' => array(
                 'name' => 'User Role Manager',
                 'description' => 'Assign multiple roles to WordPress users',
@@ -456,6 +430,21 @@ class Ofast_X_Settings
             'admin-tweaks' => array(
                 'name' => 'Admin Tweaks',
                 'description' => 'Quick admin customizations: ID columns, infinite scroll, hide admin bar, remove WP logo, rename howdy',
+            ),
+            'content-ordering' => array(
+                'name' => 'Content Ordering',
+                'description' => 'Drag-and-drop reordering for posts, pages, and custom post types',
+                'status' => 'Integrated',
+            ),
+            'notification-channels' => array(
+                'name' => 'Notification Channels',
+                'description' => 'WhatsApp notifications for form submissions and events',
+                'status' => 'Integrated',
+            ),
+            'spam-protection' => array(
+                'name' => 'Spam Protection',
+                'description' => 'Cloudflare Turnstile and Google reCAPTCHA v2/v3',
+                'status' => 'Integrated',
             ),
         );
     }

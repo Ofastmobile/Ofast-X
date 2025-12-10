@@ -31,6 +31,12 @@ class Ofast_X_Forms
      */
     private function init_hooks()
     {
+        // Only load if module is enabled in Ofast X settings
+        $enabled = get_option('ofastx_modules_enabled', array());
+        if (empty($enabled['forms'])) {
+            return;
+        }
+
         // Admin menu
         add_action('admin_menu', array($this, 'add_admin_menu'));
 

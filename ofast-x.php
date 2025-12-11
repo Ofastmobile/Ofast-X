@@ -77,6 +77,12 @@ function ofast_x_init_plugin()
     // Load Contact Forms module
     require_once OFAST_X_PLUGIN_DIR . 'modules/forms/class-ofast-forms.php';
 
+    // Load Social Login module
+    require_once OFAST_X_PLUGIN_DIR . 'modules/social-login/class-ofast-social-login.php';
+
+    // Load Login Redesign module
+    require_once OFAST_X_PLUGIN_DIR . 'modules/login-redesign/class-ofast-login-redesign.php';
+
     // Load Content Ordering module
     require_once OFAST_X_PLUGIN_DIR . 'modules/content-ordering/class-ofast-content-ordering.php';
 

@@ -446,6 +446,16 @@ class Ofast_X_Settings
                 'description' => 'Cloudflare Turnstile and Google reCAPTCHA v2/v3',
                 'status' => 'Integrated',
             ),
+            'social-login' => array(
+                'name' => 'Social Login',
+                'description' => 'Allow users to login with Google and Facebook accounts',
+                'status' => 'Integrated',
+            ),
+            'login-redesign' => array(
+                'name' => 'Login Redesign',
+                'description' => 'Customize the WordPress login page with your logo and colors',
+                'status' => 'Integrated',
+            ),
         );
     }
 }

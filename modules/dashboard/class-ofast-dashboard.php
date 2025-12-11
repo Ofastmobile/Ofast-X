@@ -173,7 +173,11 @@ class Ofast_X_Dashboard
             'admin-url' => 'Admin URL Customizer',
             'admin-footer' => 'Custom Admin Footer',
             'duplicate-content' => 'Content Duplicator',
-            'menu-editor' => 'Admin Menu Editor'
+            'menu-editor' => 'Admin Menu Editor',
+            'spam-protection' => 'Spam Protection',
+            'notification-channels' => 'Notification Channels',
+            'social-login' => 'Social Login',
+            'login-redesign' => 'Login Redesign'
         );
 
         $loaded = array();

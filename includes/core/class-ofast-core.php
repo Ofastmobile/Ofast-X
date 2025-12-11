@@ -121,6 +121,16 @@ class Ofast_X_Core
         if ($this->is_module_enabled('spam-protection')) {
             $this->load_spam_protection();
         }
+
+        // Load Social Login module
+        if ($this->is_module_enabled('social-login')) {
+            $this->load_social_login();
+        }
+
+        // Load Login Redesign module
+        if ($this->is_module_enabled('login-redesign')) {
+            $this->load_login_redesign();
+        }
     }
 
     /**
@@ -412,5 +422,29 @@ class Ofast_X_Core
         $spam_protection = new Ofast_X_Spam_Protection();
         $spam_protection->init();
         $this->modules['spam-protection'] = $spam_protection;
+    }
+
+    /**
+     * Load Social Login Module
+     */
+    private function load_social_login()
+    {
+        if (class_exists('Ofast_X_Social_Login')) {
+            $social_login = Ofast_X_Social_Login::get_instance();
+            $social_login->init();
+            $this->modules['social-login'] = $social_login;
+        }
+    }
+
+    /**
+     * Load Login Redesign Module
+     */
+    private function load_login_redesign()
+    {
+        if (class_exists('Ofast_X_Login_Redesign')) {
+            $login_redesign = Ofast_X_Login_Redesign::get_instance();
+            $login_redesign->init();
+            $this->modules['login-redesign'] = $login_redesign;
+        }
     }
 }

@@ -233,7 +233,7 @@ class Ofast_X_Email_Template
                         <!-- Footer -->
                         <div class="email-footer">
                             <?php if (!empty($social_links)): ?>
-                                <div class="social-links">
+                                <div class="social-links" style="margin-bottom: 8px;">
                                     <?php foreach ($social_links as $platform => $url): ?>
                                         <?php if ($url): ?>
                                             <a href="<?php echo esc_url($url); ?>" class="social-icon">
@@ -244,13 +244,11 @@ class Ofast_X_Email_Template
                                 </div>
                             <?php endif; ?>
 
-                            <div class="divider"></div>
-
                             <?php if ($footer_text): ?>
-                                <p style="margin: 15px 0;"><?php echo wp_kses_post($footer_text); ?></p>
+                                <p style="margin: 5px 0;"><?php echo wp_kses_post($footer_text); ?></p>
                             <?php endif; ?>
 
-                            <p style="margin: 10px 0; font-size: 12px;">
+                            <p style="margin: 5px 0; font-size: 11px;">
                                 © <?php echo date('Y'); ?> <?php echo esc_html($company_name); ?>. All rights reserved.
                             </p>
                         </div>

@@ -70,6 +70,15 @@ class Ofast_X_Email_Admin
 
         add_submenu_page(
             'ofast-emailer',
+            'Email Templates',
+            'Templates',
+            'manage_options',
+            'ofast-email-templates',
+            array($this, 'render_templates_page')
+        );
+
+        add_submenu_page(
+            'ofast-emailer',
             'Settings',
             'Settings',
             'manage_options',

@@ -76,15 +76,6 @@ class Ofast_X_Email_Admin
             'ofast-email-templates',
             array($this, 'render_templates_page')
         );
-
-        add_submenu_page(
-            'ofast-emailer',
-            'Settings',
-            'Settings',
-            'manage_options',
-            'ofast-email-settings',
-            array($this, 'render_settings_page')
-        );
     }
 
     /**
@@ -430,10 +421,19 @@ class Ofast_X_Email_Admin
                 });
             });
             
-            // Close Modal
-            $("#close-preview-modal, #email-preview-modal").click(function(e) {
+            // Close Modal - prevent event bubbling that could reset form
+            $("#close-preview-modal").click(function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $("#email-preview-modal").fadeOut();
+                return false;
+            });
+            
+            // Close modal when clicking background
+            $("#email-preview-modal").click(function(e) {
                 if (e.target === this) {
-                    $("#email-preview-modal").fadeOut();
+                    e.preventDefault();
+                    $(this).fadeOut();
                 }
             });
             
@@ -538,71 +538,12 @@ class Ofast_X_Email_Admin
                 });
             });
         </script>
-<?php
+    <?php
     }
 
     /**
-     * Render settings page (FIX #2, #3, #12, #13)
+     * @deprecated Settings moved to Templates page
      */
-    public function render_settings_page()
-    {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ofast_settings_update'])) {
-            update_option('ofast_email_logo', esc_url_raw($_POST['email_logo']));
-            update_option('ofast_email_tagline', sanitize_text_field($_POST['email_tagline']));
-            update_option('ofast_email_subtitle', sanitize_text_field($_POST['email_subtitle']));
-            update_option('ofast_email_site_name', sanitize_text_field($_POST['site_name']));
-            update_option('ofast_email_company_name', sanitize_text_field($_POST['company_name']));
-            update_option('ofast_email_owner_name', sanitize_text_field($_POST['owner_name']));
-            update_option('ofast_email_from_name', sanitize_text_field($_POST['email_from']));
-            update_option('ofast_email_reply_to', sanitize_email($_POST['email_reply']));
-            update_option('ofast_email_social', array_map('esc_url_raw', $_POST['social'] ?? []));
-            echo '<div class="notice notice-success"><p>Settings saved!</p></div>';
-        }
-
-        $logo = get_option('ofast_email_logo', '');
-        $tagline = get_option('ofast_email_tagline', 'Learn. Create. Earn');
-        $subtitle = get_option('ofast_email_subtitle', 'Africa\'s No 1 Digital Learning Hub');
-        $site_name = get_option('ofast_email_site_name', 'Ofastshop Digitals');
-        $company_name = get_option('ofast_email_company_name', 'Ofastshop Digitals');
-        $owner_name = get_option('ofast_email_owner_name', 'Bofast World');
-        $from = get_option('ofast_email_from_name', 'Ofastshop Digitals');
-        $reply = get_option('ofast_email_reply_to', 'support@ofastshop.com');
-        $social = get_option('ofast_email_social', []);
-
-        echo '<div class="wrap"><h2>Ofast Email Settings</h2>
-        <form method="post">
-            <h3>Email Template Branding</h3>
-            <table class="form-table">
-                <tr><th>Logo URL</th><td><input type="url" name="email_logo" value="' . esc_attr($logo) . '" class="regular-text"></td></tr>
-                <tr><th>Header Tagline</th><td><input type="text" name="email_tagline" value="' . esc_attr($tagline) . '" class="regular-text"></td></tr>
-                <tr><th>Header Subtitle</th><td><input type="text" name="email_subtitle" value="' . esc_attr($subtitle) . '" class="regular-text"></td></tr>
-            </table>
-            
-            <h3>Sender Information</h3>
-            <table class="form-table">
-                <tr><th>From Name</th><td><input type="text" name="email_from" value="' . esc_attr($from) . '" class="regular-text"></td></tr>
-                <tr><th>Reply-to Email</th><td><input type="email" name="email_reply" value="' . esc_attr($reply) . '" class="regular-text" placeholder="support@ofastshop.com"></td></tr>
-            </table>
-            
-            <h3>Footer Customization</h3>
-            <table class="form-table">
-                <tr><th>Site Name (footer link)</th><td><input type="text" name="site_name" value="' . esc_attr($site_name) . '" class="regular-text"></td></tr>
-                <tr><th>Company Name (copyright)</th><td><input type="text" name="company_name" value="' . esc_attr($company_name) . '" class="regular-text"></td></tr>
-                <tr><th>Owner Name</th><td><input type="text" name="owner_name" value="' . esc_attr($owner_name) . '" class="regular-text"></td></tr>
-            </table>
-            
-            <h3>Social Media Links</h3>
-            <table class="form-table">
-                <tr><th>Social Links</th><td>';
-        $platforms = ['facebook', 'x', 'youtube', 'whatsapp'];
-        foreach ($platforms as $platform) {
-            echo ucfirst($platform) . ': <input type="url" name="social[' . $platform . ']" value="' . esc_attr($social[$platform] ?? '') . '" class="regular-text" placeholder="https://"><br>';
-        }
-        echo '</td></tr>
-            </table>
-            <p><button type="submit" name="ofast_settings_update" class="button button-primary">Save Settings</button></p>
-        </form></div>';
-    }
 
     /**
      * Helper: Get email headers (FIX #2)
@@ -749,5 +690,419 @@ class Ofast_X_Email_Admin
         }
 
         echo '</div>';
+    }
+
+    /**
+     * Render Templates page - visual email template designer
+     */
+    public function render_templates_page()
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die('You do not have sufficient permissions');
+        }
+
+        // Handle reset
+        if (isset($_POST['ofast_reset_template']) && wp_verify_nonce($_POST['_wpnonce'], 'ofast_template_reset')) {
+            $this->reset_template_settings();
+            echo '<div class="notice notice-success"><p>Template settings reset to defaults!</p></div>';
+        }
+
+        // Handle save
+        if (isset($_POST['ofast_save_template']) && wp_verify_nonce($_POST['_wpnonce'], 'ofast_template_save')) {
+            $this->save_template_settings();
+            echo '<div class="notice notice-success"><p>Template settings saved!</p></div>';
+        }
+
+        // Get current settings
+        $style = get_option('ofast_email_template_style', 'modern');
+        $primary = get_option('ofast_email_primary_color', '#6366f1');
+        $accent = get_option('ofast_email_accent_color', '#10b981');
+        $bg = get_option('ofast_email_bg_color', '#f8fafc');
+        $text = get_option('ofast_email_text_color', '#1e293b');
+        $logo = get_option('ofast_email_logo', '');
+        $company = get_option('ofast_email_company_name', get_bloginfo('name'));
+        $tagline = get_option('ofast_email_tagline', '');
+        $show_header = get_option('ofast_email_show_header', true);
+        $show_footer = get_option('ofast_email_show_footer', true);
+        $from_name = get_option('ofast_email_from_name', get_bloginfo('name'));
+        $reply_to = get_option('ofast_email_reply_to', get_option('admin_email'));
+        $social = get_option('ofast_email_social', array());
+        $apply_to = get_option('ofast_email_apply_to', array('emailer'));
+        $font_family = get_option('ofast_email_font_family', 'system');
+        $font_size = get_option('ofast_email_font_size', '15');
+        $logo_width = get_option('ofast_email_logo_width', '120');
+
+        wp_enqueue_style('wp-color-picker');
+        wp_enqueue_script('wp-color-picker');
+        wp_enqueue_media();
+
+    ?>
+        <div class="wrap">
+            <h1>Email Templates</h1>
+            <p>Design your email template with live preview. Changes apply to selected email types.</p>
+
+            <div style="display: flex; gap: 30px; margin-top: 20px;">
+                <!-- Left Column: Settings -->
+                <div style="flex: 0 0 380px;">
+                    <form method="post">
+                        <?php wp_nonce_field('ofast_template_save'); ?>
+
+                        <!-- Template Style -->
+                        <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
+                            <h3 style="margin: 0 0 15px 0; font-size: 14px;">Template Style</h3>
+                            <div style="display: flex; gap: 10px;">
+                                <label style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'modern' ? '#2271b1' : '#ddd'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'modern' ? '#f0f6fc' : '#fff'; ?>;">
+                                    <input type="radio" name="template_style" value="modern" <?php checked($style, 'modern'); ?> style="display: none;">
+                                    <div style="font-weight: 600;">Modern</div>
+                                    <small style="color: #666;">Gradient header</small>
+                                </label>
+                                <label style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'classic' ? '#2271b1' : '#ddd'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'classic' ? '#f0f6fc' : '#fff'; ?>;">
+                                    <input type="radio" name="template_style" value="classic" <?php checked($style, 'classic'); ?> style="display: none;">
+                                    <div style="font-weight: 600;">Classic</div>
+                                    <small style="color: #666;">Solid header</small>
+                                </label>
+                                <label style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'minimal' ? '#2271b1' : '#ddd'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'minimal' ? '#f0f6fc' : '#fff'; ?>;">
+                                    <input type="radio" name="template_style" value="minimal" <?php checked($style, 'minimal'); ?> style="display: none;">
+                                    <div style="font-weight: 600;">Minimal</div>
+                                    <small style="color: #666;">Clean, no header</small>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Colors -->
+                        <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
+                            <h3 style="margin: 0 0 15px 0; font-size: 14px;">Colors</h3>
+                            <table class="form-table" style="margin: 0;">
+                                <tr>
+                                    <th style="width: 100px;">Primary</th>
+                                    <td><input type="text" name="primary_color" value="<?php echo esc_attr($primary); ?>" class="ofast-color-picker"></td>
+                                </tr>
+                                <tr>
+                                    <th>Accent</th>
+                                    <td><input type="text" name="accent_color" value="<?php echo esc_attr($accent); ?>" class="ofast-color-picker"></td>
+                                </tr>
+                                <tr>
+                                    <th>Background</th>
+                                    <td><input type="text" name="bg_color" value="<?php echo esc_attr($bg); ?>" class="ofast-color-picker"></td>
+                                </tr>
+                                <tr>
+                                    <th>Text</th>
+                                    <td><input type="text" name="text_color" value="<?php echo esc_attr($text); ?>" class="ofast-color-picker"></td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Typography -->
+                        <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
+                            <h3 style="margin: 0 0 15px 0; font-size: 14px;">Typography</h3>
+                            <table class="form-table" style="margin: 0;">
+                                <tr>
+                                    <th style="width: 100px;">Font</th>
+                                    <td>
+                                        <select name="font_family" id="font_family" style="width: 100%;">
+                                            <option value="system" <?php selected($font_family, 'system'); ?>>System Default</option>
+                                            <option value="inter" <?php selected($font_family, 'inter'); ?>>Inter</option>
+                                            <option value="roboto" <?php selected($font_family, 'roboto'); ?>>Roboto</option>
+                                            <option value="opensans" <?php selected($font_family, 'opensans'); ?>>Open Sans</option>
+                                            <option value="lato" <?php selected($font_family, 'lato'); ?>>Lato</option>
+                                            <option value="poppins" <?php selected($font_family, 'poppins'); ?>>Poppins</option>
+                                            <option value="georgia" <?php selected($font_family, 'georgia'); ?>>Georgia (Serif)</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Size</th>
+                                    <td>
+                                        <select name="font_size" id="font_size" style="width: 100%;">
+                                            <option value="13" <?php selected($font_size, '13'); ?>>Small (13px)</option>
+                                            <option value="14" <?php selected($font_size, '14'); ?>>Medium (14px)</option>
+                                            <option value="15" <?php selected($font_size, '15'); ?>>Default (15px)</option>
+                                            <option value="16" <?php selected($font_size, '16'); ?>>Large (16px)</option>
+                                            <option value="17" <?php selected($font_size, '17'); ?>>Extra Large (17px)</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Branding -->
+                        <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
+                            <h3 style="margin: 0 0 15px 0; font-size: 14px;">Branding</h3>
+                            <table class="form-table" style="margin: 0;">
+                                <tr>
+                                    <th style="width: 100px;">Logo</th>
+                                    <td>
+                                        <input type="text" name="logo_url" id="logo_url" value="<?php echo esc_url($logo); ?>" style="width: 200px;">
+                                        <button type="button" class="button" id="upload_logo_btn">Upload</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Logo Size</th>
+                                    <td>
+                                        <select name="logo_width" style="width: 100%;">
+                                            <option value="80" <?php selected($logo_width, '80'); ?>>Small (80px)</option>
+                                            <option value="100" <?php selected($logo_width, '100'); ?>>Medium (100px)</option>
+                                            <option value="120" <?php selected($logo_width, '120'); ?>>Default (120px)</option>
+                                            <option value="150" <?php selected($logo_width, '150'); ?>>Large (150px)</option>
+                                            <option value="180" <?php selected($logo_width, '180'); ?>>Extra Large (180px)</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Company</th>
+                                    <td><input type="text" name="company_name" value="<?php echo esc_attr($company); ?>" style="width: 100%;"></td>
+                                </tr>
+                                <tr>
+                                    <th>Tagline</th>
+                                    <td><input type="text" name="tagline" value="<?php echo esc_attr($tagline); ?>" style="width: 100%;"></td>
+                                </tr>
+                                <tr>
+                                    <th>From Name</th>
+                                    <td><input type="text" name="from_name" value="<?php echo esc_attr($from_name); ?>" style="width: 100%;" placeholder="Sender name for emails"></td>
+                                </tr>
+                                <tr>
+                                    <th>Reply-to</th>
+                                    <td><input type="email" name="reply_to" value="<?php echo esc_attr($reply_to); ?>" style="width: 100%;" placeholder="email@example.com"></td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Header/Footer -->
+                        <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
+                            <h3 style="margin: 0 0 15px 0; font-size: 14px;">Sections</h3>
+                            <label style="display: block; margin-bottom: 8px;">
+                                <input type="checkbox" name="show_header" value="1" <?php checked($show_header); ?>> Show Header
+                            </label>
+                            <label style="display: block;">
+                                <input type="checkbox" name="show_footer" value="1" <?php checked($show_footer); ?>> Show Footer
+                            </label>
+                        </div>
+
+                        <!-- Social Links -->
+                        <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
+                            <h3 style="margin: 0 0 15px 0; font-size: 14px;">Social Links</h3>
+                            <?php
+                            $platforms = array('facebook', 'x', 'youtube', 'whatsapp', 'instagram', 'linkedin');
+                            foreach ($platforms as $p) {
+                                $val = $social[$p] ?? '';
+                                echo '<div style="margin-bottom: 8px;"><label style="display: flex; align-items: center; gap: 8px;">';
+                                echo '<span style="width: 70px; text-transform: capitalize;">' . esc_html($p) . '</span>';
+                                echo '<input type="url" name="social[' . $p . ']" value="' . esc_url($val) . '" style="flex: 1;" placeholder="https://">';
+                                echo '</label></div>';
+                            }
+                            ?>
+                        </div>
+
+                        <!-- Apply To -->
+                        <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
+                            <h3 style="margin: 0 0 15px 0; font-size: 14px;">Apply Template To</h3>
+                            <p style="margin: 0 0 10px 0; font-size: 12px; color: #666;">Select which email types should use this template:</p>
+                            <?php
+                            $email_types = array(
+                                'emailer' => 'Ofast Emailer (campaigns)',
+                                'notifications' => 'WordPress Notifications',
+                                'woocommerce' => 'WooCommerce Emails',
+                                'all_wp' => 'All WordPress Emails'
+                            );
+                            foreach ($email_types as $key => $label) {
+                                $checked = in_array($key, (array)$apply_to) ? 'checked' : '';
+                                echo '<label style="display: block; margin-bottom: 6px;">';
+                                echo '<input type="checkbox" name="apply_to[]" value="' . $key . '" ' . $checked . '> ' . esc_html($label);
+                                echo '</label>';
+                            }
+                            ?>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div style="display: flex; gap: 10px;">
+                            <button type="submit" name="ofast_save_template" class="button button-primary">Save Template</button>
+                            <button type="submit" name="ofast_reset_template" class="button" onclick="return confirm('Reset all template settings to defaults?');">Reset to Default</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Right Column: Preview -->
+                <div style="flex: 1; min-width: 0; position: sticky; top: 32px; align-self: flex-start;">
+                    <div class="postbox" style="padding: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 style="margin: 0; font-size: 14px;">Live Preview</h3>
+                            <div style="display: flex; gap: 5px;">
+                                <button type="button" class="button device-btn active" data-width="600">Desktop</button>
+                                <button type="button" class="button device-btn" data-width="375">Mobile</button>
+                            </div>
+                        </div>
+                        <div style="background: #f1f5f9; padding: 10px; border-radius: 8px; display: flex; justify-content: center;">
+                            <iframe id="template-preview" style="width: 600px; height: 500px; border: none; border-radius: 8px; background: #fff; transition: width 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            jQuery(document).ready(function($) {
+                // Initialize color pickers
+                $('.ofast-color-picker').wpColorPicker({
+                    change: function() {
+                        setTimeout(updatePreview, 100);
+                    }
+                });
+
+                // Template style change
+                $('input[name="template_style"]').on('change', function() {
+                    $('input[name="template_style"]').each(function() {
+                        var $label = $(this).closest('label');
+                        if ($(this).is(':checked')) {
+                            $label.css({
+                                'border-color': '#2271b1',
+                                'background': '#f0f6fc'
+                            });
+                        } else {
+                            $label.css({
+                                'border-color': '#ddd',
+                                'background': '#fff'
+                            });
+                        }
+                    });
+                    updatePreview();
+                });
+
+                // Other inputs
+                $('input[name="company_name"], input[name="tagline"], input[name="logo_url"], input[name="show_header"], input[name="show_footer"]').on('change keyup', function() {
+                    updatePreview();
+                });
+
+                // Device toggle
+                $('.device-btn').on('click', function() {
+                    var width = $(this).data('width');
+                    $('#template-preview').css('width', width + 'px');
+                    $('.device-btn').removeClass('button-primary active');
+                    $(this).addClass('button-primary active');
+                });
+
+                // Media uploader for logo
+                $('#upload_logo_btn').on('click', function(e) {
+                    e.preventDefault();
+                    var frame = wp.media({
+                        title: 'Select Logo',
+                        button: {
+                            text: 'Use this image'
+                        },
+                        multiple: false
+                    });
+                    frame.on('select', function() {
+                        var attachment = frame.state().get('selection').first().toJSON();
+                        $('#logo_url').val(attachment.url);
+                        updatePreview();
+                    });
+                    frame.open();
+                });
+
+                // Update preview
+                function updatePreview() {
+                    var style = $('input[name="template_style"]:checked').val() || 'modern';
+                    var primary = $('input[name="primary_color"]').val() || '#6366f1';
+                    var accent = $('input[name="accent_color"]').val() || '#10b981';
+                    var bgColor = $('input[name="bg_color"]').val() || '#f8fafc';
+                    var textColor = $('input[name="text_color"]').val() || '#1e293b';
+                    var logo = $('input[name="logo_url"]').val() || '';
+                    var company = $('input[name="company_name"]').val() || 'Your Company';
+                    var tagline = $('input[name="tagline"]').val() || '';
+                    var showHeader = $('input[name="show_header"]').is(':checked');
+                    var showFooter = $('input[name="show_footer"]').is(':checked');
+
+                    var headerBg = style === 'modern' ? 'linear-gradient(135deg, ' + primary + ' 0%, ' + accent + ' 100%)' :
+                        style === 'classic' ? primary : 'transparent';
+                    var headerStyle = style === 'minimal' ? 'display: none;' : 'background: ' + headerBg + '; padding: 15px; text-align: center; color: #fff;';
+
+                    var html = '<!DOCTYPE html><html><head><style>';
+                    html += 'body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: ' + bgColor + '; color: ' + textColor + '; }';
+                    html += '.container { max-width: 100%; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }';
+                    html += '.header { ' + headerStyle + ' }';
+                    html += '.logo { max-width: 120px; margin-bottom: 5px; }';
+                    html += '.company { font-size: 16px; font-weight: 600; margin: 0; }';
+                    html += '.tagline { font-size: 11px; opacity: 0.9; margin: 3px 0 0 0; }';
+                    html += '.body { padding: 25px; font-size: 14px; line-height: 1.6; text-align: justify; }';
+                    html += '.footer { background: #f1f5f9; padding: 12px; text-align: center; font-size: 11px; color: #64748b; }';
+                    html += '</style></head><body><div class="container">';
+
+                    if (showHeader && style !== 'minimal') {
+                        html += '<div class="header">';
+                        if (logo) html += '<img src="' + logo + '" class="logo" alt="">';
+                        html += '<p class="company">' + company + '</p>';
+                        if (tagline) html += '<p class="tagline">' + tagline + '</p>';
+                        html += '</div>';
+                    }
+
+                    html += '<div class="body">';
+                    html += '<p>Hello <strong>John</strong>,</p>';
+                    html += '<p>This is a sample email to preview your template design. The content you write in your emails will appear here, with your branding and colors applied.</p>';
+                    html += '<p>Thank you for using Ofast Emailer!</p>';
+                    html += '</div>';
+
+                    if (showFooter) {
+                        html += '<div class="footer">';
+                        html += '<p style="margin: 5px 0;">&copy; ' + new Date().getFullYear() + ' ' + company + '. All rights reserved.</p>';
+                        html += '</div>';
+                    }
+
+                    html += '</div></body></html>';
+
+                    document.getElementById('template-preview').srcdoc = html;
+                }
+
+                // Initial preview
+                updatePreview();
+            });
+        </script>
+<?php
+    }
+
+    /**
+     * Save template settings
+     */
+    private function save_template_settings()
+    {
+        update_option('ofast_email_template_style', sanitize_text_field($_POST['template_style'] ?? 'modern'));
+        update_option('ofast_email_primary_color', sanitize_hex_color($_POST['primary_color'] ?? '#6366f1'));
+        update_option('ofast_email_accent_color', sanitize_hex_color($_POST['accent_color'] ?? '#10b981'));
+        update_option('ofast_email_bg_color', sanitize_hex_color($_POST['bg_color'] ?? '#f8fafc'));
+        update_option('ofast_email_text_color', sanitize_hex_color($_POST['text_color'] ?? '#1e293b'));
+        update_option('ofast_email_logo', esc_url_raw($_POST['logo_url'] ?? ''));
+        update_option('ofast_email_company_name', sanitize_text_field($_POST['company_name'] ?? ''));
+        update_option('ofast_email_tagline', sanitize_text_field($_POST['tagline'] ?? ''));
+        update_option('ofast_email_show_header', isset($_POST['show_header']));
+        update_option('ofast_email_show_footer', isset($_POST['show_footer']));
+        update_option('ofast_email_from_name', sanitize_text_field($_POST['from_name'] ?? get_bloginfo('name')));
+        update_option('ofast_email_reply_to', sanitize_email($_POST['reply_to'] ?? get_option('admin_email')));
+        update_option('ofast_email_social', array_map('esc_url_raw', $_POST['social'] ?? array()));
+        update_option('ofast_email_apply_to', array_map('sanitize_text_field', $_POST['apply_to'] ?? array('emailer')));
+        update_option('ofast_email_font_family', sanitize_text_field($_POST['font_family'] ?? 'system'));
+        update_option('ofast_email_font_size', absint($_POST['font_size'] ?? 15));
+        update_option('ofast_email_logo_width', absint($_POST['logo_width'] ?? 120));
+    }
+
+    /**
+     * Reset template settings to defaults
+     */
+    private function reset_template_settings()
+    {
+        update_option('ofast_email_template_style', 'modern');
+        update_option('ofast_email_primary_color', '#6366f1');
+        update_option('ofast_email_accent_color', '#10b981');
+        update_option('ofast_email_bg_color', '#f8fafc');
+        update_option('ofast_email_text_color', '#1e293b');
+        update_option('ofast_email_logo', '');
+        update_option('ofast_email_company_name', get_bloginfo('name'));
+        update_option('ofast_email_tagline', '');
+        update_option('ofast_email_show_header', true);
+        update_option('ofast_email_show_footer', true);
+        update_option('ofast_email_from_name', get_bloginfo('name'));
+        update_option('ofast_email_reply_to', get_option('admin_email'));
+        update_option('ofast_email_social', array());
+        update_option('ofast_email_apply_to', array('emailer'));
+        update_option('ofast_email_font_family', 'system');
+        update_option('ofast_email_font_size', '15');
+        update_option('ofast_email_logo_width', '120');
     }
 }

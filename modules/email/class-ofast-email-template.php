@@ -30,6 +30,21 @@ class Ofast_X_Email_Template
         $show_footer = get_option('ofast_email_show_footer', true);
         $footer_text = get_option('ofast_email_footer_text', '');
         $social_links = get_option('ofast_email_social', array());
+        $font_family_key = get_option('ofast_email_font_family', 'system');
+        $font_size = absint(get_option('ofast_email_font_size', 15));
+        $logo_width = absint(get_option('ofast_email_logo_width', 120));
+
+        // Map font family keys to CSS font stacks
+        $font_stacks = array(
+            'system' => "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+            'inter' => "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+            'roboto' => "'Roboto', Arial, sans-serif",
+            'opensans' => "'Open Sans', Arial, sans-serif",
+            'lato' => "'Lato', Arial, sans-serif",
+            'poppins' => "'Poppins', Arial, sans-serif",
+            'georgia' => "Georgia, 'Times New Roman', serif"
+        );
+        $font_family = isset($font_stacks[$font_family_key]) ? $font_stacks[$font_family_key] : $font_stacks['system'];
 
         // Override with passed options
         $options = wp_parse_args($options, array(
@@ -49,11 +64,22 @@ class Ofast_X_Email_Template
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title><?php echo esc_html($company_name); ?></title>
+            <?php
+            // Build header background based on template style
+            if ($template_style === 'modern') {
+                $header_bg = 'linear-gradient(135deg, ' . esc_attr($primary_color) . ' 0%, ' . esc_attr($accent_color) . ' 100%)';
+            } elseif ($template_style === 'classic') {
+                $header_bg = esc_attr($primary_color);
+            } else {
+                $header_bg = 'transparent';
+            }
+            ?>
             <style>
                 body {
                     margin: 0;
                     padding: 0;
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                    font-family: <?php echo $font_family; ?>;
+                    font-size: <?php echo esc_attr($font_size); ?>px;
                     background-color: <?php echo esc_attr($bg_color); ?>;
                     color: <?php echo esc_attr($text_color); ?>;
                     line-height: 1.6;
@@ -67,20 +93,26 @@ class Ofast_X_Email_Template
 
                 .email-container {
                     background: #ffffff;
-                    border-radius: 16px;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+                    border-radius: <?php echo esc_attr($template_style === 'minimal' ? '0' : '16px'); ?>;
+                    box-shadow: <?php echo $template_style === 'minimal' ? 'none' : '0 4px 6px rgba(0, 0, 0, 0.05)'; ?>;
                     overflow: hidden;
+                    <?php if ($template_style === 'minimal'): ?>border: 1px solid #e2e8f0;
+                    <?php endif; ?>
                 }
 
-                .email-header {
-                    background: linear-gradient(135deg, <?php echo esc_attr($primary_color); ?> 0%, <?php echo esc_attr($accent_color); ?> 100%);
+                <?php if ($template_style === 'minimal'): ?>.email-header {
+                    display: none;
+                }
+
+                <?php else: ?>.email-header {
+                    background: <?php echo $header_bg; ?>;
                     padding: 15px;
                     text-align: center;
                     color: #ffffff;
                 }
 
-                .email-logo {
-                    max-width: 120px;
+                <?php endif; ?>.email-logo {
+                    max-width: <?php echo esc_attr($logo_width); ?>px;
                     height: auto;
                     margin-bottom: 5px;
                 }
@@ -101,8 +133,8 @@ class Ofast_X_Email_Template
 
                 .email-body {
                     padding: 30px 25px;
-                    font-size: 15px;
-                    color: #334155;
+                    font-size: <?php echo esc_attr($font_size); ?>px;
+                    color: <?php echo esc_attr($text_color); ?>;
                     text-align: justify;
                 }
 

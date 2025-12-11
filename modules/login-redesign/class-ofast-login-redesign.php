@@ -329,8 +329,10 @@ class Ofast_X_Login_Redesign
 
         // Centered container wrapper
         if ($isCentered) {
+            // The wrapper is a flex container with stretch (default)
             $css .= '.ofast-tc-wrapper { ';
             $css .= 'display: flex !important;';
+            $css .= 'flex-direction: row !important;';
             $css .= 'width: 90% !important;';
             $css .= 'max-width: 1000px !important;';
             $css .= 'margin: 50px auto !important;';
@@ -339,36 +341,51 @@ class Ofast_X_Login_Redesign
             $css .= 'overflow: hidden !important;';
             $css .= 'box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;';
             $css .= '}';
-            // Login container in centered mode - fill full height
-            $css .= '#login { ';
-            $css .= 'position: relative !important;';
-            $css .= 'width: 50% !important;';
+
+            // Image side in centered mode
+            $css .= '.ofast-tc-wrapper .ofast-login-side { ';
+            $css .= 'flex: 0 0 50% !important;';
             $css .= 'min-height: 100% !important;';
-            $css .= 'align-self: stretch !important;';
+            $css .= '}';
+
+            // Login container in centered mode - must be flex child that stretches
+            $css .= '.ofast-tc-wrapper #login { ';
+            $css .= 'flex: 0 0 50% !important;';
+            $css .= 'position: relative !important;';
+            $css .= 'top: auto !important;';
+            $css .= 'left: auto !important;';
+            $css .= 'right: auto !important;';
+            $css .= 'width: auto !important;';
+            $css .= 'height: auto !important;';
+            $css .= 'margin: 0 !important;';
+            $css .= 'display: flex !important;';
+            $css .= 'flex-direction: column !important;';
+            $css .= 'justify-content: center !important;';
+            $css .= 'align-items: center !important;';
+            $css .= 'padding: 40px !important;';
+            $css .= 'box-sizing: border-box !important;';
+            $css .= 'background: ' . $formBgStyle . ' !important;';
+            $css .= '}';
         } else {
             // Main container - full screen
             $css .= '#login { ';
             $css .= 'position: fixed !important;';
             $css .= 'width: 50% !important;';
             $css .= 'height: 100% !important;';
-        }
-
-        $css .= 'display: flex !important;';
-        $css .= 'flex-direction: column !important;';
-        $css .= 'justify-content: center !important;';
-        $css .= 'align-items: center !important;';
-        $css .= 'padding: 40px !important;';
-        $css .= 'box-sizing: border-box !important;';
-        $css .= 'background: ' . $formBgStyle . ' !important;';
-
-        if (!$isCentered) {
+            $css .= 'display: flex !important;';
+            $css .= 'flex-direction: column !important;';
+            $css .= 'justify-content: center !important;';
+            $css .= 'align-items: center !important;';
+            $css .= 'padding: 40px !important;';
+            $css .= 'box-sizing: border-box !important;';
+            $css .= 'background: ' . $formBgStyle . ' !important;';
             if ($imgPos === 'left') {
                 $css .= 'right: 0 !important; left: auto !important;';
             } else {
                 $css .= 'left: 0 !important; right: auto !important;';
             }
+            $css .= '}';
         }
-        $css .= '}';
 
         // Logo in two-column
         $css .= '#login h1 a {';

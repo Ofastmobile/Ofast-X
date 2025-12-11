@@ -20,6 +20,9 @@ class Ofast_X_Dashboard
         add_action('admin_menu', array($this, 'add_dashboard_menu'));
         // Add Chat Us menu at very end (priority 9999)
         add_action('admin_menu', array($this, 'add_chat_menu'), 9999);
+        // Reorder admin menu
+        add_filter('custom_menu_order', '__return_true');
+        add_filter('menu_order', array($this, 'reorder_admin_menu'), 999);
     }
 
     /**
@@ -92,6 +95,55 @@ class Ofast_X_Dashboard
             }
         </style>
     <?php
+    }
+
+    /**
+     * Reorder admin menu to place Ofast menus after WordPress Dashboard
+     * Order: Dashboard, Ofast X, Ofast Emailer, Ofast SMTP, Contact Form, then rest
+     */
+    public function reorder_admin_menu($menu_order)
+    {
+        if (!$menu_order) {
+            return true;
+        }
+
+        // Define our preferred order
+        $ofast_menus = array(
+            'ofast-dashboard',     // Ofast X
+            'ofast-email',         // Ofast Emailer (if exists)
+            'ofast-smtp',          // Ofast SMTP (if exists)
+            'ofast-forms',         // Contact Form
+        );
+
+        // Build new order
+        $new_order = array();
+
+        // First, add WordPress Dashboard (index.php)
+        if (in_array('index.php', $menu_order)) {
+            $new_order[] = 'index.php';
+        }
+
+        // Add separator after dashboard
+        $new_order[] = 'separator1';
+
+        // Add Ofast menus in our preferred order
+        foreach ($ofast_menus as $menu_slug) {
+            if (in_array($menu_slug, $menu_order)) {
+                $new_order[] = $menu_slug;
+            }
+        }
+
+        // Add separator after Ofast menus
+        $new_order[] = 'separator2';
+
+        // Add remaining menus
+        foreach ($menu_order as $menu) {
+            if (!in_array($menu, $new_order) && $menu !== 'separator1' && $menu !== 'separator2') {
+                $new_order[] = $menu;
+            }
+        }
+
+        return $new_order;
     }
 
     /**

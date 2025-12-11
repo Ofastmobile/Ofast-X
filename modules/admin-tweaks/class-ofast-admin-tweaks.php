@@ -63,6 +63,28 @@ class Ofast_X_Admin_Tweaks
             add_filter('admin_bar_menu', array($this, 'rename_howdy'), 25);
         }
 
+        // Disable XML-RPC
+        if (!empty($settings['disable_xmlrpc'])) {
+            add_filter('xmlrpc_enabled', '__return_false');
+            add_filter('wp_headers', array($this, 'remove_xmlrpc_headers'));
+            add_filter('xmlrpc_methods', array($this, 'disable_xmlrpc_methods'));
+        }
+
+        // Obfuscate Author Slugs
+        if (!empty($settings['obfuscate_author_slugs'])) {
+            add_filter('author_link', array($this, 'obfuscate_author_link'), 10, 3);
+            add_filter('request', array($this, 'handle_obfuscated_author_request'));
+            add_action('template_redirect', array($this, 'block_author_enumeration'));
+        }
+
+        // Email Address Obfuscator
+        if (!empty($settings['obfuscate_emails'])) {
+            add_filter('the_content', array($this, 'obfuscate_emails_in_content'));
+            add_filter('the_excerpt', array($this, 'obfuscate_emails_in_content'));
+            add_filter('widget_text', array($this, 'obfuscate_emails_in_content'));
+            add_filter('comment_text', array($this, 'obfuscate_emails_in_content'));
+        }
+
         // Add admin menu page
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'save_settings'));
@@ -172,6 +194,90 @@ class Ofast_X_Admin_Tweaks
     }
 
     /**
+     * Remove X-Pingback header
+     */
+    public function remove_xmlrpc_headers($headers)
+    {
+        unset($headers['X-Pingback']);
+        return $headers;
+    }
+
+    /**
+     * Disable all XML-RPC methods
+     */
+    public function disable_xmlrpc_methods($methods)
+    {
+        return array();
+    }
+
+    /**
+     * Obfuscate author link to use ID instead of nicename
+     */
+    public function obfuscate_author_link($link, $author_id, $author_nicename)
+    {
+        $hash = substr(md5('ofast_author_' . $author_id . wp_salt()), 0, 12);
+        return home_url('/author/' . $hash . '/');
+    }
+
+    /**
+     * Handle obfuscated author requests
+     */
+    public function handle_obfuscated_author_request($query_vars)
+    {
+        if (isset($query_vars['author_name'])) {
+            $author_name = $query_vars['author_name'];
+            // Check if it's a hash (12 char hex)
+            if (preg_match('/^[a-f0-9]{12}$/', $author_name)) {
+                // Find the matching author
+                $users = get_users(array('fields' => array('ID')));
+                foreach ($users as $user) {
+                    $hash = substr(md5('ofast_author_' . $user->ID . wp_salt()), 0, 12);
+                    if ($hash === $author_name) {
+                        $query_vars['author'] = $user->ID;
+                        unset($query_vars['author_name']);
+                        break;
+                    }
+                }
+            }
+        }
+        return $query_vars;
+    }
+
+    /**
+     * Block author enumeration via ?author=N
+     */
+    public function block_author_enumeration()
+    {
+        if (isset($_GET['author']) && is_numeric($_GET['author'])) {
+            wp_redirect(home_url(), 301);
+            exit;
+        }
+    }
+
+    /**
+     * Obfuscate email addresses in content
+     */
+    public function obfuscate_emails_in_content($content)
+    {
+        // Match email addresses
+        $pattern = '/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/';
+        return preg_replace_callback($pattern, array($this, 'encode_email'), $content);
+    }
+
+    /**
+     * Encode email address to HTML entities
+     */
+    private function encode_email($matches)
+    {
+        $email = $matches[1];
+        $encoded = '';
+        for ($i = 0; $i < strlen($email); $i++) {
+            $encoded .= '&#' . ord($email[$i]) . ';';
+        }
+        return $encoded;
+    }
+
+    /**
      * Save settings
      */
     public function save_settings()
@@ -196,6 +302,9 @@ class Ofast_X_Admin_Tweaks
             'remove_new_content' => isset($_POST['ofast_remove_new_content']) ? 1 : 0,
             'rename_howdy' => isset($_POST['ofast_rename_howdy']) ? 1 : 0,
             'hide_admin_bar_roles' => isset($_POST['ofast_hide_bar_roles']) ? array_map('sanitize_text_field', $_POST['ofast_hide_bar_roles']) : array(),
+            'disable_xmlrpc' => isset($_POST['ofast_disable_xmlrpc']) ? 1 : 0,
+            'obfuscate_author_slugs' => isset($_POST['ofast_obfuscate_author_slugs']) ? 1 : 0,
+            'obfuscate_emails' => isset($_POST['ofast_obfuscate_emails']) ? 1 : 0,
         );
 
         update_option('ofast_admin_tweaks', $settings);
@@ -224,6 +333,7 @@ class Ofast_X_Admin_Tweaks
             <form method="post">
                 <?php wp_nonce_field('ofast_admin_tweaks_save', 'admin_tweaks_nonce'); ?>
 
+                <h2 class="title">Admin Interface</h2>
                 <table class="form-table">
                     <tr>
                         <th scope="row">Post/Page ID Column</th>
@@ -290,6 +400,40 @@ class Ofast_X_Admin_Tweaks
                                 <input type="checkbox" name="ofast_rename_howdy" value="1" <?php checked(!empty($settings['rename_howdy'])); ?>>
                                 Change "Howdy, Username" to "Hello, Username" in admin bar
                             </label>
+                        </td>
+                    </tr>
+                </table>
+
+                <h2 class="title" style="margin-top:30px;">Security Hardening</h2>
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">Disable XML-RPC</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="ofast_disable_xmlrpc" value="1" <?php checked(!empty($settings['disable_xmlrpc'])); ?>>
+                                Completely disable XML-RPC functionality
+                            </label>
+                            <p class="description">Prevents brute force attacks and DDoS amplification via xmlrpc.php. Safe to enable unless you use mobile apps or Jetpack.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Obfuscate Author Slugs</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="ofast_obfuscate_author_slugs" value="1" <?php checked(!empty($settings['obfuscate_author_slugs'])); ?>>
+                                Hide real usernames from author URLs
+                            </label>
+                            <p class="description">Replaces usernames in author archive URLs with random hashes. Blocks ?author=N enumeration attacks.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Email Address Obfuscator</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="ofast_obfuscate_emails" value="1" <?php checked(!empty($settings['obfuscate_emails'])); ?>>
+                                Encode email addresses in page content
+                            </label>
+                            <p class="description">Converts email addresses to HTML entities (e.g., &#101;&#109;&#97;&#105;&#108;) to prevent spam harvesting bots from collecting them.</p>
                         </td>
                     </tr>
                 </table>

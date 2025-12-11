@@ -17,19 +17,19 @@ class Ofast_X_Email_Template
      */
     public static function get_template($content, $options = array())
     {
-        // Get customizable options from settings
-        $template_style = get_option('ofastx_email_template_style', 'modern');
-        $primary_color = get_option('ofastx_email_primary_color', '#6366f1'); // Indigo
-        $accent_color = get_option('ofastx_email_accent_color', '#10b981'); // Emerald
-        $bg_color = get_option('ofastx_email_bg_color', '#f8fafc'); // Light gray
-        $text_color = get_option('ofastx_email_text_color', '#1e293b'); // Dark slate
-        $logo_url = get_option('ofastx_email_logo', '');
-        $company_name = get_option('ofastx_email_company_name', 'Your Company');
-        $tagline = get_option('ofastx_email_tagline', '');
-        $show_header = get_option('ofastx_email_show_header', true);
-        $show_footer = get_option('ofastx_email_show_footer', true);
-        $footer_text = get_option('ofastx_email_footer_text', '');
-        $social_links = get_option('ofastx_email_social', array());
+        // Get customizable options from settings (using same keys as settings page)
+        $template_style = get_option('ofast_email_template_style', 'modern');
+        $primary_color = get_option('ofast_email_primary_color', '#6366f1'); // Indigo
+        $accent_color = get_option('ofast_email_accent_color', '#10b981'); // Emerald
+        $bg_color = get_option('ofast_email_bg_color', '#f8fafc'); // Light gray
+        $text_color = get_option('ofast_email_text_color', '#1e293b'); // Dark slate
+        $logo_url = get_option('ofast_email_logo', '');
+        $company_name = get_option('ofast_email_company_name', get_option('ofast_email_from_name', 'Your Company'));
+        $tagline = get_option('ofast_email_tagline', '');
+        $show_header = get_option('ofast_email_show_header', true);
+        $show_footer = get_option('ofast_email_show_footer', true);
+        $footer_text = get_option('ofast_email_footer_text', '');
+        $social_links = get_option('ofast_email_social', array());
 
         // Override with passed options
         $options = wp_parse_args($options, array(
@@ -74,35 +74,36 @@ class Ofast_X_Email_Template
 
                 .email-header {
                     background: linear-gradient(135deg, <?php echo esc_attr($primary_color); ?> 0%, <?php echo esc_attr($accent_color); ?> 100%);
-                    padding: 40px 30px;
+                    padding: 15px;
                     text-align: center;
                     color: #ffffff;
                 }
 
                 .email-logo {
-                    max-width: 200px;
+                    max-width: 120px;
                     height: auto;
-                    margin-bottom: 15px;
+                    margin-bottom: 5px;
                 }
 
                 .email-company-name {
-                    font-size: 24px;
-                    font-weight: 700;
-                    margin: 0 0 8px 0;
+                    font-size: 16px;
+                    font-weight: 600;
+                    margin: 0;
                     color: #ffffff;
                 }
 
                 .email-tagline {
-                    font-size: 14px;
-                    opacity: 0.95;
-                    margin: 0;
+                    font-size: 11px;
+                    opacity: 0.9;
+                    margin: 3px 0 0 0;
                     font-weight: 400;
                 }
 
                 .email-body {
-                    padding: 40px 30px;
+                    padding: 30px 25px;
                     font-size: 15px;
                     color: #334155;
+                    text-align: justify;
                 }
 
 
@@ -110,8 +111,8 @@ class Ofast_X_Email_Template
                 .highlight-box {
                     background: linear-gradient(135deg, rgba(<?php echo self::hex_to_rgb($accent_color); ?>, 0.1) 0%, rgba(<?php echo self::hex_to_rgb($primary_color); ?>, 0.1) 100%);
                     border-left: 4px solid <?php echo esc_attr($accent_color); ?>;
-                    padding: 20px;
-                    margin: 25px 0;
+                    padding: 15px;
+                    margin: 20px 0;
                     border-radius: 8px;
                 }
 
@@ -120,10 +121,10 @@ class Ofast_X_Email_Template
                     background: <?php echo esc_attr($primary_color); ?>;
                     color: #ffffff !important;
                     text-decoration: none;
-                    padding: 14px 32px;
+                    padding: 12px 28px;
                     border-radius: 8px;
                     font-weight: 600;
-                    margin: 25px 0;
+                    margin: 20px 0;
                     transition: all 0.3s ease;
                 }
 
@@ -134,35 +135,32 @@ class Ofast_X_Email_Template
 
                 .email-footer {
                     background: #f1f5f9;
-                    padding: 30px;
+                    padding: 12px 15px;
                     text-align: center;
-                    font-size: 13px;
+                    font-size: 11px;
                     color: #64748b;
                 }
 
                 .social-links {
-                    margin: 20px 0;
+                    margin: 5px 0;
                 }
 
                 .social-icon {
                     display: inline-block;
-                    width: 36px;
-                    height: 36px;
-                    margin: 0 6px;
-                    background: #ffffff;
-                    border-radius: 50%;
-                    padding: 8px;
-                    transition: transform 0.2s;
+                    width: 24px;
+                    height: 24px;
+                    margin: 0 5px;
+                    vertical-align: middle;
                 }
 
                 .social-icon:hover {
-                    transform: scale(1.1);
+                    opacity: 0.8;
                 }
 
                 .social-icon img {
-                    width: 20px;
-                    height: 20px;
-                    filter: grayscale(100%);
+                    width: 24px;
+                    height: 24px;
+                    display: block;
                 }
 
                 .divider {

@@ -68,6 +68,8 @@ class Ofast_X_Login_Redesign
             'bg_color' => get_option('ofast_login_bg_color', '#f0f0f1'),
             'bg_image' => get_option('ofast_login_bg_image', ''),
             'form_bg' => get_option('ofast_login_form_bg', '#ffffff'),
+            'form_bg_end' => get_option('ofast_login_form_bg_end', '#ffffff'),
+            'form_use_gradient' => get_option('ofast_login_form_use_gradient', false),
             'form_radius' => get_option('ofast_login_form_radius', '4'),
             'btn_color' => get_option('ofast_login_btn_color', '#2271b1'),
             'btn_hover' => get_option('ofast_login_btn_hover', '#135e96'),
@@ -83,6 +85,9 @@ class Ofast_X_Login_Redesign
             'custom_css' => get_option('ofast_login_custom_css', ''),
             // Two-column specific
             'tc_side_image' => get_option('ofast_login_tc_side_image', ''),
+            'tc_use_color' => get_option('ofast_login_tc_use_color', false),
+            'tc_side_color' => get_option('ofast_login_tc_side_color', '#667eea'),
+            'tc_side_color_end' => get_option('ofast_login_tc_side_color_end', '#764ba2'),
             'tc_image_position' => get_option('ofast_login_tc_image_position', 'left'),
             'tc_overlay_color' => get_option('ofast_login_tc_overlay_color', '#000000'),
             'tc_overlay_opacity' => get_option('ofast_login_tc_overlay_opacity', '40'),
@@ -149,6 +154,8 @@ class Ofast_X_Login_Redesign
             update_option('ofast_login_bg_color', '#f0f0f1');
             update_option('ofast_login_bg_image', '');
             update_option('ofast_login_form_bg', '#ffffff');
+            update_option('ofast_login_form_bg_end', '#ffffff');
+            update_option('ofast_login_form_use_gradient', false);
             update_option('ofast_login_form_radius', '4');
             update_option('ofast_login_btn_color', '#2271b1');
             update_option('ofast_login_btn_hover', '#135e96');
@@ -164,6 +171,9 @@ class Ofast_X_Login_Redesign
             update_option('ofast_login_custom_css', '');
             // Two-column
             update_option('ofast_login_tc_side_image', '');
+            update_option('ofast_login_tc_use_color', false);
+            update_option('ofast_login_tc_side_color', '#667eea');
+            update_option('ofast_login_tc_side_color_end', '#764ba2');
             update_option('ofast_login_tc_image_position', 'left');
             update_option('ofast_login_tc_overlay_color', '#000000');
             update_option('ofast_login_tc_overlay_opacity', '40');
@@ -197,6 +207,8 @@ class Ofast_X_Login_Redesign
         update_option('ofast_login_bg_color', sanitize_hex_color($_POST['bg_color'] ?? '#f0f0f1'));
         update_option('ofast_login_bg_image', esc_url_raw($_POST['bg_image'] ?? ''));
         update_option('ofast_login_form_bg', sanitize_hex_color($_POST['form_bg'] ?? '#ffffff'));
+        update_option('ofast_login_form_bg_end', sanitize_hex_color($_POST['form_bg_end'] ?? '#ffffff'));
+        update_option('ofast_login_form_use_gradient', isset($_POST['form_use_gradient']));
         update_option('ofast_login_form_radius', absint($_POST['form_radius'] ?? 4));
         update_option('ofast_login_btn_color', sanitize_hex_color($_POST['btn_color'] ?? '#2271b1'));
         update_option('ofast_login_btn_hover', sanitize_hex_color($_POST['btn_hover'] ?? '#135e96'));
@@ -213,6 +225,9 @@ class Ofast_X_Login_Redesign
 
         // Two-column settings
         update_option('ofast_login_tc_side_image', esc_url_raw($_POST['tc_side_image'] ?? ''));
+        update_option('ofast_login_tc_use_color', isset($_POST['tc_use_color']));
+        update_option('ofast_login_tc_side_color', sanitize_hex_color($_POST['tc_side_color'] ?? '#667eea'));
+        update_option('ofast_login_tc_side_color_end', sanitize_hex_color($_POST['tc_side_color_end'] ?? '#764ba2'));
         update_option('ofast_login_tc_image_position', sanitize_text_field($_POST['tc_image_position'] ?? 'left'));
         update_option('ofast_login_tc_overlay_color', sanitize_hex_color($_POST['tc_overlay_color'] ?? '#000000'));
         update_option('ofast_login_tc_overlay_opacity', absint($_POST['tc_overlay_opacity'] ?? 40));
@@ -296,6 +311,14 @@ class Ofast_X_Login_Redesign
         $isCentered = $s['tc_centered'];
         $borderWidth = intval($s['tc_form_border_width']);
         $borderColor = esc_attr($s['tc_form_border_color']);
+        $formUseGradient = $s['form_use_gradient'];
+
+        // Build form background style
+        if ($formUseGradient) {
+            $formBgStyle = 'linear-gradient(135deg, ' . esc_attr($s['form_bg']) . ' 0%, ' . esc_attr($s['form_bg_end']) . ' 100%)';
+        } else {
+            $formBgStyle = esc_attr($s['form_bg']);
+        }
 
         // Body background
         if ($isCentered) {
@@ -316,12 +339,12 @@ class Ofast_X_Login_Redesign
             $css .= 'overflow: hidden !important;';
             $css .= 'box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;';
             $css .= '}';
-            // Login container in centered mode
+            // Login container in centered mode - fill full height
             $css .= '#login { ';
             $css .= 'position: relative !important;';
             $css .= 'width: 50% !important;';
-            $css .= 'height: auto !important;';
-            $css .= 'min-height: 500px !important;';
+            $css .= 'min-height: 100% !important;';
+            $css .= 'align-self: stretch !important;';
         } else {
             // Main container - full screen
             $css .= '#login { ';
@@ -336,7 +359,7 @@ class Ofast_X_Login_Redesign
         $css .= 'align-items: center !important;';
         $css .= 'padding: 40px !important;';
         $css .= 'box-sizing: border-box !important;';
-        $css .= 'background: ' . esc_attr($s['form_bg']) . ' !important;';
+        $css .= 'background: ' . $formBgStyle . ' !important;';
 
         if (!$isCentered) {
             if ($imgPos === 'left') {
@@ -344,11 +367,6 @@ class Ofast_X_Login_Redesign
             } else {
                 $css .= 'left: 0 !important; right: auto !important;';
             }
-        }
-
-        // Form border
-        if ($borderWidth > 0) {
-            $css .= 'border: ' . $borderWidth . 'px solid ' . $borderColor . ' !important;';
         }
         $css .= '}';
 
@@ -466,6 +484,9 @@ class Ofast_X_Login_Redesign
 
         $imgPos = $s['tc_image_position'];
         $sideImage = esc_url($s['tc_side_image'] ?: $s['bg_image']);
+        $useColor = $s['tc_use_color'] || empty($sideImage);
+        $sideColor = esc_attr($s['tc_side_color']);
+        $sideColorEnd = esc_attr($s['tc_side_color_end']);
         $overlayColor = esc_attr($s['tc_overlay_color']);
         $overlayOpacity = intval($s['tc_overlay_opacity']) / 100;
         $heading = esc_html($s['tc_heading']);
@@ -473,14 +494,20 @@ class Ofast_X_Login_Redesign
         $textColor = esc_attr($s['tc_text_color']);
         $isCentered = $s['tc_centered'];
 
+        // Build background style
+        if ($useColor) {
+            $bgStyle = 'background: linear-gradient(135deg, ' . $sideColor . ' 0%, ' . $sideColorEnd . ' 100%);';
+        } else {
+            $bgStyle = 'background-image: url(' . $sideImage . '); background-size: cover; background-position: center;';
+        }
+
         if ($isCentered) {
             // For centered mode, we need to wrap everything in a container
-            // This script moves #login into our wrapper
             echo '<div class="ofast-tc-wrapper" id="ofast-tc-wrapper">';
 
             // Image side (order depends on position)
             if ($imgPos === 'left') {
-                $this->render_image_side($sideImage, $overlayColor, $overlayOpacity, $heading, $subheading, $textColor);
+                $this->render_image_side($bgStyle, $overlayColor, $overlayOpacity, $heading, $subheading, $textColor, $useColor);
             }
             echo '</div>';
 
@@ -505,7 +532,7 @@ class Ofast_X_Login_Redesign
             // If image is on right, render it as placeholder to be moved
             if ($imgPos === 'right') {
                 echo '<div class="ofast-login-side-placeholder" style="display:none;">';
-                $this->render_image_side_html($sideImage, $overlayColor, $overlayOpacity, $heading, $subheading, $textColor);
+                $this->render_image_side($bgStyle, $overlayColor, $overlayOpacity, $heading, $subheading, $textColor, $useColor);
                 echo '</div>';
             }
         } else {
@@ -514,10 +541,12 @@ class Ofast_X_Login_Redesign
 
             echo '<div class="ofast-login-side" style="';
             echo 'position: fixed; top: 0; ' . $position . ' width: 50%; height: 100%;';
-            echo 'background-image: url(' . $sideImage . '); background-size: cover; background-position: center;';
+            echo $bgStyle;
             echo 'display: flex; align-items: center; justify-content: center; z-index: 1;">';
-            echo '<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;';
-            echo 'background: ' . $overlayColor . '; opacity: ' . $overlayOpacity . ';"></div>';
+            if (!$useColor) {
+                echo '<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;';
+                echo 'background: ' . $overlayColor . '; opacity: ' . $overlayOpacity . ';"></div>';
+            }
             echo '<div style="position: relative; z-index: 2; text-align: center; padding: 40px; color: ' . $textColor . ';">';
             if ($heading) {
                 echo '<h2 style="font-size: 36px; font-weight: 600; margin: 0 0 15px 0; color: ' . $textColor . ';">' . $heading . '</h2>';
@@ -532,16 +561,18 @@ class Ofast_X_Login_Redesign
     }
 
     /**
-     * Render the image side panel
+     * Render the image/gradient side panel for centered mode
      */
-    private function render_image_side($sideImage, $overlayColor, $overlayOpacity, $heading, $subheading, $textColor)
+    private function render_image_side($bgStyle, $overlayColor, $overlayOpacity, $heading, $subheading, $textColor, $useColor = false)
     {
         echo '<div class="ofast-login-side" style="';
-        echo 'width: 50%; min-height: 500px; position: relative;';
-        echo 'background-image: url(' . $sideImage . '); background-size: cover; background-position: center;';
+        echo 'width: 50%; min-height: 100%; position: relative;';
+        echo $bgStyle;
         echo 'display: flex; align-items: center; justify-content: center;">';
-        echo '<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;';
-        echo 'background: ' . $overlayColor . '; opacity: ' . $overlayOpacity . ';"></div>';
+        if (!$useColor) {
+            echo '<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;';
+            echo 'background: ' . $overlayColor . '; opacity: ' . $overlayOpacity . ';"></div>';
+        }
         echo '<div style="position: relative; z-index: 2; text-align: center; padding: 40px; color: ' . $textColor . ';">';
         if ($heading) {
             echo '<h2 style="font-size: 36px; font-weight: 600; margin: 0 0 15px 0; color: ' . $textColor . ';">' . $heading . '</h2>';
@@ -550,14 +581,6 @@ class Ofast_X_Login_Redesign
             echo '<p style="font-size: 18px; margin: 0; opacity: 0.9; color: ' . $textColor . ';">' . $subheading . '</p>';
         }
         echo '</div></div>';
-    }
-
-    /**
-     * Render image side HTML for JS insertion
-     */
-    private function render_image_side_html($sideImage, $overlayColor, $overlayOpacity, $heading, $subheading, $textColor)
-    {
-        $this->render_image_side($sideImage, $overlayColor, $overlayOpacity, $heading, $subheading, $textColor);
     }
 
 
@@ -778,8 +801,28 @@ class Ofast_X_Login_Redesign
                         <!-- Two-Column Specific Settings -->
                         <div id="two-column-settings" class="postbox" style="padding:20px;margin-top:15px;<?php echo $current_template !== 'two-column' ? 'display:none;' : ''; ?>">
                             <h3 style="margin-top:0;">Two-Column Settings</h3>
+
+                            <h4 style="margin:0 0 10px 0;">Side Panel Background</h4>
                             <table class="form-table" style="margin:0;">
                                 <tr>
+                                    <th>Use Color Gradient</th>
+                                    <td>
+                                        <label>
+                                            <input type="checkbox" name="tc_use_color" value="1" <?php checked($s['tc_use_color']); ?>>
+                                            Use gradient colors instead of image
+                                        </label>
+                                        <p class="description">When enabled, the side panel shows a gradient. When disabled, it shows an image.</p>
+                                    </td>
+                                </tr>
+                                <tr class="tc-color-option" style="<?php echo !$s['tc_use_color'] ? 'display:none;' : ''; ?>">
+                                    <th>Gradient Start Color</th>
+                                    <td><input type="text" name="tc_side_color" id="tc_side_color" value="<?php echo esc_attr($s['tc_side_color']); ?>" class="color-picker"></td>
+                                </tr>
+                                <tr class="tc-color-option" style="<?php echo !$s['tc_use_color'] ? 'display:none;' : ''; ?>">
+                                    <th>Gradient End Color</th>
+                                    <td><input type="text" name="tc_side_color_end" id="tc_side_color_end" value="<?php echo esc_attr($s['tc_side_color_end']); ?>" class="color-picker"></td>
+                                </tr>
+                                <tr class="tc-image-option" style="<?php echo $s['tc_use_color'] ? 'display:none;' : ''; ?>">
                                     <th>Side Image</th>
                                     <td>
                                         <input type="text" name="tc_side_image" id="tc_side_image" value="<?php echo esc_url($s['tc_side_image']); ?>" class="regular-text">
@@ -848,23 +891,6 @@ class Ofast_X_Login_Redesign
                                     <td><input type="text" name="tc_bg_color" id="tc_bg_color" value="<?php echo esc_attr($s['tc_bg_color']); ?>" class="color-picker"></td>
                                 </tr>
                             </table>
-
-                            <hr style="margin: 20px 0;">
-                            <h4 style="margin-top:0;">Form Side Border</h4>
-                            <table class="form-table" style="margin:0;">
-                                <tr>
-                                    <th>Border Color</th>
-                                    <td><input type="text" name="tc_form_border_color" id="tc_form_border_color" value="<?php echo esc_attr($s['tc_form_border_color']); ?>" class="color-picker"></td>
-                                </tr>
-                                <tr>
-                                    <th>Border Width</th>
-                                    <td>
-                                        <input type="range" name="tc_form_border_width" id="tc_form_border_width" min="0" max="10" value="<?php echo esc_attr($s['tc_form_border_width']); ?>">
-                                        <span id="tc_form_border_width_val"><?php echo esc_html($s['tc_form_border_width']); ?>px</span>
-                                        <p class="description">Set to 0 for no border</p>
-                                    </td>
-                                </tr>
-                            </table>
                         </div>
 
                         <!-- Simple Template Background (only show for simple) -->
@@ -891,6 +917,19 @@ class Ofast_X_Login_Redesign
                                 <tr>
                                     <th>Form Background</th>
                                     <td><input type="text" name="form_bg" id="form_bg" value="<?php echo esc_attr($s['form_bg']); ?>" class="color-picker"></td>
+                                </tr>
+                                <tr>
+                                    <th>Use Gradient</th>
+                                    <td>
+                                        <label>
+                                            <input type="checkbox" name="form_use_gradient" value="1" <?php checked($s['form_use_gradient']); ?>>
+                                            Use gradient for form background
+                                        </label>
+                                    </td>
+                                </tr>
+                                <tr class="form-gradient-option" style="<?php echo !$s['form_use_gradient'] ? 'display:none;' : ''; ?>">
+                                    <th>End Color</th>
+                                    <td><input type="text" name="form_bg_end" id="form_bg_end" value="<?php echo esc_attr($s['form_bg_end']); ?>" class="color-picker"></td>
                                 </tr>
                                 <tr>
                                     <th>Form Border Radius</th>
@@ -1057,6 +1096,28 @@ class Ofast_X_Login_Redesign
                     updatePreview();
                 });
 
+                // Use color gradient checkbox toggle
+                $('input[name="tc_use_color"]').on('change', function() {
+                    if ($(this).is(':checked')) {
+                        $('.tc-color-option').show();
+                        $('.tc-image-option').hide();
+                    } else {
+                        $('.tc-color-option').hide();
+                        $('.tc-image-option').show();
+                    }
+                    updatePreview();
+                });
+
+                // Form gradient checkbox toggle
+                $('input[name="form_use_gradient"]').on('change', function() {
+                    if ($(this).is(':checked')) {
+                        $('.form-gradient-option').show();
+                    } else {
+                        $('.form-gradient-option').hide();
+                    }
+                    updatePreview();
+                });
+
                 // Any input change
                 $('input, textarea').on('change input', function() {
                     updatePreview();
@@ -1108,6 +1169,9 @@ class Ofast_X_Login_Redesign
                     if (template === 'two-column') {
                         // Two-column preview
                         var sideImage = $('#tc_side_image').val() || $('#bg_image').val() || '';
+                        var useColor = $('input[name="tc_use_color"]').is(':checked') || !sideImage;
+                        var sideColor = $('.wp-color-picker[name="tc_side_color"]').val() || '#667eea';
+                        var sideColorEnd = $('.wp-color-picker[name="tc_side_color_end"]').val() || '#764ba2';
                         var imgPos = $('input[name="tc_image_position"]:checked').val() || 'left';
                         var overlayColor = $('.wp-color-picker[name="tc_overlay_color"]').val() || '#000000';
                         var overlayOpacity = ($('#tc_overlay_opacity').val() || 40) / 100;
@@ -1117,17 +1181,28 @@ class Ofast_X_Login_Redesign
                         var isCentered = $('input[name="tc_centered"]').is(':checked');
                         var tcBgColor = $('.wp-color-picker[name="tc_bg_color"]').val() || '#f0f0f1';
 
-                        var bgStyle = sideImage ? 'background-image:url(' + sideImage + ');background-size:cover;background-position:center;' : 'background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);';
+                        var bgStyle = useColor ?
+                            'background:linear-gradient(135deg, ' + sideColor + ' 0%, ' + sideColorEnd + ' 100%);' :
+                            'background-image:url(' + sideImage + ');background-size:cover;background-position:center;';
+
+                        var overlayDiv = useColor ? '' : '<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:' + overlayColor + ';opacity:' + overlayOpacity + ';"></div>';
 
                         var imageSide = '<div style="width:50%;height:100%;' + bgStyle + 'position:relative;display:flex;align-items:center;justify-content:center;">' +
-                            '<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:' + overlayColor + ';opacity:' + overlayOpacity + ';"></div>' +
+                            overlayDiv +
                             '<div style="position:relative;z-index:2;text-align:center;padding:20px;color:' + textColor + ';">' +
                             '<div style="font-size:16px;font-weight:600;margin-bottom:5px;">' + heading + '</div>' +
                             '<div style="font-size:11px;opacity:0.9;">' + subheading + '</div>' +
                             '</div>' +
                             '</div>';
 
-                        var formSide = '<div style="width:50%;height:100%;background:' + formBg + ';display:flex;align-items:center;justify-content:center;">' +
+                        // Form background - check for gradient
+                        var formUseGradient = $('input[name="form_use_gradient"]').is(':checked');
+                        var formBgEnd = $('.wp-color-picker[name="form_bg_end"]').val() || '#ffffff';
+                        var formBgStyle = formUseGradient ?
+                            'linear-gradient(135deg, ' + formBg + ' 0%, ' + formBgEnd + ' 100%)' :
+                            formBg;
+
+                        var formSide = '<div style="width:50%;height:100%;background:' + formBgStyle + ';display:flex;align-items:center;justify-content:center;">' +
                             '<div style="text-align:center;width:140px;">' +
                             '<img src="' + logoUrl + '" style="width:' + (logoW * 0.5) + 'px;height:' + (logoH * 0.5) + 'px;object-fit:contain;margin-bottom:10px;">' +
                             '<div style="margin-bottom:8px;"><input type="text" style="' + inputStyle + '" value="Username"></div>' +

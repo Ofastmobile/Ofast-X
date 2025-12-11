@@ -192,7 +192,8 @@ class Ofast_X_SMTP_Admin
             );
         }
 
-        $max_weekly = max(array_column($weekly_data, 'count')) ?: 1;
+        $weekly_counts = array_column($weekly_data, 'count');
+        $max_weekly = !empty($weekly_counts) ? max($weekly_counts) : 1;
 ?>
         <div class="wrap">
             <h1>SMTP Dashboard</h1>

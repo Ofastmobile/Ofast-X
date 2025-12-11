@@ -352,15 +352,21 @@ class Ofast_X_Email_Admin
                 });
                 </script>';
 
-        // Preview Modal HTML
+        // Preview Modal HTML with Device Toggle
         echo '<div id="email-preview-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:999999;overflow-y:auto;">
-            <div style="position:relative;width:90%;max-width:800px;margin:30px auto;background:white;border-radius:8px;overflow:hidden;">
-                <div style="padding:15px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
-                    <h3 style="margin:0;">Email Preview</h3>
-                    <button id="close-preview-modal" style="background:none;border:none;font-size:24px;cursor:pointer;color:#64748b;">&times;</button>
+            <div style="position:relative;width:90%;max-width:900px;margin:20px auto;background:#1e293b;border-radius:12px;overflow:hidden;">
+                <div style="padding:12px 20px;background:#0f172a;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center;">
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <h3 style="margin:0;color:#fff;font-size:14px;">Email Preview</h3>
+                        <div style="display:flex;gap:5px;margin-left:15px;">
+                            <button type="button" class="device-btn active" data-width="600" style="padding:6px 12px;border:1px solid #475569;background:#334155;color:#fff;border-radius:4px;cursor:pointer;font-size:12px;">Desktop</button>
+                            <button type="button" class="device-btn" data-width="375" style="padding:6px 12px;border:1px solid #475569;background:transparent;color:#94a3b8;border-radius:4px;cursor:pointer;font-size:12px;">Mobile</button>
+                        </div>
+                    </div>
+                    <button id="close-preview-modal" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;">&times;</button>
                 </div>
-                <div id="preview-content" style="padding:20px;max-height:calc(100vh - 200px);overflow-y:auto;">
-                    <!-- Preview will load here -->
+                <div style="padding:20px;background:#1e293b;display:flex;justify-content:center;">
+                    <iframe id="preview-iframe" style="width:600px;height:calc(100vh - 150px);border:none;border-radius:8px;background:#fff;transition:width 0.3s ease;"></iframe>
                 </div>
             </div>
         </div>';
@@ -368,6 +374,14 @@ class Ofast_X_Email_Admin
         // Preview Modal JavaScript
         echo '<script>
         jQuery(document).ready(function($) {
+            // Device toggle buttons
+            $(".device-btn").click(function() {
+                var width = $(this).data("width");
+                $("#preview-iframe").css("width", width + "px");
+                $(".device-btn").removeClass("active").css({"background":"transparent","color":"#94a3b8"});
+                $(this).addClass("active").css({"background":"#334155","color":"#fff"});
+            });
+            
             // Preview Email Button
             $("#preview-email-btn").click(function(e) {
                 e.preventDefault();
@@ -387,9 +401,10 @@ class Ofast_X_Email_Admin
                     return;
                 }
                 
-                // Show loading
-                $("#preview-content").html("<p style=\'text-align:center;padding:40px;\'><span class=\'spinner is-active\' style=\'float:none;\'></span><br>Generating preview...</p>");
+                // Show modal with loading
                 $("#email-preview-modal").fadeIn();
+                var iframe = document.getElementById("preview-iframe");
+                iframe.srcdoc = "<div style=\'display:flex;align-items:center;justify-content:center;height:100%;font-family:sans-serif;color:#64748b;\'>Loading preview...</div>";
                 
                 // AJAX to get preview
                 $.post(ajaxurl, {
@@ -399,9 +414,9 @@ class Ofast_X_Email_Admin
                     message: message
                 }, function(response) {
                     if (response.success) {
-                        $("#preview-content").html(response.data.html);
+                        iframe.srcdoc = response.data.html;
                     } else {
-                        $("#preview-content").html("<p style=\'color:red;\'>Error loading preview</p>");
+                        iframe.srcdoc = "<div style=\'color:red;padding:20px;\'>Error loading preview</div>";
                     }
                 });
             });

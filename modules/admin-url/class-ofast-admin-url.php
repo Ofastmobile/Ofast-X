@@ -117,6 +117,22 @@ class Ofast_X_Admin_Url
             return;
         }
 
+        // Handle resend email
+        if (isset($_POST['resend_email'])) {
+            check_admin_referer('ofast_admin_url_save', '_wpnonce');
+            if (current_user_can('manage_options')) {
+                $custom_slug = get_option('ofast_admin_custom_slug', '');
+                $emergency_key = get_option('ofast_admin_emergency_key', '');
+                if (!empty($custom_slug) && !empty($emergency_key)) {
+                    $this->send_admin_notification($custom_slug, $emergency_key);
+                    add_settings_error('ofast_admin_url', 'resent', 'Login details have been sent to ' . get_option('admin_email') . '!', 'success');
+                } else {
+                    add_settings_error('ofast_admin_url', 'no_url', 'No custom URL is configured. Set one first.', 'error');
+                }
+            }
+            return;
+        }
+
         if (!isset($_POST['ofast_save_admin_url'])) {
             return;
         }

@@ -74,7 +74,17 @@ class Ofast_X_Redirects
 
         $id = isset($_POST['redirect_id']) ? intval($_POST['redirect_id']) : 0;
         $source_url = isset($_POST['source_url']) ? sanitize_text_field($_POST['source_url']) : '';
-        $target_url = isset($_POST['target_url']) ? esc_url_raw($_POST['target_url']) : '';
+
+        // FIXED: Allow relative paths (like / or /page) not just full URLs
+        $raw_target = isset($_POST['target_url']) ? trim($_POST['target_url']) : '';
+        if (strpos($raw_target, '/') === 0) {
+            // Relative path - sanitize as text field to allow / and /path
+            $target_url = sanitize_text_field($raw_target);
+        } else {
+            // Full URL - use esc_url_raw
+            $target_url = esc_url_raw($raw_target);
+        }
+
         $type = isset($_POST['redirect_type']) ? sanitize_text_field($_POST['redirect_type']) : '301';
         $is_regex = isset($_POST['is_regex']) ? 1 : 0;
         $active = isset($_POST['active']) ? 1 : 0;
@@ -181,8 +191,19 @@ class Ofast_X_Redirects
                     }
                 }
             } else {
-                // Exact matching (case-insensitive)
-                if (strtolower($request_path) === strtolower($redirect->source_url)) {
+                // Exact matching (case-insensitive, normalize trailing slashes)
+                $source_normalized = rtrim(strtolower($redirect->source_url), '/');
+                $request_normalized = rtrim(strtolower($request_path), '/');
+
+                // Handle root path special case
+                if ($source_normalized === '') {
+                    $source_normalized = '/';
+                }
+                if ($request_normalized === '') {
+                    $request_normalized = '/';
+                }
+
+                if ($request_normalized === $source_normalized) {
                     $matched = true;
                     $target = $redirect->target_url;
                 }

@@ -383,6 +383,16 @@ class Ofast_X_WhatsApp
                 'sender_id' => $_POST['sender_id'] ?? '',
                 'admin_number' => $_POST['admin_number']
             ));
+
+            // Save notification types
+            $notify_types = array(
+                'user_registration' => isset($_POST['notify_user_registration']) ? 1 : 0,
+                'form_submission' => isset($_POST['notify_form_submission']) ? 1 : 0,
+                'woocommerce' => isset($_POST['notify_woocommerce']) ? 1 : 0,
+                'admin_only' => isset($_POST['notify_admin_only']) ? 1 : 0,
+            );
+            update_option('ofast_whatsapp_notify_types', $notify_types);
+
             $this->load_settings();
             echo '<div class="notice notice-success"><p>WhatsApp settings saved!</p></div>';
         }
@@ -392,19 +402,50 @@ class Ofast_X_WhatsApp
             $result = $this->test_connection();
             if ($result['success']) {
                 $info = isset($result['balance']) ? "Balance: {$result['balance']}" : ($result['account_name'] ?? 'Connected');
-                echo '<div class="notice notice-success"><p>Connected to ' . esc_html($result['provider']) . '! ' . esc_html($info) . '</p></div>';
+                set_transient('ofast_whatsapp_test_result', array('type' => 'success', 'message' => 'Connected to ' . $result['provider'] . '! ' . $info), 30);
             } else {
-                echo '<div class="notice notice-error"><p>Connection failed: ' . esc_html($result['error']) . '</p></div>';
+                set_transient('ofast_whatsapp_test_result', array('type' => 'error', 'message' => 'Connection failed: ' . $result['error']), 30);
             }
+            wp_redirect($_SERVER['REQUEST_URI']);
+            exit;
+        }
+
+        // Handle send test message
+        if (isset($_POST['ofast_send_test_whatsapp']) && wp_verify_nonce($_POST['whatsapp_nonce'], 'ofast_whatsapp_save')) {
+            if ($this->is_configured() && !empty($this->admin_number)) {
+                $test_message = "Ofast X WhatsApp Test\n\nThis is a test message from " . get_bloginfo('name') . ".\n\nIf you received this, your WhatsApp notifications are working!\n\nTime: " . current_time('F j, Y g:i a');
+                $result = $this->send_message($this->admin_number, $test_message);
+                if ($result) {
+                    set_transient('ofast_whatsapp_test_result', array('type' => 'success', 'message' => 'Test message sent to ' . $this->admin_number . '! Check your WhatsApp.'), 30);
+                } else {
+                    set_transient('ofast_whatsapp_test_result', array('type' => 'error', 'message' => 'Failed to send test message. Check your API credentials and balance.'), 30);
+                }
+            } else {
+                set_transient('ofast_whatsapp_test_result', array('type' => 'error', 'message' => 'Please configure settings and admin number first.'), 30);
+            }
+            wp_redirect($_SERVER['REQUEST_URI']);
+            exit;
         }
 
         $is_configured = $this->is_configured();
         $is_termii = $this->provider === self::PROVIDER_TERMII;
+
+        // Get and clear test result
+        $test_result = get_transient('ofast_whatsapp_test_result');
+        delete_transient('ofast_whatsapp_test_result');
 ?>
         <div class="ofast-settings-card" style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px;">
             <h3 style="margin-top: 0;">
                 WhatsApp Notifications
             </h3>
+
+            <?php if ($test_result): ?>
+                <div style="padding: 12px 15px; border-radius: 6px; margin-bottom: 15px; <?php echo $test_result['type'] === 'success' ? 'background: #d4edda; border: 1px solid #c3e6cb; color: #155724;' : 'background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24;'; ?>">
+                    <strong><?php echo $test_result['type'] === 'success' ? '✓' : '✗'; ?></strong>
+                    <?php echo esc_html($test_result['message']); ?>
+                </div>
+            <?php endif; ?>
+
             <p style="color: #666; margin-bottom: 15px;">
                 Send instant WhatsApp notifications when forms are submitted.
                 <?php if ($is_configured): ?>
@@ -466,9 +507,58 @@ class Ofast_X_WhatsApp
                         </td>
                     </tr>
                 </table>
+
+                <!-- Notification Types Section -->
+                <h4 style="margin: 20px 0 10px; padding-top: 15px; border-top: 1px solid #ddd;">Notification Types</h4>
+                <p class="description" style="margin-bottom: 15px;">Select which events should trigger WhatsApp notifications.</p>
+                <?php
+                $notify_types = get_option('ofast_whatsapp_notify_types', array('form_submission' => 1));
+                ?>
+                <table class="form-table" style="margin: 0;">
+                    <tr>
+                        <th style="padding: 8px 0;">New User Registrations</th>
+                        <td style="padding: 8px 0;">
+                            <label>
+                                <input type="checkbox" name="notify_user_registration" value="1" <?php checked(!empty($notify_types['user_registration'])); ?>>
+                                Notify when a new user registers
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th style="padding: 8px 0;">Form Submissions</th>
+                        <td style="padding: 8px 0;">
+                            <label>
+                                <input type="checkbox" name="notify_form_submission" value="1" <?php checked(!empty($notify_types['form_submission'])); ?>>
+                                Notify when contact/newsletter forms are submitted
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th style="padding: 8px 0;">WooCommerce Orders</th>
+                        <td style="padding: 8px 0;">
+                            <label>
+                                <input type="checkbox" name="notify_woocommerce" value="1" <?php checked(!empty($notify_types['woocommerce'])); ?>>
+                                Notify when new orders are placed
+                            </label>
+                            <p class="description">Requires WooCommerce to be active</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th style="padding: 8px 0;">Admin Alerts Only</th>
+                        <td style="padding: 8px 0;">
+                            <label>
+                                <input type="checkbox" name="notify_admin_only" value="1" <?php checked(!empty($notify_types['admin_only'])); ?>>
+                                Only send to admin (don't notify users)
+                            </label>
+                        </td>
+                    </tr>
+                </table>
                 <p style="margin-top: 15px;">
                     <button type="submit" name="ofast_save_whatsapp" class="button button-primary">Save Settings</button>
                     <button type="submit" name="ofast_test_whatsapp" class="button" style="margin-left: 10px;">Test Connection</button>
+                    <?php if ($is_configured): ?>
+                        <button type="submit" name="ofast_send_test_whatsapp" class="button" style="margin-left: 10px; background: #10b981; border-color: #10b981; color: #fff;">Send Test Message</button>
+                    <?php endif; ?>
                     <a href="https://termii.com" target="_blank" class="button" style="margin-left: 10px;" id="provider_link">Get Termii</a>
                 </p>
             </form>

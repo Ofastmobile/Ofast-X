@@ -82,32 +82,47 @@ class Ofast_X_Google_Sheets
     /**
      * Save settings
      */
-    public static function save_settings($data)
+    public static function save_settings($data, $files = array())
     {
         $settings = array(
             'enabled' => !empty($data['enabled']),
             'spreadsheet_id' => sanitize_text_field($data['spreadsheet_id'] ?? ''),
         );
 
-        // Handle credentials JSON
-        if (!empty($data['credentials'])) {
-            $json = $data['credentials'];
+        $json = '';
 
+        // Priority 1: Check for file upload
+        if (!empty($files['credentials_file']['tmp_name']) && is_uploaded_file($files['credentials_file']['tmp_name'])) {
+            $json = file_get_contents($files['credentials_file']['tmp_name']);
+        }
+        // Priority 2: Check for pasted JSON
+        elseif (!empty($data['credentials'])) {
+            // Use wp_unslash to prevent stripping of special chars
+            $json = wp_unslash($data['credentials']);
+        }
+
+        // Handle credentials JSON
+        if (!empty($json)) {
             // Validate JSON
             $decoded = json_decode($json, true);
-            if (json_last_error() === JSON_ERROR_NONE) {
+            if (json_last_error() === JSON_ERROR_NONE && isset($decoded['client_email'])) {
                 // Encrypt before storing
                 if (class_exists('Ofast_X_Security_Hardening')) {
                     $settings['credentials'] = Ofast_X_Security_Hardening::encrypt_option($json);
                 } else {
-                    $settings['credentials'] = $json;
+                    $settings['credentials'] = base64_encode($json);
                 }
+                // Store service account email for display
+                $settings['service_email'] = sanitize_email($decoded['client_email']);
             }
         } else {
             // Keep existing credentials
             $existing = get_option('ofast_google_sheets', array());
             if (!empty($existing['credentials'])) {
                 $settings['credentials'] = $existing['credentials'];
+            }
+            if (!empty($existing['service_email'])) {
+                $settings['service_email'] = $existing['service_email'];
             }
         }
 
@@ -259,7 +274,7 @@ class Ofast_X_Google_Sheets
                 wp_die('Security check failed');
             }
 
-            self::save_settings($_POST);
+            self::save_settings($_POST, $_FILES);
             $this->load_settings();
             echo '<div class="notice notice-success"><p>Google Sheets settings saved!</p></div>';
         }
@@ -270,7 +285,7 @@ class Ofast_X_Google_Sheets
         <h3>Google Sheets Integration</h3>
         <p>Sync form submissions to Google Sheets automatically.</p>
 
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             <?php wp_nonce_field('ofast_sheets_save', 'sheets_nonce'); ?>
 
             <table class="form-table">
@@ -296,12 +311,28 @@ class Ofast_X_Google_Sheets
                     <th scope="row">Service Account Credentials</th>
                     <td>
                         <?php if ($has_credentials): ?>
-                            <p style="color:green;margin-bottom:10px;">Credentials are stored (encrypted)</p>
+                            <p style="color:green;margin-bottom:10px;">
+                                ✓ Credentials stored (encrypted)
+                                <?php if (!empty($settings['service_email'])): ?>
+                                    <br><small>Service account: <?php echo esc_html($settings['service_email']); ?></small>
+                                <?php endif; ?>
+                            </p>
                         <?php endif; ?>
-                        <textarea name="credentials" rows="6" class="large-text code" placeholder="Paste your service account JSON here..."><?php echo $has_credentials ? '' : ''; ?></textarea>
-                        <p class="description">
+
+                        <div style="margin-bottom: 15px;">
+                            <label><strong>Upload JSON File:</strong></label><br>
+                            <input type="file" name="credentials_file" accept=".json" style="margin-top: 5px;">
+                            <p class="description">Upload your service-account-key.json file directly</p>
+                        </div>
+
+                        <div>
+                            <label><strong>Or Paste JSON:</strong></label><br>
+                            <textarea name="credentials" rows="6" class="large-text code" placeholder="Paste your service account JSON here..."></textarea>
+                        </div>
+
+                        <p class="description" style="margin-top: 10px;">
                             <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Create a service account</a>
-                            and paste the JSON key here. Remember to share your spreadsheet with the service account email.
+                            and download the JSON key. Share your spreadsheet with the service account email.
                         </p>
                     </td>
                 </tr>

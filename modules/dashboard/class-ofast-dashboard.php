@@ -160,41 +160,200 @@ class Ofast_X_Dashboard
         $loaded_modules = $this->get_loaded_modules();
 
     ?>
-        <div class="wrap">
-            <h1>Ofast X Dashboard</h1>
-            <p class="description">Overview of your site's users and active modules</p>
+        <style>
+            .ofast-dashboard {
+                max-width: 1200px;
+            }
+
+            .ofast-header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                padding: 30px;
+                border-radius: 16px;
+                margin-bottom: 30px;
+                color: #fff;
+            }
+
+            .ofast-header h1 {
+                margin: 0;
+                font-size: 28px;
+                font-weight: 700;
+            }
+
+            .ofast-header p {
+                margin: 8px 0 0;
+                opacity: 0.9;
+                font-size: 15px;
+            }
+
+            .ofast-stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+                gap: 16px;
+                margin-bottom: 30px;
+            }
+
+            .ofast-stat-card {
+                background: #fff;
+                padding: 20px;
+                border-radius: 12px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+                border: 1px solid #e5e7eb;
+                transition: transform 0.2s, box-shadow 0.2s;
+            }
+
+            .ofast-stat-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            }
+
+            .ofast-stat-card.primary {
+                background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+                color: #fff;
+            }
+
+            .ofast-stat-label {
+                font-size: 13px;
+                opacity: 0.8;
+                margin: 0;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .ofast-stat-value {
+                font-size: 32px;
+                font-weight: 700;
+                margin: 8px 0 0;
+                line-height: 1;
+            }
+
+            .ofast-stat-card.primary .ofast-stat-label {
+                color: rgba(255, 255, 255, 0.85);
+            }
+
+            .ofast-section-title {
+                font-size: 18px;
+                font-weight: 600;
+                color: #1e293b;
+                margin: 0 0 16px;
+                padding-bottom: 12px;
+                border-bottom: 2px solid #e5e7eb;
+            }
+
+            .ofast-modules-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 12px;
+            }
+
+            .ofast-module-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                background: #fff;
+                padding: 14px 18px;
+                border-radius: 10px;
+                border: 1px solid #e5e7eb;
+            }
+
+            .ofast-module-name {
+                font-size: 14px;
+                font-weight: 500;
+                color: #1e293b;
+            }
+
+            .ofast-module-status {
+                padding: 4px 10px;
+                border-radius: 20px;
+                font-size: 11px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+            }
+
+            .ofast-module-status.active {
+                background: #dcfce7;
+                color: #166534;
+            }
+
+            .ofast-quick-links {
+                display: flex;
+                gap: 12px;
+                flex-wrap: wrap;
+                margin-top: 30px;
+            }
+
+            .ofast-quick-link {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px 20px;
+                background: #fff;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                color: #1e293b;
+                text-decoration: none;
+                font-size: 14px;
+                font-weight: 500;
+                transition: all 0.2s;
+            }
+
+            .ofast-quick-link:hover {
+                background: #f8fafc;
+                border-color: #667eea;
+                color: #667eea;
+            }
+        </style>
+
+        <div class="wrap ofast-dashboard">
+            <!-- Header -->
+            <div class="ofast-header">
+                <h1>Ofast X Dashboard</h1>
+                <p>Welcome back! Here's an overview of your site's users and active modules.</p>
+            </div>
 
             <!-- User Statistics -->
-            <h2>User Statistics</h2>
-            <div style="display:flex;flex-wrap:wrap;gap:20px;margin-top:20px;">
-
+            <h2 class="ofast-section-title">User Statistics</h2>
+            <div class="ofast-stats-grid">
                 <!-- Total Users Card -->
-                <div style="flex:1;min-width:180px;background:#0073aa;color:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-                    <h3 style="margin:0;font-size:16px;">Total Users</h3>
-                    <p style="font-size:32px;font-weight:bold;margin:10px 0 0;"><?php echo esc_html($all_users['total_users']); ?></p>
+                <div class="ofast-stat-card primary">
+                    <p class="ofast-stat-label">Total Users</p>
+                    <p class="ofast-stat-value"><?php echo esc_html($all_users['total_users']); ?></p>
                 </div>
 
                 <?php foreach ($all_users['avail_roles'] as $role => $count): ?>
                     <?php $label = isset($roles[$role]['name']) ? $roles[$role]['name'] : ucfirst($role); ?>
-                    <div style="flex:1;min-width:180px;background:#f1f1f1;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-                        <h4 style="margin:0;font-size:15px;color:#333;"><?php echo esc_html($label); ?></h4>
-                        <p style="font-size:24px;font-weight:bold;margin:10px 0 0;color:#0073aa;"><?php echo esc_html($count); ?></p>
+                    <div class="ofast-stat-card">
+                        <p class="ofast-stat-label"><?php echo esc_html($label); ?></p>
+                        <p class="ofast-stat-value" style="color: #3b82f6;"><?php echo esc_html($count); ?></p>
                     </div>
                 <?php endforeach; ?>
-
             </div>
 
-            <!-- Module Status -->
-            <h2 style="margin-top:40px;">Active Modules</h2>
-            <div class="card" style="max-width:600px">
-                <h3 style="margin-top:0;">Plugin is working! Modules loaded:</h3>
-                <ul style="list-style:none;padding:0;">
-                    <?php foreach ($loaded_modules as $module): ?>
-                        <li style="padding:8px 0;border-bottom:1px solid #eee;">
-                            <?php echo esc_html($module); ?>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
+            <!-- Active Modules -->
+            <h2 class="ofast-section-title">Active Modules (<?php echo count($loaded_modules); ?>)</h2>
+            <div class="ofast-modules-grid">
+                <?php foreach ($loaded_modules as $module): ?>
+                    <div class="ofast-module-item">
+                        <span class="ofast-module-name"><?php echo esc_html($module); ?></span>
+                        <span class="ofast-module-status active">Active</span>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <!-- Quick Links -->
+            <div class="ofast-quick-links">
+                <a href="<?php echo admin_url('admin.php?page=ofast-emailer'); ?>" class="ofast-quick-link">
+                    <span>Send Email</span>
+                </a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-smtp'); ?>" class="ofast-quick-link">
+                    <span>SMTP Settings</span>
+                </a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-forms'); ?>" class="ofast-quick-link">
+                    <span>Contact Forms</span>
+                </a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-notification-channels'); ?>" class="ofast-quick-link">
+                    <span>Notifications</span>
+                </a>
             </div>
 
         </div>

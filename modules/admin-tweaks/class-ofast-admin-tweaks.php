@@ -60,7 +60,12 @@ class Ofast_X_Admin_Tweaks
 
         // Rename Howdy to Hello
         if (!empty($settings['rename_howdy'])) {
-            add_filter('admin_bar_menu', array($this, 'rename_howdy'), 25);
+            add_filter('admin_bar_menu', array($this, 'rename_howdy'), 200);
+        }
+
+        // Hide Howdy completely
+        if (!empty($settings['hide_howdy'])) {
+            add_filter('admin_bar_menu', array($this, 'hide_howdy'), 200);
         }
 
         // Disable XML-RPC
@@ -194,6 +199,24 @@ class Ofast_X_Admin_Tweaks
     }
 
     /**
+     * Hide Howdy greeting completely
+     */
+    public function hide_howdy($wp_admin_bar)
+    {
+        $my_account = $wp_admin_bar->get_node('my-account');
+        if ($my_account) {
+            // Remove "Howdy, " prefix completely - show just the display name
+            $current_user = wp_get_current_user();
+            $display_name = $current_user->display_name;
+            $newtitle = preg_replace('/^Howdy,\s*/', '', $my_account->title);
+            $wp_admin_bar->add_node(array(
+                'id' => 'my-account',
+                'title' => $newtitle,
+            ));
+        }
+    }
+
+    /**
      * Remove X-Pingback header
      */
     public function remove_xmlrpc_headers($headers)
@@ -301,6 +324,7 @@ class Ofast_X_Admin_Tweaks
             'remove_wp_logo' => isset($_POST['ofast_remove_wp_logo']) ? 1 : 0,
             'remove_new_content' => isset($_POST['ofast_remove_new_content']) ? 1 : 0,
             'rename_howdy' => isset($_POST['ofast_rename_howdy']) ? 1 : 0,
+            'hide_howdy' => isset($_POST['ofast_hide_howdy']) ? 1 : 0,
             'hide_admin_bar_roles' => isset($_POST['ofast_hide_bar_roles']) ? array_map('sanitize_text_field', $_POST['ofast_hide_bar_roles']) : array(),
             'disable_xmlrpc' => isset($_POST['ofast_disable_xmlrpc']) ? 1 : 0,
             'obfuscate_author_slugs' => isset($_POST['ofast_obfuscate_author_slugs']) ? 1 : 0,
@@ -399,6 +423,15 @@ class Ofast_X_Admin_Tweaks
                             <label>
                                 <input type="checkbox" name="ofast_rename_howdy" value="1" <?php checked(!empty($settings['rename_howdy'])); ?>>
                                 Change "Howdy, Username" to "Hello, Username" in admin bar
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Hide Howdy Greeting</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="ofast_hide_howdy" value="1" <?php checked(!empty($settings['hide_howdy'])); ?>>
+                                Completely remove the "Howdy" greeting (shows only username)
                             </label>
                         </td>
                     </tr>

@@ -22,6 +22,55 @@ class Ofast_X_Email_Admin
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('wp_ajax_ofast_preview_email', array($this, 'ajax_preview_email'));
+
+        // Auto-repair table on admin init (runs once)
+        add_action('admin_init', array($this, 'maybe_repair_table'));
+    }
+
+    /**
+     * Auto-repair email logs table if columns are missing
+     */
+    public function maybe_repair_table()
+    {
+        // Only run once per day to avoid performance issues
+        $last_check = get_option('ofast_email_table_checked', 0);
+        if (time() - $last_check < DAY_IN_SECONDS) {
+            return;
+        }
+        update_option('ofast_email_table_checked', time());
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_email_logs';
+
+        // Check if table exists
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table'") !== $table) {
+            // Create the table
+            $charset = $wpdb->get_charset_collate();
+            $sql = "CREATE TABLE $table (
+                id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+                subject varchar(255) NOT NULL,
+                body longtext,
+                sent_at datetime DEFAULT CURRENT_TIMESTAMP,
+                recipient_count int(11) DEFAULT 0,
+                status varchar(50) DEFAULT 'sent',
+                notes text,
+                PRIMARY KEY (id)
+            ) $charset;";
+            require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+            dbDelta($sql);
+            return;
+        }
+
+        // Check for missing columns and add them
+        $columns = $wpdb->get_col("SHOW COLUMNS FROM $table");
+
+        if (!in_array('body', $columns)) {
+            $wpdb->query("ALTER TABLE $table ADD COLUMN body longtext AFTER subject");
+        }
+
+        if (!in_array('status', $columns)) {
+            $wpdb->query("ALTER TABLE $table ADD COLUMN status varchar(50) DEFAULT 'sent' AFTER recipient_count");
+        }
     }
 
     /**
@@ -203,7 +252,66 @@ class Ofast_X_Email_Admin
      */
     private function render_send_form($result_message, $roles)
     {
-        echo '<div class="wrap"><h2>Send Email</h2>' . $result_message . '
+        // Enhanced toast notification
+        $toast_html = '';
+        if (!empty($result_message)) {
+            $is_success = strpos($result_message, 'notice-success') !== false;
+            $toast_color = $is_success ? '#10b981' : '#ef4444';
+            $toast_icon = $is_success ? '✓' : '✗';
+            // Extract message text
+            preg_match('/<p>(.*?)<\/p>/', $result_message, $matches);
+            $message_text = $matches[1] ?? 'Operation completed';
+
+            $toast_html = '
+            <div id="ofast-email-toast" style="
+                position: fixed;
+                top: 50px;
+                right: 20px;
+                z-index: 999999;
+                background: ' . $toast_color . ';
+                color: #fff;
+                padding: 16px 24px;
+                border-radius: 10px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                font-size: 14px;
+                font-weight: 500;
+                animation: slideIn 0.3s ease;
+            ">
+                <span style="font-size: 20px;">' . $toast_icon . '</span>
+                <span>' . esc_html($message_text) . '</span>
+                <button onclick="this.parentElement.remove()" style="
+                    background: none;
+                    border: none;
+                    color: #fff;
+                    font-size: 18px;
+                    cursor: pointer;
+                    margin-left: 10px;
+                    opacity: 0.8;
+                ">&times;</button>
+            </div>
+            <style>
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+            </style>
+            <script>
+                setTimeout(function() {
+                    var toast = document.getElementById("ofast-email-toast");
+                    if (toast) {
+                        toast.style.transition = "all 0.3s ease";
+                        toast.style.transform = "translateX(100%)";
+                        toast.style.opacity = "0";
+                        setTimeout(function() { toast.remove(); }, 300);
+                    }
+                }, 5000);
+            </script>';
+        }
+
+        echo '<div class="wrap"><h2>Send Email</h2>' . $toast_html . '
         <form method="post" enctype="multipart/form-data" id="email-form">
             <p><label><strong>Email Subject:</strong><br>
             <input type="text" name="subject" style="width: 100%;" required></label></p>
@@ -573,16 +681,22 @@ class Ofast_X_Email_Admin
     /**
      * Helper: Log email
      */
-    private function log_email($subject, $recipient_count, $notes, $body = '')
+    private function log_email($subject, $recipient_count, $notes, $body = '', $status = 'sent')
     {
         global $wpdb;
-        $wpdb->insert($wpdb->prefix . 'ofast_email_logs', [
+        $result = $wpdb->insert($wpdb->prefix . 'ofast_email_logs', [
             'subject' => $subject,
             'body' => $body,
             'sent_at' => current_time('mysql'),
             'recipient_count' => $recipient_count,
+            'status' => $status,
             'notes' => $notes
         ]);
+
+        // Debug: Log if insert failed
+        if ($result === false) {
+            error_log('Ofast Emailer: Failed to log email - ' . $wpdb->last_error);
+        }
     }
 
     /**

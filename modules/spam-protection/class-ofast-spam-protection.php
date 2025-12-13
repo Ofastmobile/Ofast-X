@@ -24,6 +24,115 @@ class Ofast_X_Spam_Protection
 
         // Admin menu
         add_action('admin_menu', array($this, 'add_admin_menu'));
+
+        // Get protection settings
+        $protect_comments = get_option('ofast_spam_protect_comments', false);
+        $protect_cf7 = get_option('ofast_spam_protect_cf7', false);
+
+        // Comment form protection
+        if ($protect_comments && $this->is_configured()) {
+            // Render widget in comment form
+            add_action('comment_form_after_fields', array($this, 'render_comment_widget'));
+            add_action('comment_form_logged_in_after', array($this, 'render_comment_widget'));
+
+            // Verify on comment submission
+            add_filter('preprocess_comment', array($this, 'verify_comment'), 10, 1);
+
+            // Enqueue script on pages with comments
+            add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_script'));
+        }
+
+        // Contact Form 7 integration
+        if ($protect_cf7 && $this->is_configured()) {
+            // Add field to CF7 forms
+            add_filter('wpcf7_form_elements', array($this, 'add_cf7_widget'));
+
+            // Validate CF7 submission
+            add_filter('wpcf7_validate', array($this, 'validate_cf7'), 20, 2);
+
+            // Enqueue script on CF7 pages
+            add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_script'));
+        }
+    }
+
+    /**
+     * Enqueue frontend script for Turnstile
+     */
+    public function enqueue_frontend_script()
+    {
+        $provider = $this->get_active_provider();
+        if ($provider === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
+            echo Ofast_X_Turnstile::render_script();
+        }
+    }
+
+    /**
+     * Render Turnstile widget in comment form
+     */
+    public function render_comment_widget()
+    {
+        $provider = $this->get_active_provider();
+        if ($provider === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
+            echo '<p class="comment-form-turnstile" style="margin: 10px 0;">';
+            echo Ofast_X_Turnstile::get_instance()->render_widget('comment');
+            echo '</p>';
+        }
+    }
+
+    /**
+     * Verify comment submission
+     */
+    public function verify_comment($commentdata)
+    {
+        // Skip for logged-in admins
+        if (current_user_can('manage_options')) {
+            return $commentdata;
+        }
+
+        $token = isset($_POST['cf-turnstile-response']) ? sanitize_text_field($_POST['cf-turnstile-response']) : '';
+        $result = $this->verify($token);
+
+        if (!$result['success']) {
+            wp_die(
+                '<strong>Spam protection failed:</strong> ' . esc_html($result['error'] ?? 'Verification required'),
+                'Comment Blocked',
+                array('response' => 403, 'back_link' => true)
+            );
+        }
+
+        return $commentdata;
+    }
+
+    /**
+     * Add Turnstile widget to Contact Form 7
+     */
+    public function add_cf7_widget($elements)
+    {
+        $provider = $this->get_active_provider();
+        if ($provider === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
+            $widget = '<div class="wpcf7-turnstile" style="margin: 15px 0;">';
+            $widget .= Ofast_X_Turnstile::get_instance()->render_widget('cf7');
+            $widget .= '</div>';
+
+            // Add before submit button if possible
+            $elements = preg_replace('/(<input[^>]*type=["\']submit["\'][^>]*>)/i', $widget . '$1', $elements, 1);
+        }
+        return $elements;
+    }
+
+    /**
+     * Validate Contact Form 7 submission
+     */
+    public function validate_cf7($result, $tags)
+    {
+        $token = isset($_POST['cf-turnstile-response']) ? sanitize_text_field($_POST['cf-turnstile-response']) : '';
+        $verify = $this->verify($token);
+
+        if (!$verify['success']) {
+            $result->invalidate('', $verify['error'] ?? 'Spam verification failed');
+        }
+
+        return $result;
     }
 
     /**
@@ -53,6 +162,10 @@ class Ofast_X_Spam_Protection
         // Handle reCAPTCHA save
         if (isset($_POST['ofast_save_recaptcha']) && wp_verify_nonce($_POST['recaptcha_nonce'], 'ofast_recaptcha_save')) {
             update_option('ofast_spam_provider', sanitize_text_field($_POST['spam_provider']));
+
+            // Save protection settings
+            update_option('ofast_spam_protect_comments', isset($_POST['protect_comments']) ? 1 : 0);
+            update_option('ofast_spam_protect_cf7', isset($_POST['protect_cf7']) ? 1 : 0);
 
             if (!empty($_POST['recaptcha_site_key'])) {
                 update_option('ofast_recaptcha_site_key', sanitize_text_field($_POST['recaptcha_site_key']));
@@ -150,6 +263,38 @@ class Ofast_X_Spam_Protection
                         </tr>
                     </table>
                 </div>
+
+                <hr>
+
+                <!-- Where to Apply Protection -->
+                <h2>Where to Apply Protection</h2>
+                <p class="description">Select which forms should be protected by spam protection.</p>
+                <?php
+                $protect_comments = get_option('ofast_spam_protect_comments', false);
+                $protect_cf7 = get_option('ofast_spam_protect_cf7', false);
+                ?>
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">WordPress Comments</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="protect_comments" value="1" <?php checked($protect_comments); ?>>
+                                Add spam protection to comment forms
+                            </label>
+                            <p class="description">Protects blog post comments from spam bots.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Contact Form 7</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="protect_cf7" value="1" <?php checked($protect_cf7); ?>>
+                                Add spam protection to Contact Form 7 forms
+                            </label>
+                            <p class="description">Requires Contact Form 7 plugin to be installed.</p>
+                        </td>
+                    </tr>
+                </table>
 
                 <p>
                     <button type="submit" name="ofast_save_recaptcha" class="button button-primary">Save Settings</button>

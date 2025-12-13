@@ -731,6 +731,7 @@ class Ofast_X_Email_Admin
         $font_family = get_option('ofast_email_font_family', 'system');
         $font_size = get_option('ofast_email_font_size', '15');
         $logo_width = get_option('ofast_email_logo_width', '120');
+        $logo_height = get_option('ofast_email_logo_height', '0');
 
         wp_enqueue_style('wp-color-picker');
         wp_enqueue_script('wp-color-picker');
@@ -838,14 +839,10 @@ class Ofast_X_Email_Admin
                                 </tr>
                                 <tr>
                                     <th>Logo Size</th>
-                                    <td>
-                                        <select name="logo_width" style="width: 100%;">
-                                            <option value="80" <?php selected($logo_width, '80'); ?>>Small (80px)</option>
-                                            <option value="100" <?php selected($logo_width, '100'); ?>>Medium (100px)</option>
-                                            <option value="120" <?php selected($logo_width, '120'); ?>>Default (120px)</option>
-                                            <option value="150" <?php selected($logo_width, '150'); ?>>Large (150px)</option>
-                                            <option value="180" <?php selected($logo_width, '180'); ?>>Extra Large (180px)</option>
-                                        </select>
+                                    <td style="display: flex; gap: 10px; align-items: center;">
+                                        <label>W: <input type="number" name="logo_width" id="logo_width" value="<?php echo esc_attr($logo_width); ?>" style="width: 60px;" min="30" max="300"> px</label>
+                                        <label>H: <input type="number" name="logo_height" id="logo_height" value="<?php echo esc_attr($logo_height); ?>" style="width: 60px;" min="0" max="200" placeholder="auto"> px</label>
+                                        <small style="color: #666;">(0 = auto)</small>
                                     </td>
                                 </tr>
                                 <tr>
@@ -968,7 +965,7 @@ class Ofast_X_Email_Admin
                 });
 
                 // Other inputs
-                $('input[name="company_name"], input[name="tagline"], input[name="logo_url"], input[name="show_header"], input[name="show_footer"]').on('change keyup', function() {
+                $('input[name="company_name"], input[name="tagline"], input[name="logo_url"], input[name="show_header"], input[name="show_footer"], input[name="logo_width"], input[name="logo_height"]').on('change keyup', function() {
                     updatePreview();
                 });
 
@@ -1010,16 +1007,21 @@ class Ofast_X_Email_Admin
                     var tagline = $('input[name="tagline"]').val() || '';
                     var showHeader = $('input[name="show_header"]').is(':checked');
                     var showFooter = $('input[name="show_footer"]').is(':checked');
+                    var logoWidth = parseInt($('input[name="logo_width"]').val()) || 120;
+                    var logoHeight = parseInt($('input[name="logo_height"]').val()) || 0;
 
                     var headerBg = style === 'modern' ? 'linear-gradient(135deg, ' + primary + ' 0%, ' + accent + ' 100%)' :
                         style === 'classic' ? primary : 'transparent';
                     var headerStyle = style === 'minimal' ? 'display: none;' : 'background: ' + headerBg + '; padding: 15px; text-align: center; color: #fff;';
 
+                    // Logo style with dynamic width/height
+                    var logoStyle = 'max-width: ' + logoWidth + 'px; ' + (logoHeight > 0 ? 'height: ' + logoHeight + 'px;' : 'height: auto;') + ' margin-bottom: 5px;';
+
                     var html = '<!DOCTYPE html><html><head><style>';
                     html += 'body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: ' + bgColor + '; color: ' + textColor + '; }';
                     html += '.container { max-width: 100%; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }';
                     html += '.header { ' + headerStyle + ' }';
-                    html += '.logo { max-width: 120px; margin-bottom: 5px; }';
+                    html += '.logo { ' + logoStyle + ' }';
                     html += '.company { font-size: 16px; font-weight: 600; margin: 0; }';
                     html += '.tagline { font-size: 11px; opacity: 0.9; margin: 3px 0 0 0; }';
                     html += '.body { padding: 25px; font-size: 14px; line-height: 1.6; text-align: justify; }';
@@ -1080,6 +1082,7 @@ class Ofast_X_Email_Admin
         update_option('ofast_email_font_family', sanitize_text_field($_POST['font_family'] ?? 'system'));
         update_option('ofast_email_font_size', absint($_POST['font_size'] ?? 15));
         update_option('ofast_email_logo_width', absint($_POST['logo_width'] ?? 120));
+        update_option('ofast_email_logo_height', absint($_POST['logo_height'] ?? 0));
     }
 
     /**
@@ -1104,5 +1107,6 @@ class Ofast_X_Email_Admin
         update_option('ofast_email_font_family', 'system');
         update_option('ofast_email_font_size', '15');
         update_option('ofast_email_logo_width', '120');
+        update_option('ofast_email_logo_height', '0');
     }
 }

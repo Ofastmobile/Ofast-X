@@ -33,6 +33,7 @@ class Ofast_X_Email_Template
         $font_family_key = get_option('ofast_email_font_family', 'system');
         $font_size = absint(get_option('ofast_email_font_size', 15));
         $logo_width = absint(get_option('ofast_email_logo_width', 120));
+        $logo_height = absint(get_option('ofast_email_logo_height', 0));
 
         // Map font family keys to CSS font stacks
         $font_stacks = array(
@@ -113,7 +114,7 @@ class Ofast_X_Email_Template
 
                 <?php endif; ?>.email-logo {
                     max-width: <?php echo esc_attr($logo_width); ?>px;
-                    height: auto;
+                    height: <?php echo $logo_height > 0 ? esc_attr($logo_height) . 'px' : 'auto'; ?>;
                     margin-bottom: 5px;
                 }
 

@@ -321,13 +321,13 @@ class Ofast_X_Google_Sheets
 
                         <div style="margin-bottom: 15px;">
                             <label><strong>Upload JSON File:</strong></label><br>
-                            <input type="file" name="credentials_file" accept=".json" style="margin-top: 5px;">
-                            <p class="description">Upload your service-account-key.json file directly</p>
+                            <input type="file" name="credentials_file" id="ofast_sheets_file" accept=".json" style="margin-top: 5px;">
+                            <p class="description">Upload your service-account-key.json file - content will appear below</p>
                         </div>
 
                         <div>
-                            <label><strong>Or Paste JSON:</strong></label><br>
-                            <textarea name="credentials" rows="6" class="large-text code" placeholder="Paste your service account JSON here..."></textarea>
+                            <label><strong>JSON Content:</strong></label><br>
+                            <textarea name="credentials" id="ofast_sheets_json" rows="6" class="large-text code" placeholder="Upload a file above or paste your service account JSON here..."></textarea>
                         </div>
 
                         <p class="description" style="margin-top: 10px;">
@@ -347,6 +347,27 @@ class Ofast_X_Google_Sheets
         </form>
 
         <script>
+            // File upload reader - populates textarea when file selected
+            document.getElementById('ofast_sheets_file').addEventListener('change', function(e) {
+                var file = e.target.files[0];
+                if (file) {
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        var content = e.target.result;
+                        document.getElementById('ofast_sheets_json').value = content;
+
+                        // Try to validate and prettify
+                        try {
+                            var parsed = JSON.parse(content);
+                            document.getElementById('ofast_sheets_json').value = JSON.stringify(parsed, null, 2);
+                        } catch (err) {
+                            // Keep raw content if not valid JSON
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            });
+
             function testGoogleSheets() {
                 jQuery.post(ajaxurl, {
                     action: 'ofast_test_google_sheets',

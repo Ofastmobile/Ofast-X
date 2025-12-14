@@ -97,7 +97,6 @@ class Ofast_X_Email_Admin
             array($this, 'render_send_page')
         );
 
-        /* Temporarily disabled - requires Action Scheduler
         add_submenu_page(
             'ofast-emailer',
             'Scheduled Emails',
@@ -106,7 +105,6 @@ class Ofast_X_Email_Admin
             'ofast-scheduled-emails',
             array($this, 'render_scheduled_page')
         );
-        */
 
         add_submenu_page(
             'ofast-emailer',
@@ -158,89 +156,139 @@ class Ofast_X_Email_Admin
 
         // Handle form submission
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_email'])) {
-            $subject = sanitize_text_field($_POST['subject']);
-            $body = wp_kses_post($_POST['message']);
-            $selected_roles = $_POST['roles'] ?? [];
-            $send_test = isset($_POST['test_email']);
-            $schedule_time = $_POST['schedule_time'] ?? '';
-            $timestamp = $schedule_time ? strtotime($schedule_time) : time();
 
-            // FIX #7: Get checked user IDs from checkboxes
-            $checked_user_ids = $_POST['checked_users'] ?? [];
-
-            // Parse user ID ranges
-            $input_ids = preg_split('/\s*,\s*/', $_POST['user_ids'] ?? '');
-            $range_user_ids = [];
-            foreach ($input_ids as $entry) {
-                if (strpos($entry, '-') !== false) {
-                    [$start, $end] = array_map('intval', explode('-', $entry));
-                    $range_user_ids = array_merge($range_user_ids, range($start, $end));
-                } elseif (is_numeric($entry)) {
-                    $range_user_ids[] = intval($entry);
-                }
+            // SECURITY: Verify CSRF nonce
+            if (!isset($_POST['ofast_email_nonce']) || !wp_verify_nonce($_POST['ofast_email_nonce'], 'ofast_send_email_action')) {
+                wp_die(__('Security check failed. Please refresh and try again.', 'ofast-x'), 'Security Error', array('response' => 403));
             }
 
-            // Merge all user IDs
-            $selected_user_ids = array_unique(array_merge($range_user_ids, array_map('intval', $checked_user_ids)));
-
-            if ($send_test) {
-                $user = wp_get_current_user();
-                $message = $this->replace_placeholders($body, $user);
-                $headers = $this->get_email_headers();
-                wp_mail($user->user_email, $subject, $this->get_email_template($message), $headers);
-                $result_message = '<div class="notice notice-success"><p>Test email sent to ' . esc_html($user->user_email) . '</p></div>';
+            // SECURITY: Rate limiting - max 10 bulk sends per hour per admin
+            $rate_limit_key = 'ofast_email_rate_' . get_current_user_id();
+            $send_count = get_transient($rate_limit_key) ?: 0;
+            if ($send_count >= 10) {
+                $result_message = '<div class="notice notice-error"><p>Rate limit exceeded. Maximum 10 bulk sends per hour.</p></div>';
             } else {
-                // Merge user IDs + roles
-                $total_ids = $selected_user_ids;
-                if (!empty($selected_roles)) {
-                    $role_ids = get_users(['role__in' => $selected_roles, 'fields' => 'ID']);
-                    $total_ids = array_unique(array_merge($total_ids, $role_ids));
+                // Increment rate limiter
+                set_transient($rate_limit_key, $send_count + 1, HOUR_IN_SECONDS);
+
+                $subject = sanitize_text_field($_POST['subject']);
+                $body = wp_kses_post($_POST['message']);
+
+                // SECURITY: Sanitize roles array
+                $selected_roles = array();
+                if (!empty($_POST['roles']) && is_array($_POST['roles'])) {
+                    foreach ($_POST['roles'] as $role) {
+                        $clean_role = sanitize_key($role);
+                        if (wp_roles()->is_role($clean_role)) {
+                            $selected_roles[] = $clean_role;
+                        }
+                    }
                 }
 
-                // FIX #4 & #5: Change threshold to 40 for scheduling
-                if (count($total_ids) <= 40) {
-                    $sent = 0;
+                $send_test = isset($_POST['test_email']);
+                $schedule_time = sanitize_text_field($_POST['schedule_time'] ?? '');
+                $timestamp = $schedule_time ? strtotime($schedule_time) : time();
+
+                // FIX #7: Get checked user IDs from checkboxes with validation
+                $checked_user_ids = array();
+                if (!empty($_POST['checked_users']) && is_array($_POST['checked_users'])) {
+                    foreach ($_POST['checked_users'] as $id) {
+                        if (is_numeric($id) && $id > 0) {
+                            $checked_user_ids[] = intval($id);
+                        }
+                    }
+                }
+
+                // Parse user ID ranges (with security limits)
+                $input_ids = preg_split('/\s*,\s*/', sanitize_text_field($_POST['user_ids'] ?? ''));
+                $range_user_ids = [];
+                foreach ($input_ids as $entry) {
+                    if (strpos($entry, '-') !== false) {
+                        [$start, $end] = array_map('intval', explode('-', $entry));
+                        // SECURITY: Limit range to 1000 to prevent memory exhaustion
+                        if ($end - $start > 1000) {
+                            $end = $start + 1000;
+                        }
+                        if ($start > 0 && $end > 0) {
+                            $range_user_ids = array_merge($range_user_ids, range($start, $end));
+                        }
+                    } elseif (is_numeric($entry) && intval($entry) > 0) {
+                        $range_user_ids[] = intval($entry);
+                    }
+                }
+
+                // Merge all user IDs
+                $selected_user_ids = array_unique(array_merge($range_user_ids, $checked_user_ids));
+
+                if ($send_test) {
+                    $user = wp_get_current_user();
+                    $message = $this->replace_placeholders($body, $user);
                     $headers = $this->get_email_headers();
-                    $sample_body = ''; // Store one sample for log
-                    foreach (get_users(['include' => $total_ids]) as $user) {
-                        $message = $this->replace_placeholders($body, $user);
-                        $full_body = $this->get_email_template($message);
-                        if (empty($sample_body)) {
-                            $sample_body = $full_body; // Store first email as sample
-                        }
-                        if (wp_mail($user->user_email, $subject, $full_body, $headers)) {
-                            $sent++;
-                        }
-                    }
-
-                    $this->log_email($subject, $sent, 'Immediate send', $sample_body);
-                    $result_message = '<div class="notice notice-success"><p>Sent immediately to ' . $sent . ' user(s)</p></div>';
+                    wp_mail($user->user_email, $subject, $this->get_email_template($message), $headers);
+                    $result_message = '<div class="notice notice-success"><p>Test email sent to ' . esc_html($user->user_email) . '</p></div>';
                 } else {
-                    // Schedule in batches of 40 users per hour using Action Scheduler
-                    $chunks = array_chunk($total_ids, 40);
-                    $scheduled_count = 0;
-
-                    foreach ($chunks as $i => $chunk) {
-                        $batch_time = $timestamp + ($i * 3600); // 1 hour apart
-
-                        // Use WordPress cron for scheduling
-                        wp_schedule_single_event(
-                            $batch_time,
-                            'ofast_send_email_batch',
-                            array(
-                                array(
-                                    'subject' => $subject,
-                                    'body' => $body,
-                                    'user_ids' => $chunk
-                                )
-                            )
-                        );
-                        $scheduled_count++;
+                    // Merge user IDs + roles
+                    $total_ids = $selected_user_ids;
+                    if (!empty($selected_roles)) {
+                        $role_ids = get_users(['role__in' => $selected_roles, 'fields' => 'ID']);
+                        $total_ids = array_unique(array_merge($total_ids, $role_ids));
                     }
 
-                    $result_message = '<div class="notice notice-success"><p>' . $scheduled_count . ' batches scheduled (40 users/hour) starting ' . date('Y-m-d H:i', $timestamp) . '</p></div>';
+                    // SECURITY: Max recipient limit to prevent server overload
+                    $max_recipients = apply_filters('ofast_email_max_recipients', 5000);
+                    if (count($total_ids) > $max_recipients) {
+                        $total_ids = array_slice($total_ids, 0, $max_recipients);
+                        $result_message = '<div class="notice notice-warning"><p>Recipient list limited to ' . $max_recipients . ' users.</p></div>';
+                    }
+
+                    // FIX #4 & #5: Use configurable batch size
+                    $batch_size = isset($_POST['batch_size']) ? intval($_POST['batch_size']) : 40;
+                    $batch_size = max(10, min(50, $batch_size)); // Clamp between 10-50
+
+                    if (count($total_ids) <= $batch_size) {
+                        $sent = 0;
+                        $headers = $this->get_email_headers();
+                        $sample_body = ''; // Store one sample for log
+                        foreach (get_users(['include' => $total_ids]) as $user) {
+                            $message = $this->replace_placeholders($body, $user);
+                            $full_body = $this->get_email_template($message);
+                            if (empty($sample_body)) {
+                                $sample_body = $full_body; // Store first email as sample
+                            }
+                            if (wp_mail($user->user_email, $subject, $full_body, $headers)) {
+                                $sent++;
+                            }
+                        }
+
+                        $this->log_email($subject, $sent, 'Immediate send', $sample_body);
+                        $result_message = '<div class="notice notice-success"><p>Sent immediately to ' . $sent . ' user(s)</p></div>';
+                    } else {
+                        // Schedule in batches using selected batch size
+                        $chunks = array_chunk($total_ids, $batch_size);
+                        $scheduled_count = 0;
+
+                        foreach ($chunks as $i => $chunk) {
+                            $batch_time = $timestamp + ($i * 3600); // 1 hour apart
+
+                            // Use WordPress cron for scheduling
+                            wp_schedule_single_event(
+                                $batch_time,
+                                'ofast_send_email_batch',
+                                array(
+                                    array(
+                                        'subject' => $subject,
+                                        'body' => $body,
+                                        'user_ids' => $chunk
+                                    )
+                                )
+                            );
+                            $scheduled_count++;
+                        }
+
+                        $result_message = '<div class="notice notice-success"><p>' . $scheduled_count . ' batches scheduled (' . $batch_size . ' users/hour) starting ' . date('Y-m-d H:i', $timestamp) . '</p></div>';
+                    }
                 }
-            }
+            } // End rate limit else block
         }
 
         // Render UI
@@ -312,8 +360,9 @@ class Ofast_X_Email_Admin
         }
 
         echo '<div class="wrap"><h2>Send Email</h2>' . $toast_html . '
-        <form method="post" enctype="multipart/form-data" id="email-form">
-            <p><label><strong>Email Subject:</strong><br>
+        <form method="post" enctype="multipart/form-data" id="email-form">';
+        wp_nonce_field('ofast_send_email_action', 'ofast_email_nonce');
+        echo '<p><label><strong>Email Subject:</strong><br>
             <input type="text" name="subject" style="width: 100%;" required></label></p>
 
             <p><label><strong>Message Body:</strong><br>';
@@ -343,7 +392,19 @@ class Ofast_X_Email_Admin
             <p>
                 <label><strong>Schedule Time (optional):</strong><br>
                 <input type="datetime-local" name="schedule_time" style="width: 250px;">
-                <small>Leave blank to send immediately. More than 40 recipients will auto-schedule.</small></label>
+                <small>Leave blank to send immediately. Large batches will auto-schedule.</small></label>
+            </p>
+            
+            <p>
+                <label><strong>Emails Per Hour:</strong>
+                <select name="batch_size" style="margin-left: 10px;">
+                    <option value="20">20 per hour (safest)</option>
+                    <option value="30">30 per hour</option>
+                    <option value="40" selected>40 per hour (recommended)</option>
+                    <option value="50">50 per hour (max)</option>
+                </select>
+                </label>
+                <br><small>Higher values may trigger spam limits on shared hosting or Gmail SMTP.</small>
             </p>
 
 
@@ -732,7 +793,7 @@ class Ofast_X_Email_Admin
     }
 
     /**
-     * Render scheduled emails page (Action Scheduler queue view)
+     * Render scheduled emails page (WordPress Cron queue view)
      */
     public function render_scheduled_page()
     {
@@ -740,67 +801,122 @@ class Ofast_X_Email_Admin
             wp_die('You do not have sufficient permissions');
         }
 
+        // Handle cancel action
+        if (isset($_POST['cancel_scheduled']) && wp_verify_nonce($_POST['cancel_nonce'], 'ofast_cancel_scheduled')) {
+            $timestamp = intval($_POST['cancel_timestamp']);
+            $args = json_decode(stripslashes($_POST['cancel_args']), true);
+            wp_unschedule_event($timestamp, 'ofast_send_email_batch', array($args));
+            echo '<div class="notice notice-success"><p>Scheduled batch cancelled.</p></div>';
+        }
+
         echo '<div class="wrap">';
         echo '<h1>Scheduled Email Batches</h1>';
-        echo '<p>Email batches scheduled via Action Scheduler (runs reliably every minute)</p>';
+        echo '<p>Email batches scheduled via WordPress Cron (lightweight, no dependencies)</p>';
 
-        // Get all pending scheduled actions for email batches
-        $actions = as_get_scheduled_actions(array(
-            'hook' => 'ofast_send_email_batch',
-            'status' => 'pending',
-            'per_page' => 50
-        ));
+        // Get all cron events
+        $events = _get_cron_array();
+        $scheduled_batches = array();
 
-        if (empty($actions)) {
-            echo '<div class="notice notice-info"><p>No email batches currently scheduled.</p></div>';
+        foreach ($events as $timestamp => $hooks) {
+            foreach ($hooks as $hook => $jobs) {
+                if ($hook === 'ofast_send_email_batch') {
+                    foreach ($jobs as $key => $details) {
+                        $args = isset($details['args'][0]) ? $details['args'][0] : array();
+                        $scheduled_batches[] = array(
+                            'timestamp' => $timestamp,
+                            'subject' => $args['subject'] ?? '[no subject]',
+                            'user_count' => count($args['user_ids'] ?? array()),
+                            'args' => $args,
+                            'key' => $key
+                        );
+                    }
+                }
+            }
+        }
+
+        if (empty($scheduled_batches)) {
+            // Empty state handled by styled card below
         } else {
             echo '<table class="wp-list-table widefat fixed striped">';
             echo '<thead><tr>';
-            echo '<th>Batch ID</th><th>Subject</th><th>Recipients</th><th>Scheduled Time</th><th>Status</th>';
+            echo '<th>Scheduled Time</th><th>Subject</th><th>Recipients</th><th>Status</th><th>Action</th>';
             echo '</tr></thead><tbody>';
 
-            foreach ($actions as $action_id => $action) {
-                $args = $action->get_args();
-                $subject = esc_html($args['subject'] ?? 'N/A');
-                $user_count = count($args['user_ids'] ?? []);
-                $scheduled_time = $action->get_schedule()->get_date()->format('Y-m-d H:i:s');
+            foreach ($scheduled_batches as $batch) {
+                $time_diff = $batch['timestamp'] - time();
+                $time_display = date('Y-m-d H:i:s', $batch['timestamp']);
+
+                if ($time_diff > 0) {
+                    $status = '<span style="color:#0073aa;">Pending (' . human_time_diff(time(), $batch['timestamp']) . ')</span>';
+                } else {
+                    $status = '<span style="color:#f0ad4e;">Waiting for cron...</span>';
+                }
 
                 echo '<tr>';
-                echo '<td>' . esc_html($action_id) . '</td>';
-                echo '<td>' . $subject . '</td>';
-                echo '<td>' . $user_count . ' users</td>';
-                echo '<td>' . esc_html($scheduled_time) . '</td>';
-                echo '<td><span class="dashicons dashions-clock"></span> Pending</td>';
+                echo '<td>' . esc_html($time_display) . '</td>';
+                echo '<td>' . esc_html(wp_trim_words($batch['subject'], 8, '...')) . '</td>';
+                echo '<td>' . esc_html($batch['user_count']) . ' users</td>';
+                echo '<td>' . $status . '</td>';
+                echo '<td>
+                    <form method="post" style="display:inline;">
+                        <input type="hidden" name="cancel_timestamp" value="' . esc_attr($batch['timestamp']) . '">
+                        <input type="hidden" name="cancel_args" value="' . esc_attr(json_encode($batch['args'])) . '">
+                        ' . wp_nonce_field('ofast_cancel_scheduled', 'cancel_nonce', true, false) . '
+                        <button type="submit" name="cancel_scheduled" class="button button-small" onclick="return confirm(\'Cancel this batch?\')">Cancel</button>
+                    </form>
+                </td>';
                 echo '</tr>';
             }
 
             echo '</tbody></table>';
         }
 
-        // Show completed actions (last 10)
-        echo '<h2 style="margin-top: 30px;">Recently Completed Batches</h2>';
-        $completed = as_get_scheduled_actions(array(
-            'hook' => 'ofast_send_email_batch',
-            'status' => 'complete',
-            'per_page' => 10
-        ));
-
-        if (!empty($completed)) {
-            echo '<table class="wp-list-table widefat fixed striped">';
-            echo '<thead><tr>';
-            echo '<th>Subject</th><th>Recipients</th><th>Executed At</th>';
-            echo '</tr></thead><tbody>';
-
-            foreach ($completed as $action) {
-                $args = $action->get_args();
-                echo '<tr>';
-                echo '<td>' . esc_html($args['subject'] ?? 'N/A') . '</td>';
-                echo '<td>' . count($args['user_ids'] ?? []) . ' users</td>';
-                echo '<td>' . esc_html($action->get_schedule()->get_date()->format('Y-m-d H:i:s')) . '</td>';
-                echo '</tr>';
-            }
-
-            echo '</tbody></table>';
+        // Info about WP Cron reliability - only show when no batches
+        if (empty($scheduled_batches)) {
+            echo '
+            <div style="
+                margin-top: 30px;
+                padding: 40px;
+                background: linear-gradient(135deg, #0073aa 0%, #005177 100%);
+                border-radius: 16px;
+                text-align: center;
+                color: white;
+                box-shadow: 0 10px 40px rgba(0, 115, 170, 0.3);
+            ">
+                <div style="
+                    width: 80px;
+                    height: 80px;
+                    background: rgba(255,255,255,0.2);
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 20px;
+                    font-size: 36px;
+                ">📅</div>
+                
+                <h2 style="margin: 0 0 10px; font-size: 24px; font-weight: 600;">No Scheduled Batches</h2>
+                <p style="margin: 0 0 25px; opacity: 0.9; font-size: 15px;">
+                    When you send emails to more than your batch limit, they\'ll appear here.
+                </p>
+                
+                <div style="
+                    background: rgba(255,255,255,0.15);
+                    border-radius: 12px;
+                    padding: 20px;
+                    text-align: left;
+                    max-width: 500px;
+                    margin: 0 auto;
+                ">
+                    <h4 style="margin: 0 0 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">How It Works</h4>
+                    <p style="margin: 0 0 10px; font-size: 14px; line-height: 1.6;">
+                        <strong>WordPress Cron</strong> runs when someone visits your site. On busy sites, this is very reliable.
+                    </p>
+                    <p style="margin: 0; font-size: 14px; line-height: 1.6;">
+                        <strong>Low-traffic sites?</strong> Set up a real server cron job to hit <code style="background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px;">wp-cron.php</code> every 5 minutes.
+                    </p>
+                </div>
+            </div>';
         }
 
         echo '</div>';

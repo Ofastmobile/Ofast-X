@@ -513,21 +513,6 @@ class Ofast_X_Snippets
                         <div class="snippet-options-column">
                             <table class="form-table">
                                 <tr>
-                                    <th><label for="snippet_name">Snippet Name</label></th>
-                                    <td>
-                                        <input type="text" name="snippet_name" id="snippet_name" class="regular-text" required
-                                            value="<?php echo $edit_snippet ? esc_attr($edit_snippet->name) : ''; ?>"
-                                            placeholder="e.g., Custom Header Code">
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th><label for="snippet_description">Description</label></th>
-                                    <td>
-                                        <textarea name="snippet_description" id="snippet_description" rows="3" class="large-text"
-                                            placeholder="Brief description of what this snippet does (optional)"><?php echo $edit_snippet ? esc_textarea($edit_snippet->description) : ''; ?></textarea>
-                                        <p class="description">Optional: Add a description to help you remember what this snippet does.</p>
-                                </tr>
-                                <tr>
                                     <th><label for="snippet_category">Category</label></th>
                                     <td>
                                         <?php
@@ -673,6 +658,20 @@ class Ofast_X_Snippets
                         </div>
                         <!-- Left Column: Code Editor (on desktop, appears on left due to flexbox order) -->
                         <div class="snippet-code-column">
+                            <!-- Snippet Name -->
+                            <div style="margin-bottom: 15px;">
+                                <label for="snippet_name" style="display: block; font-size: 14px; font-weight: 500; color: #1e1e1e; margin-bottom: 6px;">Snippet Name</label>
+                                <input type="text" name="snippet_name" id="snippet_name" class="regular-text" required
+                                    value="<?php echo $edit_snippet ? esc_attr($edit_snippet->name) : ''; ?>"
+                                    placeholder="e.g., Custom Header Code" style="width: 100%; max-width: 100%;">
+                            </div>
+                            <!-- Description -->
+                            <div style="margin-bottom: 15px;">
+                                <label for="snippet_description" style="display: block; font-size: 14px; font-weight: 500; color: #1e1e1e; margin-bottom: 6px;">Description</label>
+                                <textarea name="snippet_description" id="snippet_description" rows="2" class="large-text"
+                                    placeholder="Brief description (optional)" style="width: 100%; max-width: 100%;"><?php echo $edit_snippet ? esc_textarea($edit_snippet->description) : ''; ?></textarea>
+                            </div>
+                            <!-- Code Editor -->
                             <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 500; color: #1e1e1e;">Code</h4>
                             <textarea name="snippet_code" id="snippet_code" rows="15" class="large-text code" required
                                 placeholder="Enter your code here..."><?php echo $edit_snippet ? esc_textarea($edit_snippet->code) : ''; ?></textarea>

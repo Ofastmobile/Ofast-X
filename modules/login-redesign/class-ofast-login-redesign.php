@@ -648,7 +648,7 @@ class Ofast_X_Login_Redesign
                 <!-- Template Selector Tabs -->
                 <div style="margin: 20px 0;">
                     <h2 style="margin-bottom: 15px;">Choose Template</h2>
-                    <div style="display: flex; gap: 20px;">
+                    <div class="ofast-flex-wrap" style="gap: 20px;">
                         <!-- Simple Template -->
                         <label style="
                             display: block;

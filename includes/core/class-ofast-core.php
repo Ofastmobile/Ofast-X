@@ -367,6 +367,14 @@ class Ofast_X_Core
             array(),
             OFAST_X_VERSION
         );
+
+        // Responsive CSS for mobile-friendly admin pages
+        wp_enqueue_style(
+            'ofast-x-admin-responsive',
+            OFAST_X_PLUGIN_URL . 'admin/css/ofast-admin-responsive.css',
+            array('ofast-x-admin'),
+            OFAST_X_VERSION
+        );
     }
 
     /**

@@ -67,9 +67,9 @@ class Ofast_X_Forms_Builder
                 <?php wp_nonce_field('ofast_form_save', 'form_nonce'); ?>
                 <input type="hidden" name="form_id" value="<?php echo $this->form_id; ?>">
 
-                <div class="builder-layout">
+                <div class="builder-layout ofast-flex-layout">
                     <!-- Left: Form Settings -->
-                    <div class="builder-main">
+                    <div class="builder-main ofast-main">
                         <div class="builder-section">
                             <h2>Form Details</h2>
                             <table class="form-table">
@@ -236,7 +236,7 @@ class Ofast_X_Forms_Builder
                     </div>
 
                     <!-- Right: Sidebar -->
-                    <div class="builder-sidebar">
+                    <div class="builder-sidebar ofast-sidebar">
                         <div class="sidebar-box">
                             <h3>Publish</h3>
                             <button type="submit" name="ofast_save_form" class="button button-primary button-large" style="width:100%;">Save Form</button>

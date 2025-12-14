@@ -200,7 +200,7 @@ class Ofast_X_SMTP_Admin
             <p>Monitor your email delivery performance and SMTP status.</p>
 
             <!-- Connection Status -->
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 25px 0;">
+            <div class="ofast-grid-3" style="margin: 25px 0;">
                 <div style="background: <?php echo $enabled && $host ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #6b7280, #4b5563)'; ?>; padding: 25px; border-radius: 12px; color: #fff; text-align: center;">
                     <div style="font-size: 28px; margin-bottom: 5px;">
                         <?php echo $enabled && $host ? '✓' : '✗'; ?>
@@ -230,7 +230,7 @@ class Ofast_X_SMTP_Admin
             </div>
 
             <!-- Stats Cards -->
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 25px 0;">
+            <div class="ofast-grid-4" style="margin: 25px 0;">
                 <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                     <div style="font-size: 36px; font-weight: 700; color: #6366f1;"><?php echo number_format($stats['total']); ?></div>
                     <div style="color: #6b7280; font-size: 14px; margin-top: 5px;">Total Emails</div>
@@ -251,10 +251,10 @@ class Ofast_X_SMTP_Admin
                 </div>
             </div>
 
-            <!-- Two Column Layout -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin: 25px 0;">
+            <!-- Two Column Layout (stacks on mobile) -->
+            <div class="ofast-flex-layout" style="margin: 25px 0;">
                 <!-- Weekly Chart -->
-                <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div class="ofast-main" style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                     <h3 style="margin: 0 0 20px 0; font-size: 16px; color: #374151;">Emails Last 7 Days</h3>
                     <div style="display: flex; align-items: flex-end; justify-content: space-between; height: 120px; gap: 8px;">
                         <?php foreach ($weekly_data as $day): ?>
@@ -269,7 +269,7 @@ class Ofast_X_SMTP_Admin
                 </div>
 
                 <!-- Recent Emails -->
-                <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div class="ofast-main" style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                     <h3 style="margin: 0 0 20px 0; font-size: 16px; color: #374151;">Recent Emails</h3>
                     <?php if (empty($recent_emails)): ?>
                         <p style="color: #6b7280; text-align: center; padding: 30px 0;">No emails sent yet.</p>
@@ -683,7 +683,7 @@ class Ofast_X_SMTP_Admin
             <p>View all emails sent through SMTP with status and preview.</p>
 
             <!-- Stats Cards -->
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 20px 0;">
+            <div class="ofast-grid-4" style="margin: 20px 0;">
                 <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; text-align: center;">
                     <div style="font-size: 32px; font-weight: bold; color: #6366f1;"><?php echo esc_html($stats['total']); ?></div>
                     <div style="color: #6b7280;">Total Emails</div>

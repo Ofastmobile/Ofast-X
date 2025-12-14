@@ -340,8 +340,9 @@ class Ofast_X_Dashboard
                 <?php endforeach; ?>
             </div>
 
-            <!-- Quick Links -->
-            <div class="ofast-quick-links">
+            <!-- Quick Access -->
+            <h3 class="ofast-section-title" style="margin-top:30px;">Quick Access</h3>
+            <div class="ofast-grid-3 ofast-quick-links" style="gap:12px;">
                 <a href="<?php echo admin_url('admin.php?page=ofast-emailer'); ?>" class="ofast-quick-link">
                     <span>Send Email</span>
                 </a>
@@ -353,6 +354,12 @@ class Ofast_X_Dashboard
                 </a>
                 <a href="<?php echo admin_url('admin.php?page=ofast-notification-channels'); ?>" class="ofast-quick-link">
                     <span>Notifications</span>
+                </a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-snippets'); ?>" class="ofast-quick-link">
+                    <span>Code Snippets</span>
+                </a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-login-redesign'); ?>" class="ofast-quick-link">
+                    <span>Login Redesign</span>
                 </a>
             </div>
 
@@ -373,6 +380,7 @@ class Ofast_X_Dashboard
             'smtp' => 'SMTP Configuration',
             'newsletter' => 'Newsletter Manager',
             'contact' => 'Contact Forms',
+            'forms' => 'Contact Forms',
             'seo' => 'SEO Optimizer',
             'analytics' => 'Analytics Dashboard',
             'backup' => 'Backup Manager',
@@ -388,7 +396,15 @@ class Ofast_X_Dashboard
             'spam-protection' => 'Spam Protection',
             'notification-channels' => 'Notification Channels',
             'social-login' => 'Social Login',
-            'login-redesign' => 'Login Redesign'
+            'login-redesign' => 'Login Redesign',
+            'snippets' => 'Code Snippets',
+            'redirects' => 'URL Redirects',
+            'admin-tweaks' => 'Admin Tweaks',
+            'admin-design' => 'Admin Design',
+            'whatsapp' => 'WhatsApp Integration',
+            'google-sheets' => 'Google Sheets',
+            'content-ordering' => 'Content Ordering',
+            'whos-admin' => 'Who\'s Admin'
         );
 
         $loaded = array();

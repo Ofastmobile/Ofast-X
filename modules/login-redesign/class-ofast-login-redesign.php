@@ -726,9 +726,9 @@ class Ofast_X_Login_Redesign
                     </div>
                 </div>
 
-                <div style="display:flex;gap:30px;margin-top:20px;align-items:flex-start;">
+                <div class="ofast-flex-layout" style="gap:30px;margin-top:20px;align-items:flex-start;">
                     <!-- Settings Panel -->
-                    <div style="flex:1;max-width:500px;">
+                    <div class="ofast-main" style="max-width:500px;">
 
                         <div class="postbox" style="padding:20px;">
                             <h3 style="margin-top:0;">General</h3>
@@ -1054,7 +1054,7 @@ class Ofast_X_Login_Redesign
                     </div>
 
                     <!-- Preview Panel -->
-                    <div style="flex:1;position:sticky;top:32px;align-self:flex-start;">
+                    <div class="ofast-sidebar" style="position:sticky;top:32px;align-self:flex-start;">
                         <div class="postbox" style="padding:20px;">
                             <h3 style="margin-top:0;">Live Preview</h3>
                             <div id="login-preview" style="border:1px solid #ddd;border-radius:8px;overflow:hidden;min-height:400px;background:#f0f0f1;">

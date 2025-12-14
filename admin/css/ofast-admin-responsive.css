@@ -203,7 +203,7 @@
     .ofast-grid-2,
     .ofast-grid-3,
     .ofast-grid-4 {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
     }
 
     .ofast-section,

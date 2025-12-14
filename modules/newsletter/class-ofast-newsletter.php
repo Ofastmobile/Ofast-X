@@ -307,32 +307,35 @@ class Ofast_X_Newsletter
             </div>
 
             <?php if ($subscribers): ?>
-                <table class="wp-list-table widefat fixed striped">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Status</th>
-                            <th>IP</th>
-                            <th>Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($subscribers as $sub): ?>
+                <!-- Scrollable Table Container -->
+                <div style="overflow-x: auto; max-width: 100%;">
+                    <table class="wp-list-table widefat fixed striped" style="min-width: 800px;">
+                        <thead>
                             <tr>
-                                <td><?php echo $sub->id; ?></td>
-                                <td><strong><?php echo esc_html($sub->name); ?></strong></td>
-                                <td><?php echo esc_html($sub->email); ?></td>
-                                <td><span style="padding:3px 8px;background:#e6ffed;border:1px solid #28a745;border-radius:3px;font-size:11px;"><?php echo $sub->status; ?></span></td>
-                                <td><?php echo esc_html($sub->ip_address); ?></td>
-                                <td><?php echo date('M j, Y', strtotime($sub->subscribed_at)); ?></td>
-                                <td><a href="<?php echo wp_nonce_url('?page=ofast-newsletter&action=delete&id=' . $sub->id, 'delete_subscriber_' . $sub->id); ?>" class="button button-small" onclick="return confirm('Delete?')">Delete</a></td>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>IP</th>
+                                <th>Date</th>
+                                <th>Actions</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($subscribers as $sub): ?>
+                                <tr>
+                                    <td><?php echo $sub->id; ?></td>
+                                    <td><strong><?php echo esc_html($sub->name); ?></strong></td>
+                                    <td><?php echo esc_html($sub->email); ?></td>
+                                    <td><span style="padding:3px 8px;background:#e6ffed;border:1px solid #28a745;border-radius:3px;font-size:11px;"><?php echo $sub->status; ?></span></td>
+                                    <td><?php echo esc_html($sub->ip_address); ?></td>
+                                    <td><?php echo date('M j, Y', strtotime($sub->subscribed_at)); ?></td>
+                                    <td><a href="<?php echo wp_nonce_url('?page=ofast-newsletter&action=delete&id=' . $sub->id, 'delete_subscriber_' . $sub->id); ?>" class="button button-small" onclick="return confirm('Delete?')">Delete</a></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php else: ?>
                 <p style="text-align:center;padding:40px;color:#999;">No subscribers yet!</p>
             <?php endif; ?>

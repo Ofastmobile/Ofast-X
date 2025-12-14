@@ -621,50 +621,53 @@ class Ofast_X_Redirects
                         <span style="font-weight: normal; color: #666; font-size: 14px;">(<?php echo count($redirects); ?> total)</span>
                     </h3>
 
-                    <table class="wp-list-table widefat fixed striped">
-                        <thead>
-                            <tr>
-                                <th style="width: 30px;"><input type="checkbox" id="select-all-redirects"></th>
-                                <th>Source URL</th>
-                                <th>Target URL</th>
-                                <th style="width: 80px;">Type</th>
-                                <th style="width: 60px;">Hits</th>
-                                <th style="width: 80px;">Status</th>
-                                <th style="width: 120px;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($redirects as $redirect): ?>
+                    <!-- Scrollable Table Container -->
+                    <div style="overflow-x: auto; max-width: 100%;">
+                        <table class="wp-list-table widefat fixed striped" style="min-width: 900px;">
+                            <thead>
                                 <tr>
-                                    <td><input type="checkbox" class="redirect-checkbox" value="<?php echo $redirect->id; ?>"></td>
-                                    <td>
-                                        <code style="font-size: 12px;"><?php echo esc_html($redirect->source_url); ?></code>
-                                        <?php if ($redirect->is_regex): ?>
-                                            <span style="background: #fef3cd; color: #856404; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 5px;">regex</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td style="word-break: break-all; font-size: 12px;"><?php echo esc_html($redirect->target_url); ?></td>
-                                    <td>
-                                        <span style="background: <?php echo $redirect->type == '301' ? '#d4edda' : '#fff3cd'; ?>; color: <?php echo $redirect->type == '301' ? '#155724' : '#856404'; ?>; padding: 2px 8px; border-radius: 3px; font-size: 11px;">
-                                            <?php echo $redirect->type; ?>
-                                        </span>
-                                    </td>
-                                    <td style="font-size: 12px;"><?php echo number_format($redirect->hits); ?></td>
-                                    <td>
-                                        <button class="button button-small ofast-redirect-toggle <?php echo $redirect->active ? 'button-primary' : ''; ?>"
-                                            data-id="<?php echo $redirect->id; ?>" data-active="<?php echo $redirect->active; ?>"
-                                            style="min-width: 50px; font-size: 11px;">
-                                            <?php echo $redirect->active ? 'ON' : 'OFF'; ?>
-                                        </button>
-                                    </td>
-                                    <td>
-                                        <a href="?page=ofast-redirects&edit=<?php echo $redirect->id; ?>" class="button button-small">Edit</a>
-                                        <button class="button button-small ofast-redirect-delete" data-id="<?php echo $redirect->id; ?>" style="color: #dc3545;">Delete</button>
-                                    </td>
+                                    <th style="width: 30px;"><input type="checkbox" id="select-all-redirects"></th>
+                                    <th>Source URL</th>
+                                    <th>Target URL</th>
+                                    <th style="width: 80px;">Type</th>
+                                    <th style="width: 60px;">Hits</th>
+                                    <th style="width: 80px;">Status</th>
+                                    <th style="width: 120px;">Actions</th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($redirects as $redirect): ?>
+                                    <tr>
+                                        <td><input type="checkbox" class="redirect-checkbox" value="<?php echo $redirect->id; ?>"></td>
+                                        <td>
+                                            <code style="font-size: 12px;"><?php echo esc_html($redirect->source_url); ?></code>
+                                            <?php if ($redirect->is_regex): ?>
+                                                <span style="background: #fef3cd; color: #856404; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 5px;">regex</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td style="word-break: break-all; font-size: 12px;"><?php echo esc_html($redirect->target_url); ?></td>
+                                        <td>
+                                            <span style="background: <?php echo $redirect->type == '301' ? '#d4edda' : '#fff3cd'; ?>; color: <?php echo $redirect->type == '301' ? '#155724' : '#856404'; ?>; padding: 2px 8px; border-radius: 3px; font-size: 11px;">
+                                                <?php echo $redirect->type; ?>
+                                            </span>
+                                        </td>
+                                        <td style="font-size: 12px;"><?php echo number_format($redirect->hits); ?></td>
+                                        <td>
+                                            <button class="button button-small ofast-redirect-toggle <?php echo $redirect->active ? 'button-primary' : ''; ?>"
+                                                data-id="<?php echo $redirect->id; ?>" data-active="<?php echo $redirect->active; ?>"
+                                                style="min-width: 50px; font-size: 11px;">
+                                                <?php echo $redirect->active ? 'ON' : 'OFF'; ?>
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <a href="?page=ofast-redirects&edit=<?php echo $redirect->id; ?>" class="button button-small">Edit</a>
+                                            <button class="button button-small ofast-redirect-delete" data-id="<?php echo $redirect->id; ?>" style="color: #dc3545;">Delete</button>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             <?php else: ?>
                 <div style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; padding: 40px; text-align: center; margin-top: 20px;">

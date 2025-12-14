@@ -309,56 +309,59 @@ class Ofast_X_Forms_Submissions
                     <p>No submissions found.</p>
                 </div>
             <?php else: ?>
-                <table class="wp-list-table widefat fixed striped">
-                    <thead>
-                        <tr>
-                            <th style="width:30%;">Details</th>
-                            <th>Form</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($submissions as $sub): ?>
-                            <?php
-                            $data = json_decode($sub->data, true);
-                            $preview = '';
-                            if (is_array($data)) {
-                                $first_two = array_slice($data, 0, 2);
-                                foreach ($first_two as $k => $v) {
-                                    if (is_array($v)) $v = implode(', ', $v);
-                                    $preview .= '<strong>' . esc_html($k) . ':</strong> ' . esc_html(substr($v, 0, 50)) . '<br>';
-                                }
-                            }
-                            $bg = $sub->status === 'unread' ? '#fff8e5' : '';
-                            ?>
-                            <tr style="<?php echo $bg ? "background:{$bg};" : ''; ?>">
-                                <td><?php echo $preview; ?></td>
-                                <td><?php echo esc_html($sub->form_title ?: 'Unknown'); ?></td>
-                                <td>
-                                    <?php
-                                    $status_colors = array('unread' => 'orange', 'read' => 'green', 'spam' => 'red', 'trash' => 'gray');
-                                    echo '<span style="color:' . ($status_colors[$sub->status] ?? 'gray') . ';">' . ucfirst($sub->status) . '</span>';
-                                    ?>
-                                </td>
-                                <td><?php echo date('M j, Y g:i a', strtotime($sub->submitted_at)); ?></td>
-                                <td>
-                                    <?php
-                                    $nonce = wp_create_nonce('submission_action_' . $sub->id);
-                                    $base_url = add_query_arg(array('id' => $sub->id, '_wpnonce' => $nonce));
-                                    ?>
-                                    <a href="#" class="view-submission" data-id="<?php echo $sub->id; ?>" data-data="<?php echo esc_attr(wp_json_encode($data)); ?>">View</a> |
-                                    <?php if ($sub->status === 'unread'): ?>
-                                        <a href="<?php echo esc_url(add_query_arg('action', 'mark_read', $base_url)); ?>">Mark Read</a> |
-                                    <?php endif; ?>
-                                    <a href="<?php echo esc_url(add_query_arg('action', 'mark_spam', $base_url)); ?>" style="color:orange;">Spam</a> |
-                                    <a href="<?php echo esc_url(add_query_arg('action', 'delete', $base_url)); ?>" style="color:red;" onclick="return confirm('Delete this submission?');">Delete</a>
-                                </td>
+                <!-- Scrollable Table Container -->
+                <div style="overflow-x: auto; max-width: 100%;">
+                    <table class="wp-list-table widefat fixed striped" style="min-width: 800px;">
+                        <thead>
+                            <tr>
+                                <th style="width:30%;">Details</th>
+                                <th>Form</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($submissions as $sub): ?>
+                                <?php
+                                $data = json_decode($sub->data, true);
+                                $preview = '';
+                                if (is_array($data)) {
+                                    $first_two = array_slice($data, 0, 2);
+                                    foreach ($first_two as $k => $v) {
+                                        if (is_array($v)) $v = implode(', ', $v);
+                                        $preview .= '<strong>' . esc_html($k) . ':</strong> ' . esc_html(substr($v, 0, 50)) . '<br>';
+                                    }
+                                }
+                                $bg = $sub->status === 'unread' ? '#fff8e5' : '';
+                                ?>
+                                <tr style="<?php echo $bg ? "background:{$bg};" : ''; ?>">
+                                    <td><?php echo $preview; ?></td>
+                                    <td><?php echo esc_html($sub->form_title ?: 'Unknown'); ?></td>
+                                    <td>
+                                        <?php
+                                        $status_colors = array('unread' => 'orange', 'read' => 'green', 'spam' => 'red', 'trash' => 'gray');
+                                        echo '<span style="color:' . ($status_colors[$sub->status] ?? 'gray') . ';">' . ucfirst($sub->status) . '</span>';
+                                        ?>
+                                    </td>
+                                    <td><?php echo date('M j, Y g:i a', strtotime($sub->submitted_at)); ?></td>
+                                    <td>
+                                        <?php
+                                        $nonce = wp_create_nonce('submission_action_' . $sub->id);
+                                        $base_url = add_query_arg(array('id' => $sub->id, '_wpnonce' => $nonce));
+                                        ?>
+                                        <a href="#" class="view-submission" data-id="<?php echo $sub->id; ?>" data-data="<?php echo esc_attr(wp_json_encode($data)); ?>">View</a> |
+                                        <?php if ($sub->status === 'unread'): ?>
+                                            <a href="<?php echo esc_url(add_query_arg('action', 'mark_read', $base_url)); ?>">Mark Read</a> |
+                                        <?php endif; ?>
+                                        <a href="<?php echo esc_url(add_query_arg('action', 'mark_spam', $base_url)); ?>" style="color:orange;">Spam</a> |
+                                        <a href="<?php echo esc_url(add_query_arg('action', 'delete', $base_url)); ?>" style="color:red;" onclick="return confirm('Delete this submission?');">Delete</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php endif; ?>
 
             <!-- View Modal -->

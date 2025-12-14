@@ -634,47 +634,50 @@ class Ofast_X_Email_Admin
             <?php if (empty($logs)): ?>
                 <p>No emails have been logged yet.</p>
             <?php else: ?>
-                <table class="widefat fixed striped">
-                    <thead>
-                        <tr>
-                            <th style="width:5%;">ID</th>
-                            <th>Subject</th>
-                            <th style="width:15%;">Sent At</th>
-                            <th style="width:8%;">Recipients</th>
-                            <th style="width:10%;">Status</th>
-                            <th style="width:15%;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($logs as $log): ?>
+                <!-- Scrollable Table Container -->
+                <div style="overflow-x: auto; max-width: 100%;">
+                    <table class="widefat fixed striped" style="min-width: 800px;">
+                        <thead>
                             <tr>
-                                <td><?php echo esc_html($log->id); ?></td>
-                                <td><?php echo esc_html(wp_trim_words($log->subject, 12, '...')); ?></td>
-                                <td><?php echo esc_html($log->sent_at); ?></td>
-                                <td><?php echo esc_html($log->recipient_count); ?></td>
-                                <td>
-                                    <?php
-                                    $status = $log->status ?? 'sent';
-                                    $status_class = $status === 'failed' ? 'color: #dc2626;' : ($status === 'scheduled' ? 'color: #f59e0b;' : 'color: #10b981;');
-                                    ?>
-                                    <span style="<?php echo $status_class; ?> font-weight: 500;">
-                                        <?php echo esc_html(ucfirst($status)); ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <?php if (!empty($log->body)): ?>
-                                        <button type="button" class="button button-small preview-email-btn"
-                                            data-content="<?php echo esc_attr(base64_encode($log->body)); ?>">
-                                            Preview
-                                        </button>
-                                    <?php else: ?>
-                                        <span style="color: #9ca3af;">No preview</span>
-                                    <?php endif; ?>
-                                </td>
+                                <th style="width:5%;">ID</th>
+                                <th>Subject</th>
+                                <th style="width:15%;">Sent At</th>
+                                <th style="width:8%;">Recipients</th>
+                                <th style="width:10%;">Status</th>
+                                <th style="width:15%;">Actions</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($logs as $log): ?>
+                                <tr>
+                                    <td><?php echo esc_html($log->id); ?></td>
+                                    <td><?php echo esc_html(wp_trim_words($log->subject, 12, '...')); ?></td>
+                                    <td><?php echo esc_html($log->sent_at); ?></td>
+                                    <td><?php echo esc_html($log->recipient_count); ?></td>
+                                    <td>
+                                        <?php
+                                        $status = $log->status ?? 'sent';
+                                        $status_class = $status === 'failed' ? 'color: #dc2626;' : ($status === 'scheduled' ? 'color: #f59e0b;' : 'color: #10b981;');
+                                        ?>
+                                        <span style="<?php echo $status_class; ?> font-weight: 500;">
+                                            <?php echo esc_html(ucfirst($status)); ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <?php if (!empty($log->body)): ?>
+                                            <button type="button" class="button button-small preview-email-btn"
+                                                data-content="<?php echo esc_attr(base64_encode($log->body)); ?>">
+                                                Preview
+                                            </button>
+                                        <?php else: ?>
+                                            <span style="color: #9ca3af;">No preview</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php endif; ?>
         </div>
 
@@ -837,7 +840,9 @@ class Ofast_X_Email_Admin
         if (empty($scheduled_batches)) {
             // Empty state handled by styled card below
         } else {
-            echo '<table class="wp-list-table widefat fixed striped">';
+            echo '<!-- Scrollable Table Container -->';
+            echo '<div style="overflow-x: auto; max-width: 100%;">';
+            echo '<table class="wp-list-table widefat fixed striped" style="min-width: 800px;">';
             echo '<thead><tr>';
             echo '<th>Scheduled Time</th><th>Subject</th><th>Recipients</th><th>Status</th><th>Action</th>';
             echo '</tr></thead><tbody>';
@@ -869,6 +874,7 @@ class Ofast_X_Email_Admin
             }
 
             echo '</tbody></table>';
+            echo '</div>';
         }
 
         // Info about WP Cron reliability - only show when no batches

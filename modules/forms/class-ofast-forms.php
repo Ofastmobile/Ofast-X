@@ -324,43 +324,46 @@ class Ofast_X_Forms
                     <p>No forms yet. <a href="<?php echo admin_url('admin.php?page=ofast-forms-new'); ?>">Create your first form</a></p>
                 </div>
             <?php else: ?>
-                <table class="wp-list-table widefat fixed striped">
-                    <thead>
-                        <tr>
-                            <th>Title</th>
-                            <th>Shortcode</th>
-                            <th>Submissions</th>
-                            <th>Status</th>
-                            <th>Created</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($forms as $form): ?>
+                <!-- Scrollable Table Container -->
+                <div style="overflow-x: auto; max-width: 100%;">
+                    <table class="wp-list-table widefat fixed striped" style="min-width: 800px;">
+                        <thead>
                             <tr>
-                                <td><strong><?php echo esc_html($form->title); ?></strong></td>
-                                <td><code>[ofast_form id="<?php echo $form->id; ?>"]</code></td>
-                                <td>
-                                    <?php
-                                    $count = $this->get_submission_count($form->id);
-                                    $unread = $this->get_unread_count($form->id);
-                                    echo $count;
-                                    if ($unread > 0) {
-                                        echo ' <span class="count-bubble">' . $unread . ' new</span>';
-                                    }
-                                    ?>
-                                </td>
-                                <td><?php echo $form->active ? '<span style="color:green;">Active</span>' : '<span style="color:gray;">Inactive</span>'; ?></td>
-                                <td><?php echo date('M j, Y', strtotime($form->created_at)); ?></td>
-                                <td>
-                                    <a href="<?php echo admin_url('admin.php?page=ofast-forms-new&id=' . $form->id); ?>">Edit</a> |
-                                    <a href="<?php echo admin_url('admin.php?page=ofast-forms-submissions&form_id=' . $form->id); ?>">View Submissions</a> |
-                                    <a href="#" class="delete-form" data-id="<?php echo $form->id; ?>" style="color:red;">Delete</a>
-                                </td>
+                                <th>Title</th>
+                                <th>Shortcode</th>
+                                <th>Submissions</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($forms as $form): ?>
+                                <tr>
+                                    <td><strong><?php echo esc_html($form->title); ?></strong></td>
+                                    <td><code>[ofast_form id="<?php echo $form->id; ?>"]</code></td>
+                                    <td>
+                                        <?php
+                                        $count = $this->get_submission_count($form->id);
+                                        $unread = $this->get_unread_count($form->id);
+                                        echo $count;
+                                        if ($unread > 0) {
+                                            echo ' <span class="count-bubble">' . $unread . ' new</span>';
+                                        }
+                                        ?>
+                                    </td>
+                                    <td><?php echo $form->active ? '<span style="color:green;">Active</span>' : '<span style="color:gray;">Inactive</span>'; ?></td>
+                                    <td><?php echo date('M j, Y', strtotime($form->created_at)); ?></td>
+                                    <td>
+                                        <a href="<?php echo admin_url('admin.php?page=ofast-forms-new&id=' . $form->id); ?>">Edit</a> |
+                                        <a href="<?php echo admin_url('admin.php?page=ofast-forms-submissions&form_id=' . $form->id); ?>">View Submissions</a> |
+                                        <a href="#" class="delete-form" data-id="<?php echo $form->id; ?>" style="color:red;">Delete</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php endif; ?>
         </div>
         <script>

@@ -724,53 +724,56 @@ class Ofast_X_SMTP_Admin
             </div>
 
             <!-- Email Log Table -->
-            <table class="wp-list-table widefat fixed striped">
-                <thead>
-                    <tr>
-                        <th style="width: 50px;">ID</th>
-                        <th>To</th>
-                        <th>Subject</th>
-                        <th style="width: 80px;">Status</th>
-                        <th style="width: 160px;">Sent At</th>
-                        <th style="width: 150px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($logs)): ?>
+            <!-- Scrollable Table Container -->
+            <div style="overflow-x: auto; max-width: 100%;">
+                <table class="wp-list-table widefat fixed striped" style="min-width: 800px;">
+                    <thead>
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: 40px;">
-                                <p style="color: #6b7280;">No emails logged yet. Emails will appear here once SMTP is configured and emails are sent.</p>
-                            </td>
+                            <th style="width: 50px;">ID</th>
+                            <th>To</th>
+                            <th>Subject</th>
+                            <th style="width: 80px;">Status</th>
+                            <th style="width: 160px;">Sent At</th>
+                            <th style="width: 150px;">Actions</th>
                         </tr>
-                    <?php else: ?>
-                        <?php foreach ($logs as $log): ?>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($logs)): ?>
                             <tr>
-                                <td><?php echo esc_html($log->id); ?></td>
-                                <td><?php echo esc_html($log->to_email); ?></td>
-                                <td><?php echo esc_html($log->subject); ?></td>
-                                <td>
-                                    <?php if ($log->status === 'success'): ?>
-                                        <span style="background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 3px; font-size: 11px;">SUCCESS</span>
-                                    <?php else: ?>
-                                        <span style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 3px; font-size: 11px;">FAILED</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td><?php echo esc_html($log->sent_at); ?></td>
-                                <td>
-                                    <button type="button" class="button button-small preview-email" data-id="<?php echo esc_attr($log->id); ?>" data-content="<?php echo esc_attr(base64_encode($log->body)); ?>">
-                                        Preview
-                                    </button>
-                                    <?php if ($log->status === 'failed'): ?>
-                                        <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-smtp-log&resend=' . $log->id), 'resend_email'); ?>" class="button button-small">
-                                            Resend
-                                        </a>
-                                    <?php endif; ?>
+                                <td colspan="6" style="text-align: center; padding: 40px;">
+                                    <p style="color: #6b7280;">No emails logged yet. Emails will appear here once SMTP is configured and emails are sent.</p>
                                 </td>
                             </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                        <?php else: ?>
+                            <?php foreach ($logs as $log): ?>
+                                <tr>
+                                    <td><?php echo esc_html($log->id); ?></td>
+                                    <td><?php echo esc_html($log->to_email); ?></td>
+                                    <td><?php echo esc_html($log->subject); ?></td>
+                                    <td>
+                                        <?php if ($log->status === 'success'): ?>
+                                            <span style="background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 3px; font-size: 11px;">SUCCESS</span>
+                                        <?php else: ?>
+                                            <span style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 3px; font-size: 11px;">FAILED</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?php echo esc_html($log->sent_at); ?></td>
+                                    <td>
+                                        <button type="button" class="button button-small preview-email" data-id="<?php echo esc_attr($log->id); ?>" data-content="<?php echo esc_attr(base64_encode($log->body)); ?>">
+                                            Preview
+                                        </button>
+                                        <?php if ($log->status === 'failed'): ?>
+                                            <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-smtp-log&resend=' . $log->id), 'resend_email'); ?>" class="button button-small">
+                                                Resend
+                                            </a>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
 
             <!-- Pagination -->
             <?php

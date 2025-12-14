@@ -507,178 +507,184 @@ class Ofast_X_Snippets
                         <input type="hidden" name="snippet_id" value="<?php echo $editing; ?>">
                     <?php endif; ?>
 
-                    <table class="form-table">
-                        <tr>
-                            <th><label for="snippet_name">Snippet Name</label></th>
-                            <td>
-                                <input type="text" name="snippet_name" id="snippet_name" class="regular-text" required
-                                    value="<?php echo $edit_snippet ? esc_attr($edit_snippet->name) : ''; ?>"
-                                    placeholder="e.g., Custom Header Code">
-                            </td>
-                        </tr>
-                        <tr>
-                            <th><label for="snippet_description">Description</label></th>
-                            <td>
-                                <textarea name="snippet_description" id="snippet_description" rows="3" class="large-text"
-                                    placeholder="Brief description of what this snippet does (optional)"><?php echo $edit_snippet ? esc_textarea($edit_snippet->description) : ''; ?></textarea>
-                                <p class="description">Optional: Add a description to help you remember what this snippet does.</p>
-                        </tr>
-                        <tr>
-                            <th><label for="snippet_category">Category</label></th>
-                            <td>
-                                <?php
-                                // Get existing categories for autocomplete
-                                $existing_categories = $wpdb->get_col("SELECT DISTINCT category FROM {$wpdb->prefix}ofast_snippets WHERE category != '' ORDER BY category");
-                                $current_category = ($edit_snippet && isset($edit_snippet->category)) ? $edit_snippet->category : '';
-                                ?>
-                                <input type="text" name="snippet_category" id="snippet_category" class="regular-text"
-                                    value="<?php echo esc_attr($current_category); ?>"
-                                    placeholder="e.g., WooCommerce, Security, Performance"
-                                    list="snippet_categories_list">
-                                <datalist id="snippet_categories_list">
-                                    <?php foreach ($existing_categories as $cat): ?>
-                                        <option value="<?php echo esc_attr($cat); ?>">
-                                        <?php endforeach; ?>
-                                </datalist>
-                                <p class="description">Type to search existing categories or create a new one.</p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th><label for="snippet_tags">Tags</label></th>
-                            <td>
-                                <?php
-                                // Get existing tags for autocomplete
-                                $existing_tags = array();
-                                $all_tags_raw = $wpdb->get_col("SELECT DISTINCT tags FROM {$wpdb->prefix}ofast_snippets WHERE tags != '' AND tags IS NOT NULL");
-                                foreach ($all_tags_raw as $tags_json) {
-                                    $tags_arr = json_decode($tags_json, true);
-                                    if (is_array($tags_arr)) {
-                                        $existing_tags = array_merge($existing_tags, $tags_arr);
-                                    }
-                                }
-                                $existing_tags = array_unique(array_filter($existing_tags));
-                                sort($existing_tags);
+                    <!-- Two-Column Layout Wrapper -->
+                    <div class="snippet-editor-layout">
+                        <!-- Right Column: Options (appears first in HTML for mobile stacking) -->
+                        <div class="snippet-options-column">
+                            <table class="form-table">
+                                <tr>
+                                    <th><label for="snippet_name">Snippet Name</label></th>
+                                    <td>
+                                        <input type="text" name="snippet_name" id="snippet_name" class="regular-text" required
+                                            value="<?php echo $edit_snippet ? esc_attr($edit_snippet->name) : ''; ?>"
+                                            placeholder="e.g., Custom Header Code">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th><label for="snippet_description">Description</label></th>
+                                    <td>
+                                        <textarea name="snippet_description" id="snippet_description" rows="3" class="large-text"
+                                            placeholder="Brief description of what this snippet does (optional)"><?php echo $edit_snippet ? esc_textarea($edit_snippet->description) : ''; ?></textarea>
+                                        <p class="description">Optional: Add a description to help you remember what this snippet does.</p>
+                                </tr>
+                                <tr>
+                                    <th><label for="snippet_category">Category</label></th>
+                                    <td>
+                                        <?php
+                                        // Get existing categories for autocomplete
+                                        $existing_categories = $wpdb->get_col("SELECT DISTINCT category FROM {$wpdb->prefix}ofast_snippets WHERE category != '' ORDER BY category");
+                                        $current_category = ($edit_snippet && isset($edit_snippet->category)) ? $edit_snippet->category : '';
+                                        ?>
+                                        <input type="text" name="snippet_category" id="snippet_category" class="regular-text"
+                                            value="<?php echo esc_attr($current_category); ?>"
+                                            placeholder="e.g., WooCommerce, Security, Performance"
+                                            list="snippet_categories_list">
+                                        <datalist id="snippet_categories_list">
+                                            <?php foreach ($existing_categories as $cat): ?>
+                                                <option value="<?php echo esc_attr($cat); ?>">
+                                                <?php endforeach; ?>
+                                        </datalist>
+                                        <p class="description">Type to search existing categories or create a new one.</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th><label for="snippet_tags">Tags</label></th>
+                                    <td>
+                                        <?php
+                                        // Get existing tags for autocomplete
+                                        $existing_tags = array();
+                                        $all_tags_raw = $wpdb->get_col("SELECT DISTINCT tags FROM {$wpdb->prefix}ofast_snippets WHERE tags != '' AND tags IS NOT NULL");
+                                        foreach ($all_tags_raw as $tags_json) {
+                                            $tags_arr = json_decode($tags_json, true);
+                                            if (is_array($tags_arr)) {
+                                                $existing_tags = array_merge($existing_tags, $tags_arr);
+                                            }
+                                        }
+                                        $existing_tags = array_unique(array_filter($existing_tags));
+                                        sort($existing_tags);
 
-                                $current_tags = '';
-                                if ($edit_snippet && !empty($edit_snippet->tags)) {
-                                    $tags_arr = json_decode($edit_snippet->tags, true);
-                                    if (is_array($tags_arr)) {
-                                        $current_tags = implode(', ', $tags_arr);
-                                    }
-                                }
-                                ?>
-                                <input type="text" name="snippet_tags" id="snippet_tags" class="regular-text"
-                                    value="<?php echo esc_attr($current_tags); ?>"
-                                    placeholder="e.g., woocommerce, hooks, filter"
-                                    list="snippet_tags_list">
-                                <datalist id="snippet_tags_list">
-                                    <?php foreach ($existing_tags as $tag): ?>
-                                        <option value="<?php echo esc_attr($tag); ?>">
-                                        <?php endforeach; ?>
-                                </datalist>
-                                <p class="description">Comma-separated tags for easier filtering. Example: security, login, performance</p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th><label for="snippet_language">Language</label></th>
-                            <td>
-                                <select name="snippet_language" id="snippet_language" class="regular-text">
-                                    <option value="php" <?php selected($edit_snippet ? $edit_snippet->language : 'php', 'php'); ?>>PHP</option>
-                                    <option value="javascript" <?php selected($edit_snippet ? $edit_snippet->language : '', 'javascript'); ?>>JavaScript</option>
-                                    <option value="css" <?php selected($edit_snippet ? $edit_snippet->language : '', 'css'); ?>>CSS</option>
-                                    <option value="html" <?php selected($edit_snippet ? $edit_snippet->language : '', 'html'); ?>>HTML</option>
-                                </select>
-                                <p class="description">Select the code language for this snippet.</p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th><label for="snippet_scope">Run Location</label></th>
-                            <td>
-                                <select name="snippet_scope" id="snippet_scope" class="regular-text">
-                                    <option value="global" <?php selected($edit_snippet ? $edit_snippet->scope : 'global', 'global'); ?>>Run Everywhere</option>
-                                    <option value="admin" <?php selected($edit_snippet ? $edit_snippet->scope : '', 'admin'); ?>>Admin Only</option>
-                                    <option value="frontend" <?php selected($edit_snippet ? $edit_snippet->scope : '', 'frontend'); ?>>Frontend Only</option>
-                                </select>
-                                <p class="description">Choose where this snippet should execute.</p>
-                            </td>
-                        </tr>
-                        <tr class="snippet-location-row">
-                            <th><label for="snippet_location">Injection Location</label></th>
-                            <td>
-                                <?php $location = ($edit_snippet && isset($edit_snippet->location)) ? $edit_snippet->location : 'footer'; ?>
-                                <select name="snippet_location" id="snippet_location" class="regular-text">
-                                    <option value="header" <?php selected($location, 'header'); ?>>Header (before &lt;/head&gt;)</option>
-                                    <option value="body" <?php selected($location, 'body'); ?>>Body (after &lt;body&gt;)</option>
-                                    <option value="footer" <?php selected($location, 'footer'); ?>>Footer (before &lt;/body&gt;)</option>
-                                </select>
-                                <p class="description">Where to inject JS/CSS/HTML code. (PHP always runs on init)</p>
-                            </td>
-                        </tr>
-                        <tr class="snippet-targeting-row">
-                            <th><label for="snippet_target_type">Page Targeting</label></th>
-                            <td>
-                                <select name="snippet_target_type" id="snippet_target_type" class="regular-text">
-                                    <?php $target_type = ($edit_snippet && isset($edit_snippet->target_type)) ? $edit_snippet->target_type : 'all'; ?>
-                                    <option value="all" <?php selected($target_type, 'all'); ?>>All Pages</option>
-                                    <option value="homepage" <?php selected($target_type, 'homepage'); ?>>Homepage Only</option>
-                                    <option value="post_type" <?php selected($target_type, 'post_type'); ?>>Specific Post Type</option>
-                                    <option value="page_ids" <?php selected($target_type, 'page_ids'); ?>>Specific Page/Post IDs</option>
-                                    <option value="url_contains" <?php selected($target_type, 'url_contains'); ?>>URL Contains</option>
-                                </select>
-                                <p class="description">Choose which pages this snippet runs on.</p>
-                            </td>
-                        </tr>
-                        <tr class="snippet-target-value-row" style="display: none;">
-                            <th><label for="snippet_target_value">Target Value</label></th>
-                            <td>
-                                <?php $target_value = ($edit_snippet && isset($edit_snippet->target_value)) ? $edit_snippet->target_value : ''; ?>
-                                <input type="text" name="snippet_target_value" id="snippet_target_value" class="regular-text"
-                                    value="<?php echo esc_attr($target_value); ?>"
-                                    placeholder="">
-                                <p class="description target-help">
-                                    <span class="post-type-help" style="display:none;">Enter post type: <code>product</code>, <code>post</code>, <code>page</code></span>
-                                    <span class="page-ids-help" style="display:none;">Enter comma-separated IDs: <code>1, 5, 23</code></span>
-                                    <span class="url-contains-help" style="display:none;">Enter URL keyword: <code>/shop/</code>, <code>checkout</code></span>
-                                </p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th><label for="snippet_run_once">Run Once</label></th>
-                            <td>
-                                <?php $run_once = ($edit_snippet && isset($edit_snippet->run_once)) ? $edit_snippet->run_once : false; ?>
-                                <label class="ofast-toggle-switch">
-                                    <input type="checkbox" name="snippet_run_once" id="snippet_run_once" value="1" <?php checked($run_once); ?>>
-                                    <span class="ofast-toggle-slider"></span>
-                                    <span class="ofast-toggle-label">Execute only once, then auto-deactivate</span>
-                                </label>
-                                <p class="description">Snippet will run one time and then automatically deactivate itself.</p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th><label for="snippet_code">Code</label></th>
-                            <td>
-                                <textarea name="snippet_code" id="snippet_code" rows="10" class="large-text code" required
-                                    placeholder="Enter your code here..."><?php echo $edit_snippet ? esc_textarea($edit_snippet->code) : ''; ?></textarea>
-                                <p class="description" id="snippet_code_help">
-                                    <span class="php-help">Enter PHP code without &lt;?php ?&gt; tags. Be careful - bad code can break your site!</span>
-                                    <span class="js-help" style="display:none;">Enter JavaScript code. Will be wrapped in &lt;script&gt; tags automatically.</span>
-                                    <span class="css-help" style="display:none;">Enter CSS code. Will be wrapped in &lt;style&gt; tags automatically.</span>
-                                    <span class="html-help" style="display:none;">Enter HTML code. Will be output directly on the page.</span>
-                                </p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>Activation</th>
-                            <td>
-                                <label class="ofast-toggle-switch">
-                                    <input type="checkbox" name="snippet_active" value="1" <?php checked($edit_snippet ? $edit_snippet->active : false); ?>>
-                                    <span class="ofast-toggle-slider"></span>
-                                    <span class="ofast-toggle-label">Activate snippet after saving</span>
-                                </label>
-                                <p class="description">Toggle ON to activate immediately, or leave OFF to save as inactive.</p>
-                            </td>
-                        </tr>
-                    </table>
+                                        $current_tags = '';
+                                        if ($edit_snippet && !empty($edit_snippet->tags)) {
+                                            $tags_arr = json_decode($edit_snippet->tags, true);
+                                            if (is_array($tags_arr)) {
+                                                $current_tags = implode(', ', $tags_arr);
+                                            }
+                                        }
+                                        ?>
+                                        <input type="text" name="snippet_tags" id="snippet_tags" class="regular-text"
+                                            value="<?php echo esc_attr($current_tags); ?>"
+                                            placeholder="e.g., woocommerce, hooks, filter"
+                                            list="snippet_tags_list">
+                                        <datalist id="snippet_tags_list">
+                                            <?php foreach ($existing_tags as $tag): ?>
+                                                <option value="<?php echo esc_attr($tag); ?>">
+                                                <?php endforeach; ?>
+                                        </datalist>
+                                        <p class="description">Comma-separated tags for easier filtering. Example: security, login, performance</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th><label for="snippet_language">Language</label></th>
+                                    <td>
+                                        <select name="snippet_language" id="snippet_language" class="regular-text">
+                                            <option value="php" <?php selected($edit_snippet ? $edit_snippet->language : 'php', 'php'); ?>>PHP</option>
+                                            <option value="javascript" <?php selected($edit_snippet ? $edit_snippet->language : '', 'javascript'); ?>>JavaScript</option>
+                                            <option value="css" <?php selected($edit_snippet ? $edit_snippet->language : '', 'css'); ?>>CSS</option>
+                                            <option value="html" <?php selected($edit_snippet ? $edit_snippet->language : '', 'html'); ?>>HTML</option>
+                                        </select>
+                                        <p class="description">Select the code language for this snippet.</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th><label for="snippet_scope">Run Location</label></th>
+                                    <td>
+                                        <select name="snippet_scope" id="snippet_scope" class="regular-text">
+                                            <option value="global" <?php selected($edit_snippet ? $edit_snippet->scope : 'global', 'global'); ?>>Run Everywhere</option>
+                                            <option value="admin" <?php selected($edit_snippet ? $edit_snippet->scope : '', 'admin'); ?>>Admin Only</option>
+                                            <option value="frontend" <?php selected($edit_snippet ? $edit_snippet->scope : '', 'frontend'); ?>>Frontend Only</option>
+                                        </select>
+                                        <p class="description">Choose where this snippet should execute.</p>
+                                    </td>
+                                </tr>
+                                <tr class="snippet-location-row">
+                                    <th><label for="snippet_location">Injection Location</label></th>
+                                    <td>
+                                        <?php $location = ($edit_snippet && isset($edit_snippet->location)) ? $edit_snippet->location : 'footer'; ?>
+                                        <select name="snippet_location" id="snippet_location" class="regular-text">
+                                            <option value="header" <?php selected($location, 'header'); ?>>Header (before &lt;/head&gt;)</option>
+                                            <option value="body" <?php selected($location, 'body'); ?>>Body (after &lt;body&gt;)</option>
+                                            <option value="footer" <?php selected($location, 'footer'); ?>>Footer (before &lt;/body&gt;)</option>
+                                        </select>
+                                        <p class="description">Where to inject JS/CSS/HTML code. (PHP always runs on init)</p>
+                                    </td>
+                                </tr>
+                                <tr class="snippet-targeting-row">
+                                    <th><label for="snippet_target_type">Page Targeting</label></th>
+                                    <td>
+                                        <select name="snippet_target_type" id="snippet_target_type" class="regular-text">
+                                            <?php $target_type = ($edit_snippet && isset($edit_snippet->target_type)) ? $edit_snippet->target_type : 'all'; ?>
+                                            <option value="all" <?php selected($target_type, 'all'); ?>>All Pages</option>
+                                            <option value="homepage" <?php selected($target_type, 'homepage'); ?>>Homepage Only</option>
+                                            <option value="post_type" <?php selected($target_type, 'post_type'); ?>>Specific Post Type</option>
+                                            <option value="page_ids" <?php selected($target_type, 'page_ids'); ?>>Specific Page/Post IDs</option>
+                                            <option value="url_contains" <?php selected($target_type, 'url_contains'); ?>>URL Contains</option>
+                                        </select>
+                                        <p class="description">Choose which pages this snippet runs on.</p>
+                                    </td>
+                                </tr>
+                                <tr class="snippet-target-value-row" style="display: none;">
+                                    <th><label for="snippet_target_value">Target Value</label></th>
+                                    <td>
+                                        <?php $target_value = ($edit_snippet && isset($edit_snippet->target_value)) ? $edit_snippet->target_value : ''; ?>
+                                        <input type="text" name="snippet_target_value" id="snippet_target_value" class="regular-text"
+                                            value="<?php echo esc_attr($target_value); ?>"
+                                            placeholder="">
+                                        <p class="description target-help">
+                                            <span class="post-type-help" style="display:none;">Enter post type: <code>product</code>, <code>post</code>, <code>page</code></span>
+                                            <span class="page-ids-help" style="display:none;">Enter comma-separated IDs: <code>1, 5, 23</code></span>
+                                            <span class="url-contains-help" style="display:none;">Enter URL keyword: <code>/shop/</code>, <code>checkout</code></span>
+                                        </p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th><label for="snippet_run_once">Run Once</label></th>
+                                    <td>
+                                        <?php $run_once = ($edit_snippet && isset($edit_snippet->run_once)) ? $edit_snippet->run_once : false; ?>
+                                        <label class="ofast-toggle-switch">
+                                            <input type="checkbox" name="snippet_run_once" id="snippet_run_once" value="1" <?php checked($run_once); ?>>
+                                            <span class="ofast-toggle-slider"></span>
+                                            <span class="ofast-toggle-label">Execute only once, then auto-deactivate</span>
+                                        </label>
+                                        <p class="description">Snippet will run one time and then automatically deactivate itself.</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Activation</th>
+                                    <td>
+                                        <label class="ofast-toggle-switch">
+                                            <input type="checkbox" name="snippet_active" value="1" <?php checked($edit_snippet ? $edit_snippet->active : false); ?>>
+                                            <span class="ofast-toggle-slider"></span>
+                                            <span class="ofast-toggle-label">Activate snippet after saving</span>
+                                        </label>
+                                        <p class="description">Toggle ON to activate immediately, or leave OFF to save as inactive.</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <!-- Left Column: Code Editor (on desktop, appears on left due to flexbox order) -->
+                        <div class="snippet-code-column">
+                            <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 500; color: #1e1e1e;">Code</h4>
+                            <textarea name="snippet_code" id="snippet_code" rows="15" class="large-text code" required
+                                placeholder="Enter your code here..."><?php echo $edit_snippet ? esc_textarea($edit_snippet->code) : ''; ?></textarea>
+                            <p class="description" id="snippet_code_help">
+                                <span class="php-help">Enter PHP code without &lt;?php ?&gt; tags. Be careful - bad code can break your site!</span>
+                                <span class="js-help" style="display:none;">Enter JavaScript code. Will be wrapped in &lt;script&gt; tags automatically.</span>
+                                <span class="css-help" style="display:none;">Enter CSS code. Will be wrapped in &lt;style&gt; tags automatically.</span>
+                                <span class="html-help" style="display:none;">Enter HTML code. Will be output directly on the page.</span>
+                            </p>
+                        </div>
+                    </div>
+                    <!-- End Two-Column Layout -->
 
                     <p class="submit">
                         <button type="submit" name="ofast_save_snippet" class="button button-primary">
@@ -790,6 +796,47 @@ class Ofast_X_Snippets
                     border-top: 1px solid #eee;
                     padding-top: 20px;
                     margin-top: 10px;
+                }
+
+                /* Two-Column Layout - Desktop Only */
+                @media screen and (min-width: 1200px) {
+                    .ofast-snippet-form {
+                        max-width: 100%;
+                    }
+
+                    .snippet-editor-layout {
+                        display: flex;
+                        gap: 30px;
+                        align-items: flex-start;
+                    }
+
+                    .snippet-code-column {
+                        flex: 1;
+                        min-width: 0;
+                        order: 1;
+                        /* Code on left */
+                    }
+
+                    .snippet-options-column {
+                        width: 380px;
+                        flex-shrink: 0;
+                        order: 2;
+                        /* Options on right */
+                    }
+
+                    .snippet-code-column .CodeMirror {
+                        height: 500px;
+                    }
+
+                    .snippet-options-column .form-table th {
+                        width: 100px;
+                    }
+
+                    .snippet-options-column input[type="text"],
+                    .snippet-options-column select,
+                    .snippet-options-column textarea {
+                        max-width: 100%;
+                    }
                 }
 
                 /* Responsive Styles */

@@ -507,6 +507,21 @@ class Ofast_X_Snippets
                         <input type="hidden" name="snippet_id" value="<?php echo $editing; ?>">
                     <?php endif; ?>
 
+                    <!-- Name and Description (always at top on mobile) -->
+                    <div class="snippet-name-section">
+                        <div style="margin-bottom: 15px;">
+                            <label for="snippet_name" style="display: block; font-size: 14px; font-weight: 500; color: #1e1e1e; margin-bottom: 6px;">Snippet Name</label>
+                            <input type="text" name="snippet_name" id="snippet_name" class="regular-text" required
+                                value="<?php echo $edit_snippet ? esc_attr($edit_snippet->name) : ''; ?>"
+                                placeholder="e.g., Custom Header Code" style="width: 100%; max-width: 600px;">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label for="snippet_description" style="display: block; font-size: 14px; font-weight: 500; color: #1e1e1e; margin-bottom: 6px;">Description</label>
+                            <textarea name="snippet_description" id="snippet_description" rows="2" class="large-text"
+                                placeholder="Brief description (optional)" style="width: 100%; max-width: 600px;"><?php echo $edit_snippet ? esc_textarea($edit_snippet->description) : ''; ?></textarea>
+                        </div>
+                    </div>
+
                     <!-- Two-Column Layout Wrapper -->
                     <div class="snippet-editor-layout">
                         <!-- Right Column: Options (appears first in HTML for mobile stacking) -->
@@ -624,30 +639,26 @@ class Ofast_X_Snippets
                                         <input type="text" name="snippet_target_value" id="snippet_target_value" class="regular-text"
                                             value="<?php echo esc_attr($target_value); ?>"
                                             placeholder="">
-                                        <p class="description target-help">
-                                            <span class="post-type-help" style="display:none;">Enter post type: <code>product</code>, <code>post</code>, <code>page</code></span>
-                                            <span class="page-ids-help" style="display:none;">Enter comma-separated IDs: <code>1, 5, 23</code></span>
-                                            <span class="url-contains-help" style="display:none;">Enter URL keyword: <code>/shop/</code>, <code>checkout</code></span>
                                         </p>
                                     </td>
-                                </tr>
-                                <tr>
-                                    <th><label for="snippet_run_once">Run Once</label></th>
+                                    <!-- Run Once & Activation (desktop only - hidden on mobile) -->
+                                <tr class="snippet-actions-desktop">
+                                    <th><label for="snippet_run_once_desktop">Run Once</label></th>
                                     <td>
                                         <?php $run_once = ($edit_snippet && isset($edit_snippet->run_once)) ? $edit_snippet->run_once : false; ?>
                                         <label class="ofast-toggle-switch">
-                                            <input type="checkbox" name="snippet_run_once" id="snippet_run_once" value="1" <?php checked($run_once); ?>>
+                                            <input type="checkbox" id="snippet_run_once_desktop" value="1" <?php checked($run_once); ?>>
                                             <span class="ofast-toggle-slider"></span>
                                             <span class="ofast-toggle-label">Execute only once, then auto-deactivate</span>
                                         </label>
                                         <p class="description">Snippet will run one time and then automatically deactivate itself.</p>
                                     </td>
                                 </tr>
-                                <tr>
+                                <tr class="snippet-actions-desktop">
                                     <th>Activation</th>
                                     <td>
                                         <label class="ofast-toggle-switch">
-                                            <input type="checkbox" name="snippet_active" value="1" <?php checked($edit_snippet ? $edit_snippet->active : false); ?>>
+                                            <input type="checkbox" id="snippet_active_desktop" value="1" <?php checked($edit_snippet ? $edit_snippet->active : false); ?>>
                                             <span class="ofast-toggle-slider"></span>
                                             <span class="ofast-toggle-label">Activate snippet after saving</span>
                                         </label>
@@ -658,19 +669,6 @@ class Ofast_X_Snippets
                         </div>
                         <!-- Left Column: Code Editor (on desktop, appears on left due to flexbox order) -->
                         <div class="snippet-code-column">
-                            <!-- Snippet Name -->
-                            <div style="margin-bottom: 15px;">
-                                <label for="snippet_name" style="display: block; font-size: 14px; font-weight: 500; color: #1e1e1e; margin-bottom: 6px;">Snippet Name</label>
-                                <input type="text" name="snippet_name" id="snippet_name" class="regular-text" required
-                                    value="<?php echo $edit_snippet ? esc_attr($edit_snippet->name) : ''; ?>"
-                                    placeholder="e.g., Custom Header Code" style="width: 100%; max-width: 100%;">
-                            </div>
-                            <!-- Description -->
-                            <div style="margin-bottom: 15px;">
-                                <label for="snippet_description" style="display: block; font-size: 14px; font-weight: 500; color: #1e1e1e; margin-bottom: 6px;">Description</label>
-                                <textarea name="snippet_description" id="snippet_description" rows="2" class="large-text"
-                                    placeholder="Brief description (optional)" style="width: 100%; max-width: 100%;"><?php echo $edit_snippet ? esc_textarea($edit_snippet->description) : ''; ?></textarea>
-                            </div>
                             <!-- Code Editor -->
                             <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 500; color: #1e1e1e;">Code</h4>
                             <textarea name="snippet_code" id="snippet_code" rows="15" class="large-text code" required
@@ -684,6 +682,35 @@ class Ofast_X_Snippets
                         </div>
                     </div>
                     <!-- End Two-Column Layout -->
+
+                    <!-- Run Once & Activation (appears below code on mobile) -->
+                    <div class="snippet-actions-section" style="margin-top: 20px;">
+                        <table class="form-table" style="margin: 0;">
+                            <tr>
+                                <th style="width: 120px;"><label for="snippet_run_once">Run Once</label></th>
+                                <td>
+                                    <?php $run_once = ($edit_snippet && isset($edit_snippet->run_once)) ? $edit_snippet->run_once : false; ?>
+                                    <label class="ofast-toggle-switch">
+                                        <input type="checkbox" name="snippet_run_once" id="snippet_run_once" value="1" <?php checked($run_once); ?>>
+                                        <span class="ofast-toggle-slider"></span>
+                                        <span class="ofast-toggle-label">Execute only once, then auto-deactivate</span>
+                                    </label>
+                                    <p class="description">Snippet will run one time and then automatically deactivate itself.</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th style="width: 120px;">Activation</th>
+                                <td>
+                                    <label class="ofast-toggle-switch">
+                                        <input type="checkbox" name="snippet_active" value="1" <?php checked($edit_snippet ? $edit_snippet->active : false); ?>>
+                                        <span class="ofast-toggle-slider"></span>
+                                        <span class="ofast-toggle-label">Activate snippet after saving</span>
+                                    </label>
+                                    <p class="description">Toggle ON to activate immediately, or leave OFF to save as inactive.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
 
                     <p class="submit">
                         <button type="submit" name="ofast_save_snippet" class="button button-primary">
@@ -793,55 +820,7 @@ class Ofast_X_Snippets
                 /* Submit Area */
                 .ofast-snippet-form .submit {
                     border-top: 1px solid #eee;
-                    padding-top: 20px;
-                    margin-top: 10px;
-                }
 
-                /* Two-Column Layout - Desktop Only */
-                @media screen and (min-width: 1200px) {
-                    .ofast-snippet-form {
-                        max-width: 100%;
-                    }
-
-                    .snippet-editor-layout {
-                        display: flex;
-                        gap: 30px;
-                        align-items: flex-start;
-                    }
-
-                    .snippet-code-column {
-                        flex: 1;
-                        min-width: 0;
-                        order: 1;
-                        /* Code on left */
-                    }
-
-                    .snippet-options-column {
-                        width: 380px;
-                        flex-shrink: 0;
-                        order: 2;
-                        /* Options on right */
-                    }
-
-                    .snippet-code-column .CodeMirror {
-                        height: 500px;
-                    }
-
-                    .snippet-options-column .form-table th {
-                        width: 100px;
-                    }
-
-                    .snippet-options-column input[type="text"],
-                    .snippet-options-column select,
-                    .snippet-options-column textarea {
-                        max-width: 100%;
-                    }
-                }
-
-                /* Responsive Styles */
-                @media screen and (max-width: 782px) {
-
-                    .ofast-snippet-form .form-table th,
                     .ofast-snippet-form .form-table td {
                         display: block;
                         width: 100%;
@@ -1168,6 +1147,21 @@ class Ofast_X_Snippets
                         });
                     }
                 }
+
+                // Sync desktop action checkboxes with mobile (actual form fields)
+                $('#snippet_run_once_desktop').on('change', function() {
+                    $('input[name="snippet_run_once"]').prop('checked', $(this).prop('checked'));
+                });
+                $('input[name="snippet_run_once"]').on('change', function() {
+                    $('#snippet_run_once_desktop').prop('checked', $(this).prop('checked'));
+                });
+
+                $('#snippet_active_desktop').on('change', function() {
+                    $('input[name="snippet_active"]').prop('checked', $(this).prop('checked'));
+                });
+                $('input[name="snippet_active"]').on('change', function() {
+                    $('#snippet_active_desktop').prop('checked', $(this).prop('checked'));
+                });
 
                 // Toggle snippet
                 $(document).on('click', '.ofast-snippet-toggle', function(e) {

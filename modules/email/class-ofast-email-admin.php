@@ -978,9 +978,56 @@ class Ofast_X_Email_Admin
             <h1>Email Templates</h1>
             <p>Design your email template with live preview. Changes apply to selected email types.</p>
 
-            <div style="display: flex; gap: 30px; margin-top: 20px;">
+            <style>
+                .ofast-template-layout {
+                    display: flex;
+                    gap: 30px;
+                    margin-top: 20px;
+                }
+
+                .ofast-template-settings {
+                    flex: 0 0 380px;
+                }
+
+                .ofast-template-preview {
+                    flex: 1;
+                    min-width: 0;
+                    position: sticky;
+                    top: 32px;
+                    align-self: flex-start;
+                }
+
+                @media screen and (max-width: 1200px) {
+                    .ofast-template-layout {
+                        flex-direction: column;
+                    }
+
+                    .ofast-template-settings {
+                        flex: 1;
+                        width: 100%;
+                    }
+
+                    .ofast-template-preview {
+                        position: static;
+                        width: 100%;
+                        margin-top: 20px;
+                    }
+
+                    .ofast-template-preview iframe {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        height: 400px;
+                    }
+
+                    .ofast-template-preview .postbox>div:last-child {
+                        overflow-x: auto;
+                    }
+                }
+            </style>
+
+            <div class="ofast-template-layout">
                 <!-- Left Column: Settings -->
-                <div style="flex: 0 0 380px;">
+                <div class="ofast-template-settings">
                     <form method="post">
                         <?php wp_nonce_field('ofast_template_save'); ?>
 
@@ -1164,8 +1211,8 @@ class Ofast_X_Email_Admin
                                 <button type="button" class="button device-btn" data-width="375">Mobile</button>
                             </div>
                         </div>
-                        <div style="background: #f1f5f9; padding: 10px; border-radius: 8px; display: flex; justify-content: center;">
-                            <iframe id="template-preview" style="width: 600px; height: 500px; border: none; border-radius: 8px; background: #fff; transition: width 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></iframe>
+                        <div style="background: #f1f5f9; padding: 10px; border-radius: 8px; display: flex; justify-content: center; max-width: 100%; overflow-x: auto;">
+                            <iframe id="template-preview" style="width: 600px; max-width: 100%; height: 500px; border: none; border-radius: 8px; background: #fff; transition: width 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></iframe>
                         </div>
                     </div>
                 </div>

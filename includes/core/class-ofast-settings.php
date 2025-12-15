@@ -438,7 +438,7 @@ class Ofast_X_Settings
             ),
             'notification-channels' => array(
                 'name' => 'Notification Channels',
-                'description' => 'WhatsApp notifications for form submissions and events',
+                'description' => 'WhatsApp and Google Sheets notifications for form submissions',
                 'status' => 'Integrated',
             ),
             'spam-protection' => array(

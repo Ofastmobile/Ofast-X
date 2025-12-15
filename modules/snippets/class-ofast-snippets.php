@@ -1153,11 +1153,20 @@ class Ofast_X_Snippets
                     });
 
                     // Make sure CodeMirror content syncs back to textarea before form submit
-                    $('form').on('submit', function() {
+                    $('.ofast-snippet-form').on('submit', function() {
                         if (cmEditor && cmEditor.codemirror) {
                             cmEditor.codemirror.save();
+                            // Extra safety: also set the value directly
+                            $codeTextarea.val(cmEditor.codemirror.getValue());
                         }
                     });
+
+                    // Also sync on any CodeMirror change (backup for form submit)
+                    if (cmEditor && cmEditor.codemirror) {
+                        cmEditor.codemirror.on('change', function() {
+                            cmEditor.codemirror.save();
+                        });
+                    }
                 }
 
                 // Toggle snippet

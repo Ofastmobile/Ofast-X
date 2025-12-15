@@ -507,24 +507,24 @@ class Ofast_X_Snippets
                         <input type="hidden" name="snippet_id" value="<?php echo $editing; ?>">
                     <?php endif; ?>
 
-                    <!-- Name and Description (always at top on mobile) -->
-                    <div class="snippet-name-section">
-                        <div style="margin-bottom: 15px;">
-                            <label for="snippet_name" style="display: block; font-size: 14px; font-weight: 500; color: #1e1e1e; margin-bottom: 6px;">Snippet Name</label>
-                            <input type="text" name="snippet_name" id="snippet_name" class="regular-text" required
-                                value="<?php echo $edit_snippet ? esc_attr($edit_snippet->name) : ''; ?>"
-                                placeholder="e.g., Custom Header Code" style="width: 100%; max-width: 600px;">
-                        </div>
-                        <div style="margin-bottom: 15px;">
-                            <label for="snippet_description" style="display: block; font-size: 14px; font-weight: 500; color: #1e1e1e; margin-bottom: 6px;">Description</label>
-                            <textarea name="snippet_description" id="snippet_description" rows="2" class="large-text"
-                                placeholder="Brief description (optional)" style="width: 100%; max-width: 600px;"><?php echo $edit_snippet ? esc_textarea($edit_snippet->description) : ''; ?></textarea>
-                        </div>
-                    </div>
-
-                    <!-- Two-Column Layout Wrapper -->
+                    <!-- Two-Column Layout Wrapper (CSS Grid on desktop) -->
                     <div class="snippet-editor-layout">
-                        <!-- Right Column: Options (appears first in HTML for mobile stacking) -->
+                        <!-- Name and Description -->
+                        <div class="snippet-name-section">
+                            <div style="margin-bottom: 15px;">
+                                <label for="snippet_name" style="display: block; font-size: 14px; font-weight: 500; color: #1e1e1e; margin-bottom: 6px;">Snippet Name</label>
+                                <input type="text" name="snippet_name" id="snippet_name" class="regular-text" required
+                                    value="<?php echo $edit_snippet ? esc_attr($edit_snippet->name) : ''; ?>"
+                                    placeholder="e.g., Custom Header Code" style="width: 100%; max-width: 100%;">
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <label for="snippet_description" style="display: block; font-size: 14px; font-weight: 500; color: #1e1e1e; margin-bottom: 6px;">Description</label>
+                                <textarea name="snippet_description" id="snippet_description" rows="2" class="large-text"
+                                    placeholder="Brief description (optional)" style="width: 100%; max-width: 100%;"><?php echo $edit_snippet ? esc_textarea($edit_snippet->description) : ''; ?></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Options -->
                         <div class="snippet-options-column">
                             <table class="form-table">
                                 <tr>
@@ -820,7 +820,77 @@ class Ofast_X_Snippets
                 /* Submit Area */
                 .ofast-snippet-form .submit {
                     border-top: 1px solid #eee;
+                    padding-top: 20px;
+                    margin-top: 10px;
+                }
 
+                /* Two-Column Layout - Desktop Only */
+                @media screen and (min-width: 1200px) {
+                    .ofast-snippet-form {
+                        max-width: 100%;
+                    }
+
+                    .snippet-editor-layout {
+                        display: grid;
+                        grid-template-columns: 1fr 380px;
+                        grid-template-rows: auto auto;
+                        gap: 20px 30px;
+                        align-items: start;
+                    }
+
+                    /* Name section: Column 1, Row 1 */
+                    .snippet-name-section {
+                        grid-column: 1;
+                        grid-row: 1;
+                    }
+
+                    /* Code column: Column 1, Row 2 */
+                    .snippet-code-column {
+                        grid-column: 1;
+                        grid-row: 2;
+                    }
+
+                    /* Options column: Column 2, spanning rows 1-2 */
+                    .snippet-options-column {
+                        grid-column: 2;
+                        grid-row: 1 / 3;
+                    }
+
+                    .snippet-code-column .CodeMirror {
+                        height: 500px;
+                    }
+
+                    .snippet-options-column .form-table th {
+                        width: 100px;
+                    }
+
+                    .snippet-options-column .form-table {
+                        margin-top: 0;
+                    }
+
+                    .snippet-options-column input[type="text"],
+                    .snippet-options-column select,
+                    .snippet-options-column textarea {
+                        max-width: 100%;
+                    }
+
+                    /* Hide mobile actions section on desktop - show in options column instead */
+                    .snippet-actions-section {
+                        display: none;
+                    }
+                }
+
+                /* Hide desktop-only actions rows on mobile/tablet (below 1200px) */
+                @media screen and (max-width: 1199px) {
+                    .snippet-actions-desktop {
+                        display: none;
+                    }
+                }
+
+                /* Responsive Styles */
+                @media screen and (max-width: 782px) {
+
+                    .ofast-snippet-form .form-table th,
                     .ofast-snippet-form .form-table td {
                         display: block;
                         width: 100%;

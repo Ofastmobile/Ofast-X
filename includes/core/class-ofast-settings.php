@@ -67,6 +67,10 @@ class Ofast_X_Settings
         // Save to database
         update_option('ofastx_modules_enabled', $enabled_modules);
 
+        // Save data management settings
+        $delete_data = isset($_POST['ofast_delete_data_on_uninstall']) ? 1 : 0;
+        update_option('ofast_delete_data_on_uninstall', $delete_data);
+
         // Redirect with success message
         wp_redirect(add_query_arg('settings_saved', '1', wp_get_referer()));
         exit;
@@ -142,6 +146,36 @@ class Ofast_X_Settings
                             </div>
                         </div>
                     <?php endforeach; ?>
+                </div>
+
+                <!-- Data Management Section -->
+                <div class="ofast-data-management" style="margin-top: 40px; padding: 25px; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;">
+                    <h2 style="margin: 0 0 10px 0; font-size: 18px; color: #1e293b;">Data Management</h2>
+                    <p style="color: #64748b; margin: 0 0 20px 0;">Control what happens to your data when the plugin is deleted.</p>
+
+                    <?php $delete_data = get_option('ofast_delete_data_on_uninstall', 0); ?>
+
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <label style="display: flex; align-items: flex-start; gap: 12px; padding: 15px 20px; background: <?php echo !$delete_data ? '#f0fdf4' : '#f8fafc'; ?>; border: 2px solid <?php echo !$delete_data ? '#10b981' : '#e5e7eb'; ?>; border-radius: 10px; cursor: pointer; flex: 1; min-width: 250px;">
+                            <input type="radio" name="ofast_delete_data_on_uninstall" value="0" <?php checked($delete_data, 0); ?> style="margin-top: 3px;">
+                            <div>
+                                <strong style="display: block; color: #1e293b; font-size: 14px;">Keep All Data</strong>
+                                <span style="color: #64748b; font-size: 13px;">Database tables and settings will be preserved. Useful if you plan to reinstall later.</span>
+                            </div>
+                        </label>
+
+                        <label style="display: flex; align-items: flex-start; gap: 12px; padding: 15px 20px; background: <?php echo $delete_data ? '#fef2f2' : '#f8fafc'; ?>; border: 2px solid <?php echo $delete_data ? '#ef4444' : '#e5e7eb'; ?>; border-radius: 10px; cursor: pointer; flex: 1; min-width: 250px;">
+                            <input type="radio" name="ofast_delete_data_on_uninstall" value="1" <?php checked($delete_data, 1); ?> style="margin-top: 3px;">
+                            <div>
+                                <strong style="display: block; color: #1e293b; font-size: 14px;">Remove All Data</strong>
+                                <span style="color: #64748b; font-size: 13px;">Completely remove all database tables, options, and settings when uninstalled.</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <p style="margin: 15px 0 0 0; padding: 12px 0; color: #64748b; font-size: 13px;">
+                        <strong>Note:</strong> This setting only takes effect when the plugin is <em>deleted</em> (not just deactivated). Deactivating the plugin will never remove your data.
+                    </p>
                 </div>
 
                 <p class="submit" style="margin-top: 30px;">

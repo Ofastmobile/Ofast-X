@@ -573,7 +573,7 @@ a new key will be generated and emailed to you.
             <!-- Bypass Instructions -->
             <div style="background: #f0f6fc; border: 1px solid #c3d9ed; border-radius: 8px; padding: 15px; margin-top: 20px;">
                 <h3 style="margin-top: 0; color: #1d4ed8;">Recovery Options</h3>
-                <p><strong>Option 1: Emergency URL</strong> - Use the emergency bypass URL (valid for 1 hour per use)</p>
+                <p><strong>Option 1: Emergency URL</strong> - Use the emergency bypass URL (Expires upon one usage)</p>
                 <p><strong>Option 2: wp-config.php</strong> - Add this line to your wp-config.php file:</p>
                 <pre style="background: #fff; padding: 10px; border-radius: 4px; overflow-x: auto;">define('OFAST_DISABLE_ADMIN_PROTECTION', true);</pre>
                 <p><strong>Option 3: Database</strong> - Delete the <code>ofast_admin_custom_slug</code> option from wp_options table</p>

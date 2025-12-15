@@ -171,8 +171,8 @@ class Ofast_X_Email_Admin
                 // Increment rate limiter
                 set_transient($rate_limit_key, $send_count + 1, HOUR_IN_SECONDS);
 
-                $subject = sanitize_text_field($_POST['subject']);
-                $body = wp_kses_post($_POST['message']);
+                $subject = sanitize_text_field(wp_unslash($_POST['subject']));
+                $body = wp_kses_post(wp_unslash($_POST['message']));
 
                 // SECURITY: Sanitize roles array
                 $selected_roles = array();
@@ -774,8 +774,8 @@ class Ofast_X_Email_Admin
             wp_send_json_error('Unauthorized');
         }
 
-        $subject = sanitize_text_field($_POST['subject'] ?? 'Email Preview');
-        $message = wp_kses_post($_POST['message'] ?? '');
+        $subject = sanitize_text_field(wp_unslash($_POST['subject'] ?? 'Email Preview'));
+        $message = wp_kses_post(wp_unslash($_POST['message'] ?? ''));
 
         // Load template class
         require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-template.php';

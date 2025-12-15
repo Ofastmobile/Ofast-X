@@ -156,7 +156,7 @@ class Ofast_X_Settings
                     <?php $delete_data = get_option('ofast_delete_data_on_uninstall', 0); ?>
 
                     <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                        <label style="display: flex; align-items: flex-start; gap: 12px; padding: 15px 20px; background: <?php echo !$delete_data ? '#f0fdf4' : '#f8fafc'; ?>; border: 2px solid <?php echo !$delete_data ? '#10b981' : '#e5e7eb'; ?>; border-radius: 10px; cursor: pointer; flex: 1; min-width: 250px;">
+                        <label style="display: flex; align-items: flex-start; gap: 12px; padding: 15px 20px; background: <?php echo !$delete_data ? '#eef2ff' : '#f8fafc'; ?>; border: 2px solid <?php echo !$delete_data ? '#6366f1' : '#e5e7eb'; ?>; border-radius: 10px; cursor: pointer; flex: 1; min-width: 250px;">
                             <input type="radio" name="ofast_delete_data_on_uninstall" value="0" <?php checked($delete_data, 0); ?> style="margin-top: 3px;">
                             <div>
                                 <strong style="display: block; color: #1e293b; font-size: 14px;">Keep All Data</strong>
@@ -179,7 +179,7 @@ class Ofast_X_Settings
                 </div>
 
                 <p class="submit" style="margin-top: 30px;">
-                    <button type="submit" name="ofast_save_settings" class="button button-primary button-hero">
+                    <button type="submit" name="ofast_save_settings" class="ofast-save-btn">
                         Save All Settings
                     </button>
                 </p>
@@ -219,8 +219,8 @@ class Ofast_X_Settings
             }
 
             .ofast-module-card.enabled {
-                border-color: #10b981;
-                background: linear-gradient(to bottom, #f0fdf4, #fff);
+                border-color: #6366f1;
+                background: linear-gradient(to bottom, #eef2ff, #fff);
             }
 
             .ofast-module-card.locked {
@@ -316,7 +316,7 @@ class Ofast_X_Settings
             }
 
             .ofast-toggle-switch input:checked+.slider {
-                background-color: #10b981;
+                background-color: #6366f1;
             }
 
             .ofast-toggle-switch input:checked+.slider:before {
@@ -350,10 +350,28 @@ class Ofast_X_Settings
                 color: #6d28d9;
             }
 
-            .button-hero {
-                padding: 12px 30px !important;
-                height: auto !important;
-                font-size: 14px !important;
+            .ofast-save-btn {
+                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+                color: #fff;
+                border: none;
+                padding: 14px 32px;
+                font-size: 15px;
+                font-weight: 600;
+                border-radius: 10px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+            }
+
+            .ofast-save-btn:hover {
+                background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+                box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+                transform: translateY(-2px);
+            }
+
+            .ofast-save-btn:active {
+                transform: translateY(0);
+                box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
             }
         </style>
 

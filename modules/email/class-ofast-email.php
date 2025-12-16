@@ -54,6 +54,12 @@ class Ofast_X_Email
         // NEW: Hook for batch email processing (used by admin scheduler)
         add_action('ofast_send_email_batch', array($this, 'process_email_batch'), 10, 1);
 
+        // Apply template to WordPress emails based on settings
+        $apply_to = get_option('ofast_email_apply_to', array('emailer'));
+        if (in_array('wordpress', $apply_to) || in_array('all', $apply_to)) {
+            add_filter('wp_mail', array($this, 'apply_template_to_wp_mail'), 999, 1);
+        }
+
         // Daily cleanup
         if (!wp_next_scheduled('ofast_email_cleanup')) {
             wp_schedule_event(time(), 'daily', 'ofast_email_cleanup');
@@ -196,5 +202,54 @@ class Ofast_X_Email
         error_log('Ofast-X Email Batch: Successfully sent ' . $sent_count . ' of ' . count($user_ids) . ' emails');
 
         return $sent_count;
+    }
+
+    /**
+     * Apply email template to WordPress emails (wp_mail filter)
+     * 
+     * @param array $args The wp_mail arguments
+     * @return array Modified arguments with template applied
+     */
+    public function apply_template_to_wp_mail($args)
+    {
+        // Get the email message
+        $message = $args['message'];
+
+        // Skip if message is empty or already has HTML template markers
+        if (empty($message)) {
+            return $args;
+        }
+
+        // Check if already has full HTML structure (avoid double-wrapping)
+        if (stripos($message, '<!DOCTYPE') !== false || stripos($message, '<html') !== false) {
+            return $args;
+        }
+
+        // Wrap in template
+        $args['message'] = Ofast_X_Email_Template::get_template($message);
+
+        // Ensure content type is HTML
+        if (!isset($args['headers'])) {
+            $args['headers'] = array();
+        }
+        if (is_string($args['headers'])) {
+            $args['headers'] = explode("\n", $args['headers']);
+        }
+
+        // Check if Content-Type header already exists
+        $has_content_type = false;
+        foreach ($args['headers'] as $header) {
+            if (stripos($header, 'Content-Type') !== false) {
+                $has_content_type = true;
+                break;
+            }
+        }
+
+        // Add HTML content type if not present
+        if (!$has_content_type) {
+            $args['headers'][] = 'Content-Type: text/html; charset=UTF-8';
+        }
+
+        return $args;
     }
 }

@@ -220,9 +220,17 @@ class Ofast_X_SMTP
         $from_email = sanitize_email($_POST['from_email'] ?? '');
         $from_name = sanitize_text_field($_POST['from_name'] ?? get_bloginfo('name'));
 
+        // If password is placeholder, use saved password
+        if ($password === '••••••••' || empty($password)) {
+            $saved_password = get_option('ofast_smtp_password', '');
+            if (!empty($saved_password)) {
+                $password = $this->decrypt_password($saved_password);
+            }
+        }
+
         // Validate
         if (empty($host) || empty($username) || empty($password) || empty($from_email)) {
-            wp_send_json_error('Please fill in all required fields');
+            wp_send_json_error('Please fill in all required fields (if password was saved, try saving first then test)');
         }
 
         // Test using PHPMailer directly

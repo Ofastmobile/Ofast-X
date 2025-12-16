@@ -1215,6 +1215,39 @@ class Ofast_X_Email_Admin
                             ?>
                         </div>
 
+                        <!-- Email Cron Settings (Like Tutor LMS) -->
+                        <div style="margin-bottom: 20px; padding: 15px; background: #f0f6fc; border-radius: 8px; border: 1px solid #c3d9ed;">
+                            <h3 style="margin: 0 0 15px 0; font-size: 14px; color: #1d4ed8;">Email Cron Settings</h3>
+
+                            <?php
+                            $cron_enabled = get_option('ofast_email_cron_enabled', 0);
+                            $cron_frequency = get_option('ofast_email_cron_frequency', 200);
+                            $emails_per_cron = get_option('ofast_email_emails_per_cron', 10);
+                            ?>
+
+                            <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer;">
+                                <input type="checkbox" name="cron_enabled" value="1" <?php checked($cron_enabled, 1); ?> style="width: 18px; height: 18px;">
+                                <span>
+                                    <strong>WP Cron for Bulk Mailing</strong><br>
+                                    <span style="font-size: 12px; color: #666;">Enable WordPress native scheduler for email sending</span>
+                                </span>
+                            </label>
+
+                            <div style="display: grid; gap: 15px;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">WP Email Cron Frequency (seconds)</label>
+                                    <input type="number" name="cron_frequency" value="<?php echo esc_attr($cron_frequency); ?>" min="60" max="3600" style="width: 100px;">
+                                    <span style="font-size: 12px; color: #666;">Time between cron runs (default: 200)</span>
+                                </div>
+
+                                <div>
+                                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Emails Per Cron Execution</label>
+                                    <input type="number" name="emails_per_cron" value="<?php echo esc_attr($emails_per_cron); ?>" min="1" max="100" style="width: 100px;">
+                                    <span style="font-size: 12px; color: #666;">Number of emails to send per cron run (default: 10)</span>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Buttons -->
                         <div style="display: flex; gap: 10px;">
                             <button type="submit" name="ofast_save_template" class="button button-primary">Save Template</button>
@@ -1388,6 +1421,11 @@ class Ofast_X_Email_Admin
         update_option('ofast_email_font_size', absint($_POST['font_size'] ?? 15));
         update_option('ofast_email_logo_width', absint($_POST['logo_width'] ?? 120));
         update_option('ofast_email_logo_height', absint($_POST['logo_height'] ?? 0));
+
+        // Email Cron Settings
+        update_option('ofast_email_cron_enabled', isset($_POST['cron_enabled']) ? 1 : 0);
+        update_option('ofast_email_cron_frequency', max(60, min(3600, absint($_POST['cron_frequency'] ?? 200))));
+        update_option('ofast_email_emails_per_cron', max(1, min(100, absint($_POST['emails_per_cron'] ?? 10))));
     }
 
     /**

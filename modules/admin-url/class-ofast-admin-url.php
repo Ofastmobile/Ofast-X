@@ -45,7 +45,10 @@ class Ofast_X_Admin_Url
         }
 
         // Customize logout redirect - go to home page instead of login page (which would 404)
-        add_filter('logout_redirect', array($this, 'custom_logout_redirect'), 10, 3);
+        add_filter('logout_redirect', array($this, 'custom_logout_redirect'), 999, 3);
+
+        // Fallback: catch wp-login.php?loggedout=true and redirect to home
+        add_action('login_init', array($this, 'handle_logout_redirect'), 1);
 
         // Register security hooks (login attempt tracking, lockout)
         $this->register_security_hooks();
@@ -420,8 +423,20 @@ a new key will be generated and emailed to you.
      */
     public function custom_logout_redirect($redirect_to, $requested_redirect_to, $user)
     {
-        // Redirect to home page after logout
+        // Always redirect to home page after logout when admin URL protection is active
         return home_url('/');
+    }
+
+    /**
+     * Fallback logout handler - ensures redirect to homepage
+     */
+    public function handle_logout_redirect()
+    {
+        // If we're on the login page with loggedout parameter, redirect to home
+        if (isset($_GET['loggedout']) && $_GET['loggedout'] === 'true') {
+            wp_safe_redirect(home_url('/'));
+            exit;
+        }
     }
 
     /**

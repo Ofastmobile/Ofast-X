@@ -2,7 +2,7 @@
 
 /**
  * Ofast X Email Admin Interface
- * All 13 fixes integrated into proper OOP structure
+ * Integrated into proper OOP structure
  */
 
 if (!defined('ABSPATH')) {
@@ -263,29 +263,51 @@ class Ofast_X_Email_Admin
                         $this->log_email($subject, $sent, 'Immediate send', $sample_body);
                         $result_message = '<div class="notice notice-success"><p>Sent immediately to ' . $sent . ' user(s)</p></div>';
                     } else {
-                        // Schedule in batches using selected batch size
+                        // Schedule in batches - FIRST BATCH SENDS IMMEDIATELY
                         $chunks = array_chunk($total_ids, $batch_size);
                         $scheduled_count = 0;
+                        $immediate_sent = 0;
 
                         foreach ($chunks as $i => $chunk) {
-                            $batch_time = $timestamp + ($i * 3600); // 1 hour apart
+                            if ($i === 0) {
+                                // FIRST BATCH: Send immediately
+                                $headers = $this->get_email_headers();
+                                $sample_body = '';
+                                foreach (get_users(['include' => $chunk]) as $user) {
+                                    $message = $this->replace_placeholders($body, $user);
+                                    $full_body = $this->get_email_template($message);
+                                    if (empty($sample_body)) {
+                                        $sample_body = $full_body;
+                                    }
+                                    if (wp_mail($user->user_email, $subject, $full_body, $headers)) {
+                                        $immediate_sent++;
+                                    }
+                                }
+                                $this->log_email($subject, $immediate_sent, 'Immediate batch (1 of ' . count($chunks) . ')', $sample_body);
+                            } else {
+                                // SUBSEQUENT BATCHES: Schedule hourly
+                                $batch_time = $timestamp + ($i * 3600); // Start from 1 hour
 
-                            // Use WordPress cron for scheduling
-                            wp_schedule_single_event(
-                                $batch_time,
-                                'ofast_send_email_batch',
-                                array(
+                                wp_schedule_single_event(
+                                    $batch_time,
+                                    'ofast_send_email_batch',
                                     array(
-                                        'subject' => $subject,
-                                        'body' => $body,
-                                        'user_ids' => $chunk
+                                        array(
+                                            'subject' => $subject,
+                                            'body' => $body,
+                                            'user_ids' => $chunk
+                                        )
                                     )
-                                )
-                            );
-                            $scheduled_count++;
+                                );
+                                $scheduled_count++;
+                            }
                         }
 
-                        $result_message = '<div class="notice notice-success"><p>' . $scheduled_count . ' batches scheduled (' . $batch_size . ' users/hour) starting ' . date('Y-m-d H:i', $timestamp) . '</p></div>';
+                        if ($scheduled_count > 0) {
+                            $result_message = '<div class="notice notice-success"><p>Sent ' . $immediate_sent . ' emails immediately. ' . $scheduled_count . ' more batches scheduled (' . $batch_size . ' users/hour)</p></div>';
+                        } else {
+                            $result_message = '<div class="notice notice-success"><p>Sent ' . $immediate_sent . ' emails immediately.</p></div>';
+                        }
                     }
                 }
             } // End rate limit else block

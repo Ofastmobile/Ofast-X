@@ -68,7 +68,7 @@ class Ofast_X_Settings
         update_option('ofastx_modules_enabled', $enabled_modules);
 
         // Save data management settings
-        $delete_data = isset($_POST['ofast_delete_data_on_uninstall']) ? 1 : 0;
+        $delete_data = isset($_POST['ofast_delete_data_on_uninstall']) ? intval($_POST['ofast_delete_data_on_uninstall']) : 0;
         update_option('ofast_delete_data_on_uninstall', $delete_data);
 
         // Redirect with success message

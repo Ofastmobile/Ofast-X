@@ -48,8 +48,11 @@ class Ofast_X_Email
      */
     private function setup_hooks()
     {
-        // Email sending hook with batch tracking
+        // Email sending hook with batch tracking (old format)
         add_action('ofast_scheduled_email_event', array($this, 'handle_scheduled_email'), 10, 6);
+
+        // NEW: Hook for batch email processing (used by admin scheduler)
+        add_action('ofast_send_email_batch', array($this, 'process_email_batch'), 10, 1);
 
         // Daily cleanup
         if (!wp_next_scheduled('ofast_email_cleanup')) {
@@ -124,5 +127,74 @@ class Ofast_X_Email
             "DELETE FROM {$wpdb->prefix}ofast_email_logs WHERE sent_at < DATE_SUB(NOW(), INTERVAL %d DAY)",
             $retention_days
         ));
+    }
+
+    /**
+     * Process scheduled email batch (called by WordPress cron)
+     * 
+     * @param array $args Contains subject, body, user_ids
+     */
+    public function process_email_batch($args)
+    {
+        // Extract arguments
+        $subject = isset($args['subject']) ? sanitize_text_field($args['subject']) : '';
+        $body = isset($args['body']) ? wp_kses_post($args['body']) : '';
+        $user_ids = isset($args['user_ids']) ? array_map('absint', (array) $args['user_ids']) : array();
+
+        if (empty($subject) || empty($user_ids)) {
+            error_log('Ofast-X Email Batch: Invalid arguments - missing subject or user_ids');
+            return 0;
+        }
+
+        // Get headers
+        $headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . get_option('ofast_email_from_name', get_bloginfo('name')) . ' <' . get_option('ofast_email_reply_to', get_option('admin_email')) . '>',
+            'Reply-To: ' . get_option('ofast_email_reply_to', get_option('admin_email'))
+        );
+
+        // Get users
+        $users = get_users(array(
+            'include' => $user_ids,
+            'fields' => 'all'
+        ));
+
+        $sent_count = 0;
+        $sample_body = '';
+
+        foreach ($users as $user) {
+            $final_body = $this->replace_placeholders($body, $user);
+            $email_html = Ofast_X_Email_Template::get_template($final_body);
+
+            if (empty($sample_body)) {
+                $sample_body = $email_html;
+            }
+
+            if (wp_mail($user->user_email, $subject, $email_html, $headers)) {
+                $sent_count++;
+            } else {
+                error_log('Ofast-X Email Batch: Failed to send to ' . $user->user_email);
+            }
+
+            // Small delay between emails to prevent server overload
+            if (count($users) > 10) {
+                usleep(100000); // 0.1 second
+            }
+        }
+
+        // Log the batch
+        global $wpdb;
+        $wpdb->insert($wpdb->prefix . 'ofast_email_logs', array(
+            'subject' => $subject,
+            'body' => $sample_body,
+            'sent_at' => current_time('mysql'),
+            'recipient_count' => $sent_count,
+            'status' => 'sent',
+            'notes' => 'Scheduled batch - ' . $sent_count . ' of ' . count($user_ids) . ' sent'
+        ));
+
+        error_log('Ofast-X Email Batch: Successfully sent ' . $sent_count . ' of ' . count($user_ids) . ' emails');
+
+        return $sent_count;
     }
 }

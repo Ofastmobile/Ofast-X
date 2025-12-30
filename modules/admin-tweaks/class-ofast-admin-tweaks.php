@@ -80,6 +80,10 @@ class Ofast_X_Admin_Tweaks
             add_filter('author_link', array($this, 'obfuscate_author_link'), 10, 3);
             add_filter('request', array($this, 'handle_obfuscated_author_request'));
             add_action('template_redirect', array($this, 'block_author_enumeration'));
+
+            // Ensure hash is updated on profile save
+            add_action('profile_update', array($this, 'update_user_author_hash'));
+            add_action('user_register', array($this, 'update_user_author_hash'));
         }
 
         // Email Address Obfuscator
@@ -238,8 +242,32 @@ class Ofast_X_Admin_Tweaks
      */
     public function obfuscate_author_link($link, $author_id, $author_nicename)
     {
-        $hash = substr(md5('ofast_author_' . $author_id . wp_salt()), 0, 12);
+        $hash = $this->get_user_author_hash($author_id);
         return home_url('/author/' . $hash . '/');
+    }
+
+    /**
+     * Get or generate the obfuscated hash for a user
+     */
+    private function get_user_author_hash($user_id)
+    {
+        $hash = get_user_meta($user_id, 'ofast_author_hash', true);
+
+        if (empty($hash)) {
+            $hash = $this->update_user_author_hash($user_id);
+        }
+
+        return $hash;
+    }
+
+    /**
+     * Update/Generate the obfuscated hash for a user
+     */
+    public function update_user_author_hash($user_id)
+    {
+        $hash = substr(md5('ofast_author_' . $user_id . wp_salt()), 0, 12);
+        update_user_meta($user_id, 'ofast_author_hash', $hash);
+        return $hash;
     }
 
     /**
@@ -251,15 +279,17 @@ class Ofast_X_Admin_Tweaks
             $author_name = $query_vars['author_name'];
             // Check if it's a hash (12 char hex)
             if (preg_match('/^[a-f0-9]{12}$/', $author_name)) {
-                // Find the matching author
-                $users = get_users(array('fields' => array('ID')));
-                foreach ($users as $user) {
-                    $hash = substr(md5('ofast_author_' . $user->ID . wp_salt()), 0, 12);
-                    if ($hash === $author_name) {
-                        $query_vars['author'] = $user->ID;
-                        unset($query_vars['author_name']);
-                        break;
-                    }
+                // Find the matching author using meta query (much faster than looping)
+                $users = get_users(array(
+                    'meta_key' => 'ofast_author_hash',
+                    'meta_value' => $author_name,
+                    'fields' => 'ID',
+                    'number' => 1
+                ));
+
+                if (!empty($users)) {
+                    $query_vars['author'] = $users[0];
+                    unset($query_vars['author_name']);
                 }
             }
         }

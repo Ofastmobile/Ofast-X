@@ -152,6 +152,9 @@ class Ofast_X_Redirects
             add_settings_error('ofast_redirects', 'success', 'Redirect added successfully.', 'success');
         }
 
+        // Clear cache when redirects are modified
+        $this->clear_redirects_cache();
+
         // Redirect to avoid resubmission
         wp_redirect(admin_url('admin.php?page=ofast-redirects'));
         exit;
@@ -159,6 +162,7 @@ class Ofast_X_Redirects
 
     /**
      * Process redirects on frontend
+     * PERFORMANCE: Uses transient caching to avoid DB queries on every request
      */
     public function process_redirects()
     {
@@ -167,15 +171,26 @@ class Ofast_X_Redirects
             return;
         }
 
-        global $wpdb;
-        $table = $wpdb->prefix . 'ofast_redirects';
-
         // Get current request URI
         $request_uri = $_SERVER['REQUEST_URI'];
         $request_path = parse_url($request_uri, PHP_URL_PATH);
 
-        // Get all active redirects
-        $redirects = $wpdb->get_results("SELECT * FROM $table WHERE active = 1 ORDER BY id");
+        // PERFORMANCE: Get redirects from cache (5 minute TTL)
+        $redirects = get_transient('ofast_redirects_cache');
+
+        if ($redirects === false) {
+            global $wpdb;
+            $table = $wpdb->prefix . 'ofast_redirects';
+            $redirects = $wpdb->get_results("SELECT * FROM $table WHERE active = 1 ORDER BY id");
+
+            // Cache for 5 minutes (300 seconds)
+            set_transient('ofast_redirects_cache', $redirects, 300);
+        }
+
+        // Early exit if no redirects
+        if (empty($redirects)) {
+            return;
+        }
 
         foreach ($redirects as $redirect) {
             $matched = false;
@@ -210,7 +225,9 @@ class Ofast_X_Redirects
             }
 
             if ($matched) {
-                // Update hit counter
+                // Update hit counter (async-safe, doesn't block page load)
+                global $wpdb;
+                $table = $wpdb->prefix . 'ofast_redirects';
                 $wpdb->update($table, array(
                     'hits' => $redirect->hits + 1,
                     'last_accessed' => current_time('mysql')
@@ -221,6 +238,14 @@ class Ofast_X_Redirects
                 exit;
             }
         }
+    }
+
+    /**
+     * Clear redirects cache when redirects are modified
+     */
+    private function clear_redirects_cache()
+    {
+        delete_transient('ofast_redirects_cache');
     }
 
     /**
@@ -247,6 +272,9 @@ class Ofast_X_Redirects
         $new_active = $current ? 0 : 1;
         $wpdb->update($table, array('active' => $new_active), array('id' => $id));
 
+        // Clear cache when redirect is toggled
+        $this->clear_redirects_cache();
+
         wp_send_json_success(array('active' => $new_active));
     }
 
@@ -271,6 +299,9 @@ class Ofast_X_Redirects
         $table = $wpdb->prefix . 'ofast_redirects';
 
         $wpdb->delete($table, array('id' => $id));
+
+        // Clear cache when redirect is deleted
+        $this->clear_redirects_cache();
 
         wp_send_json_success();
     }
@@ -400,6 +431,9 @@ class Ofast_X_Redirects
                 }
                 break;
         }
+
+        // Clear cache when redirects are imported
+        $this->clear_redirects_cache();
 
         wp_send_json_success(array(
             'imported' => $imported,

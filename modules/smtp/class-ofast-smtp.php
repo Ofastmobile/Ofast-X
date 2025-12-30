@@ -513,6 +513,11 @@ class Ofast_X_SMTP
      */
     private function ensure_log_table()
     {
+        // Check cache first to avoid redundant DB queries
+        if (get_transient('ofast_smtp_log_table_exists')) {
+            return;
+        }
+
         global $wpdb;
         $table_name = $wpdb->prefix . 'ofast_smtp_log';
 
@@ -542,5 +547,8 @@ class Ofast_X_SMTP
             require_once ABSPATH . 'wp-admin/includes/upgrade.php';
             dbDelta($sql);
         }
+
+        // Cache the result for 24 hours
+        set_transient('ofast_smtp_log_table_exists', true, DAY_IN_SECONDS);
     }
 }

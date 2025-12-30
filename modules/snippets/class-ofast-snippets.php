@@ -1897,6 +1897,9 @@ class Ofast_X_Snippets
             ''
         );
 
+        // Clear cache when snippet is toggled
+        $this->clear_snippets_cache();
+
         wp_send_json_success(array('active' => $new_active));
     }
 
@@ -1928,6 +1931,9 @@ class Ofast_X_Snippets
 
         // Audit log
         $this->log_snippet_action('DELETED', $id, $snippet ? $snippet->name : 'Unknown', '');
+
+        // Clear cache when snippet is deleted
+        $this->clear_snippets_cache();
 
         wp_send_json_success();
     }
@@ -1966,6 +1972,9 @@ class Ofast_X_Snippets
 
         // Audit log
         $this->log_snippet_action('RENAMED', $id, $name, $old_snippet ? "From: {$old_snippet->name}" : '');
+
+        // Clear cache when snippet is renamed
+        $this->clear_snippets_cache();
 
         wp_send_json_success(array('name' => $name));
     }
@@ -2103,6 +2112,9 @@ class Ofast_X_Snippets
             $message .= "\n\nErrors:\n" . implode("\n", array_slice($errors, 0, 5));
         }
 
+        // Clear cache when snippets are imported
+        $this->clear_snippets_cache();
+
         wp_send_json_success(array('message' => $message, 'imported' => $imported, 'skipped' => $skipped));
     }
 
@@ -2186,6 +2198,9 @@ class Ofast_X_Snippets
         // Log
         $this->log_snippet_action('TEMPLATE_USED', $wpdb->insert_id, $snippet_name, "Category: {$template['category']}");
 
+        // Clear cache when template is used
+        $this->clear_snippets_cache();
+
         wp_send_json_success(array(
             'message' => "'{$snippet_name}' added! It's set to INACTIVE - review and activate when ready.",
             'id' => $wpdb->insert_id
@@ -2238,6 +2253,9 @@ class Ofast_X_Snippets
 
         // Audit log
         $this->log_snippet_action('BULK_' . strtoupper($action), 0, 'Bulk Action', "Count: {$count}");
+
+        // Clear cache when bulk action is performed
+        $this->clear_snippets_cache();
 
         wp_send_json_success(array('count' => $count));
     }
@@ -2429,6 +2447,9 @@ class Ofast_X_Snippets
         // Audit log
         $this->log_snippet_action('IMPORTED_FROM_PLUGIN', 0, $plugin, "Imported: {$imported}, Skipped: {$skipped}");
 
+        // Clear cache when snippets are imported from plugin
+        $this->clear_snippets_cache();
+
         $message = "Imported {$imported} snippet(s) from {$plugin}";
         if ($skipped > 0) {
             $message .= ", skipped {$skipped} (security/syntax issues)";
@@ -2439,14 +2460,26 @@ class Ofast_X_Snippets
 
     /**
      * Execute active snippets
+     * PERFORMANCE: Uses transient caching to avoid DB queries on every request
      */
     public function execute_snippets()
     {
-        global $wpdb;
-        $table = $wpdb->prefix . 'ofast_snippets';
+        // PERFORMANCE: Get active snippets from cache (1 hour TTL)
+        $snippets = get_transient('ofast_active_snippets_cache');
 
-        // Get all active snippets with all relevant fields
-        $snippets = $wpdb->get_results("SELECT id, code, language, scope, location, target_type, target_value, run_once, executed_at FROM $table WHERE active = 1");
+        if ($snippets === false) {
+            global $wpdb;
+            $table = $wpdb->prefix . 'ofast_snippets';
+            // Get all active snippets with all relevant fields
+            $snippets = $wpdb->get_results("SELECT id, code, language, scope, location, target_type, target_value, run_once, executed_at FROM $table WHERE active = 1");
+
+            // Cache for 1 hour (3600 seconds)
+            set_transient('ofast_active_snippets_cache', $snippets, 3600);
+        }
+
+        if (empty($snippets)) {
+            return;
+        }
 
         foreach ($snippets as $snippet) {
             // Check scope (admin/frontend/global)
@@ -2467,7 +2500,10 @@ class Ofast_X_Snippets
 
             // Check run_once - if already executed, skip and deactivate
             if ($snippet->run_once && !empty($snippet->executed_at)) {
+                global $wpdb;
+                $table = $wpdb->prefix . 'ofast_snippets';
                 $wpdb->update($table, array('active' => 0), array('id' => $snippet->id));
+                $this->clear_snippets_cache();
                 continue;
             }
 
@@ -2490,6 +2526,14 @@ class Ofast_X_Snippets
                     break;
             }
         }
+    }
+
+    /**
+     * Clear snippets cache when snippets are modified
+     */
+    private function clear_snippets_cache()
+    {
+        delete_transient('ofast_active_snippets_cache');
     }
 
     /**

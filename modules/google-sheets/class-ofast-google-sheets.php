@@ -199,8 +199,17 @@ class Ofast_X_Google_Sheets
      */
     private function get_access_token()
     {
-        // Return cached token if still valid
+        // 1. Check current object cache (same request)
         if ($this->access_token && time() < $this->token_expires - 60) {
+            return $this->access_token;
+        }
+
+        // 2. Check WordPress transient (cross-request)
+        $cached_token = get_transient('ofast_gsheets_access_token');
+        if ($cached_token) {
+            $this->access_token = $cached_token;
+            // We don't know exact expiry of the transient, but Google tokens usually last 1h.
+            // If it fails, the next call will refresh it.
             return $this->access_token;
         }
 
@@ -250,7 +259,12 @@ class Ofast_X_Google_Sheets
 
         if (!empty($body['access_token'])) {
             $this->access_token = $body['access_token'];
-            $this->token_expires = $now + ($body['expires_in'] ?? 3600);
+            $expires_in = $body['expires_in'] ?? 3600;
+            $this->token_expires = $now + $expires_in;
+
+            // Cache in transient for slightly less than expiry time
+            set_transient('ofast_gsheets_access_token', $this->access_token, $expires_in - 120);
+
             return $this->access_token;
         }
 

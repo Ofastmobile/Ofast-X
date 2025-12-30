@@ -16,11 +16,8 @@ class Ofast_X_User_Roles
      */
     public function init()
     {
-        // Only load if module is enabled
-        $enabled = get_option('ofastx_modules_enabled', array());
-        if (empty($enabled['user-roles'])) {
-            return;
-        }
+        // NOTE: Module enabled check removed - core loader already verified this
+        // before calling init(). See class-ofast-core.php is_module_enabled()
 
         // Add role checkboxes to user profile
         add_action('show_user_profile', array($this, 'render_role_checkboxes'));

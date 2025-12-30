@@ -11,17 +11,13 @@ if (!defined('ABSPATH')) {
 
 class Ofast_X_Snippets
 {
-
     /**
      * Initialize module
      */
     public function init()
     {
-        // Only load if module is enabled
-        $enabled = get_option('ofastx_modules_enabled', array());
-        if (empty($enabled['snippets'])) {
-            return;
-        }
+        // NOTE: Module enabled check removed - core loader already verified this
+        // before calling init(). See class-ofast-core.php is_module_enabled()
 
         // Add dashboard widget
         add_action('wp_dashboard_setup', array($this, 'add_dashboard_widget'));

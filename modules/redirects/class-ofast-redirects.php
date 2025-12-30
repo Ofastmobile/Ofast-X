@@ -17,11 +17,8 @@ class Ofast_X_Redirects
      */
     public function init()
     {
-        // Only load if module is enabled
-        $enabled = get_option('ofastx_modules_enabled', array());
-        if (empty($enabled['redirects'])) {
-            return;
-        }
+        // NOTE: Module enabled check removed - core loader already verified this
+        // before calling init(). See class-ofast-core.php is_module_enabled()
 
         // Admin menu
         add_action('admin_menu', array($this, 'add_admin_menu'));

@@ -1054,7 +1054,7 @@ class Ofast_X_Login_Redesign
                     </div>
 
                     <!-- Preview Panel -->
-                    <div class="ofast-sidebar" style="position:sticky;top:32px;align-self:flex-start;">
+                    <div style="width:450px;min-width:350px;flex-shrink:0;position:sticky;top:32px;align-self:flex-start;">
                         <div class="postbox" style="padding:20px;">
                             <h3 style="margin-top:0;">Live Preview</h3>
                             <div id="login-preview" style="border:1px solid #ddd;border-radius:8px;overflow:hidden;min-height:400px;background:#f0f0f1;">

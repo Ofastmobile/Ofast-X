@@ -17,11 +17,8 @@ class Ofast_X_Whos_Admin
      */
     public function init()
     {
-        // Only load if module is enabled
-        $enabled = get_option('ofastx_modules_enabled', array());
-        if (empty($enabled['whos-admin'])) {
-            return;
-        }
+        // NOTE: Module enabled check removed - core loader already verified this
+        // before calling init(). See class-ofast-core.php is_module_enabled()
 
         // Add dashboard widgets
         add_action('wp_dashboard_setup', array($this, 'add_dashboard_widgets'));

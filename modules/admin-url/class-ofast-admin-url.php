@@ -20,11 +20,8 @@ class Ofast_X_Admin_Url
      */
     public function init()
     {
-        // Only load if module is enabled
-        $enabled = get_option('ofastx_modules_enabled', array());
-        if (empty($enabled['admin-url'])) {
-            return;
-        }
+        // NOTE: Module enabled check removed - core loader already verified this
+        // before calling init(). See class-ofast-core.php is_module_enabled()
 
         // Get settings
         $this->custom_slug = get_option('ofast_admin_custom_slug', '');
@@ -706,14 +703,22 @@ a new key will be generated and emailed to you.
 
     /**
      * SECURITY: Log security events
+     * PERFORMANCE: Uses transients instead of options to avoid blocking DB writes
      */
     private function log_security_event($event_type, $data)
     {
-        $log = get_option('ofast_security_log', array());
+        // Use hourly transients instead of a single option
+        // This prevents blocking DB writes on every request
+        $log_key = 'ofast_security_log_' . date('Y-m-d-H');
+        $log = get_transient($log_key);
+        
+        if (!is_array($log)) {
+            $log = array();
+        }
 
-        // Keep only last 100 events
-        if (count($log) >= 100) {
-            $log = array_slice($log, -99);
+        // Keep only last 50 events per hour
+        if (count($log) >= 50) {
+            $log = array_slice($log, -49);
         }
 
         $log[] = array(
@@ -722,7 +727,8 @@ a new key will be generated and emailed to you.
             'timestamp' => current_time('mysql'),
         );
 
-        update_option('ofast_security_log', $log);
+        // Store with 24-hour expiry (transient is non-blocking)
+        set_transient($log_key, $log, DAY_IN_SECONDS);
     }
 
     /**

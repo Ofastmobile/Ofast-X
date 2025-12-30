@@ -11,6 +11,16 @@ if (!defined('ABSPATH')) {
 
 class Ofast_X_Core
 {
+    /**
+     * Static cache for enabled modules - loaded once, used everywhere
+     * This eliminates 20+ redundant get_option() calls per request
+     */
+    private static $enabled_modules_cache = null;
+    
+    /**
+     * Static cache for frequently accessed options
+     */
+    private static $options_cache = array();
 
     protected $loader;
     protected $modules = array();
@@ -315,26 +325,63 @@ class Ofast_X_Core
 
     /**
      * Check if module is enabled
+     * PERFORMANCE: Uses static cache to avoid repeated DB queries
      */
     private function is_module_enabled($module_slug)
     {
-        // Get saved settings, or initialize with defaults
-        $enabled_modules = get_option('ofastx_modules_enabled', false);
-
-        // First time - save defaults to database
-        if ($enabled_modules === false) {
-            $enabled_modules = array(
-                'email' => true,
-                'debug' => true,
-                'smtp' => true,        // SMTP module for reliable email delivery
-                'newsletter' => false, // Will be added later
-                // Add more modules here as you build them
-            );
-            update_option('ofastx_modules_enabled', $enabled_modules);
+        // Use cached value if available (eliminates 20+ DB reads per request)
+        if (self::$enabled_modules_cache === null) {
+            self::$enabled_modules_cache = get_option('ofastx_modules_enabled', false);
+            
+            // First time - save defaults to database
+            if (self::$enabled_modules_cache === false) {
+                self::$enabled_modules_cache = array(
+                    'email' => true,
+                    'debug' => true,
+                    'smtp' => true,        // SMTP module for reliable email delivery
+                    'newsletter' => false, // Will be added later
+                    // Add more modules here as you build them
+                );
+                update_option('ofastx_modules_enabled', self::$enabled_modules_cache);
+            }
         }
 
         // Return whether this specific module is enabled
-        return isset($enabled_modules[$module_slug]) && $enabled_modules[$module_slug];
+        return isset(self::$enabled_modules_cache[$module_slug]) && self::$enabled_modules_cache[$module_slug];
+    }
+    
+    /**
+     * Get a cached option value
+     * PERFORMANCE: Caches option values to avoid repeated DB queries
+     * 
+     * @param string $key Option key
+     * @param mixed $default Default value if option doesn't exist
+     * @return mixed Option value
+     */
+    public static function get_cached_option($key, $default = '')
+    {
+        if (!isset(self::$options_cache[$key])) {
+            self::$options_cache[$key] = get_option($key, $default);
+        }
+        return self::$options_cache[$key];
+    }
+    
+    /**
+     * Clear options cache (call when options are updated)
+     * 
+     * @param string|null $key Specific key to clear, or null to clear all
+     */
+    public static function clear_options_cache($key = null)
+    {
+        if ($key === null) {
+            self::$options_cache = array();
+            self::$enabled_modules_cache = null;
+        } else {
+            unset(self::$options_cache[$key]);
+            if ($key === 'ofastx_modules_enabled') {
+                self::$enabled_modules_cache = null;
+            }
+        }
     }
 
     /**

@@ -33,6 +33,8 @@ class Ofast_X_Snippets
         add_action('wp_ajax_ofast_import_snippets', array($this, 'ajax_import_snippets'));
         add_action('wp_ajax_ofast_bulk_action_snippets', array($this, 'ajax_bulk_action_snippets'));
         add_action('wp_ajax_ofast_import_from_plugin', array($this, 'ajax_import_from_plugin'));
+        add_action('wp_ajax_ofast_preview_plugin_snippets', array($this, 'ajax_preview_plugin_snippets'));
+        add_action('wp_ajax_ofast_selective_import_snippets', array($this, 'ajax_selective_import_snippets'));
         add_action('wp_ajax_ofast_use_library_template', array($this, 'ajax_use_library_template'));
         add_action('wp_ajax_ofast_get_revisions', array($this, 'ajax_get_revisions'));
         add_action('wp_ajax_ofast_restore_revision', array($this, 'ajax_restore_revision'));
@@ -397,27 +399,47 @@ class Ofast_X_Snippets
             if (!empty($other_plugins)):
             ?>
                 <!-- Import from Other Plugins -->
-                <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-                    <h3 style="margin-top: 0; color: #856404;">Import from Other Plugins</h3>
-                    <p style="color: #856404; margin-bottom: 15px;">We detected other snippet plugins on your site. You can import their snippets here.</p>
-                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                        <?php foreach ($other_plugins as $plugin): ?>
-                            <div style="background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 12px; min-width: 200px;">
-                                <strong><?php echo esc_html($plugin['name']); ?></strong>
-                                <p style="margin: 5px 0; color: #666; font-size: 12px;">
-                                    <?php echo intval($plugin['count']); ?> snippet(s) available
-                                </p>
-                                <button type="button" class="button ofast-import-from-plugin"
-                                    data-plugin="<?php echo esc_attr($plugin['slug']); ?>"
-                                    style="width: 100%;">
-                                    Import All
-                                </button>
-                            </div>
-                        <?php endforeach; ?>
+                <div style="background: #f0f6fc; border: 1px solid #c3d9ed; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
+                        <h3 style="margin: 0; color: #1d4ed8; font-size: 15px;">Import from Other Plugins</h3>
+                        <button type="button" class="button" id="toggle-import-plugins">Show Plugins</button>
                     </div>
-                    <p style="color: #856404; font-size: 11px; margin-top: 10px; margin-bottom: 0;">
-                        All imported snippets will be set to <strong>INACTIVE</strong> for safety. Review and activate manually.
-                    </p>
+                    
+                    <div id="import-plugins-content" style="display: none;">
+                        <p style="color: #1e40af; margin: 15px 0; font-size: 13px;">We detected other snippet plugins on your site. You can import their snippets here.</p>
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                            <?php foreach ($other_plugins as $plugin): ?>
+                                <div style="background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 12px; min-width: 280px;">
+                                    <strong><?php echo esc_html($plugin['name']); ?></strong>
+                                    <p style="margin: 5px 0; color: #666; font-size: 12px;">
+                                        <?php echo intval($plugin['count']); ?> snippet(s) available
+                                    </p>
+                                    <div style="display: flex; gap: 8px; margin-top: 10px;">
+                                        <button type="button" class="button ofast-preview-plugin-snippets"
+                                            data-plugin="<?php echo esc_attr($plugin['slug']); ?>"
+                                            data-plugin-name="<?php echo esc_attr($plugin['name']); ?>"
+                                            style="flex: 1;">
+                                            Preview & Import
+                                        </button>
+                                        <button type="button" class="button ofast-import-from-plugin"
+                                            data-plugin="<?php echo esc_attr($plugin['slug']); ?>"
+                                            style="flex: 1;">
+                                            Import All
+                                        </button>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <div style="margin-top: 12px; display: flex; gap: 20px; flex-wrap: wrap; font-size: 11px;">
+                            <span style="color: #1e40af;"><span style="color: #10b981; font-size: 14px;">●</span> Active in source plugin</span>
+                            <span style="color: #1e40af;"><span style="color: #6b7280; font-size: 14px;">●</span> Inactive in source plugin</span>
+                            <span style="color: #1e40af;"><span style="color: #ef4444; font-size: 14px;">●</span> Duplicate (already exists)</span>
+                            <span style="color: #1e40af;"><span style="background: #d1fae5; color: #065f46; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600;">SAFE</span> Syntax validated</span>
+                        </div>
+                        <p style="color: #1e40af; font-size: 11px; margin-top: 10px; margin-bottom: 0;">
+                            All imported snippets will be set to <strong>INACTIVE</strong> for safety. Review and activate manually.
+                        </p>
+                    </div>
                 </div>
             <?php endif; ?>
 
@@ -1615,6 +1637,149 @@ class Ofast_X_Snippets
                     });
                 });
 
+                // Preview & Import from other plugin
+                $(document).on('click', '.ofast-preview-plugin-snippets', function() {
+                    var $btn = $(this);
+                    var plugin = $btn.data('plugin');
+                    var pluginName = $btn.data('plugin-name');
+
+                    $btn.prop('disabled', true).text('Loading...');
+
+                    $.post(ajaxurl, {
+                        action: 'ofast_preview_plugin_snippets',
+                        nonce: '<?php echo wp_create_nonce('ofast_preview_snippets'); ?>',
+                        plugin: plugin
+                    }, function(response) {
+                        $btn.prop('disabled', false).text('Preview & Import');
+
+                        if (!response.success) {
+                            alert('Error: ' + response.data);
+                            return;
+                        }
+
+                        var snippets = response.data.snippets;
+                        var validCount = snippets.filter(s => s.status !== 'duplicate' && s.is_safe !== false).length;
+                        var unsafeCount = snippets.filter(s => s.is_safe === false).length;
+
+                        // Build modal HTML
+                        var modalHtml = `
+                            <div id="ofast-preview-import-modal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:100000; overflow-y:auto; padding:20px;">
+                                <div style="max-width:900px; margin:30px auto; background:#fff; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                                    <div style="padding:20px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border-radius:12px 12px 0 0;">
+                                        <div>
+                                            <h2 style="margin:0; color:#1e293b;">Import from ${pluginName}</h2>
+                                            <p style="margin:5px 0 0; color:#64748b; font-size:13px;">${snippets.length} snippets found, <strong style="color:#10b981;">${validCount} safe to import</strong>${unsafeCount > 0 ? ', <span style="color:#ef4444;">' + unsafeCount + ' unsafe</span>' : ''}</p>
+                                        </div>
+                                        <button type="button" class="close-preview-modal" style="background:none; border:none; font-size:28px; cursor:pointer; color:#64748b; line-height:1;">&times;</button>
+                                    </div>
+                                    
+                                    <div style="padding:15px 20px; background:#f1f5f9; border-bottom:1px solid #e5e7eb; display:flex; gap:15px; flex-wrap:wrap; font-size:12px; align-items:center;">
+                                        <span><span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:3px; font-size:10px; font-weight:600;">SAFE</span> Syntax OK</span>
+                                        <span><span style="background:#fee2e2; color:#991b1b; padding:2px 6px; border-radius:3px; font-size:10px; font-weight:600;">UNSAFE</span> Has errors</span>
+                                        <span><span style="color:#10b981; font-size:14px;">●</span> Active</span>
+                                        <span><span style="color:#6b7280; font-size:14px;">●</span> Inactive</span>
+                                        <span><span style="color:#ef4444; font-size:14px;">●</span> Duplicate</span>
+                                        <label style="margin-left:auto;"><input type="checkbox" id="preview-select-all" ${validCount === 0 ? 'disabled' : ''}> Select All Safe</label>
+                                    </div>
+                                    
+                                    <div style="max-height:400px; overflow-y:auto; padding:10px 20px;">
+                                        ${snippets.map((s, i) => `
+                                            <div class="preview-snippet-item" style="display:flex; gap:12px; padding:12px; border:1px solid ${s.status === 'duplicate' ? '#fecaca' : (s.is_safe === false ? '#fed7aa' : '#e5e7eb')}; border-radius:8px; margin-bottom:10px; background:${s.status === 'duplicate' ? '#fef2f2' : (s.is_safe === false ? '#fffbeb' : '#fff')}; ${s.status === 'duplicate' ? 'opacity:0.7;' : ''}">
+                                                <input type="checkbox" class="preview-snippet-checkbox" name="import_snippets[]" value="${s.id}" ${s.status === 'duplicate' || s.is_safe === false ? 'disabled' : ''} style="margin-top:4px;">
+                                                <div style="flex:1; min-width:0;">
+                                                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
+                                                        <span style="color:${s.status === 'active' ? '#10b981' : (s.status === 'duplicate' ? '#ef4444' : '#6b7280')}; font-size:16px;">●</span>
+                                                        <strong style="color:#1e293b;">${s.name}</strong>
+                                                        ${s.status === 'duplicate' ? '<span style="background:#fecaca; color:#991b1b; padding:2px 6px; border-radius:3px; font-size:10px;">DUPLICATE</span>' : ''}
+                                                        ${s.language !== 'php' ? '<span style="background:#e0e7ff; color:#3730a3; padding:2px 6px; border-radius:3px; font-size:10px;">' + s.language.toUpperCase() + '</span>' : ''}
+                                                        <span style="margin-left:auto;">${s.is_safe !== false ? '<span style="background:#d1fae5; color:#065f46; padding:2px 8px; border-radius:3px; font-size:10px; font-weight:600;">SAFE</span>' : '<span style="background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:3px; font-size:10px; font-weight:600;">UNSAFE</span>'}</span>
+                                                    </div>
+                                                    ${s.description ? '<p style="margin:0 0 8px; color:#64748b; font-size:12px;">' + s.description + '</p>' : ''}
+                                                    ${s.status === 'duplicate' ? '<p style="margin:0; color:#ef4444; font-size:11px;">Already exists in Ofast X (ID: ' + s.existing_id + ')</p>' : ''}
+                                                    ${s.is_safe === false ? '<p style="margin:0 0 8px; color:#ea580c; font-size:11px; background:#fffbeb; padding:4px 8px; border-radius:4px;"><strong>Syntax Error:</strong> ' + (s.error_message || 'Invalid PHP code') + '</p>' : ''}
+                                                    <details style="margin-top:8px;">
+                                                        <summary style="cursor:pointer; color:#3b82f6; font-size:12px;">Preview Code</summary>
+                                                        <pre style="background:#1e1e1e; color:#d4d4d4; padding:10px; border-radius:4px; font-size:11px; overflow-x:auto; margin-top:8px; max-height:150px; white-space:pre-wrap;">${s.code_preview}</pre>
+                                                    </details>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    
+                                    <div style="padding:20px; border-top:1px solid #e5e7eb; display:flex; gap:10px; justify-content:flex-end; background:#f8fafc; border-radius:0 0 12px 12px;">
+                                        <button type="button" class="button close-preview-modal">Cancel</button>
+                                        <button type="button" class="button button-primary import-selected-snippets" data-plugin="${plugin}" ${validCount === 0 ? 'disabled' : ''}>
+                                            Import Selected (<span class="selected-count">0</span>)
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+
+                        $('body').append(modalHtml);
+
+                        var $modal = $('#ofast-preview-import-modal');
+
+                        // Update count when checkboxes change
+                        function updateSelectedCount() {
+                            var count = $modal.find('.preview-snippet-checkbox:checked').length;
+                            $modal.find('.selected-count').text(count);
+                            $modal.find('.import-selected-snippets').prop('disabled', count === 0);
+                        }
+
+                        $modal.on('change', '.preview-snippet-checkbox', updateSelectedCount);
+
+                        // Select all
+                        $modal.on('change', '#preview-select-all', function() {
+                            var checked = $(this).is(':checked');
+                            $modal.find('.preview-snippet-checkbox:not(:disabled)').prop('checked', checked);
+                            updateSelectedCount();
+                        });
+
+                        // Close modal
+                        $modal.on('click', '.close-preview-modal', function() {
+                            $modal.remove();
+                        });
+
+                        $modal.on('click', function(e) {
+                            if (e.target === this) {
+                                $modal.remove();
+                            }
+                        });
+
+                        // Import selected
+                        $modal.on('click', '.import-selected-snippets', function() {
+                            var $importBtn = $(this);
+                            var selectedIds = [];
+                            $modal.find('.preview-snippet-checkbox:checked').each(function() {
+                                selectedIds.push($(this).val());
+                            });
+
+                            if (selectedIds.length === 0) {
+                                alert('Please select at least one snippet to import');
+                                return;
+                            }
+
+                            $importBtn.prop('disabled', true).text('Importing...');
+
+                            $.post(ajaxurl, {
+                                action: 'ofast_selective_import_snippets',
+                                nonce: '<?php echo wp_create_nonce('ofast_selective_import'); ?>',
+                                plugin: $importBtn.data('plugin'),
+                                ids: selectedIds
+                            }, function(resp) {
+                                if (resp.success) {
+                                    alert(resp.data.message);
+                                    location.reload();
+                                } else {
+                                    alert('Import failed: ' + resp.data);
+                                    $importBtn.prop('disabled', false).html('Import Selected (<span class="selected-count">' + selectedIds.length + '</span>)');
+                                }
+                            });
+                        });
+                    });
+                });
+
                 // Toggle Library visibility
                 $('#toggle-library').on('click', function() {
                     var $lib = $('#snippet-library');
@@ -1625,6 +1790,19 @@ class Ofast_X_Snippets
                     } else {
                         $lib.slideDown();
                         $btn.text('Hide Templates');
+                    }
+                });
+
+                // Toggle Import from Other Plugins visibility
+                $('#toggle-import-plugins').on('click', function() {
+                    var $content = $('#import-plugins-content');
+                    var $btn = $(this);
+                    if ($content.is(':visible')) {
+                        $content.slideUp();
+                        $btn.text('Show Plugins');
+                    } else {
+                        $content.slideDown();
+                        $btn.text('Hide Plugins');
                     }
                 });
 
@@ -2452,6 +2630,302 @@ class Ofast_X_Snippets
         }
 
         wp_send_json_success(array('message' => $message, 'imported' => $imported, 'skipped' => $skipped, 'errors' => array_slice($errors, 0, 5)));
+    }
+
+    /**
+     * AJAX: Preview snippets from another plugin (for selective import)
+     */
+    public function ajax_preview_plugin_snippets()
+    {
+        check_ajax_referer('ofast_preview_snippets', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        $plugin = isset($_POST['plugin']) ? sanitize_text_field($_POST['plugin']) : '';
+        if (empty($plugin)) {
+            wp_send_json_error('Invalid plugin');
+        }
+
+        global $wpdb;
+        $our_table = $wpdb->prefix . 'ofast_snippets';
+        $snippets = array();
+
+        if ($plugin === 'code-snippets') {
+            $source_table = $wpdb->prefix . 'snippets';
+            $source_snippets = $wpdb->get_results("SELECT * FROM $source_table");
+
+            foreach ($source_snippets as $s) {
+                $code_hash = md5(trim($s->code));
+                $existing_id = $wpdb->get_var($wpdb->prepare(
+                    "SELECT id FROM $our_table WHERE MD5(TRIM(code)) = %s",
+                    $code_hash
+                ));
+
+                $status = 'inactive';
+                if ($existing_id) {
+                    $status = 'duplicate';
+                } elseif (!empty($s->active) && $s->active == 1) {
+                    $status = 'active';
+                }
+
+                // Validate PHP syntax for safety check
+                $is_safe = true;
+                $error_message = null;
+                if (!empty($s->code)) {
+                    $validation = $this->validate_php_code($s->code);
+                    if ($validation !== true) {
+                        $is_safe = false;
+                        $error_message = $validation;
+                    }
+                }
+
+                $snippets[] = array(
+                    'id' => $s->id,
+                    'name' => $s->name,
+                    'description' => isset($s->desc) ? $s->desc : '',
+                    'language' => 'php',
+                    'status' => $status,
+                    'existing_id' => $existing_id ? intval($existing_id) : null,
+                    'is_safe' => $is_safe,
+                    'error_message' => $error_message,
+                    'code_preview' => htmlspecialchars(mb_substr($s->code, 0, 500) . (strlen($s->code) > 500 ? '...' : ''))
+                );
+            }
+        } elseif ($plugin === 'wpcode') {
+            $posts = $wpdb->get_results(
+                "SELECT p.*, pm.meta_value as code_type, pm2.meta_value as is_active
+                 FROM {$wpdb->posts} p 
+                 LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_wpcode_code_type'
+                 LEFT JOIN {$wpdb->postmeta} pm2 ON p.ID = pm2.post_id AND pm2.meta_key = '_wpcode_active'
+                 WHERE p.post_type = 'wpcode' AND p.post_status IN ('publish', 'draft')"
+            );
+
+            foreach ($posts as $post) {
+                $code = $post->post_content;
+                $code_meta = get_post_meta($post->ID, '_wpcode_snippet_code', true);
+                if (!empty($code_meta)) {
+                    $code = $code_meta;
+                }
+
+                $language = 'php';
+                $code_type = isset($post->code_type) ? $post->code_type : get_post_meta($post->ID, '_wpcode_code_type', true);
+                if ($code_type === 'js' || $code_type === 'javascript') {
+                    $language = 'javascript';
+                } elseif ($code_type === 'css') {
+                    $language = 'css';
+                } elseif ($code_type === 'html' || $code_type === 'text') {
+                    $language = 'html';
+                }
+
+                $code_hash = md5(trim($code));
+                $existing_id = $wpdb->get_var($wpdb->prepare(
+                    "SELECT id FROM $our_table WHERE MD5(TRIM(code)) = %s",
+                    $code_hash
+                ));
+
+                $is_active = isset($post->is_active) ? $post->is_active : get_post_meta($post->ID, '_wpcode_active', true);
+                $status = 'inactive';
+                if ($existing_id) {
+                    $status = 'duplicate';
+                } elseif ($is_active == 1 || $post->post_status === 'publish') {
+                    $status = 'active';
+                }
+
+                // Validate PHP syntax for safety check (only for PHP snippets)
+                $is_safe = true;
+                $error_message = null;
+                if ($language === 'php' && !empty($code)) {
+                    $validation = $this->validate_php_code($code);
+                    if ($validation !== true) {
+                        $is_safe = false;
+                        $error_message = $validation;
+                    }
+                }
+
+                $snippets[] = array(
+                    'id' => $post->ID,
+                    'name' => $post->post_title,
+                    'description' => $post->post_excerpt,
+                    'language' => $language,
+                    'status' => $status,
+                    'existing_id' => $existing_id ? intval($existing_id) : null,
+                    'is_safe' => $is_safe,
+                    'error_message' => $error_message,
+                    'code_preview' => htmlspecialchars(mb_substr($code, 0, 500) . (strlen($code) > 500 ? '...' : ''))
+                );
+            }
+        } else {
+            wp_send_json_error('Unknown plugin: ' . $plugin);
+        }
+
+        wp_send_json_success(array('snippets' => $snippets));
+    }
+
+    /**
+     * AJAX: Selectively import specific snippets from another plugin
+     */
+    public function ajax_selective_import_snippets()
+    {
+        check_ajax_referer('ofast_selective_import', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        // Rate limiting
+        if (!$this->check_rate_limit('import_plugin')) {
+            wp_send_json_error('Too many requests. Please wait a moment.');
+        }
+
+        $plugin = isset($_POST['plugin']) ? sanitize_text_field($_POST['plugin']) : '';
+        $ids = isset($_POST['ids']) ? array_map('intval', $_POST['ids']) : array();
+
+        if (empty($plugin) || empty($ids)) {
+            wp_send_json_error('Invalid request');
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+        $imported = 0;
+        $skipped = 0;
+        $errors = array();
+
+        if ($plugin === 'code-snippets') {
+            $source_table = $wpdb->prefix . 'snippets';
+            $placeholders = implode(',', array_fill(0, count($ids), '%d'));
+            $snippets = $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM $source_table WHERE id IN ($placeholders)",
+                $ids
+            ));
+
+            foreach ($snippets as $snippet) {
+                // Validate PHP code
+                if (!empty($snippet->code)) {
+                    $validation = $this->validate_php_code($snippet->code);
+                    if ($validation !== true) {
+                        $errors[] = $snippet->name . ': ' . $validation;
+                        $skipped++;
+                        continue;
+                    }
+                }
+
+                // Map scope
+                $scope = 'global';
+                if (isset($snippet->scope)) {
+                    if ($snippet->scope === 'admin' || $snippet->scope === 2) {
+                        $scope = 'admin';
+                    } elseif ($snippet->scope === 'front-end' || $snippet->scope === 1) {
+                        $scope = 'frontend';
+                    }
+                }
+
+                // Duplicate check
+                $code_hash = md5(trim($snippet->code));
+                $existing_code = $wpdb->get_var($wpdb->prepare(
+                    "SELECT id FROM $table WHERE MD5(TRIM(code)) = %s",
+                    $code_hash
+                ));
+                if ($existing_code) {
+                    $skipped++;
+                    continue;
+                }
+
+                $wpdb->insert($table, array(
+                    'name' => sanitize_text_field($snippet->name) . ' (from Code Snippets)',
+                    'description' => isset($snippet->desc) ? sanitize_textarea_field($snippet->desc) : '',
+                    'code' => $snippet->code,
+                    'language' => 'php',
+                    'scope' => $scope,
+                    'location' => 'footer',
+                    'target_type' => 'all',
+                    'target_value' => '',
+                    'run_once' => 0,
+                    'active' => 0,
+                    'created_at' => current_time('mysql')
+                ));
+                $imported++;
+            }
+        } elseif ($plugin === 'wpcode') {
+            $placeholders = implode(',', array_fill(0, count($ids), '%d'));
+            $posts = $wpdb->get_results($wpdb->prepare(
+                "SELECT p.*, pm.meta_value as code_type 
+                 FROM {$wpdb->posts} p 
+                 LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_wpcode_code_type'
+                 WHERE p.ID IN ($placeholders) AND p.post_type = 'wpcode'",
+                $ids
+            ));
+
+            foreach ($posts as $post) {
+                $code = $post->post_content;
+                $code_meta = get_post_meta($post->ID, '_wpcode_snippet_code', true);
+                if (!empty($code_meta)) {
+                    $code = $code_meta;
+                }
+
+                $language = 'php';
+                $code_type = isset($post->code_type) ? $post->code_type : get_post_meta($post->ID, '_wpcode_code_type', true);
+                if ($code_type === 'js' || $code_type === 'javascript') {
+                    $language = 'javascript';
+                } elseif ($code_type === 'css') {
+                    $language = 'css';
+                } elseif ($code_type === 'html' || $code_type === 'text') {
+                    $language = 'html';
+                }
+
+                // Validate PHP code only
+                if ($language === 'php' && !empty($code)) {
+                    $validation = $this->validate_php_code($code);
+                    if ($validation !== true) {
+                        $errors[] = $post->post_title . ': ' . $validation;
+                        $skipped++;
+                        continue;
+                    }
+                }
+
+                // Duplicate check
+                $code_hash = md5(trim($code));
+                $existing_code = $wpdb->get_var($wpdb->prepare(
+                    "SELECT id FROM $table WHERE MD5(TRIM(code)) = %s",
+                    $code_hash
+                ));
+                if ($existing_code) {
+                    $skipped++;
+                    continue;
+                }
+
+                $wpdb->insert($table, array(
+                    'name' => sanitize_text_field($post->post_title) . ' (from WPCode)',
+                    'description' => sanitize_textarea_field($post->post_excerpt),
+                    'code' => $code,
+                    'language' => $language,
+                    'scope' => 'global',
+                    'location' => 'footer',
+                    'target_type' => 'all',
+                    'target_value' => '',
+                    'run_once' => 0,
+                    'active' => 0,
+                    'created_at' => current_time('mysql')
+                ));
+                $imported++;
+            }
+        } else {
+            wp_send_json_error('Unknown plugin: ' . $plugin);
+        }
+
+        // Audit log
+        $this->log_snippet_action('SELECTIVE_IMPORT', 0, $plugin, "Selected: " . count($ids) . ", Imported: {$imported}, Skipped: {$skipped}");
+
+        // Clear cache
+        $this->clear_snippets_cache();
+
+        $message = "Imported {$imported} snippet(s) from {$plugin}";
+        if ($skipped > 0) {
+            $message .= ", skipped {$skipped} (duplicates/errors)";
+        }
+
+        wp_send_json_success(array('message' => $message, 'imported' => $imported, 'skipped' => $skipped));
     }
 
     /**

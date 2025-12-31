@@ -298,7 +298,7 @@ class Ofast_X_Snippets
                 $this->log_snippet_action('UPDATED', $id, $name, "Language: {$language}, Scope: {$scope}, Active: " . ($active ? 'Yes' : 'No'));
 
                 if ($validation === true) {
-                    echo '<div class="notice notice-success"><p>Snippet updated and ' . ($active ? 'activated' : 'saved') . '!</p></div>';
+                    echo Ofast_X_Toast::render('Snippet updated and ' . ($active ? 'activated' : 'saved') . '!', 'success');
                 } else {
                     echo '<div class="notice notice-info"><p>Snippet saved (inactive for safety)</p></div>';
                 }
@@ -349,7 +349,7 @@ class Ofast_X_Snippets
                         $this->log_snippet_action('CREATED', $new_id, $name, "Language: {$language}, Scope: {$scope}, Active: " . ($active ? 'Yes' : 'No'));
 
                         if ($validation === true) {
-                            echo '<div class="notice notice-success"><p>Snippet added and ' . ($active ? 'activated' : 'saved') . '!</p></div>';
+                            echo Ofast_X_Toast::render('Snippet added and ' . ($active ? 'activated' : 'saved') . '!', 'success');
                         } else {
                             echo '<div class="notice notice-info"><p>Snippet saved (inactive for safety)</p></div>';
                         }

@@ -62,6 +62,9 @@ function ofast_x_init_plugin()
     // Load security hardening (early load for headers)
     require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-security-hardening.php';
 
+    // Load Toast Notification system
+    require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-toast.php';
+
     // Load Turnstile spam protection
     require_once OFAST_X_PLUGIN_DIR . 'includes/security/class-ofast-turnstile.php';
 

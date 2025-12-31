@@ -831,7 +831,7 @@ class Ofast_X_Email_Admin
             $timestamp = intval($_POST['cancel_timestamp']);
             $args = json_decode(stripslashes($_POST['cancel_args']), true);
             wp_unschedule_event($timestamp, 'ofast_send_email_batch', array($args));
-            echo '<div class="notice notice-success"><p>Scheduled batch cancelled.</p></div>';
+            echo Ofast_X_Toast::render('Scheduled batch cancelled.', 'success');
         }
 
         echo '<div class="wrap">';
@@ -962,7 +962,7 @@ class Ofast_X_Email_Admin
         // Handle reset
         if (isset($_POST['ofast_reset_template']) && wp_verify_nonce($_POST['_wpnonce'], 'ofast_template_reset')) {
             $this->reset_template_settings();
-            echo '<div class="notice notice-success"><p>Template settings reset to defaults!</p></div>';
+            echo Ofast_X_Toast::render('Template settings reset to defaults!', 'success');
         }
 
         // Handle send test email
@@ -983,16 +983,16 @@ class Ofast_X_Email_Admin
             $sent = wp_mail($admin_email, 'Test Email - Ofast X Template', $html, $headers);
             
             if ($sent) {
-                echo '<div class="notice notice-success"><p>Test email sent to <strong>' . esc_html($admin_email) . '</strong></p></div>';
+                echo Ofast_X_Toast::render('Test email sent to ' . esc_html($admin_email), 'success');
             } else {
-                echo '<div class="notice notice-error"><p>Failed to send test email. Please check your email configuration.</p></div>';
+                echo Ofast_X_Toast::render('Failed to send test email. Please check your email configuration.', 'error');
             }
         }
 
         // Handle save
         if (isset($_POST['ofast_save_template']) && wp_verify_nonce($_POST['_wpnonce'], 'ofast_template_save')) {
             $this->save_template_settings();
-            echo '<div class="notice notice-success"><p>Template settings saved!</p></div>';
+            echo Ofast_X_Toast::render('Template settings saved!', 'success');
         }
 
         // Get current settings

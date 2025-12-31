@@ -136,15 +136,11 @@ class Ofast_X_Settings
             <p class="description">Enable or disable plugin modules. Only enabled modules will load.</p>
 
             <?php if ($saved): ?>
-                <div class="notice notice-success is-dismissible">
-                    <p>Settings saved successfully!</p>
-                </div>
+                <?php echo Ofast_X_Toast::render('Settings saved successfully!', 'success'); ?>
             <?php endif; ?>
 
             <?php if (isset($_GET['settings_reset'])): ?>
-                <div class="notice notice-warning is-dismissible">
-                    <p>All settings have been reset to defaults!</p>
-                </div>
+                <?php echo Ofast_X_Toast::render('All settings have been reset to defaults!', 'warning'); ?>
             <?php endif; ?>
 
             <form method="post" action="">

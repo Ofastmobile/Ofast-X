@@ -74,8 +74,6 @@ class Ofast_X_Forms_Render
                 <div class="ofast-form-field ofast-form-submit">
                     <button type="submit" class="ofast-form-button" style="background: <?php echo $btn_bg; ?>; color: <?php echo $btn_text; ?>; border: none; padding: 14px 30px; font-size: 16px; font-weight: 600; border-radius: <?php echo $btn_radius; ?>px; cursor: pointer;"><?php echo esc_html($submit_text); ?></button>
                 </div>
-
-                <div class="ofast-form-message" style="display:none;"></div>
             </form>
         </div>
 
@@ -180,23 +178,56 @@ class Ofast_X_Forms_Render
                 cursor: not-allowed;
             }
 
-            .ofast-form-wrapper .ofast-form-message {
-                padding: 12px 15px;
-                border-radius: 5px;
-                margin-top: 20px;
+            /* Modern Toast Notification Styles */
+            .ofast-toast {
+                position: fixed;
+                top: 50px;
+                right: 20px;
+                z-index: 999999;
+                padding: 16px 24px;
+                border-radius: 10px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                display: flex;
+                align-items: center;
+                gap: 12px;
                 font-size: 14px;
+                font-weight: 500;
+                color: #fff;
+                animation: ofastToastSlideIn 0.3s ease;
+                max-width: 400px;
             }
 
-            .ofast-form-wrapper .ofast-form-message.success {
-                background: #d4edda;
-                color: #155724;
-                border: 1px solid #c3e6cb;
+            .ofast-toast.success {
+                background: #10b981;
             }
 
-            .ofast-form-wrapper .ofast-form-message.error {
-                background: #f8d7da;
-                color: #721c24;
-                border: 1px solid #f5c6cb;
+            .ofast-toast.error {
+                background: #ef4444;
+            }
+
+            .ofast-toast-icon {
+                font-size: 20px;
+            }
+
+            .ofast-toast-close {
+                background: none;
+                border: none;
+                color: #fff;
+                font-size: 18px;
+                cursor: pointer;
+                margin-left: 10px;
+                opacity: 0.8;
+                padding: 0;
+                line-height: 1;
+            }
+
+            .ofast-toast-close:hover {
+                opacity: 1;
+            }
+
+            @keyframes ofastToastSlideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
             }
 
             .ofast-form-wrapper .ofast-form-field.has-error input,
@@ -213,6 +244,42 @@ class Ofast_X_Forms_Render
         </style>
 
         <script>
+            // Modern Toast Notification Function
+            function showOfastToast(message, type) {
+                // Remove existing toast if any
+                var existingToast = document.querySelector('.ofast-toast');
+                if (existingToast) {
+                    existingToast.remove();
+                }
+
+                var icon = type === 'success' ? '✓' : '✗';
+                var toast = document.createElement('div');
+                toast.className = 'ofast-toast ' + type;
+                toast.innerHTML = '<span class="ofast-toast-icon">' + icon + '</span>' +
+                    '<span>' + message + '</span>' +
+                    '<button type="button" class="ofast-toast-close">&times;</button>';
+                
+                document.body.appendChild(toast);
+
+                // Close button handler
+                toast.querySelector('.ofast-toast-close').addEventListener('click', function() {
+                    toast.style.transition = 'all 0.3s ease';
+                    toast.style.transform = 'translateX(100%)';
+                    toast.style.opacity = '0';
+                    setTimeout(function() { toast.remove(); }, 300);
+                });
+
+                // Auto dismiss after 5 seconds
+                setTimeout(function() {
+                    if (document.body.contains(toast)) {
+                        toast.style.transition = 'all 0.3s ease';
+                        toast.style.transform = 'translateX(100%)';
+                        toast.style.opacity = '0';
+                        setTimeout(function() { toast.remove(); }, 300);
+                    }
+                }, 5000);
+            }
+
             (function($) {
                 $(document).ready(function() {
                     $('#ofast-form-<?php echo $form_id; ?> .ofast-form').on('submit', function(e) {
@@ -220,13 +287,11 @@ class Ofast_X_Forms_Render
 
                         var $form = $(this);
                         var $btn = $form.find('.ofast-form-button');
-                        var $msg = $form.find('.ofast-form-message');
                         var originalText = $btn.text();
 
                         // Clear errors
                         $form.find('.has-error').removeClass('has-error');
                         $form.find('.field-error').remove();
-                        $msg.hide().removeClass('success error');
 
                         // Disable button
                         $btn.prop('disabled', true).text('Sending...');
@@ -246,7 +311,7 @@ class Ofast_X_Forms_Render
                                     if (response.data.redirect) {
                                         window.location.href = response.data.redirect;
                                     } else {
-                                        $msg.addClass('success').html(response.data.message).show();
+                                        showOfastToast(response.data.message, 'success');
                                         $form[0].reset();
                                         // Reset Turnstile if present
                                         if (window.turnstile) {
@@ -261,12 +326,12 @@ class Ofast_X_Forms_Render
                                             $field.append('<div class="field-error">' + error + '</div>');
                                         });
                                     }
-                                    $msg.addClass('error').html(response.data.message || 'An error occurred.').show();
+                                    showOfastToast(response.data.message || 'An error occurred.', 'error');
                                 }
                                 $btn.prop('disabled', false).text(originalText);
                             },
                             error: function() {
-                                $msg.addClass('error').html('Connection error. Please try again.').show();
+                                showOfastToast('Connection error. Please try again.', 'error');
                                 $btn.prop('disabled', false).text(originalText);
                             }
                         });

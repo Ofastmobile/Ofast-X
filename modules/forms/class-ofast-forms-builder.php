@@ -665,6 +665,6 @@ class Ofast_X_Forms_Builder
             exit;
         }
 
-        echo '<div class="notice notice-success"><p>Form saved successfully!</p></div>';
+        echo Ofast_X_Toast::render('Form saved successfully!', 'success');
     }
 }

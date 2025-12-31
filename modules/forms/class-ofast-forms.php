@@ -356,7 +356,6 @@ class Ofast_X_Forms
                                     <td><?php echo date('M j, Y', strtotime($form->created_at)); ?></td>
                                     <td>
                                         <a href="<?php echo admin_url('admin.php?page=ofast-forms-new&id=' . $form->id); ?>">Edit</a> |
-                                        <a href="<?php echo admin_url('admin.php?page=ofast-forms-submissions&form_id=' . $form->id); ?>">View Submissions</a> |
                                         <a href="#" class="delete-form" data-id="<?php echo $form->id; ?>" style="color:red;">Delete</a>
                                     </td>
                                 </tr>

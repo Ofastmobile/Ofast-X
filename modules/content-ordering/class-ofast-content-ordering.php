@@ -479,7 +479,7 @@ class Ofast_X_Content_Ordering
 
             $this->enabled_post_types = $enabled_types;
 
-            echo '<div class="notice notice-success"><p>Settings saved! Please refresh the page to see the new Reorder submenus.</p></div>';
+            echo Ofast_X_Toast::render('Settings saved! Please refresh the page to see the new Reorder submenus.', 'success');
         }
 
         // Get all public post types

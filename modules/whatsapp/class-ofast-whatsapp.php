@@ -394,7 +394,7 @@ class Ofast_X_WhatsApp
             update_option('ofast_whatsapp_notify_types', $notify_types);
 
             $this->load_settings();
-            echo '<div class="notice notice-success"><p>WhatsApp settings saved!</p></div>';
+            echo Ofast_X_Toast::render('WhatsApp settings saved!', 'success');
         }
 
         // Handle test

@@ -290,7 +290,7 @@ class Ofast_X_Google_Sheets
 
             self::save_settings($_POST, $_FILES);
             $this->load_settings();
-            echo '<div class="notice notice-success"><p>Google Sheets settings saved!</p></div>';
+            echo Ofast_X_Toast::render('Google Sheets settings saved!', 'success');
         }
 
         $settings = get_option('ofast_google_sheets', array());

@@ -364,7 +364,7 @@ class Ofast_X_Admin_Tweaks
         update_option('ofast_admin_tweaks', $settings);
 
         add_action('admin_notices', function () {
-            echo '<div class="notice notice-success is-dismissible"><p>Admin tweaks settings saved!</p></div>';
+            echo Ofast_X_Toast::render('Admin tweaks settings saved!', 'success');
         });
     }
 

@@ -260,7 +260,7 @@ class Ofast_X_Spam_Protection
                 update_option('ofast_recaptcha_threshold', floatval($_POST['recaptcha_threshold']));
             }
 
-            echo '<div class="notice notice-success"><p>Settings saved!</p></div>';
+            echo Ofast_X_Toast::render('Settings saved!', 'success');
         }
 
         $active_provider = get_option('ofast_spam_provider', 'turnstile');

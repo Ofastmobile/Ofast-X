@@ -271,7 +271,7 @@ class Ofast_X_Newsletter
         if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
             check_admin_referer('delete_subscriber_' . $_GET['id']);
             $wpdb->delete($table, array('id' => intval($_GET['id'])));
-            echo '<div class="notice notice-success"><p>Deleted!</p></div>';
+            echo Ofast_X_Toast::render('Deleted!', 'success');
         }
 
         $subscribers = $wpdb->get_results("SELECT * FROM $table ORDER BY subscribed_at DESC");

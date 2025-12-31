@@ -377,18 +377,19 @@ a new key will be generated and emailed to you.
             return;
         }
 
-        // If user is already logged in, allow admin access
-        if (is_user_logged_in() && is_admin()) {
+        // If user is already logged in, allow all admin/login access
+        // This allows admins to preview login page from Login Redesign settings
+        if (is_user_logged_in()) {
             return;
         }
 
-        // Block direct access to wp-login.php
+        // Block direct access to wp-login.php (for non-logged-in users)
         if (strpos($request_uri, 'wp-login.php') !== false) {
             $this->show_404();
         }
 
         // Block direct /wp-admin access for non-logged in users  
-        if (strpos($request_uri, '/wp-admin') !== false && !is_user_logged_in()) {
+        if (strpos($request_uri, '/wp-admin') !== false) {
             // Don't block admin assets (images, css, js)
             if (preg_match('/\.(css|js|png|jpg|gif|ico|svg|woff|woff2|ttf|eot)$/i', $request_uri)) {
                 return;

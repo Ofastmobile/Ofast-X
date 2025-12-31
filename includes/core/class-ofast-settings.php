@@ -19,6 +19,7 @@ class Ofast_X_Settings
     {
         add_action('admin_menu', array($this, 'add_settings_menu'));
         add_action('admin_init', array($this, 'handle_save'));
+        add_action('admin_init', array($this, 'handle_reset'));
     }
 
     /**
@@ -77,6 +78,46 @@ class Ofast_X_Settings
     }
 
     /**
+     * Handle settings reset
+     */
+    public function handle_reset()
+    {
+        if (!isset($_POST['ofast_reset_settings'])) {
+            return;
+        }
+
+        // Security checks
+        if (!wp_verify_nonce($_POST['_wpnonce'], 'ofast_settings_save')) {
+            wp_die('Security check failed');
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_die('You do not have sufficient permissions');
+        }
+
+        // Reset module enabled states to defaults
+        $default_modules = array(
+            'email' => true,
+            'debug' => true,
+            'smtp' => true,
+            'newsletter' => false,
+        );
+        update_option('ofastx_modules_enabled', $default_modules);
+
+        // Reset data management setting
+        update_option('ofast_delete_data_on_uninstall', 0);
+
+        // Clear settings cache
+        if (class_exists('Ofast_X_Core') && method_exists('Ofast_X_Core', 'clear_options_cache')) {
+            Ofast_X_Core::clear_options_cache();
+        }
+
+        // Redirect with reset message
+        wp_redirect(add_query_arg('settings_reset', '1', wp_get_referer()));
+        exit;
+    }
+
+    /**
      * Render settings page
      */
     public function render_settings_page()
@@ -97,6 +138,12 @@ class Ofast_X_Settings
             <?php if ($saved): ?>
                 <div class="notice notice-success is-dismissible">
                     <p>Settings saved successfully!</p>
+                </div>
+            <?php endif; ?>
+
+            <?php if (isset($_GET['settings_reset'])): ?>
+                <div class="notice notice-warning is-dismissible">
+                    <p>All settings have been reset to defaults!</p>
                 </div>
             <?php endif; ?>
 
@@ -178,9 +225,12 @@ class Ofast_X_Settings
                     </p>
                 </div>
 
-                <p class="submit" style="margin-top: 30px;">
+                <p class="submit" style="margin-top: 30px; display: flex; gap: 15px; align-items: center;">
                     <button type="submit" name="ofast_save_settings" class="ofast-save-btn">
                         Save All Settings
+                    </button>
+                    <button type="submit" name="ofast_reset_settings" class="ofast-reset-btn" onclick="return confirm('Are you sure you want to reset all settings to defaults?\n\nThis will:\n• Disable most modules\n• Reset data management settings\n\nYour data (snippets, redirects, etc.) will NOT be deleted.');">
+                        Reset to Default
                     </button>
                 </p>
             </form>
@@ -372,6 +422,27 @@ class Ofast_X_Settings
             .ofast-save-btn:active {
                 transform: translateY(0);
                 box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
+            }
+
+            .ofast-reset-btn {
+                background: #fff;
+                color: #ef4444;
+                border: 2px solid #fecaca;
+                padding: 12px 24px;
+                font-size: 14px;
+                font-weight: 600;
+                border-radius: 10px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .ofast-reset-btn:hover {
+                background: #fef2f2;
+                border-color: #ef4444;
+            }
+
+            .ofast-reset-btn:active {
+                background: #fee2e2;
             }
         </style>
 

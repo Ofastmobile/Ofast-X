@@ -1054,12 +1054,13 @@ class Ofast_X_Login_Redesign
                     </div>
 
                     <!-- Preview Panel -->
-                    <div style="width:450px;min-width:350px;flex-shrink:0;position:sticky;top:32px;align-self:flex-start;">
+                    <div style="width:550px;min-width:400px;flex-shrink:0;position:sticky;top:32px;align-self:flex-start;">
                         <div class="postbox" style="padding:20px;">
                             <h3 style="margin-top:0;">Live Preview</h3>
-                            <div id="login-preview" style="border:1px solid #ddd;border-radius:8px;overflow:hidden;min-height:400px;background:#f0f0f1;">
+                            <div id="login-preview" style="border:1px solid #ddd;border-radius:8px;overflow:hidden;min-height:400px;background:#f0f0f1;pointer-events:none;user-select:none;">
                                 <!-- Preview rendered here -->
                             </div>
+                            <p style="margin-top:10px;color:#666;font-size:12px;font-style:italic;">Preview is for visual reference only. Interactions are disabled.</p>
                         </div>
                     </div>
                 </div>
@@ -1177,11 +1178,15 @@ class Ofast_X_Login_Redesign
                     var linkColor = $('.wp-color-picker[name="link_color"]').val() || '#50575e';
                     var logoW = $('input[name="logo_width"]').val() || 84;
                     var logoH = $('input[name="logo_height"]').val() || 84;
+                    var hideBackLink = $('input[name="hide_back_link"]').is(':checked');
+                    var siteName = '<?php echo esc_js(get_bloginfo('name')); ?>';
 
                     // Input style
                     var inputStyle = 'width:100%;padding:5px;border:' + inputBorderWidth + 'px solid ' + inputBorderColor + ';border-radius:' + inputRadius + 'px;font-size:10px;box-sizing:border-box;';
                     // Button style
                     var btnStyle = 'width:100%;padding:6px;background:' + btnColor + ';color:' + btnText + ';border:' + btnBorderWidth + 'px solid ' + btnBorderColor + ';border-radius:' + inputRadius + 'px;font-size:10px;cursor:pointer;';
+                    // Back link HTML
+                    var backLinkHtml = hideBackLink ? '' : '<div style="margin-top:10px;font-size:10px;"><a href="#" style="color:' + linkColor + ';text-decoration:none;">← Back to ' + siteName + '</a></div>';;
 
                     if (template === 'two-column') {
                         // Two-column preview
@@ -1226,6 +1231,7 @@ class Ofast_X_Login_Redesign
                             '<div style="margin-bottom:8px;"><input type="password" style="' + inputStyle + '" value="pass"></div>' +
                             '<button style="' + btnStyle + '">Log In</button>' +
                             '<div style="margin-top:8px;font-size:8px;"><a href="#" style="color:' + linkColor + ';text-decoration:none;">Register</a> | <a href="#" style="color:' + linkColor + ';text-decoration:none;">Lost password?</a></div>' +
+                            (hideBackLink ? '' : '<div style="margin-top:6px;font-size:7px;"><a href="#" style="color:' + linkColor + ';text-decoration:none;">← Back to ' + siteName + '</a></div>') +
                             '</div>' +
                             '</div>';
 
@@ -1274,6 +1280,7 @@ class Ofast_X_Login_Redesign
                             '<span style="color:' + linkColor + ';"> | </span>' +
                             '<a href="#" style="color:' + linkColor + ';text-decoration:none;">Lost your password?</a>' +
                             '</div>' +
+                            backLinkHtml +
                             '</div>' +
                             '</div>';
                     }

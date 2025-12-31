@@ -24,7 +24,7 @@ class Ofast_X_Email_Template
         $bg_color = get_option('ofast_email_bg_color', '#f8fafc'); // Light gray
         $text_color = get_option('ofast_email_text_color', '#1e293b'); // Dark slate
         $logo_url = get_option('ofast_email_logo', '');
-        $company_name = get_option('ofast_email_company_name', get_option('ofast_email_from_name', 'Your Company'));
+        $company_name = get_option('ofast_email_company_name', '');
         $tagline = get_option('ofast_email_tagline', '');
         $show_header = get_option('ofast_email_show_header', true);
         $show_footer = get_option('ofast_email_show_footer', true);
@@ -228,11 +228,17 @@ class Ofast_X_Email_Template
 
                     <?php if ($show_header): ?>
                         <!-- Header -->
-                        <div class="email-header">
+                        <?php
+                        // Calculate vertical padding when only logo is shown (no company/tagline)
+                        $header_extra_padding = (empty($company_name) && empty($tagline) && $logo_url) ? 'padding-top: 25px; padding-bottom: 25px;' : '';
+                        ?>
+                        <div class="email-header" style="<?php echo $header_extra_padding; ?>">
                             <?php if ($logo_url): ?>
-                                <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($company_name); ?>" class="email-logo">
+                                <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($company_name); ?>" class="email-logo" style="<?php echo (empty($company_name) && empty($tagline)) ? 'margin-bottom: 0;' : ''; ?>">
                             <?php endif; ?>
-                            <h1 class="email-company-name"><?php echo esc_html($company_name); ?></h1>
+                            <?php if ($company_name): ?>
+                                <h1 class="email-company-name"><?php echo esc_html($company_name); ?></h1>
+                            <?php endif; ?>
                             <?php if ($tagline): ?>
                                 <p class="email-tagline"><?php echo esc_html($tagline); ?></p>
                             <?php endif; ?>

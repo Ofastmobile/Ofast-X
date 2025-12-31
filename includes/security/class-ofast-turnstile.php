@@ -235,13 +235,27 @@ class Ofast_X_Turnstile
             wp_die(__('You do not have sufficient permissions to access this page.'));
         }
 
-        // Handle form submission
-        if (isset($_POST['ofast_save_turnstile']) && wp_verify_nonce($_POST['turnstile_nonce'], 'ofast_turnstile_save')) {
-            self::save_keys(
-                $_POST['turnstile_site_key'],
-                $_POST['turnstile_secret_key']
-            );
-            echo '<div class="notice notice-success"><p>Turnstile keys saved and encrypted!</p></div>';
+        // Handle form submission - this is now handled by parent form in spam-protection page
+        // We just save turnstile keys when they come in
+        if (isset($_POST['turnstile_site_key']) && isset($_POST['turnstile_secret_key'])) {
+            // Only save if values are not placeholders
+            $site_key = sanitize_text_field($_POST['turnstile_site_key']);
+            $secret_key = $_POST['turnstile_secret_key'];
+            
+            if (!empty($site_key)) {
+                update_option('ofast_turnstile_site_key', $site_key);
+            }
+            
+            // Only update secret if it's not the placeholder dots
+            if (!empty($secret_key) && strpos($secret_key, '••') === false) {
+                if (class_exists('Ofast_X_Security_Hardening')) {
+                    $encrypted = Ofast_X_Security_Hardening::encrypt_option($secret_key);
+                    update_option('ofast_turnstile_secret_key', $encrypted);
+                } else {
+                    update_option('ofast_turnstile_secret_key', sanitize_text_field($secret_key));
+                }
+            }
+            
             // Reload keys
             $this->site_key = get_option('ofast_turnstile_site_key', '');
             $this->secret_key = $this->get_decrypted_secret();
@@ -249,50 +263,38 @@ class Ofast_X_Turnstile
 
         $has_keys = $this->is_configured();
 ?>
-        <div class="ofast-settings-card" style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="margin-top: 0;">
-                <span style="margin-right: 8px;">🛡️</span>
-                Cloudflare Turnstile (Spam Protection)
-            </h3>
-            <p style="color: #666; margin-bottom: 15px;">
-                Protects Newsletter and Contact forms from spam bots.
-                <?php if ($has_keys): ?>
-                    <span style="color: #46b450;">✓ Configured</span>
-                <?php else: ?>
-                    <span style="color: #dc3232;">✗ Not configured</span>
-                <?php endif; ?>
-            </p>
-            <form method="post">
-                <?php wp_nonce_field('ofast_turnstile_save', 'turnstile_nonce'); ?>
-                <table class="form-table" style="margin: 0;">
-                    <tr>
-                        <th scope="row" style="padding: 10px 0;">Site Key</th>
-                        <td style="padding: 10px 0;">
-                            <input type="text"
-                                name="turnstile_site_key"
-                                value="<?php echo esc_attr($this->site_key); ?>"
-                                class="regular-text"
-                                placeholder="0x4AAAAAAA...">
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row" style="padding: 10px 0;">Secret Key</th>
-                        <td style="padding: 10px 0;">
-                            <input type="password"
-                                name="turnstile_secret_key"
-                                value="<?php echo $has_keys ? '••••••••••••••••' : ''; ?>"
-                                class="regular-text"
-                                placeholder="<?php echo $has_keys ? 'Key saved (encrypted)' : '0x4AAAAAAA...'; ?>">
-                            <p class="description">Secret key is stored encrypted.</p>
-                        </td>
-                    </tr>
-                </table>
-                <p style="margin-top: 15px;">
-                    <button type="submit" name="ofast_save_turnstile" class="button button-primary">Save Turnstile Keys</button>
-                    <a href="https://dash.cloudflare.com/?to=/:account/turnstile" target="_blank" class="button" style="margin-left: 10px;">Get Keys from Cloudflare</a>
-                </p>
-            </form>
-        </div>
+        <p style="color: #666; margin-bottom: 15px;">
+            Get your keys from <a href="https://dash.cloudflare.com/?to=/:account/turnstile" target="_blank">Cloudflare Turnstile Dashboard</a>.
+            <?php if ($has_keys): ?>
+                <span style="color: #46b450; margin-left: 10px;">✓ Configured</span>
+            <?php else: ?>
+                <span style="color: #dc3232; margin-left: 10px;">✗ Not configured</span>
+            <?php endif; ?>
+        </p>
+        
+        <table class="form-table" style="margin: 0;">
+            <tr>
+                <th scope="row">Site Key</th>
+                <td>
+                    <input type="text"
+                        name="turnstile_site_key"
+                        value="<?php echo esc_attr($this->site_key); ?>"
+                        class="regular-text"
+                        placeholder="0x4AAAAAAA...">
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">Secret Key</th>
+                <td>
+                    <input type="password"
+                        name="turnstile_secret_key"
+                        value="<?php echo $has_keys ? '••••••••••••••••' : ''; ?>"
+                        class="regular-text"
+                        placeholder="<?php echo $has_keys ? 'Key saved (encrypted)' : '0x4AAAAAAA...'; ?>">
+                    <p class="description">Secret key is stored encrypted. Leave unchanged to keep existing key.</p>
+                </td>
+            </tr>
+        </table>
 <?php
     }
 }

@@ -965,6 +965,30 @@ class Ofast_X_Email_Admin
             echo '<div class="notice notice-success"><p>Template settings reset to defaults!</p></div>';
         }
 
+        // Handle send test email
+        if (isset($_POST['ofast_send_test_template']) && wp_verify_nonce($_POST['_wpnonce'], 'ofast_template_save')) {
+            $admin_email = get_option('admin_email');
+            $test_content = '<p>This is a <strong>test email</strong> from your Ofast X Email Template.</p>
+                <p>If you can see this email with your logo, colors, and branding - your email template is working correctly!</p>
+                <p>You can now send beautiful emails to your users.</p>';
+            
+            require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-template.php';
+            $html = Ofast_X_Email_Template::get_template($test_content);
+            
+            $headers = array(
+                'Content-Type: text/html; charset=UTF-8',
+                'From: ' . get_option('ofast_email_from_name', get_bloginfo('name')) . ' <' . get_option('ofast_email_reply_to', $admin_email) . '>'
+            );
+            
+            $sent = wp_mail($admin_email, 'Test Email - Ofast X Template', $html, $headers);
+            
+            if ($sent) {
+                echo '<div class="notice notice-success"><p>Test email sent to <strong>' . esc_html($admin_email) . '</strong></p></div>';
+            } else {
+                echo '<div class="notice notice-error"><p>Failed to send test email. Please check your email configuration.</p></div>';
+            }
+        }
+
         // Handle save
         if (isset($_POST['ofast_save_template']) && wp_verify_nonce($_POST['_wpnonce'], 'ofast_template_save')) {
             $this->save_template_settings();
@@ -1249,8 +1273,15 @@ class Ofast_X_Email_Admin
                         </div>
 
                         <!-- Buttons -->
-                        <div style="display: flex; gap: 10px;">
+                        <style>
+                            @media screen and (max-width: 480px) {
+                                .ofast-template-buttons { gap: 8px !important; }
+                                .ofast-template-buttons .button { font-size: 11px !important; padding: 4px 8px !important; }
+                            }
+                        </style>
+                        <div class="ofast-template-buttons" style="display: flex; gap: 10px;">
                             <button type="submit" name="ofast_save_template" class="button button-primary">Save Template</button>
+                            <button type="submit" name="ofast_send_test_template" class="button button-primary">Send Test Email</button>
                             <button type="submit" name="ofast_reset_template" class="button" onclick="return confirm('Reset all template settings to defaults?');">Reset to Default</button>
                         </div>
                     </form>
@@ -1341,19 +1372,39 @@ class Ofast_X_Email_Admin
                     var bgColor = $('input[name="bg_color"]').val() || '#f8fafc';
                     var textColor = $('input[name="text_color"]').val() || '#1e293b';
                     var logo = $('input[name="logo_url"]').val() || '';
-                    var company = $('input[name="company_name"]').val() || 'Your Company';
+                    var company = $('input[name="company_name"]').val() || '';
                     var tagline = $('input[name="tagline"]').val() || '';
                     var showHeader = $('input[name="show_header"]').is(':checked');
                     var showFooter = $('input[name="show_footer"]').is(':checked');
                     var logoWidth = parseInt($('input[name="logo_width"]').val()) || 120;
                     var logoHeight = parseInt($('input[name="logo_height"]').val()) || 0;
 
+                    // Collect social links
+                    var socialLinks = {};
+                    var socialIcons = {
+                        'facebook': 'https://cdn-icons-png.flaticon.com/512/733/733547.png',
+                        'x': 'https://cdn-icons-png.flaticon.com/512/5968/5968830.png',
+                        'youtube': 'https://cdn-icons-png.flaticon.com/512/1384/1384060.png',
+                        'instagram': 'https://cdn-icons-png.flaticon.com/512/2111/2111463.png',
+                        'linkedin': 'https://cdn-icons-png.flaticon.com/512/174/174857.png',
+                        'whatsapp': 'https://cdn-icons-png.flaticon.com/512/733/733585.png'
+                    };
+                    $('input[name^="social["]').each(function() {
+                        var platform = $(this).attr('name').match(/social\[(\w+)\]/)[1];
+                        var url = $(this).val();
+                        if (url) socialLinks[platform] = url;
+                    });
+
                     var headerBg = style === 'modern' ? 'linear-gradient(135deg, ' + primary + ' 0%, ' + accent + ' 100%)' :
                         style === 'classic' ? primary : 'transparent';
-                    var headerStyle = style === 'minimal' ? 'display: none;' : 'background: ' + headerBg + '; padding: 15px; text-align: center; color: #fff;';
+                    
+                    // Add extra padding when only logo is shown (no company/tagline)
+                    var extraPadding = (!company && !tagline && logo) ? 'padding-top: 25px; padding-bottom: 25px;' : '';
+                    var headerStyle = style === 'minimal' ? 'display: none;' : 'background: ' + headerBg + '; padding: 15px; text-align: center; color: #fff; ' + extraPadding;
 
                     // Logo style with dynamic width/height
-                    var logoStyle = 'max-width: ' + logoWidth + 'px; ' + (logoHeight > 0 ? 'height: ' + logoHeight + 'px;' : 'height: auto;') + ' margin-bottom: 5px;';
+                    var logoMargin = (!company && !tagline) ? 'margin-bottom: 0;' : 'margin-bottom: 5px;';
+                    var logoStyle = 'max-width: ' + logoWidth + 'px; ' + (logoHeight > 0 ? 'height: ' + logoHeight + 'px;' : 'height: auto;') + ' ' + logoMargin;
 
                     var html = '<!DOCTYPE html><html><head><style>';
                     html += 'body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: ' + bgColor + '; color: ' + textColor + '; }';
@@ -1364,12 +1415,15 @@ class Ofast_X_Email_Admin
                     html += '.tagline { font-size: 11px; opacity: 0.9; margin: 3px 0 0 0; }';
                     html += '.body { padding: 25px; font-size: 14px; line-height: 1.6; text-align: justify; }';
                     html += '.footer { background: #f1f5f9; padding: 12px; text-align: center; font-size: 11px; color: #64748b; }';
+                    html += '.social-links { margin-bottom: 8px; }';
+                    html += '.social-icon { display: inline-block; width: 24px; height: 24px; margin: 0 5px; }';
+                    html += '.social-icon img { width: 24px; height: 24px; }';
                     html += '</style></head><body><div class="container">';
 
                     if (showHeader && style !== 'minimal') {
                         html += '<div class="header">';
                         if (logo) html += '<img src="' + logo + '" class="logo" alt="">';
-                        html += '<p class="company">' + company + '</p>';
+                        if (company) html += '<p class="company">' + company + '</p>';
                         if (tagline) html += '<p class="tagline">' + tagline + '</p>';
                         html += '</div>';
                     }
@@ -1382,7 +1436,21 @@ class Ofast_X_Email_Admin
 
                     if (showFooter) {
                         html += '<div class="footer">';
-                        html += '<p style="margin: 5px 0;">&copy; ' + new Date().getFullYear() + ' ' + company + '. All rights reserved.</p>';
+                        
+                        // Social links
+                        var hasSocial = Object.keys(socialLinks).length > 0;
+                        if (hasSocial) {
+                            html += '<div class="social-links">';
+                            for (var platform in socialLinks) {
+                                if (socialIcons[platform]) {
+                                    html += '<a href="' + socialLinks[platform] + '" class="social-icon"><img src="' + socialIcons[platform] + '" alt="' + platform + '"></a>';
+                                }
+                            }
+                            html += '</div>';
+                        }
+                        
+                        var footerCompany = company || 'Your Site';
+                        html += '<p style="margin: 5px 0;">&copy; ' + new Date().getFullYear() + ' ' + footerCompany + '. All rights reserved.</p>';
                         html += '</div>';
                     }
 

@@ -25,6 +25,7 @@ class Ofast_X_Spam_Protection
         // Get protection settings
         $protect_comments = get_option('ofast_spam_protect_comments', false);
         $protect_cf7 = get_option('ofast_spam_protect_cf7', false);
+        $protect_login = get_option('ofast_spam_protect_login', false);
 
         // Comment form protection
         if ($protect_comments && $this->is_configured()) {
@@ -49,6 +50,18 @@ class Ofast_X_Spam_Protection
 
             // Enqueue script on CF7 pages
             add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_script'));
+        }
+
+        // WordPress Login form protection
+        if ($protect_login && $this->is_configured()) {
+            // Render widget on login form
+            add_action('login_form', array($this, 'render_login_widget'));
+
+            // Enqueue scripts on login page
+            add_action('login_enqueue_scripts', array($this, 'enqueue_login_script'));
+
+            // Verify on authentication
+            add_filter('authenticate', array($this, 'verify_login'), 30, 3);
         }
     }
 
@@ -133,6 +146,74 @@ class Ofast_X_Spam_Protection
     }
 
     /**
+     * Render spam protection widget on login form
+     */
+    public function render_login_widget()
+    {
+        $provider = $this->get_active_provider();
+        if ($provider === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
+            echo '<div class="login-form-turnstile" style="margin: 15px 0;">';
+            echo Ofast_X_Turnstile::get_instance()->render_widget('login');
+            echo '</div>';
+        }
+    }
+
+    /**
+     * Enqueue scripts on login page
+     */
+    public function enqueue_login_script()
+    {
+        $provider = $this->get_active_provider();
+        if ($provider === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
+            echo Ofast_X_Turnstile::render_script();
+        }
+    }
+
+    /**
+     * Verify login form spam protection
+     */
+    public function verify_login($user, $username, $password)
+    {
+        // Only verify on actual login attempts (not empty form load)
+        if (empty($username) && empty($password)) {
+            return $user;
+        }
+
+        // Skip if already a credential error (wrong password, etc.)
+        // But still block if it's already a spam error
+        if (is_wp_error($user) && !in_array('spam_protection_failed', $user->get_error_codes())) {
+            return $user;
+        }
+
+        // STRICT: Token is REQUIRED for login when protection is enabled
+        $token = isset($_POST['cf-turnstile-response']) ? sanitize_text_field($_POST['cf-turnstile-response']) : '';
+        
+        // If no token at all, block immediately (prevents bypass by removing field)
+        if (empty($token)) {
+            return new WP_Error(
+                'spam_protection_failed',
+                '<strong>Security verification required.</strong> Please complete the spam protection challenge.'
+            );
+        }
+
+        $result = $this->verify($token);
+
+        if (!$result['success']) {
+            // Log failed verification attempts
+            if (function_exists('error_log')) {
+                error_log('Ofast Spam Protection: Login verification failed from IP ' . $this->get_client_ip());
+            }
+            
+            return new WP_Error(
+                'spam_protection_failed',
+                '<strong>Spam protection failed:</strong> ' . esc_html($result['error'] ?? 'Please complete the verification.')
+            );
+        }
+
+        return $user;
+    }
+
+    /**
      * Add admin menu
      */
     public function add_admin_menu()
@@ -163,6 +244,7 @@ class Ofast_X_Spam_Protection
             // Save protection settings
             update_option('ofast_spam_protect_comments', isset($_POST['protect_comments']) ? 1 : 0);
             update_option('ofast_spam_protect_cf7', isset($_POST['protect_cf7']) ? 1 : 0);
+            update_option('ofast_spam_protect_login', isset($_POST['protect_login']) ? 1 : 0);
 
             if (!empty($_POST['recaptcha_site_key'])) {
                 update_option('ofast_recaptcha_site_key', sanitize_text_field($_POST['recaptcha_site_key']));
@@ -269,6 +351,7 @@ class Ofast_X_Spam_Protection
                 <?php
                 $protect_comments = get_option('ofast_spam_protect_comments', false);
                 $protect_cf7 = get_option('ofast_spam_protect_cf7', false);
+                $protect_login = get_option('ofast_spam_protect_login', false);
                 ?>
                 <table class="form-table">
                     <tr>
@@ -289,6 +372,16 @@ class Ofast_X_Spam_Protection
                                 Add spam protection to Contact Form 7 forms
                             </label>
                             <p class="description">Requires Contact Form 7 plugin to be installed.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">WordPress Login</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="protect_login" value="1" <?php checked($protect_login); ?>>
+                                Add spam protection to login form
+                            </label>
+                            <p class="description">Protect your login page from brute force attacks and bots.</p>
                         </td>
                     </tr>
                 </table>

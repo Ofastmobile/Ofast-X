@@ -38,7 +38,7 @@ class Ofast_X_SMTP_Admin
     }
 
     /**
-     * Render tabbed page - calls existing render methods
+     * Render tabbed page with modern JS tabs (no reload)
      */
     public function render_tabbed_page()
     {
@@ -46,41 +46,80 @@ class Ofast_X_SMTP_Admin
             wp_die('Unauthorized');
         }
 
-        $current_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'dashboard';
+        // Enqueue modern tabs CSS
+        wp_enqueue_style('ofast-tabs', OFAST_X_PLUGIN_URL . 'assets/css/ofast-tabs.css', array(), OFAST_X_VERSION);
+
+        $default_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'dashboard';
         ?>
         <div class="wrap">
             <h1>SMTP</h1>
             
-            <nav class="nav-tab-wrapper" style="margin-bottom: 20px;">
-                <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-smtp&tab=dashboard')); ?>" 
-                   class="nav-tab <?php echo $current_tab === 'dashboard' ? 'nav-tab-active' : ''; ?>">
+            <!-- Modern Tabs Navigation -->
+            <nav class="ofast-tabs-nav" id="smtp-tabs-nav">
+                <a href="#" class="ofast-tab <?php echo $default_tab === 'dashboard' ? 'active' : ''; ?>" data-tab="dashboard">
+                    <span class="dashicons dashicons-chart-area"></span>
                     Dashboard
                 </a>
-                <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-smtp&tab=log')); ?>" 
-                   class="nav-tab <?php echo $current_tab === 'log' ? 'nav-tab-active' : ''; ?>">
+                <a href="#" class="ofast-tab <?php echo $default_tab === 'log' ? 'active' : ''; ?>" data-tab="log">
+                    <span class="dashicons dashicons-list-view"></span>
                     Email Log
                 </a>
-                <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-smtp&tab=settings')); ?>" 
-                   class="nav-tab <?php echo $current_tab === 'settings' ? 'nav-tab-active' : ''; ?>">
+                <a href="#" class="ofast-tab <?php echo $default_tab === 'settings' ? 'active' : ''; ?>" data-tab="settings">
+                    <span class="dashicons dashicons-admin-settings"></span>
                     Settings
                 </a>
             </nav>
 
-            <?php
-            // Call existing render methods based on tab
-            switch ($current_tab) {
-                case 'log':
-                    $this->render_log_page_content();
-                    break;
-                case 'settings':
-                    $this->render_settings_page_content();
-                    break;
-                default:
-                    $this->render_dashboard_page_content();
-                    break;
-            }
-            ?>
+            <!-- Tab Content Panels -->
+            <div id="smtp-tab-dashboard" class="ofast-tab-content<?php echo $default_tab === 'dashboard' ? ' active' : ''; ?>" style="<?php echo $default_tab !== 'dashboard' ? 'display:none;' : ''; ?>">
+                <?php $this->render_dashboard_page_content(); ?>
+            </div>
+
+            <div id="smtp-tab-log" class="ofast-tab-content<?php echo $default_tab === 'log' ? ' active' : ''; ?>" style="<?php echo $default_tab !== 'log' ? 'display:none;' : ''; ?>">
+                <?php $this->render_log_page_content(); ?>
+            </div>
+
+            <div id="smtp-tab-settings" class="ofast-tab-content<?php echo $default_tab === 'settings' ? ' active' : ''; ?>" style="<?php echo $default_tab !== 'settings' ? 'display:none;' : ''; ?>">
+                <?php $this->render_settings_page_content(); ?>
+            </div>
         </div>
+
+        <script>
+        jQuery(document).ready(function($) {
+            // Tab switching without page reload
+            $('#smtp-tabs-nav .ofast-tab').on('click', function(e) {
+                e.preventDefault();
+                
+                var tabId = $(this).data('tab');
+                
+                // Update active tab
+                $('#smtp-tabs-nav .ofast-tab').removeClass('active');
+                $(this).addClass('active');
+                
+                // Show/hide content with active class
+                $('.ofast-tab-content').removeClass('active').hide();
+                $('#smtp-tab-' + tabId).addClass('active').show();
+                
+                // Update URL without reload (for bookmarking)
+                if (history.pushState) {
+                    var url = new URL(window.location);
+                    url.searchParams.set('tab', tabId);
+                    history.pushState({tab: tabId}, '', url);
+                }
+            });
+            
+            // Handle browser back/forward
+            window.addEventListener('popstate', function(e) {
+                if (e.state && e.state.tab) {
+                    var tabId = e.state.tab;
+                    $('#smtp-tabs-nav .ofast-tab').removeClass('active');
+                    $('#smtp-tabs-nav .ofast-tab[data-tab="' + tabId + '"]').addClass('active');
+                    $('.ofast-tab-content').removeClass('active').hide();
+                    $('#smtp-tab-' + tabId).addClass('active').show();
+                }
+            });
+        });
+        </script>
         <?php
     }
 

@@ -84,7 +84,7 @@
 }
 
 .ofast-tab-content.active {
-    display: block;
+    display: block !important;
 }
 
 /* Tab Panel Header */

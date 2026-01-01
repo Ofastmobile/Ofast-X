@@ -203,14 +203,13 @@ class Ofast_X_Duplicate_Content
         $edit_link = $new_post_id ? get_edit_post_link($new_post_id) : '';
 
 ?>
-        <div class="notice notice-success is-dismissible">
-            <p>
-                Content duplicated successfully!
-                <?php if ($edit_link): ?>
-                    <a href="<?php echo esc_url($edit_link); ?>">Edit the duplicate</a>
-                <?php endif; ?>
-            </p>
-        </div>
+        <?php 
+        $message = 'Content duplicated successfully!';
+        if ($edit_link) {
+            $message .= ' <a href="' . esc_url($edit_link) . '" style="color:#fff;text-decoration:underline;">Edit the duplicate</a>';
+        }
+        Ofast_X_Toast::render($message, 'success'); 
+        ?>
 <?php
     }
 }

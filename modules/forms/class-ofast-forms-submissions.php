@@ -305,9 +305,7 @@ class Ofast_X_Forms_Submissions
             </div>
 
             <?php if (empty($submissions)): ?>
-                <div class="notice notice-info">
-                    <p>No submissions found.</p>
-                </div>
+                <?php echo Ofast_X_Toast::render('No submissions found.', 'info'); ?>
             <?php else: ?>
                 <!-- Scrollable Table Container -->
                 <div style="overflow-x: auto; max-width: 100%;">

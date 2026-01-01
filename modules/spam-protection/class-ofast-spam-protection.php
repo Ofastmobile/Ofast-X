@@ -309,7 +309,7 @@ class Ofast_X_Spam_Protection
                     if (class_exists('Ofast_X_Turnstile')) {
                         Ofast_X_Turnstile::get_instance()->render_settings_form();
                     } else {
-                        echo '<p class="notice notice-warning" style="padding:10px;">Turnstile class not loaded.</p>';
+                        Ofast_X_Toast::render('Turnstile class not loaded.', 'warning');
                     }
                     ?>
                 </div>

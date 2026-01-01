@@ -157,7 +157,7 @@ class Ofast_X_Notification_Channels
                 Ofast_X_WhatsApp::get_instance()->render_settings_form();
                 echo '</div>';
             } else {
-                echo '<div class="notice notice-warning"><p>WhatsApp integration not loaded.</p></div>';
+                echo Ofast_X_Toast::render('WhatsApp integration not loaded.', 'warning');
             }
 
             // Google Sheets Settings
@@ -166,7 +166,7 @@ class Ofast_X_Notification_Channels
                 Ofast_X_Google_Sheets::get_instance()->render_settings_form();
                 echo '</div>';
             } else {
-                echo '<div class="notice notice-warning"><p>Google Sheets integration not loaded.</p></div>';
+                echo Ofast_X_Toast::render('Google Sheets integration not loaded.', 'warning');
             }
             ?>
         </div>

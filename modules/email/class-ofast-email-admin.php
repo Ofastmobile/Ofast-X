@@ -166,7 +166,7 @@ class Ofast_X_Email_Admin
             $rate_limit_key = 'ofast_email_rate_' . get_current_user_id();
             $send_count = get_transient($rate_limit_key) ?: 0;
             if ($send_count >= 10) {
-                $result_message = '<div class="notice notice-error"><p>Rate limit exceeded. Maximum 10 bulk sends per hour.</p></div>';
+                $result_message = Ofast_X_Toast::render('Rate limit exceeded. Maximum 10 bulk sends per hour.', 'error', true);
             } else {
                 // Increment rate limiter
                 set_transient($rate_limit_key, $send_count + 1, HOUR_IN_SECONDS);
@@ -225,7 +225,7 @@ class Ofast_X_Email_Admin
                     $message = $this->replace_placeholders($body, $user);
                     $headers = $this->get_email_headers();
                     wp_mail($user->user_email, $subject, $this->get_email_template($message), $headers);
-                    $result_message = '<div class="notice notice-success"><p>Test email sent to ' . esc_html($user->user_email) . '</p></div>';
+                    $result_message = Ofast_X_Toast::render('Test email sent to ' . esc_html($user->user_email), 'success', true);
                 } else {
                     // Merge user IDs + roles
                     $total_ids = $selected_user_ids;
@@ -238,7 +238,7 @@ class Ofast_X_Email_Admin
                     $max_recipients = apply_filters('ofast_email_max_recipients', 5000);
                     if (count($total_ids) > $max_recipients) {
                         $total_ids = array_slice($total_ids, 0, $max_recipients);
-                        $result_message = '<div class="notice notice-warning"><p>Recipient list limited to ' . $max_recipients . ' users.</p></div>';
+                        $result_message = Ofast_X_Toast::render('Recipient list limited to ' . $max_recipients . ' users.', 'warning', true);
                     }
 
                     // FIX #4 & #5: Use configurable batch size
@@ -261,7 +261,7 @@ class Ofast_X_Email_Admin
                         }
 
                         $this->log_email($subject, $sent, 'Immediate send', $sample_body);
-                        $result_message = '<div class="notice notice-success"><p>Sent immediately to ' . $sent . ' user(s)</p></div>';
+                        $result_message = Ofast_X_Toast::render('Sent immediately to ' . $sent . ' user(s)', 'success', true);
                     } else {
                         // Schedule in batches - FIRST BATCH SENDS IMMEDIATELY
                         $chunks = array_chunk($total_ids, $batch_size);
@@ -304,9 +304,9 @@ class Ofast_X_Email_Admin
                         }
 
                         if ($scheduled_count > 0) {
-                            $result_message = '<div class="notice notice-success"><p>Sent ' . $immediate_sent . ' emails immediately. ' . $scheduled_count . ' more batches scheduled (' . $batch_size . ' users/hour)</p></div>';
+                            $result_message = Ofast_X_Toast::render('Sent ' . $immediate_sent . ' emails immediately. ' . $scheduled_count . ' more batches scheduled (' . $batch_size . ' users/hour)', 'success', true);
                         } else {
-                            $result_message = '<div class="notice notice-success"><p>Sent ' . $immediate_sent . ' emails immediately.</p></div>';
+                            $result_message = Ofast_X_Toast::render('Sent ' . $immediate_sent . ' emails immediately.', 'success', true);
                         }
                     }
                 }

@@ -175,9 +175,7 @@ class Ofast_X_Content_Ordering
             <div id="ofast-order-status" style="display:none;padding:10px 15px;margin:10px 0;border-radius:4px;"></div>
 
             <?php if (empty($items)): ?>
-                <div class="notice notice-info">
-                    <p>No <?php echo esc_html(strtolower($pt_obj->labels->name)); ?> found.</p>
-                </div>
+                <?php echo Ofast_X_Toast::render('No ' . esc_html(strtolower($pt_obj->labels->name)) . ' found.', 'info'); ?>
             <?php else: ?>
                 <div id="ofast-sortable-items" data-post-type="<?php echo esc_attr($post_type); ?>">
                     <?php foreach ($items as $index => $item): ?>

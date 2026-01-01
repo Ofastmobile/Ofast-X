@@ -185,7 +185,7 @@ class Ofast_X_Login_Redesign
             update_option('ofast_login_tc_centered', false);
             update_option('ofast_login_tc_bg_color', '#f0f0f1');
 
-            add_settings_error('ofast_login_redesign', 'reset', 'Settings reset to defaults!', 'success');
+            Ofast_X_Toast::add('Settings reset to defaults!', 'success');
             return;
         }
 
@@ -239,7 +239,7 @@ class Ofast_X_Login_Redesign
         update_option('ofast_login_tc_centered', isset($_POST['tc_centered']));
         update_option('ofast_login_tc_bg_color', sanitize_hex_color($_POST['tc_bg_color'] ?? '#f0f0f1'));
 
-        add_settings_error('ofast_login_redesign', 'saved', 'Settings saved!', 'success');
+        Ofast_X_Toast::add('Settings saved!', 'success');
     }
 
     /**

@@ -260,10 +260,8 @@ class Ofast_X_Snippets
             // If validation fails, force inactive and show warning
             if ($validation !== true) {
                 $active = 0; // Force inactive for safety
-                echo '<div class="notice notice-warning is-dismissible"><p>';
-                echo '<strong>Code Saved But NOT Activated:</strong> ' . esc_html($validation);
-                echo '<br><em>Fix the syntax error and try activating again.</em>';
-                echo '</p></div>';
+                $warning_msg = 'Code Saved But NOT Activated: ' . esc_html($validation) . ' Fix the syntax error and try activating again.';
+                echo Ofast_X_Toast::render($warning_msg, 'warning');
             }
 
             if ($id > 0) {
@@ -292,7 +290,7 @@ class Ofast_X_Snippets
                 // Debug logging for live server issues
                 if ($result === false) {
                     error_log('Ofast Snippet Update Error: ' . $wpdb->last_error);
-                    echo '<div class="notice notice-error"><p><strong>Database Error:</strong> ' . esc_html($wpdb->last_error) . '</p></div>';
+                    echo Ofast_X_Toast::render('Database Error: ' . esc_html($wpdb->last_error), 'error');
                     return;
                 }
 
@@ -302,13 +300,13 @@ class Ofast_X_Snippets
                 if ($validation === true) {
                     echo Ofast_X_Toast::render('Snippet updated and ' . ($active ? 'activated' : 'saved') . '!', 'success');
                 } else {
-                    echo '<div class="notice notice-info"><p>Snippet saved (inactive for safety)</p></div>';
+                    echo Ofast_X_Toast::render('Snippet saved (inactive for safety)', 'info');
                 }
             } else {
                 // DUPLICATE CHECK: Prevent saving snippets with same name
                 $existing_name = $wpdb->get_row($wpdb->prepare("SELECT id, name FROM $table WHERE name = %s", $name));
                 if ($existing_name) {
-                    echo '<div class="notice notice-error is-dismissible"><p><strong>Duplicate Name:</strong> A snippet named "' . esc_html($name) . '" already exists. Please use a different name or edit the existing snippet.</p></div>';
+                    echo Ofast_X_Toast::render('Duplicate Name: A snippet named "' . esc_html($name) . '" already exists. Please use a different name or edit the existing snippet.', 'error');
                     // Don't redirect, let form stay with data so user can fix
                 } else {
                     // DUPLICATE CODE CHECK: Prevent saving snippets with same code
@@ -318,7 +316,7 @@ class Ofast_X_Snippets
                         $code_hash
                     ));
                     if ($existing_code) {
-                        echo '<div class="notice notice-error is-dismissible"><p><strong>Duplicate Code:</strong> This exact code already exists in snippet "' . esc_html($existing_code->name) . '" (ID: ' . $existing_code->id . '). Edit the existing snippet instead of creating a duplicate.</p></div>';
+                        echo Ofast_X_Toast::render('Duplicate Code: This exact code already exists in snippet "' . esc_html($existing_code->name) . '" (ID: ' . $existing_code->id . '). Edit the existing snippet instead.', 'error');
                         // Don't save, let user decide
                     } else {
                         // Insert
@@ -341,7 +339,7 @@ class Ofast_X_Snippets
                         // Debug logging for live server issues
                         if ($result === false) {
                             error_log('Ofast Snippet Save Error: ' . $wpdb->last_error);
-                            echo '<div class="notice notice-error"><p><strong>Database Error:</strong> ' . esc_html($wpdb->last_error) . '</p></div>';
+                            echo Ofast_X_Toast::render('Database Error: ' . esc_html($wpdb->last_error), 'error');
                             return;
                         }
 
@@ -353,7 +351,7 @@ class Ofast_X_Snippets
                         if ($validation === true) {
                             echo Ofast_X_Toast::render('Snippet added and ' . ($active ? 'activated' : 'saved') . '!', 'success');
                         } else {
-                            echo '<div class="notice notice-info"><p>Snippet saved (inactive for safety)</p></div>';
+                            echo Ofast_X_Toast::render('Snippet saved (inactive for safety)', 'info');
                         }
                     } // End of !$existing_code else block
                 } // End of !$existing_name else block
@@ -3709,12 +3707,10 @@ class Ofast_X_Snippets
         }
 
         foreach ($failed_snippets as $failed) {
-            echo '<div class="notice notice-error is-dismissible">';
-            echo '<p><strong>⚠️ Snippet Auto-Deactivated:</strong> ';
-            echo '"' . esc_html($failed['name']) . '" encountered a runtime error and was automatically deactivated for safety.</p>';
-            echo '<p><strong>Error:</strong> ' . esc_html($failed['error']) . '</p>';
-            echo '<p><a href="' . admin_url('admin.php?page=ofast-snippets&edit=' . $failed['id']) . '" class="button">Fix Snippet</a></p>';
-            echo '</div>';
+            $message = '<strong>Snippet Auto-Deactivated:</strong> "' . esc_html($failed['name']) . '" encountered a runtime error and was automatically deactivated for safety. ';
+            $message .= '<strong>Error:</strong> ' . esc_html($failed['error']) . ' ';
+            $message .= '<a href="' . admin_url('admin.php?page=ofast-snippets&edit=' . $failed['id']) . '" style="color:#fff;text-decoration:underline;">Fix Snippet</a>';
+            echo Ofast_X_Toast::render($message, 'error');
         }
 
         // Clear the transient after showing

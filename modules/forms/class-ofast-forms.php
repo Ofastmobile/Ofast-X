@@ -320,9 +320,7 @@ class Ofast_X_Forms
             <h1>Contact Forms <a href="<?php echo admin_url('admin.php?page=ofast-forms-new'); ?>" class="page-title-action">Add New</a></h1>
 
             <?php if (empty($forms)): ?>
-                <div class="notice notice-info">
-                    <p>No forms yet. <a href="<?php echo admin_url('admin.php?page=ofast-forms-new'); ?>">Create your first form</a></p>
-                </div>
+                <?php echo Ofast_X_Toast::render('No forms yet. <a href="' . admin_url('admin.php?page=ofast-forms-new') . '" style="color:#fff;text-decoration:underline;">Create your first form</a>', 'info'); ?>
             <?php else: ?>
                 <!-- Scrollable Table Container -->
                 <div style="overflow-x: auto; max-width: 100%;">

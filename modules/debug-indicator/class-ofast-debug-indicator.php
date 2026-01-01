@@ -27,11 +27,7 @@ class Ofast_X_Debug_Indicator
     public function show_debug_warning()
     {
         if (defined('WP_DEBUG') && WP_DEBUG && current_user_can('manage_options')) {
-            echo '
-            <div class="notice notice-warning is-dismissible">
-                <p><strong>WordPress Debug Mode is Active</strong> - This should be disabled on production sites.</p>
-                <p>Edit wp-config.php: <code>define(\'WP_DEBUG\', false);</code></p>
-            </div>';
+            echo Ofast_X_Toast::render('WordPress Debug Mode is Active - This should be disabled on production sites. Edit wp-config.php: <code>define(\'WP_DEBUG\', false);</code>', 'warning');
         }
     }
 

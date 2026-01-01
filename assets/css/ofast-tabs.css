@@ -1,0 +1,151 @@
+/**
+ * Ofast X - Modern Tab Component
+ * Reusable horizontal tabs for consolidated modules
+ */
+
+/* Tab Container */
+.ofast-tabs-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 25px;
+    padding: 8px;
+    background: #f1f5f9;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+/* Individual Tab */
+.ofast-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ofast-tab:hover {
+    background: #fff;
+    color: #1e293b;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.ofast-tab:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+}
+
+/* Active Tab */
+.ofast-tab.active,
+.ofast-tab.active:hover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Tab Icon */
+.ofast-tab .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+}
+
+/* Tab Badge (for counts) */
+.ofast-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.ofast-tab:not(.active) .ofast-tab-badge {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+/* Tab Content Area */
+.ofast-tab-content {
+    display: none;
+}
+
+.ofast-tab-content.active {
+    display: block;
+}
+
+/* Tab Panel Header */
+.ofast-tab-header {
+    margin-bottom: 20px;
+}
+
+.ofast-tab-header h2 {
+    margin: 0 0 5px;
+    font-size: 22px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.ofast-tab-header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 782px) {
+    .ofast-tabs-nav {
+        flex-direction: column;
+        gap: 4px;
+        padding: 6px;
+    }
+
+    .ofast-tab {
+        width: 100%;
+        justify-content: center;
+        padding: 14px 16px;
+    }
+}
+
+/* Alternative: Underline Style Tabs (optional usage) */
+.ofast-tabs-nav.underline-style {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid #e2e8f0;
+    border-radius: 0;
+    padding: 0;
+    gap: 0;
+}
+
+.ofast-tabs-nav.underline-style .ofast-tab {
+    border-radius: 0;
+    padding: 12px 24px;
+    margin-bottom: -2px;
+    border-bottom: 2px solid transparent;
+}
+
+.ofast-tabs-nav.underline-style .ofast-tab.active,
+.ofast-tabs-nav.underline-style .ofast-tab.active:hover {
+    background: transparent;
+    color: #667eea;
+    border-bottom-color: #667eea;
+    box-shadow: none;
+}
+
+.ofast-tabs-nav.underline-style .ofast-tab:hover {
+    background: #f8fafc;
+    box-shadow: none;
+}

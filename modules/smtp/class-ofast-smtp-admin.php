@@ -19,6 +19,82 @@ class Ofast_X_SMTP_Admin
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'handle_save'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
+        add_action('admin_head', array($this, 'admin_head_styles'));
+    }
+
+    /**
+     * Output critical CSS in head (WooCommerce-style) - loads before body
+     */
+    public function admin_head_styles()
+    {
+        $screen = get_current_screen();
+        if (!$screen || $screen->id !== 'ofast-x_page_ofast-smtp') {
+            return;
+        }
+        ?>
+        <style id="ofast-smtp-critical-css">
+            /* Tab Navigation - WooCommerce style with sticky + glassmorphism */
+            .ofast-tabs-nav {
+                display: flex;
+                flex-wrap: nowrap;
+                gap: 8px;
+                margin-bottom: 25px;
+                padding: 10px 12px;
+                background: rgba(241, 245, 249, 0.85);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                border-radius: 12px;
+                border: 1px solid rgba(255, 255, 255, 0.5);
+                position: sticky;
+                top: 47px;
+                z-index: 100;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
+            }
+            @media (max-width: 782px) {
+                .ofast-tabs-nav {
+                    position: sticky;
+                    top: 61px;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                }
+            }
+            .ofast-tab {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px 20px;
+                background: transparent;
+                border: none;
+                border-radius: 8px;
+                color: #64748b;
+                font-size: 14px;
+                font-weight: 500;
+                text-decoration: none;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                flex-shrink: 0;
+                white-space: nowrap;
+            }
+            .ofast-tab:hover {
+                background: #fff;
+                color: #1e293b;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            }
+            .ofast-tab.active {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #fff;
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            }
+            .ofast-tab .dashicons {
+                font-size: 16px;
+                width: 16px;
+                height: 16px;
+                line-height: 16px;
+            }
+            .ofast-tab-content { display: none; }
+            .ofast-tab-content.active { display: block; }
+        </style>
+        <?php
     }
 
     /**
@@ -46,15 +122,14 @@ class Ofast_X_SMTP_Admin
             wp_die('Unauthorized');
         }
 
-        // Enqueue modern tabs CSS
-        wp_enqueue_style('ofast-tabs', OFAST_X_PLUGIN_URL . 'assets/css/ofast-tabs.css', array(), OFAST_X_VERSION);
+        // CSS already loaded in admin_head for instant rendering
 
         $default_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'dashboard';
         ?>
         <div class="wrap">
             <h1>SMTP</h1>
             
-            <!-- Modern Tabs Navigation -->
+            <!-- Modern Tabs Navigation (sticky on scroll) -->
             <nav class="ofast-tabs-nav" id="smtp-tabs-nav">
                 <a href="#" class="ofast-tab <?php echo $default_tab === 'dashboard' ? 'active' : ''; ?>" data-tab="dashboard">
                     <span class="dashicons dashicons-chart-area"></span>

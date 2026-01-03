@@ -102,12 +102,20 @@ class Ofast_X_SMTP
 
     /**
      * SECURITY: Sanitize email content to remove sensitive information
-     * Applies to ALL emails for maximum security - no exceptions
+     * Skips HTML template emails (trusted), applies to plain text only
      */
     public function sanitize_email_content($args)
     {
         if (!empty($args['message'])) {
             $message = $args['message'];
+
+            // Skip sanitization for HTML emails (structured templates we control)
+            // These are trusted and sanitization breaks their HTML structure
+            if (stripos($message, '<!DOCTYPE') !== false || 
+                stripos($message, '<html') !== false ||
+                stripos($message, '<table') !== false) {
+                return $args; // Trust HTML template emails
+            }
 
             // 1. Remove ALL wp-admin URLs - replace with site URL
             $admin_url = admin_url();

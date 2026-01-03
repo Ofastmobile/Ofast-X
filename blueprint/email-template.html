@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Email Notification</title>
+</head>
+
+<body style="margin:0; padding:0; background-color:#f3f4f6; font-family:Arial, Helvetica, sans-serif;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6; padding:30px 0;">
+        <tr>
+            <td align="center">
+
+                <!-- MAIN CARD -->
+                <table width="600" cellpadding="0" cellspacing="0"
+                    style="background-color:#ffffff; border-radius:8px; overflow:hidden;">
+
+                    <!-- HEADER -->
+                    <tr>
+                        <td style="background-color:#111827; padding:24px; text-align:center;">
+                            <!-- Optional Logo -->
+                            <img src="{{logo_url}}" alt="{{company_name}}"
+                                style="max-width:140px; height:auto; display:block; margin:0 auto;">
+                        </td>
+                    </tr>
+
+                    <!-- CONTENT -->
+                    <tr>
+                        <td style="padding:32px; color:#111827;">
+
+                            <h2 style="margin:0 0 16px; font-size:22px; font-weight:600;">
+                                Hello {{name}},
+                            </h2>
+
+                            <p style="margin:0 0 16px; font-size:15px; line-height:1.7; color:#374151;">
+                                {{message}}
+                            </p>
+
+                            <p style="margin:0 0 28px; font-size:15px; line-height:1.7; color:#374151;">
+                                If you need help or have questions, our team is always ready to assist you.
+                            </p>
+
+                            <!-- PRIMARY BUTTON -->
+                            <table cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td style="background-color:#2563eb; border-radius:6px;">
+                                        <a href="{{button_url}}" target="_blank" style="display:inline-block;
+          padding:10px 18px;
+          color:#ffffff;
+          font-size:14px;
+          font-weight:600;
+          text-decoration:none;">
+                                            {{button_text}}
+                                        </a>
+
+                                    </td>
+                                </tr>
+                            </table>
+
+                        </td>
+                    </tr>
+
+                    <!-- DIVIDER -->
+                    <tr>
+                        <td style="padding:0 32px;">
+                            <hr style="border:none; border-top:1px solid #e5e7eb;">
+                        </td>
+                    </tr>
+
+                    <!-- FOOTER -->
+                    <tr>
+                        <td style="padding:24px 32px; text-align:center; font-size:13px; color:#6b7280;">
+
+                            <p style="margin:0 0 12px;">
+                                {{company_name}} — {{company_tagline}}
+                            </p>
+
+                            <!-- SOCIAL BUTTONS (EMAIL SAFE) -->
+                            <table cellpadding="0" cellspacing="0" align="center">
+                                <tr>
+
+                                    <td style="padding:4px;">
+                                        <a href="{{facebook}}" style="display:inline-block;
+                background-color:#1877f2;
+                color:#ffffff;
+                font-size:13px;
+                font-weight:600;
+                text-decoration:none;
+                padding:8px 14px;
+                border-radius:999px;">
+                                            Facebook
+                                        </a>
+                                    </td>
+
+                                    <td style="padding:4px;">
+                                        <a href="{{twitter}}" style="display:inline-block;
+                background-color:#000000;
+                color:#ffffff;
+                font-size:13px;
+                font-weight:600;
+                text-decoration:none;
+                padding:8px 14px;
+                border-radius:999px;">
+                                            X
+                                        </a>
+                                    </td>
+
+                                    <td style="padding:4px;">
+                                        <a href="{{instagram}}" style="display:inline-block;
+                background-color:#e1306c;
+                color:#ffffff;
+                font-size:13px;
+                font-weight:600;
+                text-decoration:none;
+                padding:8px 14px;
+                border-radius:999px;">
+                                            Instagram
+                                        </a>
+                                    </td>
+
+                                </tr>
+                            </table>
+
+
+                            <p style="margin:16px 0 0;">
+                                © {{year}} {{company_name}}. All rights reserved.
+                            </p>
+
+                        </td>
+                    </tr>
+
+                </table>
+                <!-- END CARD -->
+
+            </td>
+        </tr>
+    </table>
+
+</body>
+
+</html>

@@ -2,7 +2,8 @@
 
 /**
  * Ofast X Email Template Helper
- * Modern, aesthetic email template inspired by professional certificate emails
+ * Table-based, inline-styled email template for maximum email client compatibility
+ * Based on user's blueprint design
  */
 
 if (!defined('ABSPATH')) {
@@ -11,330 +12,198 @@ if (!defined('ABSPATH')) {
 
 class Ofast_X_Email_Template
 {
-
     /**
-     * Get modern email template with customizable colors and branding
+     * Get modern email template with table-based layout and inline styles
+     * Compatible with all email clients (Gmail, Outlook, Yahoo, etc.)
      */
     public static function get_template($content, $options = array())
     {
-        // Get customizable options from settings (using same keys as settings page)
-        $template_style = get_option('ofast_email_template_style', 'modern');
-        $primary_color = get_option('ofast_email_primary_color', '#6366f1'); // Indigo
-        $accent_color = get_option('ofast_email_accent_color', '#10b981'); // Emerald
-        $bg_color = get_option('ofast_email_bg_color', '#f8fafc'); // Light gray
-        $text_color = get_option('ofast_email_text_color', '#1e293b'); // Dark slate
+        // Get customizable options from settings
+        $primary_color = get_option('ofast_email_primary_color', '#2563eb'); // Blue
+        $header_bg = get_option('ofast_email_header_bg', '#111827'); // Dark
+        $bg_color = get_option('ofast_email_bg_color', '#f3f4f6'); // Light gray
+        $text_color = get_option('ofast_email_text_color', '#111827'); // Dark text
         $logo_url = get_option('ofast_email_logo', '');
-        $company_name = get_option('ofast_email_company_name', '');
+        $company_name = get_option('ofast_email_company_name', get_bloginfo('name'));
         $tagline = get_option('ofast_email_tagline', '');
         $show_header = get_option('ofast_email_show_header', true);
         $show_footer = get_option('ofast_email_show_footer', true);
-        $footer_text = get_option('ofast_email_footer_text', '');
         $social_links = get_option('ofast_email_social', array());
-        $font_family_key = get_option('ofast_email_font_family', 'system');
-        $font_size = absint(get_option('ofast_email_font_size', 15));
-        $logo_width = absint(get_option('ofast_email_logo_width', 120));
-        $logo_height = absint(get_option('ofast_email_logo_height', 0));
-
-        // Map font family keys to CSS font stacks
-        $font_stacks = array(
-            'system' => "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-            'inter' => "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-            'roboto' => "'Roboto', Arial, sans-serif",
-            'opensans' => "'Open Sans', Arial, sans-serif",
-            'lato' => "'Lato', Arial, sans-serif",
-            'poppins' => "'Poppins', Arial, sans-serif",
-            'georgia' => "Georgia, 'Times New Roman', serif"
-        );
-        $font_family = isset($font_stacks[$font_family_key]) ? $font_stacks[$font_family_key] : $font_stacks['system'];
+        $logo_width = absint(get_option('ofast_email_logo_width', 140));
 
         // Override with passed options
         $options = wp_parse_args($options, array(
-            'highlight_box' => false,
-            'highlight_content' => '',
             'cta_button' => false,
             'cta_text' => '',
             'cta_link' => ''
         ));
 
+        // Social platform colors
+        $social_colors = array(
+            'facebook' => '#1877f2',
+            'x' => '#000000',
+            'twitter' => '#000000',
+            'instagram' => '#e1306c',
+            'linkedin' => '#0a66c2',
+            'youtube' => '#ff0000',
+            'whatsapp' => '#25d366'
+        );
+
+        // Social platform display names
+        $social_names = array(
+            'facebook' => 'Facebook',
+            'x' => 'X',
+            'twitter' => 'X',
+            'instagram' => 'Instagram',
+            'linkedin' => 'LinkedIn',
+            'youtube' => 'YouTube',
+            'whatsapp' => 'WhatsApp'
+        );
+
         ob_start();
 ?>
-        <!DOCTYPE html>
-        <html lang="en">
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title><?php echo esc_html($company_name); ?></title>
+</head>
+<body style="margin:0; padding:0; background-color:<?php echo esc_attr($bg_color); ?>; font-family:Arial, Helvetica, sans-serif;">
 
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title><?php echo esc_html($company_name); ?></title>
-            <?php
-            // Build header background based on template style
-            if ($template_style === 'modern') {
-                $header_bg = 'linear-gradient(135deg, ' . esc_attr($primary_color) . ' 0%, ' . esc_attr($accent_color) . ' 100%)';
-            } elseif ($template_style === 'classic') {
-                $header_bg = esc_attr($primary_color);
-            } else {
-                $header_bg = 'transparent';
-            }
-            ?>
-            <style>
-                body {
-                    margin: 0;
-                    padding: 0;
-                    font-family: <?php echo $font_family; ?>;
-                    font-size: <?php echo esc_attr($font_size); ?>px;
-                    background-color: <?php echo esc_attr($bg_color); ?>;
-                    color: <?php echo esc_attr($text_color); ?>;
-                    line-height: 1.6;
-                }
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:<?php echo esc_attr($bg_color); ?>; padding:30px 0;">
+        <tr>
+            <td align="center">
 
-                .email-wrapper {
-                    max-width: 600px;
-                    margin: 0 auto;
-                    padding: 20px;
-                }
+                <!-- MAIN CARD -->
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; max-width:100%;">
 
-                .email-container {
-                    background: #ffffff;
-                    border-radius: <?php echo esc_attr($template_style === 'minimal' ? '0' : '16px'); ?>;
-                    box-shadow: <?php echo $template_style === 'minimal' ? 'none' : '0 4px 6px rgba(0, 0, 0, 0.05)'; ?>;
-                    overflow: hidden;
-                    <?php if ($template_style === 'minimal'): ?>border: 1px solid #e2e8f0;
-                    <?php endif; ?>
-                }
-
-                <?php if ($template_style === 'minimal'): ?>.email-header {
-                    display: none;
-                }
-
-                <?php else: ?>.email-header {
-                    background: <?php echo $header_bg; ?>;
-                    padding: 15px;
-                    text-align: center;
-                    color: #ffffff;
-                }
-
-                <?php endif; ?>.email-logo {
-                    max-width: <?php echo esc_attr($logo_width); ?>px;
-                    height: <?php echo $logo_height > 0 ? esc_attr($logo_height) . 'px' : 'auto'; ?>;
-                    margin-bottom: 5px;
-                }
-
-                .email-company-name {
-                    font-size: 16px;
-                    font-weight: 600;
-                    margin: 0;
-                    color: #ffffff;
-                }
-
-                .email-tagline {
-                    font-size: 11px;
-                    opacity: 0.9;
-                    margin: 3px 0 0 0;
-                    font-weight: 400;
-                }
-
-                .email-body {
-                    padding: 30px 25px;
-                    font-size: <?php echo esc_attr($font_size); ?>px;
-                    color: <?php echo esc_attr($text_color); ?>;
-                    text-align: justify;
-                }
-
-
-
-                .highlight-box {
-                    background: linear-gradient(135deg, rgba(<?php echo self::hex_to_rgb($accent_color); ?>, 0.1) 0%, rgba(<?php echo self::hex_to_rgb($primary_color); ?>, 0.1) 100%);
-                    border-left: 4px solid <?php echo esc_attr($accent_color); ?>;
-                    padding: 15px;
-                    margin: 20px 0;
-                    border-radius: 8px;
-                }
-
-                .cta-button {
-                    display: inline-block;
-                    background: <?php echo esc_attr($primary_color); ?>;
-                    color: #ffffff !important;
-                    text-decoration: none;
-                    padding: 12px 28px;
-                    border-radius: 8px;
-                    font-weight: 600;
-                    margin: 20px 0;
-                    transition: all 0.3s ease;
-                }
-
-                .cta-button:hover {
-                    background: <?php echo esc_attr($accent_color); ?>;
-                    transform: translateY(-2px);
-                }
-
-                .email-footer {
-                    background: #f1f5f9;
-                    padding: 12px 15px;
-                    text-align: center;
-                    font-size: 11px;
-                    color: #64748b;
-                }
-
-                .social-links {
-                    margin: 5px 0;
-                }
-
-                .social-icon {
-                    display: inline-block;
-                    width: 24px;
-                    height: 24px;
-                    margin: 0 5px;
-                    vertical-align: middle;
-                }
-
-                .social-icon:hover {
-                    opacity: 0.8;
-                }
-
-                .social-icon img {
-                    width: 24px;
-                    height: 24px;
-                    display: block;
-                }
-
-                .divider {
-                    height: 1px;
-                    background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
-                    margin: 30px 0;
-                }
-
-                @media screen and (max-width: 600px) {
-                    .email-wrapper {
-                        padding: 10px;
-                    }
-
-                    .email-header {
-                        padding: 30px 20px;
-                    }
-
-                    .email-body {
-                        padding: 30px 20px;
-                    }
-
-                    .email-company-name {
-                        font-size: 20px;
-                    }
-                }
-            </style>
-        </head>
-
-        <body>
-            <div class="email-wrapper">
-                <div class="email-container">
-
-                    <?php if ($show_header): ?>
-                        <!-- Header -->
-                        <?php
-                        // Calculate vertical padding when only logo is shown (no company/tagline)
-                        $header_extra_padding = (empty($company_name) && empty($tagline) && $logo_url) ? 'padding-top: 25px; padding-bottom: 25px;' : '';
-                        ?>
-                        <div class="email-header" style="<?php echo $header_extra_padding; ?>">
-                            <?php if ($logo_url): ?>
-                                <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($company_name); ?>" class="email-logo" style="<?php echo (empty($company_name) && empty($tagline)) ? 'margin-bottom: 0;' : ''; ?>">
+                    <?php if ($show_header && (!empty($logo_url) || !empty($company_name))): ?>
+                    <!-- HEADER -->
+                    <tr>
+                        <td style="background-color:<?php echo esc_attr($header_bg); ?>; padding:24px; text-align:center;">
+                            <?php if (!empty($logo_url)): ?>
+                            <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($company_name); ?>" 
+                                style="max-width:<?php echo esc_attr($logo_width); ?>px; height:auto; display:block; margin:0 auto;">
+                            <?php elseif (!empty($company_name)): ?>
+                            <div style="color:#ffffff; font-size:24px; font-weight:600;"><?php echo esc_html($company_name); ?></div>
                             <?php endif; ?>
-                            <?php if ($company_name): ?>
-                                <h1 class="email-company-name"><?php echo esc_html($company_name); ?></h1>
-                            <?php endif; ?>
-                            <?php if ($tagline): ?>
-                                <p class="email-tagline"><?php echo esc_html($tagline); ?></p>
-                            <?php endif; ?>
-                        </div>
+                        </td>
+                    </tr>
                     <?php endif; ?>
 
-                    <!-- Body -->
-                    <div class="email-body">
-
-
-                        <div class="email-content">
-                            <?php echo wp_kses_post(wpautop($content)); ?>
-                        </div>
-
-                        <?php if ($options['highlight_box'] && $options['highlight_content']): ?>
-                            <div class="highlight-box">
-                                <?php echo wp_kses_post(wpautop($options['highlight_content'])); ?>
+                    <!-- CONTENT -->
+                    <tr>
+                        <td style="padding:32px; color:<?php echo esc_attr($text_color); ?>;">
+                            <div style="font-size:15px; line-height:1.7; color:#374151;">
+                                <?php echo $content; ?>
                             </div>
-                        <?php endif; ?>
 
-                        <?php if ($options['cta_button'] && $options['cta_link']): ?>
-                            <div style="text-align: center;">
-                                <a href="<?php echo esc_url($options['cta_link']); ?>" class="cta-button">
-                                    <?php echo esc_html($options['cta_text']); ?>
-                                </a>
-                            </div>
-                        <?php endif; ?>
-                    </div>
+                            <?php if ($options['cta_button'] && !empty($options['cta_link'])): ?>
+                            <!-- CTA BUTTON -->
+                            <table cellpadding="0" cellspacing="0" style="margin-top:24px;">
+                                <tr>
+                                    <td style="background-color:<?php echo esc_attr($primary_color); ?>; border-radius:6px;">
+                                        <a href="<?php echo esc_url($options['cta_link']); ?>" target="_blank" style="display:inline-block;
+                                            padding:12px 24px;
+                                            color:#ffffff;
+                                            font-size:14px;
+                                            font-weight:600;
+                                            text-decoration:none;">
+                                            <?php echo esc_html($options['cta_text'] ?: 'Click Here'); ?>
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
 
                     <?php if ($show_footer): ?>
-                        <!-- Footer -->
-                        <div class="email-footer">
-                            <?php if (!empty($social_links)): ?>
-                                <div class="social-links" style="margin-bottom: 8px;">
-                                    <?php foreach ($social_links as $platform => $url): ?>
-                                        <?php if ($url): ?>
-                                            <a href="<?php echo esc_url($url); ?>" class="social-icon">
-                                                <?php echo self::get_social_icon($platform); ?>
-                                            </a>
-                                        <?php endif; ?>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php endif; ?>
+                    <!-- DIVIDER -->
+                    <tr>
+                        <td style="padding:0 32px;">
+                            <hr style="border:none; border-top:1px solid #e5e7eb;">
+                        </td>
+                    </tr>
 
-                            <?php if ($footer_text): ?>
-                                <p style="margin: 5px 0;"><?php echo wp_kses_post($footer_text); ?></p>
-                            <?php endif; ?>
+                    <!-- FOOTER -->
+                    <tr>
+                        <td style="padding:24px 32px; text-align:center; font-size:13px; color:#6b7280;">
 
-                            <p style="margin: 5px 0; font-size: 11px;">
-                                © <?php echo date('Y'); ?> <?php echo esc_html($company_name); ?>. All rights reserved.
+                            <?php if (!empty($company_name) || !empty($tagline)): ?>
+                            <p style="margin:0 0 12px;">
+                                <?php 
+                                if (!empty($company_name) && !empty($tagline)) {
+                                    echo esc_html($company_name) . ' — ' . esc_html($tagline);
+                                } elseif (!empty($company_name)) {
+                                    echo esc_html($company_name);
+                                } elseif (!empty($tagline)) {
+                                    echo esc_html($tagline);
+                                }
+                                ?>
                             </p>
-                        </div>
+                            <?php endif; ?>
+
+                            <?php if (!empty($social_links) && is_array($social_links)): ?>
+                            <!-- SOCIAL BUTTONS (EMAIL SAFE - TEXT BASED) -->
+                            <table cellpadding="0" cellspacing="0" align="center" style="margin-bottom:12px;">
+                                <tr>
+                                    <?php foreach ($social_links as $platform => $url): 
+                                        if (empty($url)) continue;
+                                        $color = isset($social_colors[$platform]) ? $social_colors[$platform] : '#6b7280';
+                                        $name = isset($social_names[$platform]) ? $social_names[$platform] : ucfirst($platform);
+                                    ?>
+                                    <td style="padding:4px;">
+                                        <a href="<?php echo esc_url($url); ?>" style="display:inline-block;
+                                            background-color:<?php echo esc_attr($color); ?>;
+                                            color:#ffffff;
+                                            font-size:12px;
+                                            font-weight:600;
+                                            text-decoration:none;
+                                            padding:8px 14px;
+                                            border-radius:999px;">
+                                            <?php echo esc_html($name); ?>
+                                        </a>
+                                    </td>
+                                    <?php endforeach; ?>
+                                </tr>
+                            </table>
+                            <?php endif; ?>
+
+                            <p style="margin:0; font-size:12px; color:#9ca3af;">
+                                © <?php echo esc_html(date('Y')); ?> <?php echo esc_html($company_name ?: get_bloginfo('name')); ?>. All rights reserved.
+                            </p>
+
+                        </td>
+                    </tr>
                     <?php endif; ?>
 
-                </div>
-            </div>
-        </body>
+                </table>
+                <!-- END CARD -->
 
-        </html>
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>
 <?php
         return ob_get_clean();
     }
 
     /**
-     * Convert hex color to RGB
+     * Helper to convert hex color to RGB array
      */
-    private static function hex_to_rgb($hex)
+    public static function hex_to_rgb($hex)
     {
-        $hex = str_replace('#', '', $hex);
-        if (strlen($hex) == 3) {
-            $r = hexdec(substr($hex, 0, 1) . substr($hex, 0, 1));
-            $g = hexdec(substr($hex, 1, 1) . substr($hex, 1, 1));
-            $b = hexdec(substr($hex, 2, 1) . substr($hex, 2, 1));
-        } else {
-            $r = hexdec(substr($hex, 0, 2));
-            $g = hexdec(substr($hex, 2, 2));
-            $b = hexdec(substr($hex, 4, 2));
+        $hex = ltrim($hex, '#');
+        if (strlen($hex) === 3) {
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
         }
-        return "$r, $g, $b";
-    }
-
-    /**
-     * Get social media icon SVG
-     */
-    private static function get_social_icon($platform)
-    {
-        $icons = array(
-            'facebook' => '<img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook">',
-            'x' => '<img src="https://cdn-icons-png.flaticon.com/512/5968/5968830.png" alt="X">',
-            'twitter' => '<img src="https://cdn-icons-png.flaticon.com/512/5968/5968830.png" alt="Twitter">',
-            'youtube' => '<img src="https://cdn-icons-png.flaticon.com/512/1384/1384060.png" alt="YouTube">',
-            'instagram' => '<img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram">',
-            'linkedin' => '<img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn">',
-            'whatsapp' => '<img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp">'
+        return array(
+            'r' => hexdec(substr($hex, 0, 2)),
+            'g' => hexdec(substr($hex, 2, 2)),
+            'b' => hexdec(substr($hex, 4, 2))
         );
-
-        return isset($icons[$platform]) ? $icons[$platform] : '';
     }
 }

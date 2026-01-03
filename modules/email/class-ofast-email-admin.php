@@ -162,6 +162,17 @@ class Ofast_X_Email_Admin
                 wp_die(__('Security check failed. Please refresh and try again.', 'ofast-x'), 'Security Error', array('response' => 403));
             }
 
+            // SECURITY: Double-submit protection (prevent duplicate form submissions)
+            $submit_token = isset($_POST['ofast_submit_token']) ? sanitize_text_field($_POST['ofast_submit_token']) : '';
+            if (!empty($submit_token) && get_transient('ofast_submit_' . $submit_token)) {
+                // Already processed this submission
+                $result_message = Ofast_X_Toast::render('This form was already submitted. Please refresh to send again.', 'warning', true);
+            } else {
+                // Mark this submission as processed (expires in 60 seconds)
+                if (!empty($submit_token)) {
+                    set_transient('ofast_submit_' . $submit_token, true, 60);
+                }
+
             // SECURITY: Rate limiting - max 10 bulk sends per hour per admin
             $rate_limit_key = 'ofast_email_rate_' . get_current_user_id();
             $send_count = get_transient($rate_limit_key) ?: 0;
@@ -234,6 +245,13 @@ class Ofast_X_Email_Admin
                         $total_ids = array_unique(array_merge($total_ids, $role_ids));
                     }
 
+                    // FALLBACK: If no recipients selected, send only to current admin
+                    if (empty($total_ids)) {
+                        $current_user = wp_get_current_user();
+                        $total_ids = array($current_user->ID);
+                        error_log('Ofast-X Email: No recipients selected, defaulting to admin: ' . $current_user->user_email);
+                    }
+
                     // SECURITY: Max recipient limit to prevent server overload
                     $max_recipients = apply_filters('ofast_email_max_recipients', 5000);
                     if (count($total_ids) > $max_recipients) {
@@ -285,8 +303,8 @@ class Ofast_X_Email_Admin
                                 }
                                 $this->log_email($subject, $immediate_sent, 'Immediate batch (1 of ' . count($chunks) . ')', $sample_body);
                             } else {
-                                // SUBSEQUENT BATCHES: Schedule hourly
-                                $batch_time = $timestamp + ($i * 3600); // Start from 1 hour
+                                // SUBSEQUENT BATCHES: Schedule hourly from NOW
+                                $batch_time = time() + ($i * 3600); // i=1 means 1 hour from now
 
                                 wp_schedule_single_event(
                                     $batch_time,
@@ -311,6 +329,7 @@ class Ofast_X_Email_Admin
                     }
                 }
             } // End rate limit else block
+            } // End double-submit else block
         }
 
         // Render UI
@@ -322,68 +341,15 @@ class Ofast_X_Email_Admin
      */
     private function render_send_form($result_message, $roles)
     {
-        // Enhanced toast notification
-        $toast_html = '';
-        if (!empty($result_message)) {
-            $is_success = strpos($result_message, 'notice-success') !== false;
-            $toast_color = $is_success ? '#10b981' : '#ef4444';
-            $toast_icon = $is_success ? '✓' : '✗';
-            // Extract message text
-            preg_match('/<p>(.*?)<\/p>/', $result_message, $matches);
-            $message_text = $matches[1] ?? 'Operation completed';
-
-            $toast_html = '
-            <div id="ofast-email-toast" style="
-                position: fixed;
-                top: 50px;
-                right: 20px;
-                z-index: 999999;
-                background: ' . $toast_color . ';
-                color: #fff;
-                padding: 16px 24px;
-                border-radius: 10px;
-                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                font-size: 14px;
-                font-weight: 500;
-                animation: slideIn 0.3s ease;
-            ">
-                <span style="font-size: 20px;">' . $toast_icon . '</span>
-                <span>' . esc_html($message_text) . '</span>
-                <button onclick="this.parentElement.remove()" style="
-                    background: none;
-                    border: none;
-                    color: #fff;
-                    font-size: 18px;
-                    cursor: pointer;
-                    margin-left: 10px;
-                    opacity: 0.8;
-                ">&times;</button>
-            </div>
-            <style>
-                @keyframes slideIn {
-                    from { transform: translateX(100%); opacity: 0; }
-                    to { transform: translateX(0); opacity: 1; }
-                }
-            </style>
-            <script>
-                setTimeout(function() {
-                    var toast = document.getElementById("ofast-email-toast");
-                    if (toast) {
-                        toast.style.transition = "all 0.3s ease";
-                        toast.style.transform = "translateX(100%)";
-                        toast.style.opacity = "0";
-                        setTimeout(function() { toast.remove(); }, 300);
-                    }
-                }, 5000);
-            </script>';
-        }
+        // Toast notification - $result_message already contains complete toast from Ofast_X_Toast::render()
+        // Just output it directly since it includes styles, script, and JS call
+        $toast_html = !empty($result_message) ? $result_message : '';
 
         echo '<div class="wrap"><h2>Send Email</h2>' . $toast_html . '
         <form method="post" enctype="multipart/form-data" id="email-form">';
         wp_nonce_field('ofast_send_email_action', 'ofast_email_nonce');
+        // Double-submit protection token
+        echo '<input type="hidden" name="ofast_submit_token" value="' . esc_attr(wp_generate_password(16, false)) . '">';
         echo '<p><label><strong>Email Subject:</strong><br>
             <input type="text" name="subject" style="width: 100%;" required></label></p>
 
@@ -960,7 +926,7 @@ class Ofast_X_Email_Admin
         }
 
         // Handle reset
-        if (isset($_POST['ofast_reset_template']) && wp_verify_nonce($_POST['_wpnonce'], 'ofast_template_reset')) {
+        if (isset($_POST['ofast_reset_template']) && wp_verify_nonce($_POST['_wpnonce'], 'ofast_template_save')) {
             $this->reset_template_settings();
             echo Ofast_X_Toast::render('Template settings reset to defaults!', 'success');
         }

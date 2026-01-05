@@ -527,14 +527,12 @@ class Ofast_X_SMTP_Admin
         <?php
     }
 
-    /**
-     * Settings page content (without wrap) - used by tabs
-     */
     private function render_settings_page_content()
     {
         settings_errors('ofast_smtp');
 
         $enabled = get_option('ofast_smtp_enabled', false);
+        $mailer_type = get_option('ofast_smtp_mailer_type', 'default');
         $provider = get_option('ofast_smtp_provider', 'custom');
         $host = get_option('ofast_smtp_host', '');
         $port = get_option('ofast_smtp_port', 587);
@@ -555,62 +553,84 @@ class Ofast_X_SMTP_Admin
                     <th>Enable SMTP</th>
                     <td>
                         <label><input type="checkbox" name="smtp_enabled" value="1" <?php checked($enabled); ?>> Use SMTP for all WordPress emails</label>
-                        <p class="description">When enabled, all emails will be sent through your SMTP server.</p>
+                        <p class="description">When enabled, all emails will be sent through your configured mailer.</p>
                     </td>
                 </tr>
                 <tr>
-                    <th>Email Provider</th>
+                    <th>Mailer Type</th>
                     <td>
-                        <select name="smtp_provider" id="smtp_provider">
-                            <?php foreach ($presets as $key => $preset): ?>
-                                <option value="<?php echo esc_attr($key); ?>" <?php selected($provider, $key); ?>><?php echo esc_html($preset['name']); ?></option>
-                            <?php endforeach; ?>
+                        <select name="smtp_mailer_type" id="smtp_mailer_type">
+                            <option value="default" <?php selected($mailer_type, 'default'); ?>>PHP Mail (Default) - No credentials needed</option>
+                            <option value="smtp" <?php selected($mailer_type, 'smtp'); ?>>Other SMTP - Custom server</option>
                         </select>
-                        <p class="description" id="provider_note" style="margin-top: 10px; padding: 10px; background: #f0f6fc; border-radius: 5px;">
-                            <?php echo esc_html($presets[$provider]['note'] ?? ''); ?>
+                        <p class="description" id="mailer_note" style="margin-top: 10px; padding: 10px; background: #f0f6fc; border-radius: 5px;">
+                            <?php if ($mailer_type === 'default'): ?>
+                                Uses your server's built-in mail function. Only From Email/Name needed. Best for most hosts.
+                            <?php else: ?>
+                                Requires SMTP server credentials. Better deliverability with providers like SendGrid, Mailgun.
+                            <?php endif; ?>
                         </p>
                     </td>
                 </tr>
             </table>
 
-            <h2 style="margin-top: 30px;">Connection Settings</h2>
-            <table class="form-table">
-                <tr>
-                    <th><label for="smtp_host">SMTP Host *</label></th>
-                    <td><input type="text" name="smtp_host" id="smtp_host" value="<?php echo esc_attr($host); ?>" class="regular-text" placeholder="smtp.example.com"></td>
-                </tr>
-                <tr>
-                    <th><label for="smtp_port">SMTP Port *</label></th>
-                    <td>
-                        <input type="number" name="smtp_port" id="smtp_port" value="<?php echo esc_attr($port); ?>" style="width: 100px;">
-                        <span class="description">Common: 587 (TLS), 465 (SSL), 25 (None)</span>
-                    </td>
-                </tr>
-                <tr>
-                    <th>Encryption</th>
-                    <td>
-                        <label><input type="radio" name="smtp_encryption" value="tls" <?php checked($encryption, 'tls'); ?>> TLS (Recommended)</label><br>
-                        <label><input type="radio" name="smtp_encryption" value="ssl" <?php checked($encryption, 'ssl'); ?>> SSL</label><br>
-                        <label><input type="radio" name="smtp_encryption" value="none" <?php checked($encryption, 'none'); ?>> None</label>
-                    </td>
-                </tr>
-            </table>
+            <!-- SMTP Provider (only for smtp mailer type) -->
+            <div id="smtp-credentials-section" style="<?php echo $mailer_type === 'default' ? 'display:none;' : ''; ?>">
+                <table class="form-table">
+                    <tr>
+                        <th>Email Provider</th>
+                        <td>
+                            <select name="smtp_provider" id="smtp_provider">
+                                <?php foreach ($presets as $key => $preset): ?>
+                                    <option value="<?php echo esc_attr($key); ?>" <?php selected($provider, $key); ?>><?php echo esc_html($preset['name']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <p class="description" id="provider_note" style="margin-top: 10px; padding: 10px; background: #f0f6fc; border-radius: 5px;">
+                                <?php echo esc_html($presets[$provider]['note'] ?? ''); ?>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
 
-            <h2 style="margin-top: 30px;">Authentication</h2>
-            <table class="form-table">
-                <tr>
-                    <th><label for="smtp_username">Username *</label></th>
-                    <td><input type="text" name="smtp_username" id="smtp_username" value="<?php echo esc_attr($username); ?>" class="regular-text" placeholder="your@email.com or apikey"></td>
-                </tr>
-                <tr>
-                    <th><label for="smtp_password">Password *</label></th>
-                    <td>
-                        <input type="password" name="smtp_password" id="smtp_password" value="<?php echo $password ? '••••••••' : ''; ?>" class="regular-text" placeholder="Enter password or API key">
-                        <button type="button" class="button button-small" onclick="this.previousElementSibling.type = this.previousElementSibling.type === 'password' ? 'text' : 'password'">Show/Hide</button>
-                        <p class="description">For Gmail/Zoho: Use an App Password, not your login password</p>
-                    </td>
-                </tr>
-            </table>
+                <h2 style="margin-top: 30px;">Connection Settings</h2>
+                <table class="form-table">
+                    <tr>
+                        <th><label for="smtp_host">SMTP Host *</label></th>
+                        <td><input type="text" name="smtp_host" id="smtp_host" value="<?php echo esc_attr($host); ?>" class="regular-text" placeholder="smtp.example.com"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="smtp_port">SMTP Port *</label></th>
+                        <td>
+                            <input type="number" name="smtp_port" id="smtp_port" value="<?php echo esc_attr($port); ?>" style="width: 100px;">
+                            <span class="description">Common: 587 (TLS), 465 (SSL), 25 (None)</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Encryption</th>
+                        <td>
+                            <label><input type="radio" name="smtp_encryption" value="tls" <?php checked($encryption, 'tls'); ?>> TLS (Recommended)</label><br>
+                            <label><input type="radio" name="smtp_encryption" value="ssl" <?php checked($encryption, 'ssl'); ?>> SSL</label><br>
+                            <label><input type="radio" name="smtp_encryption" value="none" <?php checked($encryption, 'none'); ?>> None</label>
+                        </td>
+                    </tr>
+                </table>
+
+                <h2 style="margin-top: 30px;">Authentication</h2>
+                <table class="form-table">
+                    <tr>
+                        <th><label for="smtp_username">Username *</label></th>
+                        <td><input type="text" name="smtp_username" id="smtp_username" value="<?php echo esc_attr($username); ?>" class="regular-text" placeholder="your@email.com or apikey"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="smtp_password">Password *</label></th>
+                        <td>
+                            <input type="password" name="smtp_password" id="smtp_password" value="<?php echo $password ? '••••••••' : ''; ?>" class="regular-text" placeholder="Enter password or API key">
+                            <button type="button" class="button button-small" onclick="this.previousElementSibling.type = this.previousElementSibling.type === 'password' ? 'text' : 'password'">Show/Hide</button>
+                            <p class="description">For Gmail/Zoho: Use an App Password, not your login password</p>
+                        </td>
+                    </tr>
+                </table>
+            </div>
 
             <h2 style="margin-top: 30px;">From Settings</h2>
             <table class="form-table">
@@ -618,7 +638,7 @@ class Ofast_X_SMTP_Admin
                     <th><label for="smtp_from_email">From Email *</label></th>
                     <td>
                         <input type="email" name="smtp_from_email" id="smtp_from_email" value="<?php echo esc_attr($from_email); ?>" class="regular-text" placeholder="noreply@yoursite.com">
-                        <p class="description">This should match your SMTP account email for best deliverability</p>
+                        <p class="description">The email address shown as sender</p>
                     </td>
                 </tr>
                 <tr>
@@ -627,25 +647,27 @@ class Ofast_X_SMTP_Admin
                 </tr>
             </table>
 
-            <h2 style="margin-top: 30px;">Rate Limiting</h2>
-            <table class="form-table">
-                <tr>
-                    <th>Enable Rate Limiting</th>
-                    <td><label><input type="checkbox" name="rate_limit_enabled" value="1" <?php checked(get_option('ofast_smtp_rate_limit_enabled', true)); ?>> Limit emails per minute</label></td>
-                </tr>
-                <tr>
-                    <th><label for="rate_limit">Max Emails/Minute</label></th>
-                    <td>
-                        <input type="number" name="rate_limit" id="rate_limit" value="<?php echo esc_attr(get_option('ofast_smtp_rate_limit', 60)); ?>" min="1" max="500" style="width: 80px;">
-                        <span class="description">Recommended: 30-60 for shared hosting</span>
-                    </td>
-                </tr>
-            </table>
+            <div id="rate-limit-section" style="<?php echo $mailer_type === 'default' ? 'display:none;' : ''; ?>">
+                <h2 style="margin-top: 30px;">Rate Limiting</h2>
+                <table class="form-table">
+                    <tr>
+                        <th>Enable Rate Limiting</th>
+                        <td><label><input type="checkbox" name="rate_limit_enabled" value="1" <?php checked(get_option('ofast_smtp_rate_limit_enabled', true)); ?>> Limit emails per minute</label></td>
+                    </tr>
+                    <tr>
+                        <th><label for="rate_limit">Max Emails/Minute</label></th>
+                        <td>
+                            <input type="number" name="rate_limit" id="rate_limit" value="<?php echo esc_attr(get_option('ofast_smtp_rate_limit', 60)); ?>" min="1" max="500" style="width: 80px;">
+                            <span class="description">Recommended: 30-60 for shared hosting</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
 
             <!-- Test Connection -->
             <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 30px 0;">
                 <h3 style="margin-top: 0;">Test Connection</h3>
-                <p>Send a test email to verify your SMTP settings are correct.</p>
+                <p>Send a test email to verify your settings are correct.</p>
                 <button type="button" id="test-smtp-btn" class="button button-secondary">Send Test Email to <?php echo esc_html(get_option('admin_email')); ?></button>
                 <span id="test-result" style="margin-left: 15px;"></span>
                 <div id="test-details" style="margin-top: 15px; display: none;">
@@ -657,6 +679,19 @@ class Ofast_X_SMTP_Admin
                 <button type="submit" name="ofast_smtp_save" class="button button-primary button-large">Save SMTP Settings</button>
             </p>
         </form>
+
+        <script>
+            jQuery(document).ready(function($) {
+                $('#smtp_mailer_type').on('change', function() {
+                    var isSmtp = $(this).val() === 'smtp';
+                    $('#smtp-credentials-section').toggle(isSmtp);
+                    $('#rate-limit-section').toggle(isSmtp);
+                    $('#mailer_note').text(isSmtp 
+                        ? 'Requires SMTP server credentials. Better deliverability with providers like SendGrid, Mailgun.' 
+                        : 'Uses your server\'s built-in mail function. Only From Email/Name needed. Best for most hosts.');
+                });
+            });
+        </script>
 
         <!-- DNS Checker Section -->
         <div style="margin-top: 30px;">
@@ -712,6 +747,7 @@ class Ofast_X_SMTP_Admin
 
         // Save all settings
         update_option('ofast_smtp_enabled', isset($_POST['smtp_enabled']) ? 1 : 0);
+        update_option('ofast_smtp_mailer_type', sanitize_text_field($_POST['smtp_mailer_type'] ?? 'default'));
         update_option('ofast_smtp_provider', sanitize_text_field($_POST['smtp_provider'] ?? 'custom'));
         update_option('ofast_smtp_host', sanitize_text_field($_POST['smtp_host'] ?? ''));
         update_option('ofast_smtp_port', intval($_POST['smtp_port'] ?? 587));

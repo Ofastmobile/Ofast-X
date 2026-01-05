@@ -166,6 +166,25 @@ class Ofast_X_SMTP
      */
     public function configure_phpmailer($phpmailer)
     {
+        $mailer_type = get_option('ofast_smtp_mailer_type', 'default');
+        
+        // PHP Mail (Default) - uses server's native mail function
+        if ($mailer_type === 'default') {
+            $phpmailer->isMail();
+            
+            // Only set From if configured
+            $from_email = get_option('ofast_smtp_from_email', '');
+            $from_name = get_option('ofast_smtp_from_name', get_bloginfo('name'));
+            if (!empty($from_email)) {
+                $phpmailer->From = $from_email;
+                $phpmailer->FromName = $from_name;
+            }
+            
+            $phpmailer->XMailer = 'Ofast Mailer';
+            return;
+        }
+        
+        // SMTP mode - requires host, port, credentials
         $phpmailer->isSMTP();
         $phpmailer->Host = get_option('ofast_smtp_host', '');
         $phpmailer->Port = get_option('ofast_smtp_port', 587);

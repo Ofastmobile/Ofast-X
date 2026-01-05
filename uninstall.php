@@ -32,6 +32,7 @@ global $wpdb;
  */
 $tables = array(
     $wpdb->prefix . 'ofast_email_logs',
+    $wpdb->prefix . 'ofast_email_drafts',  // Email drafts
     $wpdb->prefix . 'ofast_smtp_log',  // SMTP module log table (was missing)
     $wpdb->prefix . 'ofast_newsletter_subscribers',
     $wpdb->prefix . 'ofast_snippets',

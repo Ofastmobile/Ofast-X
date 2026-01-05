@@ -99,6 +99,15 @@ class Ofast_X_Email_Admin
 
         add_submenu_page(
             'ofast-emailer',
+            'Drafts',
+            'Drafts',
+            'manage_options',
+            'ofast-email-drafts',
+            array($this, 'render_drafts_page')
+        );
+
+        add_submenu_page(
+            'ofast-emailer',
             'Scheduled Emails',
             'Scheduled',
             'manage_options',
@@ -153,6 +162,42 @@ class Ofast_X_Email_Admin
         }
 
         $result_message = '';
+
+        // Handle Save as Draft
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_draft'])) {
+            if (!isset($_POST['ofast_email_nonce']) || !wp_verify_nonce($_POST['ofast_email_nonce'], 'ofast_send_email_action')) {
+                wp_die(__('Security check failed. Please refresh and try again.', 'ofast-x'), 'Security Error', array('response' => 403));
+            }
+
+            global $wpdb;
+            $table = $wpdb->prefix . 'ofast_email_drafts';
+            
+            $subject = sanitize_text_field(wp_unslash($_POST['subject'] ?? ''));
+            $body = wp_kses_post(wp_unslash($_POST['message'] ?? ''));
+            $selected_roles = isset($_POST['roles']) && is_array($_POST['roles']) ? array_map('sanitize_text_field', $_POST['roles']) : array();
+            $selected_user_ids = isset($_POST['checked_users']) && is_array($_POST['checked_users']) ? array_map('intval', $_POST['checked_users']) : array();
+            $draft_id = isset($_POST['draft_id']) ? intval($_POST['draft_id']) : 0;
+
+            $data = array(
+                'admin_id' => get_current_user_id(),
+                'subject' => $subject,
+                'body' => $body,
+                'roles' => json_encode($selected_roles),
+                'user_ids' => json_encode($selected_user_ids),
+                'updated_at' => current_time('mysql')
+            );
+
+            if ($draft_id > 0) {
+                // Update existing draft
+                $wpdb->update($table, $data, array('id' => $draft_id, 'admin_id' => get_current_user_id()));
+                $result_message = Ofast_X_Toast::render('Draft updated successfully!', 'success', true);
+            } else {
+                // Insert new draft
+                $data['created_at'] = current_time('mysql');
+                $wpdb->insert($table, $data);
+                $result_message = Ofast_X_Toast::render('Email saved as draft!', 'success', true);
+            }
+        }
 
         // Handle form submission
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_email'])) {
@@ -341,6 +386,24 @@ class Ofast_X_Email_Admin
      */
     private function render_send_form($result_message, $roles)
     {
+        // Load draft if editing
+        $draft = null;
+        $draft_id = isset($_GET['draft_id']) ? intval($_GET['draft_id']) : 0;
+        if ($draft_id > 0) {
+            global $wpdb;
+            $table = $wpdb->prefix . 'ofast_email_drafts';
+            $draft = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM $table WHERE id = %d AND admin_id = %d",
+                $draft_id,
+                get_current_user_id()
+            ));
+        }
+        
+        $draft_subject = $draft ? $draft->subject : '';
+        $draft_body = $draft ? $draft->body : '';
+        $draft_roles = $draft ? (json_decode($draft->roles, true) ?: array()) : array();
+        $draft_user_ids = $draft ? (json_decode($draft->user_ids, true) ?: array()) : array();
+
         // Toast notification - $result_message already contains complete toast from Ofast_X_Toast::render()
         // Just output it directly since it includes styles, script, and JS call
         $toast_html = !empty($result_message) ? $result_message : '';
@@ -348,13 +411,18 @@ class Ofast_X_Email_Admin
         echo '<div class="wrap"><h2>Send Email</h2>' . $toast_html . '
         <form method="post" enctype="multipart/form-data" id="email-form">';
         wp_nonce_field('ofast_send_email_action', 'ofast_email_nonce');
+        // Hidden draft_id for updating
+        if ($draft_id > 0) {
+            echo '<input type="hidden" name="draft_id" value="' . esc_attr($draft_id) . '">';
+            echo '<div class="notice notice-info"><p>📝 Editing draft: <strong>' . esc_html($draft_subject ?: '(No subject)') . '</strong> — <a href="' . admin_url('admin.php?page=ofast-emailer') . '">Start fresh instead</a></p></div>';
+        }
         // Double-submit protection token
         echo '<input type="hidden" name="ofast_submit_token" value="' . esc_attr(wp_generate_password(16, false)) . '">';
         echo '<p><label><strong>Email Subject:</strong><br>
-            <input type="text" name="subject" style="width: 100%;" required></label></p>
+            <input type="text" name="subject" style="width: 100%;" required value="' . esc_attr($draft_subject) . '"></label></p>
 
             <p><label><strong>Message Body:</strong><br>';
-        wp_editor('', 'message', [
+        wp_editor($draft_body, 'message', [
             'textarea_name' => 'message',
             'media_buttons' => true,
             'textarea_rows' => 10,
@@ -400,6 +468,7 @@ class Ofast_X_Email_Admin
 
             <p>
                 <button type="submit" name="send_email" class="button button-primary"> Send / Schedule</button>
+                <button type="submit" name="save_draft" class="button button-secondary" style="margin-left:10px;"> Save as Draft</button>
                 <button type="button" id="preview-email-btn" class="button button-secondary" style="margin-left:10px;">Preview Email</button>
             </p>
             
@@ -1330,30 +1399,36 @@ class Ofast_X_Email_Admin
                     frame.open();
                 });
 
-                // Update preview
+                // Update preview - Table-based, inline-styled template (matches PHP class)
                 function updatePreview() {
-                    var style = $('input[name="template_style"]:checked').val() || 'modern';
-                    var primary = $('input[name="primary_color"]').val() || '#6366f1';
-                    var accent = $('input[name="accent_color"]').val() || '#10b981';
-                    var bgColor = $('input[name="bg_color"]').val() || '#f8fafc';
-                    var textColor = $('input[name="text_color"]').val() || '#1e293b';
+                    var primary = $('input[name="primary_color"]').val() || '#2563eb';
+                    var bgColor = $('input[name="bg_color"]').val() || '#f3f4f6';
+                    var textColor = $('input[name="text_color"]').val() || '#111827';
+                    var headerBg = '#111827'; // Dark header
                     var logo = $('input[name="logo_url"]').val() || '';
                     var company = $('input[name="company_name"]').val() || '';
                     var tagline = $('input[name="tagline"]').val() || '';
                     var showHeader = $('input[name="show_header"]').is(':checked');
                     var showFooter = $('input[name="show_footer"]').is(':checked');
-                    var logoWidth = parseInt($('input[name="logo_width"]').val()) || 120;
-                    var logoHeight = parseInt($('input[name="logo_height"]').val()) || 0;
+                    var logoWidth = parseInt($('input[name="logo_width"]').val()) || 140;
 
-                    // Collect social links
+                    // Collect social links with brand colors
                     var socialLinks = {};
-                    var socialIcons = {
-                        'facebook': 'https://cdn-icons-png.flaticon.com/512/733/733547.png',
-                        'x': 'https://cdn-icons-png.flaticon.com/512/5968/5968830.png',
-                        'youtube': 'https://cdn-icons-png.flaticon.com/512/1384/1384060.png',
-                        'instagram': 'https://cdn-icons-png.flaticon.com/512/2111/2111463.png',
-                        'linkedin': 'https://cdn-icons-png.flaticon.com/512/174/174857.png',
-                        'whatsapp': 'https://cdn-icons-png.flaticon.com/512/733/733585.png'
+                    var socialColors = {
+                        'facebook': '#1877f2',
+                        'x': '#000000',
+                        'instagram': '#e1306c',
+                        'linkedin': '#0a66c2',
+                        'youtube': '#ff0000',
+                        'whatsapp': '#25d366'
+                    };
+                    var socialNames = {
+                        'facebook': 'Facebook',
+                        'x': 'X',
+                        'instagram': 'Instagram',
+                        'linkedin': 'LinkedIn',
+                        'youtube': 'YouTube',
+                        'whatsapp': 'WhatsApp'
                     };
                     $('input[name^="social["]').each(function() {
                         var platform = $(this).attr('name').match(/social\[(\w+)\]/)[1];
@@ -1361,66 +1436,69 @@ class Ofast_X_Email_Admin
                         if (url) socialLinks[platform] = url;
                     });
 
-                    var headerBg = style === 'modern' ? 'linear-gradient(135deg, ' + primary + ' 0%, ' + accent + ' 100%)' :
-                        style === 'classic' ? primary : 'transparent';
+                    // Build table-based HTML with inline styles
+                    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Email Preview</title></head>';
+                    html += '<body style="margin:0; padding:0; background-color:' + bgColor + '; font-family:Arial, Helvetica, sans-serif;">';
+                    html += '<table width="100%" cellpadding="0" cellspacing="0" style="background-color:' + bgColor + '; padding:30px 0;"><tr><td align="center">';
                     
-                    // Add extra padding when only logo is shown (no company/tagline)
-                    var extraPadding = (!company && !tagline && logo) ? 'padding-top: 25px; padding-bottom: 25px;' : '';
-                    var headerStyle = style === 'minimal' ? 'display: none;' : 'background: ' + headerBg + '; padding: 15px; text-align: center; color: #fff; ' + extraPadding;
+                    // Main card
+                    html += '<table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; max-width:100%;">';
 
-                    // Logo style with dynamic width/height
-                    var logoMargin = (!company && !tagline) ? 'margin-bottom: 0;' : 'margin-bottom: 5px;';
-                    var logoStyle = 'max-width: ' + logoWidth + 'px; ' + (logoHeight > 0 ? 'height: ' + logoHeight + 'px;' : 'height: auto;') + ' ' + logoMargin;
-
-                    var html = '<!DOCTYPE html><html><head><style>';
-                    html += 'body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: ' + bgColor + '; color: ' + textColor + '; }';
-                    html += '.container { max-width: 100%; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }';
-                    html += '.header { ' + headerStyle + ' }';
-                    html += '.logo { ' + logoStyle + ' }';
-                    html += '.company { font-size: 16px; font-weight: 600; margin: 0; }';
-                    html += '.tagline { font-size: 11px; opacity: 0.9; margin: 3px 0 0 0; }';
-                    html += '.body { padding: 25px; font-size: 14px; line-height: 1.6; text-align: justify; }';
-                    html += '.footer { background: #f1f5f9; padding: 12px; text-align: center; font-size: 11px; color: #64748b; }';
-                    html += '.social-links { margin-bottom: 8px; }';
-                    html += '.social-icon { display: inline-block; width: 24px; height: 24px; margin: 0 5px; }';
-                    html += '.social-icon img { width: 24px; height: 24px; }';
-                    html += '</style></head><body><div class="container">';
-
-                    if (showHeader && style !== 'minimal') {
-                        html += '<div class="header">';
-                        if (logo) html += '<img src="' + logo + '" class="logo" alt="">';
-                        if (company) html += '<p class="company">' + company + '</p>';
-                        if (tagline) html += '<p class="tagline">' + tagline + '</p>';
-                        html += '</div>';
+                    // Header
+                    if (showHeader && (logo || company)) {
+                        html += '<tr><td style="background-color:' + headerBg + '; padding:24px; text-align:center;">';
+                        if (logo) {
+                            html += '<img src="' + logo + '" alt="' + company + '" style="max-width:' + logoWidth + 'px; height:auto; display:block; margin:0 auto;">';
+                        } else if (company) {
+                            html += '<div style="color:#ffffff; font-size:24px; font-weight:600;">' + company + '</div>';
+                        }
+                        html += '</td></tr>';
                     }
 
-                    html += '<div class="body">';
-                    html += '<p>Hello <strong>John</strong>,</p>';
-                    html += '<p>This is a sample email to preview your template design. The content you write in your emails will appear here, with your branding and colors applied.</p>';
-                    html += '<p>Thank you for using Ofast Emailer!</p>';
-                    html += '</div>';
+                    // Content
+                    html += '<tr><td style="padding:32px; color:' + textColor + ';">';
+                    html += '<div style="font-size:15px; line-height:1.7; color:#374151;">';
+                    html += '<p style="margin:0 0 16px;"><strong>Hello John,</strong></p>';
+                    html += '<p style="margin:0 0 16px;">This is a sample email to preview your template design. The content you write in your emails will appear here, with your branding and colors applied.</p>';
+                    html += '<p style="margin:0;">Thank you for using Ofast Emailer!</p>';
+                    html += '</div></td></tr>';
 
+                    // Footer
                     if (showFooter) {
-                        html += '<div class="footer">';
+                        html += '<tr><td style="padding:0 32px;"><hr style="border:none; border-top:1px solid #e5e7eb;"></td></tr>';
+                        html += '<tr><td style="padding:24px 32px; text-align:center; font-size:13px; color:#6b7280;">';
                         
-                        // Social links
+                        // Company/tagline
+                        if (company || tagline) {
+                            html += '<p style="margin:0 0 12px;">';
+                            if (company && tagline) {
+                                html += company + ' — ' + tagline;
+                            } else {
+                                html += company || tagline;
+                            }
+                            html += '</p>';
+                        }
+
+                        // Social buttons (text-based)
                         var hasSocial = Object.keys(socialLinks).length > 0;
                         if (hasSocial) {
-                            html += '<div class="social-links">';
+                            html += '<table cellpadding="0" cellspacing="0" align="center" style="margin-bottom:12px;"><tr>';
                             for (var platform in socialLinks) {
-                                if (socialIcons[platform]) {
-                                    html += '<a href="' + socialLinks[platform] + '" class="social-icon"><img src="' + socialIcons[platform] + '" alt="' + platform + '"></a>';
-                                }
+                                var color = socialColors[platform] || '#6b7280';
+                                var name = socialNames[platform] || platform;
+                                html += '<td style="padding:4px;">';
+                                html += '<a href="' + socialLinks[platform] + '" style="display:inline-block; background-color:' + color + '; color:#ffffff; font-size:12px; font-weight:600; text-decoration:none; padding:8px 14px; border-radius:999px;">' + name + '</a>';
+                                html += '</td>';
                             }
-                            html += '</div>';
+                            html += '</tr></table>';
                         }
-                        
+
                         var footerCompany = company || 'Your Site';
-                        html += '<p style="margin: 5px 0;">&copy; ' + new Date().getFullYear() + ' ' + footerCompany + '. All rights reserved.</p>';
-                        html += '</div>';
+                        html += '<p style="margin:0; font-size:12px; color:#9ca3af;">&copy; ' + new Date().getFullYear() + ' ' + footerCompany + '. All rights reserved.</p>';
+                        html += '</td></tr>';
                     }
 
-                    html += '</div></body></html>';
+                    html += '</table></td></tr></table></body></html>';
 
                     document.getElementById('template-preview').srcdoc = html;
                 }
@@ -1485,5 +1563,133 @@ class Ofast_X_Email_Admin
         update_option('ofast_email_font_size', '15');
         update_option('ofast_email_logo_width', '120');
         update_option('ofast_email_logo_height', '0');
+    }
+
+    /**
+     * Render drafts page
+     */
+    public function render_drafts_page()
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_email_drafts';
+        $current_user_id = get_current_user_id();
+
+        // Create table if it doesn't exist
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table'") !== $table) {
+            $charset = $wpdb->get_charset_collate();
+            $sql = "CREATE TABLE $table (
+                id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+                admin_id BIGINT(20) UNSIGNED NOT NULL,
+                subject VARCHAR(255) NOT NULL,
+                body LONGTEXT,
+                roles TEXT,
+                user_ids TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_admin_id (admin_id)
+            ) $charset;";
+            require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+            dbDelta($sql);
+        }
+
+        // Handle delete action
+        if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['draft_id'])) {
+            if (isset($_GET['_wpnonce']) && wp_verify_nonce($_GET['_wpnonce'], 'delete_draft_' . $_GET['draft_id'])) {
+                $wpdb->delete($table, array('id' => intval($_GET['draft_id']), 'admin_id' => $current_user_id));
+                echo Ofast_X_Toast::render('Draft deleted successfully!', 'success', true);
+            }
+        }
+
+        // Handle send now action
+        if (isset($_GET['action']) && $_GET['action'] === 'send' && isset($_GET['draft_id'])) {
+            if (isset($_GET['_wpnonce']) && wp_verify_nonce($_GET['_wpnonce'], 'send_draft_' . $_GET['draft_id'])) {
+                $draft = $wpdb->get_row($wpdb->prepare(
+                    "SELECT * FROM $table WHERE id = %d AND admin_id = %d",
+                    intval($_GET['draft_id']),
+                    $current_user_id
+                ));
+                
+                if ($draft) {
+                    $roles = json_decode($draft->roles, true) ?: array();
+                    $user_ids = json_decode($draft->user_ids, true) ?: array();
+                    
+                    // Get recipients
+                    $total_ids = $user_ids;
+                    if (!empty($roles)) {
+                        $role_ids = get_users(array('role__in' => $roles, 'fields' => 'ID'));
+                        $total_ids = array_unique(array_merge($total_ids, $role_ids));
+                    }
+                    if (empty($total_ids)) {
+                        $total_ids = array($current_user_id); // Fallback to admin
+                    }
+                    
+                    $sent = 0;
+                    $headers = $this->get_email_headers();
+                    foreach (get_users(array('include' => $total_ids)) as $user) {
+                        $message = $this->replace_placeholders($draft->body, $user);
+                        $full_body = $this->get_email_template($message);
+                        if (wp_mail($user->user_email, $draft->subject, $full_body, $headers)) {
+                            $sent++;
+                        }
+                    }
+                    
+                    $this->log_email($draft->subject, $sent, 'Sent from draft', $draft->body);
+                    $wpdb->delete($table, array('id' => $draft->id));
+                    echo Ofast_X_Toast::render("Sent {$sent} emails from draft!", 'success', true);
+                }
+            }
+        }
+
+        // Get drafts for current admin
+        $drafts = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $table WHERE admin_id = %d ORDER BY updated_at DESC",
+            $current_user_id
+        ));
+
+        echo '<div class="wrap"><h1>Email Drafts</h1>';
+        
+        if (empty($drafts)) {
+            echo '<div class="notice notice-info"><p>No drafts yet. <a href="' . admin_url('admin.php?page=ofast-emailer') . '">Create an email</a> and save it as draft.</p></div>';
+        } else {
+            echo '<table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th style="width:30%">Subject</th>
+                        <th style="width:20%">Recipients</th>
+                        <th style="width:20%">Last Modified</th>
+                        <th style="width:30%">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>';
+            
+            foreach ($drafts as $draft) {
+                $roles = json_decode($draft->roles, true) ?: array();
+                $user_ids = json_decode($draft->user_ids, true) ?: array();
+                $recipients = array();
+                if (!empty($roles)) $recipients[] = count($roles) . ' role(s)';
+                if (!empty($user_ids)) $recipients[] = count($user_ids) . ' user(s)';
+                $recipients_text = !empty($recipients) ? implode(', ', $recipients) : 'Admin only';
+                
+                $edit_url = admin_url('admin.php?page=ofast-emailer&draft_id=' . $draft->id);
+                $send_url = wp_nonce_url(admin_url('admin.php?page=ofast-email-drafts&action=send&draft_id=' . $draft->id), 'send_draft_' . $draft->id);
+                $delete_url = wp_nonce_url(admin_url('admin.php?page=ofast-email-drafts&action=delete&draft_id=' . $draft->id), 'delete_draft_' . $draft->id);
+                
+                echo '<tr>
+                    <td><strong>' . esc_html($draft->subject ?: '(No subject)') . '</strong></td>
+                    <td>' . esc_html($recipients_text) . '</td>
+                    <td>' . esc_html(date('M j, Y g:i a', strtotime($draft->updated_at))) . '</td>
+                    <td>
+                        <a href="' . esc_url($edit_url) . '" class="button button-small">✏️ Edit</a>
+                        <a href="' . esc_url($send_url) . '" class="button button-small button-primary" onclick="return confirm(\'Send this draft now?\')">📧 Send Now</a>
+                        <a href="' . esc_url($delete_url) . '" class="button button-small" onclick="return confirm(\'Delete this draft?\')">🗑️ Delete</a>
+                    </td>
+                </tr>';
+            }
+            
+            echo '</tbody></table>';
+        }
+        
+        echo '</div>';
     }
 }

@@ -1,28 +1,75 @@
-
-( ! ) Deprecated: Function print_emoji_styles is <strong>deprecated</strong> since version 6.4.0! Use wp_enqueue_emoji_styles instead. in C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-includes\functions.php on line 6131
+ON TOP OF PLUGIN PAGE 
+Deprecated: strpos(): Passing null to parameter #1 ($haystack) of type string is deprecated in C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-includes\functions.php on line 7374
 Call Stack
 #	Time	Memory	Function	Location
-1	1.6553	373576	{main}( )	...\index.php:0
-2	1.7132	374952	require_once( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-admin\admin.php )	...\index.php:10
-3	1.7136	375784	require_once( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-load.php )	...\admin.php:35
-4	1.7138	376384	require_once( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-config.php )	...\wp-load.php:50
-5	1.7141	385384	require_once( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-settings.php )	...\wp-config.php:106
-6	9.3085	3435016	do_action( $hook_name = 'init' )	...\wp-settings.php:742
-7	9.3085	3435232	WP_Hook->do_action( $args = [0 => ''] )	...\plugin.php:522
-8	9.3085	3435232	WP_Hook->apply_filters( $value = '', $args = [0 => ''] )	...\class-wp-hook.php:365
-9	9.3210	3566752	Ofast_X_Admin_Url->block_default_access( '' )	...\class-wp-hook.php:341
-10	9.3211	3566752	Ofast_X_Admin_Url->show_404( )	...\class-ofast-admin-url.php:397
-11	9.5505	4904208	include( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-includes\template-canvas.php )	...\class-ofast-admin-url.php:412
-12	9.6627	5129144	wp_head( )	...\template-canvas.php:17
-13	9.6627	5129144	do_action( $hook_name = 'wp_head' )	...\general-template.php:3197
-14	9.6627	5129360	WP_Hook->do_action( $args = [0 => ''] )	...\plugin.php:522
-15	9.6627	5129360	WP_Hook->apply_filters( $value = '', $args = [0 => ''] )	...\class-wp-hook.php:365
-16	9.7731	5316312	wp_print_styles( $handles = '' )	...\class-wp-hook.php:341
-17	9.7731	5316312	do_action( $hook_name = 'wp_print_styles' )	...\functions.wp-styles.php:57
-18	9.7731	5316528	WP_Hook->do_action( $args = [0 => ''] )	...\plugin.php:522
-19	9.7731	5316528	WP_Hook->apply_filters( $value = '', $args = [0 => ''] )	...\class-wp-hook.php:365
-20	9.7731	5316960	print_emoji_styles( '' )	...\class-wp-hook.php:341
-21	9.7731	5316960	_deprecated_function( $function_name = 'print_emoji_styles', $version = '6.4.0', $replacement = 'wp_enqueue_emoji_styles' )	...\deprecated.php:5916
-22	9.7731	5317280	wp_trigger_error( $function_name = '', $message = 'Function print_emoji_styles is <strong>deprecated</strong> since version 6.4.0! Use wp_enqueue_emoji_styles instead.', $error_level = 16384 )	...\functions.php:5596
-23	9.7734	5316704	trigger_error( $message = 'Function print_emoji_styles is <strong>deprecated</strong> since version 6.4.0! Use wp_enqueue_emoji_styles instead.', $error_level = 16384 )	...\functions.php:6131
-Skip to content
+1	1.2515	369880	{main}( )	...\plugins.php:0
+2	1.2518	376792	require_once( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-admin\admin.php )	...\plugins.php:10
+3	1.8191	4231872	require( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-admin\menu.php )	...\admin.php:163
+4	1.8450	4265568	require_once( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-admin\includes\menu.php )	...\menu.php:437
+5	1.8482	4272904	do_action( $hook_name = 'admin_menu', ...$arg = variadic('') )	...\menu.php:161
+6	1.8482	4273120	WP_Hook->do_action( $args = [0 => ''] )	...\plugin.php:522
+7	1.8482	4273120	WP_Hook->apply_filters( $value = '', $args = [0 => ''] )	...\class-wp-hook.php:365
+8	1.8536	4303424	Ofast_X_Setup_Wizard->add_wizard_page( '' )	...\class-wp-hook.php:341
+9	1.8536	4303640	add_submenu_page( $parent_slug = NULL, $page_title = 'Ofast X Setup', $menu_title = 'Setup Wizard', $capability = 'manage_options', $menu_slug = 'ofast-setup-wizard', $callback = [0 => class Ofast_X_Setup_Wizard { }, 1 => 'render_wizard'], $position = ??? )	...\class-ofast-setup-wizard.php:26
+10	1.8538	4303640	plugin_basename( $file = NULL )	...\plugin.php:1491
+11	1.8538	4303640	wp_normalize_path( $path = NULL )	...\plugin.php:779
+12	1.8538	4303640	wp_is_stream( $path = NULL )	...\functions.php:2189
+13	1.8538	4303640	strpos( $haystack = NULL, $needle = '://' )	...\functions.php:7374
+
+( ! ) Deprecated: str_replace(): Passing null to parameter #3 ($subject) of type array|string is deprecated in C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-includes\functions.php on line 2196
+Call Stack
+#	Time	Memory	Function	Location
+1	1.2515	369880	{main}( )	...\plugins.php:0
+2	1.2518	376792	require_once( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-admin\admin.php )	...\plugins.php:10
+3	1.8191	4231872	require( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-admin\menu.php )	...\admin.php:163
+4	1.8450	4265568	require_once( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-admin\includes\menu.php )	...\menu.php:437
+5	1.8482	4272904	do_action( $hook_name = 'admin_menu', ...$arg = variadic('') )	...\menu.php:161
+6	1.8482	4273120	WP_Hook->do_action( $args = [0 => ''] )	...\plugin.php:522
+7	1.8482	4273120	WP_Hook->apply_filters( $value = '', $args = [0 => ''] )	...\class-wp-hook.php:365
+8	1.8536	4303424	Ofast_X_Setup_Wizard->add_wizard_page( '' )	...\class-wp-hook.php:341
+9	1.8536	4303640	add_submenu_page( $parent_slug = NULL, $page_title = 'Ofast X Setup', $menu_title = 'Setup Wizard', $capability = 'manage_options', $menu_slug = 'ofast-setup-wizard', $callback = [0 => class Ofast_X_Setup_Wizard { }, 1 => 'render_wizard'], $position = ??? )	...\class-ofast-setup-wizard.php:26
+10	1.8538	4303640	plugin_basename( $file = NULL )	...\plugin.php:1491
+11	1.8538	4303640	wp_normalize_path( $path = NULL )	...\plugin.php:779
+12	1.8637	4303808	str_replace( $search = '\\', $replace = '/', $subject = NULL )	...\functions.php:2196
+
+
+
+
+SETUP WIZARD ERROR ON TOP OF THE WELCOME GUILD PAGE
+( ! ) Deprecated: strpos(): Passing null to parameter #1 ($haystack) of type string is deprecated in C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-includes\functions.php on line 7374
+Call Stack
+#	Time	Memory	Function	Location
+1	1.2514	367936	{main}( )	...\admin.php:0
+2	1.9784	4229816	require( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-admin\menu.php )	...\admin.php:163
+3	1.9956	4263512	require_once( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-admin\includes\menu.php )	...\menu.php:437
+4	2.0004	4270848	do_action( $hook_name = 'admin_menu', ...$arg = variadic('') )	...\menu.php:161
+5	2.0004	4271064	WP_Hook->do_action( $args = [0 => ''] )	...\plugin.php:522
+6	2.0004	4271064	WP_Hook->apply_filters( $value = '', $args = [0 => ''] )	...\class-wp-hook.php:365
+7	2.0069	4301368	Ofast_X_Setup_Wizard->add_wizard_page( '' )	...\class-wp-hook.php:341
+8	2.0069	4301584	add_submenu_page( $parent_slug = NULL, $page_title = 'Ofast X Setup', $menu_title = 'Setup Wizard', $capability = 'manage_options', $menu_slug = 'ofast-setup-wizard', $callback = [0 => class Ofast_X_Setup_Wizard { }, 1 => 'render_wizard'], $position = ??? )	...\class-ofast-setup-wizard.php:26
+9	2.0069	4301584	plugin_basename( $file = NULL )	...\plugin.php:1491
+10	2.0069	4301584	wp_normalize_path( $path = NULL )	...\plugin.php:779
+11	2.0069	4301584	wp_is_stream( $path = NULL )	...\functions.php:2189
+12	2.0070	4301584	strpos( $haystack = NULL, $needle = '://' )	...\functions.php:7374
+
+( ! ) Deprecated: str_replace(): Passing null to parameter #3 ($subject) of type array|string is deprecated in C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-includes\functions.php on line 2196
+Call Stack
+#	Time	Memory	Function	Location
+1	1.2514	367936	{main}( )	...\admin.php:0
+2	1.9784	4229816	require( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-admin\menu.php )	...\admin.php:163
+3	1.9956	4263512	require_once( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-admin\includes\menu.php )	...\menu.php:437
+4	2.0004	4270848	do_action( $hook_name = 'admin_menu', ...$arg = variadic('') )	...\menu.php:161
+5	2.0004	4271064	WP_Hook->do_action( $args = [0 => ''] )	...\plugin.php:522
+6	2.0004	4271064	WP_Hook->apply_filters( $value = '', $args = [0 => ''] )	...\class-wp-hook.php:365
+7	2.0069	4301368	Ofast_X_Setup_Wizard->add_wizard_page( '' )	...\class-wp-hook.php:341
+8	2.0069	4301584	add_submenu_page( $parent_slug = NULL, $page_title = 'Ofast X Setup', $menu_title = 'Setup Wizard', $capability = 'manage_options', $menu_slug = 'ofast-setup-wizard', $callback = [0 => class Ofast_X_Setup_Wizard { }, 1 => 'render_wizard'], $position = ??? )	...\class-ofast-setup-wizard.php:26
+9	2.0069	4301584	plugin_basename( $file = NULL )	...\plugin.php:1491
+10	2.0069	4301584	wp_normalize_path( $path = NULL )	...\plugin.php:779
+11	2.0190	4301752	str_replace( $search = '\\', $replace = '/', $subject = NULL )	...\functions.php:2196
+
+( ! ) Deprecated: strip_tags(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-admin\admin-header.php on line 41
+Call Stack
+#	Time	Memory	Function	Location
+1	1.2514	367936	{main}( )	...\admin.php:0
+2	2.1123	4748720	require_once( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-admin\admin-header.php )	...\admin.php:244
+3	2.1125	4749024	strip_tags( $string = NULL )	...\admin-header.php:41

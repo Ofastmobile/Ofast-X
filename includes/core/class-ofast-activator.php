@@ -240,6 +240,23 @@ class Ofast_X_Activator
         ) {$charset_collate};";
         dbDelta($sql_notification_log);
 
+        // 10. Email Drafts Table
+        $table_email_drafts = $wpdb->prefix . 'ofast_email_drafts';
+        $sql_email_drafts = "CREATE TABLE IF NOT EXISTS {$table_email_drafts} (
+            id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            admin_id BIGINT(20) UNSIGNED NOT NULL,
+            subject VARCHAR(255) NOT NULL,
+            body LONGTEXT,
+            roles TEXT,
+            user_ids TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_admin_id (admin_id),
+            KEY idx_created_at (created_at)
+        ) {$charset_collate};";
+        dbDelta($sql_email_drafts);
+
         // Log database creation
         // Ofast_X_Logger::info('Database tables created successfully');
     }

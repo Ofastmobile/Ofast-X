@@ -89,6 +89,11 @@ function ofast_x_init_plugin()
     // Load Content Ordering module
     require_once OFAST_X_PLUGIN_DIR . 'modules/content-ordering/class-ofast-content-ordering.php';
 
+    // Load Setup Wizard
+    require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-setup-wizard.php';
+    $wizard = new Ofast_X_Setup_Wizard();
+    $wizard->init();
+
     // Initialize plugin
     $ofast_x = new Ofast_X_Core();
     $ofast_x->run();
@@ -120,14 +125,14 @@ function ofast_x_plugin_action_links($links)
 add_filter('plugin_action_links_' . plugin_basename(__FILE__), 'ofast_x_plugin_action_links');
 
 /**
- * Redirect to settings page on activation
+ * Redirect to wizard on first activation
  */
 function ofast_x_activation_redirect()
 {
     if (get_option('ofast_x_do_activation_redirect', false)) {
         delete_option('ofast_x_do_activation_redirect');
-        if (!isset($_GET['activate-multi'])) {
-            wp_safe_redirect(admin_url('admin.php?page=ofast-settings'));
+        if (!isset($_GET['activate-multi']) && !get_option('ofast_wizard_complete', false)) {
+            wp_safe_redirect(admin_url('admin.php?page=ofast-setup-wizard'));
             exit;
         }
     }

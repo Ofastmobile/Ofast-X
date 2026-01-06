@@ -383,11 +383,9 @@ class Ofast_X_SMTP_Admin
             if (wp_verify_nonce(sanitize_text_field($_POST['_wpnonce']), 'clear_smtp_logs')) {
                 $days = intval($_POST['clear_days'] ?? 30);
                 $deleted = $this->clear_old_logs($days);
-                add_settings_error('ofast_smtp', 'logs_cleared', "Deleted {$deleted} log entries older than {$days} days.", 'success');
+                Ofast_X_Toast::add("Deleted {$deleted} log entries older than {$days} days.", 'success');
             }
         }
-
-        settings_errors('ofast_smtp');
 
         $per_page = 20;
         $current_page = max(1, intval($_GET['paged'] ?? 1));
@@ -529,7 +527,7 @@ class Ofast_X_SMTP_Admin
 
     private function render_settings_page_content()
     {
-        settings_errors('ofast_smtp');
+        // Toast notifications are rendered automatically via the footer hook
 
         $enabled = get_option('ofast_smtp_enabled', false);
         $mailer_type = get_option('ofast_smtp_mailer_type', 'default');
@@ -766,7 +764,7 @@ class Ofast_X_SMTP_Admin
         update_option('ofast_smtp_rate_limit_enabled', isset($_POST['rate_limit_enabled']) ? 1 : 0);
         update_option('ofast_smtp_rate_limit', max(1, intval($_POST['rate_limit'] ?? 60)));
 
-        add_settings_error('ofast_smtp', 'saved', 'SMTP settings saved successfully!', 'success');
+        Ofast_X_Toast::add('SMTP settings saved successfully!', 'success');
     }
 
     /**
@@ -783,13 +781,15 @@ class Ofast_X_SMTP_Admin
 
         // Get SMTP configuration
         $enabled = get_option('ofast_smtp_enabled', false);
+        $mailer_type = get_option('ofast_smtp_mailer_type', 'default');
         $provider = get_option('ofast_smtp_provider', 'custom');
         $host = get_option('ofast_smtp_host', '');
         $encryption = get_option('ofast_smtp_encryption', 'tls');
         $from_email = get_option('ofast_smtp_from_email', '');
 
-        $presets = Ofast_X_SMTP::get_provider_presets();
-        $provider_name = $presets[$provider]['name'] ?? 'Custom SMTP';
+        // Determine if mailer is active (default mode OR smtp with host configured)
+        $is_active = $enabled && ($mailer_type === 'default' || !empty($host));
+        $mailer_name = $mailer_type === 'default' ? 'PHP Mail (Default)' : (Ofast_X_SMTP::get_provider_presets()[$provider]['name'] ?? 'Custom SMTP');
 
         // Check if table exists
         $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_name}'") === $table_name;
@@ -840,24 +840,24 @@ class Ofast_X_SMTP_Admin
 
             <!-- Connection Status -->
             <div class="ofast-grid-3" style="margin: 25px 0;">
-                <div style="background: <?php echo $enabled && $host ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #6b7280, #4b5563)'; ?>; padding: 25px; border-radius: 12px; color: #fff; text-align: center;">
+                <div style="background: <?php echo $is_active ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #6b7280, #4b5563)'; ?>; padding: 25px; border-radius: 12px; color: #fff; text-align: center;">
                     <div style="font-size: 28px; margin-bottom: 5px;">
-                        <?php echo $enabled && $host ? '✓' : '✗'; ?>
+                        <?php echo $is_active ? '✓' : '✗'; ?>
                     </div>
                     <div style="font-size: 18px; font-weight: 600;">
-                        <?php echo $enabled && $host ? 'SMTP Active' : 'SMTP Inactive'; ?>
+                        <?php echo $is_active ? 'Mailer Active' : 'Mailer Inactive'; ?>
                     </div>
                     <div style="font-size: 13px; opacity: 0.9; margin-top: 5px;">
-                        <?php echo $enabled ? esc_html($provider_name) : 'Not Configured'; ?>
+                        <?php echo $is_active ? esc_html($mailer_name) : 'Not Configured'; ?>
                     </div>
                 </div>
                 <div style="background: linear-gradient(135deg, #6366f1, #4f46e5); padding: 25px; border-radius: 12px; color: #fff; text-align: center;">
                     <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Provider</div>
                     <div style="font-size: 18px; font-weight: 600;">
-                        <?php echo $host ? esc_html($host) : 'Not Set'; ?>
+                        <?php echo $mailer_type === 'default' ? 'Server Mail' : ($host ? esc_html($host) : 'Not Set'); ?>
                     </div>
                     <div style="font-size: 13px; opacity: 0.9; margin-top: 5px;">
-                        Port <?php echo esc_html(get_option('ofast_smtp_port', 587)); ?> / <?php echo strtoupper(esc_html($encryption)); ?>
+                        <?php echo $mailer_type === 'default' ? 'PHP mail() function' : 'Port ' . esc_html(get_option('ofast_smtp_port', 587)) . ' / ' . strtoupper(esc_html($encryption)); ?>
                     </div>
                 </div>
                 <div style="background: linear-gradient(135deg, #3b82f6, #2563eb); padding: 25px; border-radius: 12px; color: #fff; text-align: center;">
@@ -948,7 +948,7 @@ class Ofast_X_SMTP_Admin
                     <a href="<?php echo admin_url('admin.php?page=ofast-smtp-log'); ?>" class="button button-secondary button-large">
                         View All Logs
                     </a>
-                    <?php if ($enabled && $host): ?>
+                    <?php if ($is_active): ?>
                         <button type="button" id="quick-test-email" class="button button-secondary button-large">
                             Send Test Email
                         </button>
@@ -981,6 +981,7 @@ class Ofast_X_SMTP_Admin
                     $.post(ajaxurl, {
                         action: 'ofast_test_smtp',
                         nonce: '<?php echo wp_create_nonce('ofast_test_smtp'); ?>',
+                        mailer_type: '<?php echo esc_js($mailer_type); ?>',
                         host: '<?php echo esc_js($host); ?>',
                         port: '<?php echo esc_js(get_option('ofast_smtp_port', 587)); ?>',
                         encryption: '<?php echo esc_js($encryption); ?>',

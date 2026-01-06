@@ -46,8 +46,8 @@ class Ofast_X_SMTP
             $admin->init();
         }
 
-        // Hook into WordPress mail if enabled
-        if ($this->is_enabled && $this->provider !== 'default') {
+        // Hook into WordPress mail if enabled (mailer_type determines behavior inside configure_phpmailer)
+        if ($this->is_enabled) {
             add_action('phpmailer_init', array($this, 'configure_phpmailer'), 999);
         }
 
@@ -238,14 +238,50 @@ class Ofast_X_SMTP
             wp_send_json_error('Unauthorized');
         }
 
-        // Get test settings from POST (not saved yet)
+        // Check mailer type - use saved value if not provided
+        $mailer_type = isset($_POST['mailer_type']) ? sanitize_text_field($_POST['mailer_type']) : get_option('ofast_smtp_mailer_type', 'default');
+        $from_email = isset($_POST['from_email']) ? sanitize_email($_POST['from_email']) : get_option('ofast_smtp_from_email', '');
+        $from_name = isset($_POST['from_name']) ? sanitize_text_field($_POST['from_name']) : get_option('ofast_smtp_from_name', get_bloginfo('name'));
+        $admin_email = get_option('admin_email');
+
+        // PHP Mail Default mode - use wp_mail directly (no SMTP credentials needed)
+        if ($mailer_type === 'default') {
+            $headers = array('Content-Type: text/html; charset=UTF-8');
+            if (!empty($from_email)) {
+                $headers[] = 'From: ' . $from_name . ' <' . $from_email . '>';
+            }
+
+            $subject = 'Ofast X PHP Mail Test - ' . date('Y-m-d H:i:s');
+            $body = $this->get_test_email_body();
+
+            $result = wp_mail($admin_email, $subject, $body, $headers);
+
+            if ($result) {
+                wp_send_json_success(array(
+                    'message' => 'Test email sent successfully! Check inbox at ' . $admin_email,
+                    'details' => array(
+                        'mailer' => 'PHP Mail (Default)',
+                        'from' => $from_email ?: 'Server default'
+                    )
+                ));
+            } else {
+                global $phpmailer;
+                $error = isset($phpmailer) && $phpmailer->ErrorInfo ? $phpmailer->ErrorInfo : 'Server mail() failed';
+                wp_send_json_error(array(
+                    'message' => 'PHP Mail failed',
+                    'error' => $error,
+                    'suggestion' => 'Your server may not support mail(). Switch to "Other SMTP" mode.'
+                ));
+            }
+            return;
+        }
+
+        // SMTP mode - requires credentials
         $host = sanitize_text_field($_POST['host'] ?? '');
         $port = intval($_POST['port'] ?? 587);
         $encryption = sanitize_text_field($_POST['encryption'] ?? 'tls');
         $username = sanitize_text_field($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
-        $from_email = sanitize_email($_POST['from_email'] ?? '');
-        $from_name = sanitize_text_field($_POST['from_name'] ?? get_bloginfo('name'));
 
         // If password is placeholder, use saved password
         if ($password === '••••••••' || empty($password)) {
@@ -255,9 +291,9 @@ class Ofast_X_SMTP
             }
         }
 
-        // Validate
+        // Validate SMTP fields
         if (empty($host) || empty($username) || empty($password) || empty($from_email)) {
-            wp_send_json_error('Please fill in all required fields (if password was saved, try saving first then test)');
+            wp_send_json_error('Please fill in all required SMTP fields (Host, Username, Password, From Email)');
         }
 
         // Test using PHPMailer directly

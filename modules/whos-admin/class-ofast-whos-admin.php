@@ -170,7 +170,7 @@ class Ofast_X_Whos_Admin
             <p>Set your designer/developer information to display in the dashboard widget.</p>
 
             <?php if ($saved): ?>
-                <?php Ofast_X_Toast::render('Designer details saved successfully!', 'success'); ?>
+                <?php Ofast_X_Toast::add('Designer details saved successfully!', 'success'); ?>
             <?php endif; ?>
 
             <form method="post" action="">

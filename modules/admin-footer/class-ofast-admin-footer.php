@@ -69,7 +69,8 @@ class Ofast_X_Admin_Footer
 
         update_option('ofast_admin_footer_settings', $settings);
 
-        add_settings_error('ofast_admin_footer', 'saved', 'Footer settings saved!', 'success');
+        wp_redirect(add_query_arg('settings_saved', '1', wp_get_referer()));
+        exit;
     }
 
     /**
@@ -139,75 +140,421 @@ class Ofast_X_Admin_Footer
             'hide_wp_version' => 0,
         ));
 
-        settings_errors('ofast_admin_footer');
+        $saved = isset($_GET['settings-updated']) || !empty($_GET['settings_saved']);
+        if ($saved) {
+            Ofast_X_Toast::add('Footer settings saved successfully!', 'success');
+        }
 ?>
-        <div class="wrap">
-            <h1>Custom Admin Footer</h1>
-            <p class="description">Customize the footer text shown at the bottom of WordPress admin pages.</p>
+        <div class="wrap ofast-admin-footer-wrap">
+            <!-- Modern Header - White with Glassmorphism Icon -->
+            <div class="ofast-page-header">
+                <div class="ofast-header-content">
+                    <div class="ofast-header-icon">
+                        <span class="dashicons dashicons-editor-kitchensink"></span>
+                    </div>
+                    <div class="ofast-header-text">
+                        <h1>Admin Footer</h1>
+                        <p>Customize the footer text shown at the bottom of WordPress admin pages</p>
+                    </div>
+                </div>
+            </div>
 
-            <form method="post" action="">
-                <?php wp_nonce_field('ofast_admin_footer_save', '_wpnonce'); ?>
+            <div class="ofast-content-grid">
+                <!-- Main Settings Card -->
+                <div class="ofast-card ofast-main-card">
+                    <div class="ofast-card-header">
+                        <span class="dashicons dashicons-edit"></span>
+                        <h2>Footer Settings</h2>
+                    </div>
+                    <div class="ofast-card-body">
+                        <form method="post" action="" class="ofast-modern-form">
+                            <?php wp_nonce_field('ofast_admin_footer_save', '_wpnonce'); ?>
 
-                <table class="form-table">
-                    <tr>
-                        <th><label for="footer_left_text">Left Footer Text</label></th>
-                        <td>
-                            <textarea name="footer_left_text" id="footer_left_text" rows="3" class="large-text"
-                                placeholder="e.g., Designed by Your Company | Contact: info@example.com"><?php echo esc_textarea($settings['left_text'] ?? ''); ?></textarea>
-                            <p class="description">
-                                Replaces "Thank you for creating with WordPress." HTML allowed.<br>
-                                Available shortcuts: <code>{site_name}</code> <code>{year}</code> <code>{admin_email}</code>
-                            </p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th><label for="footer_right_text">Right Footer Text</label></th>
-                        <td>
-                            <input type="text" name="footer_right_text" id="footer_right_text" class="regular-text"
-                                value="<?php echo esc_attr($settings['right_text'] ?? ''); ?>"
-                                placeholder="e.g., v1.0.0">
-                            <p class="description">Replaces the WordPress version number.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Hide WP Version</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="hide_wp_version" value="1"
-                                    <?php checked(!empty($settings['hide_wp_version'])); ?>>
-                                Hide WordPress version number (security recommended)
-                            </label>
-                        </td>
-                    </tr>
-                </table>
+                            <div class="ofast-form-group">
+                                <label for="footer_left_text">
+                                    <span class="dashicons dashicons-align-left"></span>
+                                    Left Footer Text
+                                    <span class="ofast-tooltip" title="Replaces 'Thank you for creating with WordPress.' HTML is allowed.">
+                                        <span class="dashicons dashicons-info-outline"></span>
+                                    </span>
+                                </label>
+                                <textarea name="footer_left_text" id="footer_left_text" rows="3"
+                                    placeholder="e.g., Designed by Your Company | Contact: info@example.com"><?php echo esc_textarea($settings['left_text'] ?? ''); ?></textarea>
+                                <span class="ofast-field-hint">
+                                    Available shortcuts: <code>{site_name}</code> <code>{year}</code> <code>{admin_email}</code>
+                                </span>
+                            </div>
 
-                <!-- Preview Box -->
-                <div style="background: #f0f0f1; border: 1px solid #c3c4c7; border-radius: 4px; padding: 15px; margin: 20px 0; max-width: 800px;">
-                    <h3 style="margin-top: 0;">Preview</h3>
-                    <div style="display: flex; justify-content: space-between; background: #fff; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
-                        <span id="preview-left"><?php echo !empty($settings['left_text']) ? wp_kses_post($settings['left_text']) : '<em style="color:#999">Thank you for creating with WordPress.</em>'; ?></span>
-                        <span id="preview-right"><?php echo !empty($settings['right_text']) ? esc_html($settings['right_text']) : (!empty($settings['hide_wp_version']) ? '' : '<em style="color:#999">Version X.X</em>'); ?></span>
+                            <div class="ofast-form-group">
+                                <label for="footer_right_text">
+                                    <span class="dashicons dashicons-align-right"></span>
+                                    Right Footer Text
+                                    <span class="ofast-tooltip" title="Replaces the WordPress version number on the right side.">
+                                        <span class="dashicons dashicons-info-outline"></span>
+                                    </span>
+                                </label>
+                                <input type="text" name="footer_right_text" id="footer_right_text"
+                                    value="<?php echo esc_attr($settings['right_text'] ?? ''); ?>"
+                                    placeholder="e.g., v1.0.0">
+                                <span class="ofast-field-hint">Custom text for the right footer area</span>
+                            </div>
+
+                            <div class="ofast-form-group">
+                                <label class="ofast-checkbox-label">
+                                    <input type="checkbox" name="hide_wp_version" value="1"
+                                        <?php checked(!empty($settings['hide_wp_version'])); ?>>
+                                    <span class="ofast-checkbox-custom"></span>
+                                    <span class="ofast-checkbox-text">
+                                        <span class="dashicons dashicons-hidden"></span>
+                                        Hide WordPress version number
+                                        <span class="ofast-security-badge">Security Recommended</span>
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div class="ofast-form-actions">
+                                <button type="submit" name="ofast_save_admin_footer" class="ofast-btn-primary">
+                                    Save Footer Settings
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
 
-                <p class="submit">
-                    <button type="submit" name="ofast_save_admin_footer" class="button button-primary button-large">
-                        Save Footer Settings
-                    </button>
-                </p>
-            </form>
+                <!-- Preview Card -->
+                <div class="ofast-card ofast-preview-card">
+                    <div class="ofast-card-header">
+                        <span class="dashicons dashicons-visibility"></span>
+                        <h2>Live Preview</h2>
+                    </div>
+                    <div class="ofast-card-body">
+                        <div class="ofast-preview-widget">
+                            <div class="ofast-preview-footer">
+                                <span class="ofast-preview-left" id="preview-left"><?php echo !empty($settings['left_text']) ? wp_kses_post($this->replace_shortcuts($settings['left_text'])) : '<em>Thank you for creating with WordPress.</em>'; ?></span>
+                                <span class="ofast-preview-right" id="preview-right"><?php echo !empty($settings['right_text']) ? esc_html($settings['right_text']) : (!empty($settings['hide_wp_version']) ? '' : '<em>Version X.X</em>'); ?></span>
+                            </div>
+                        </div>
+                        <p class="ofast-preview-note">
+                            <span class="dashicons dashicons-info-outline"></span>
+                            This is how your footer appears in the admin area
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
+
+        <style>
+            .ofast-admin-footer-wrap {
+                max-width: 1200px;
+                margin: 20px auto;
+                padding: 0 20px;
+            }
+
+            /* Page Header - White with glassmorphism icon */
+            .ofast-page-header {
+                background: #ffffff;
+                border-radius: 16px;
+                padding: 30px;
+                margin-bottom: 30px;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            }
+            .ofast-header-content {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+            }
+            .ofast-header-icon {
+                width: 60px;
+                height: 60px;
+                background: #ffffff;
+                border-radius: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+                border: 1px solid #e2e8f0;
+                color: #667eea;
+            }
+            .ofast-header-icon .dashicons {
+                font-size: 28px;
+                width: 28px;
+                height: 28px;
+            }
+            .ofast-header-text h1 {
+                margin: 0;
+                font-size: 28px;
+                font-weight: 700;
+                color: #1e293b;
+            }
+            .ofast-header-text p {
+                margin: 5px 0 0;
+                color: #64748b;
+                font-size: 15px;
+            }
+
+            /* Content Grid */
+            .ofast-content-grid {
+                display: grid;
+                grid-template-columns: 1.5fr 1fr;
+                gap: 25px;
+            }
+            @media (max-width: 900px) {
+                .ofast-content-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            /* Cards */
+            .ofast-card {
+                background: #fff;
+                border-radius: 16px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+                overflow: hidden;
+                border: 1px solid rgba(0,0,0,0.05);
+            }
+            .ofast-card-header {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 20px 25px;
+                background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .ofast-card-header .dashicons {
+                font-size: 20px;
+                width: 20px;
+                height: 20px;
+                color: #667eea;
+            }
+            .ofast-card-header h2 {
+                margin: 0;
+                font-size: 16px;
+                font-weight: 600;
+                color: #1e293b;
+            }
+            .ofast-card-body {
+                padding: 25px;
+            }
+
+            /* Modern Form */
+            .ofast-modern-form .ofast-form-group {
+                margin-bottom: 24px;
+            }
+            .ofast-modern-form label {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-weight: 600;
+                color: #374151;
+                margin-bottom: 10px;
+                font-size: 14px;
+            }
+            .ofast-modern-form label .dashicons {
+                font-size: 16px;
+                width: 16px;
+                height: 16px;
+                color: #667eea;
+            }
+            .ofast-modern-form input[type="text"],
+            .ofast-modern-form textarea {
+                width: 100%;
+                padding: 14px 18px;
+                border: 2px solid #e2e8f0;
+                border-radius: 10px;
+                font-size: 15px;
+                transition: all 0.2s ease;
+                background: #f8fafc;
+                font-family: inherit;
+            }
+            .ofast-modern-form textarea {
+                min-height: 100px;
+                resize: vertical;
+            }
+            .ofast-modern-form input:focus,
+            .ofast-modern-form textarea:focus {
+                outline: none;
+                border-color: #667eea;
+                background: #fff;
+                box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            }
+            .ofast-modern-form input::placeholder,
+            .ofast-modern-form textarea::placeholder {
+                color: #94a3b8;
+            }
+            .ofast-field-hint {
+                display: block;
+                margin-top: 8px;
+                font-size: 13px;
+                color: #64748b;
+            }
+            .ofast-field-hint code {
+                background: #f1f5f9;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 12px;
+                color: #667eea;
+            }
+
+            /* Checkbox styling */
+            .ofast-checkbox-label {
+                display: flex !important;
+                align-items: center;
+                gap: 12px;
+                cursor: pointer;
+                padding: 16px 20px;
+                background: #f8fafc;
+                border: 2px solid #e2e8f0;
+                border-radius: 10px;
+                transition: all 0.2s ease;
+            }
+            .ofast-checkbox-label:hover {
+                border-color: #667eea;
+                background: #fff;
+            }
+            .ofast-checkbox-label input[type="checkbox"] {
+                width: 20px;
+                height: 20px;
+                accent-color: #667eea;
+            }
+            .ofast-checkbox-text {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex: 1;
+            }
+            .ofast-checkbox-text .dashicons {
+                color: #667eea;
+            }
+            .ofast-security-badge {
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                color: #fff;
+                padding: 3px 10px;
+                border-radius: 20px;
+                font-size: 11px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            /* Form Actions */
+            .ofast-form-actions {
+                margin-top: 30px;
+                padding-top: 20px;
+                border-top: 1px solid #e2e8f0;
+            }
+            .ofast-btn-primary {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                padding: 14px 28px;
+                background: #667eea;
+                color: #fff;
+                border: none;
+                border-radius: 10px;
+                font-size: 15px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.35);
+            }
+            .ofast-btn-primary:hover {
+                background: #5a6fd6;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(102, 126, 234, 0.45);
+            }
+            .ofast-btn-primary:disabled {
+                background: #94a3b8;
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+            }
+            .ofast-btn-primary .dashicons {
+                font-size: 18px;
+                width: 18px;
+                height: 18px;
+            }
+            .ofast-btn-primary .dashicons-update {
+                animation: ofast-spin 1s linear infinite;
+            }
+            @keyframes ofast-spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+
+            /* Preview Card */
+            .ofast-preview-widget {
+                background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                border-radius: 12px;
+                padding: 20px;
+                border: 1px solid #e2e8f0;
+            }
+            .ofast-preview-footer {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                background: #fff;
+                padding: 12px 16px;
+                border-radius: 8px;
+                border: 1px solid #e2e8f0;
+                font-size: 13px;
+                color: #64748b;
+            }
+            .ofast-preview-footer em {
+                color: #94a3b8;
+            }
+            .ofast-preview-note {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin: 20px 0 0;
+                padding: 12px 15px;
+                background: #e0f2fe;
+                border-radius: 8px;
+                font-size: 13px;
+                color: #0369a1;
+            }
+            .ofast-preview-note .dashicons {
+                font-size: 16px;
+                width: 16px;
+                height: 16px;
+            }
+
+            /* Tooltip */
+            .ofast-tooltip {
+                position: relative;
+                cursor: help;
+                margin-left: 4px;
+            }
+            .ofast-tooltip .dashicons {
+                font-size: 14px !important;
+                width: 14px !important;
+                height: 14px !important;
+                color: #94a3b8;
+                transition: color 0.2s ease;
+            }
+            .ofast-tooltip:hover .dashicons {
+                color: #667eea;
+            }
+        </style>
 
         <script>
             jQuery(document).ready(function($) {
                 // Live preview
                 $('#footer_left_text').on('input', function() {
-                    var text = $(this).val() || '<em style="color:#999">Thank you for creating with WordPress.</em>';
+                    var text = $(this).val() || '<em>Thank you for creating with WordPress.</em>';
                     $('#preview-left').html(text);
                 });
                 $('#footer_right_text').on('input', function() {
-                    var text = $(this).val() || '<?php echo empty($settings['hide_wp_version']) ? '<em style="color:#999">Version X.X</em>' : ''; ?>';
-                    $('#preview-right').text(text);
+                    var text = $(this).val() || '<?php echo empty($settings['hide_wp_version']) ? '<em>Version X.X</em>' : ''; ?>';
+                    $('#preview-right').html(text || '<em>Version X.X</em>');
+                });
+                $('#hide_wp_version').on('change', function() {
+                    if ($(this).is(':checked') && !$('#footer_right_text').val()) {
+                        $('#preview-right').html('');
+                    } else if (!$('#footer_right_text').val()) {
+                        $('#preview-right').html('<em>Version X.X</em>');
+                    }
                 });
             });
         </script>

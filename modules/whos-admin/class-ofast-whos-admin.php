@@ -229,7 +229,6 @@ class Ofast_X_Whos_Admin
 
                             <div class="ofast-form-actions">
                                 <button type="submit" name="ofast_whos_admin_save" class="ofast-btn-primary">
-                                    <span class="dashicons dashicons-saved"></span>
                                     Save Designer Details
                                 </button>
                             </div>
@@ -278,16 +277,14 @@ class Ofast_X_Whos_Admin
                 padding: 0 20px;
             }
 
-            /* Page Header - Glassmorphism */
+            /* Page Header - White with glassmorphism icon */
             .ofast-page-header {
-                background: rgba(102, 126, 234, 0.15);
-                backdrop-filter: blur(20px);
-                -webkit-backdrop-filter: blur(20px);
+                background: #ffffff;
                 border-radius: 16px;
                 padding: 30px;
                 margin-bottom: 30px;
-                border: 1px solid rgba(102, 126, 234, 0.2);
-                box-shadow: 0 8px 32px rgba(102, 126, 234, 0.15);
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.08);
             }
             .ofast-header-content {
                 display: flex;
@@ -297,13 +294,14 @@ class Ofast_X_Whos_Admin
             .ofast-header-icon {
                 width: 60px;
                 height: 60px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #ffffff;
                 border-radius: 16px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-                color: #fff;
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+                border: 1px solid #e2e8f0;
+                color: #667eea;
             }
             .ofast-header-icon .dashicons {
                 font-size: 28px;
@@ -423,7 +421,7 @@ class Ofast_X_Whos_Admin
                 align-items: center;
                 gap: 10px;
                 padding: 14px 28px;
-                background: #7c3aed;
+                background: #667eea;
                 color: #fff;
                 border: none;
                 border-radius: 10px;
@@ -431,12 +429,12 @@ class Ofast_X_Whos_Admin
                 font-weight: 600;
                 cursor: pointer;
                 transition: all 0.3s ease;
-                box-shadow: 0 4px 15px rgba(124, 58, 237, 0.35);
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.35);
             }
             .ofast-btn-primary:hover {
-                background: #6d28d9;
+                background: #5a6fd6;
                 transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(124, 58, 237, 0.45);
+                box-shadow: 0 6px 20px rgba(102, 126, 234, 0.45);
             }
             .ofast-btn-primary .dashicons {
                 font-size: 18px;

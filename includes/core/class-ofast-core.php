@@ -190,6 +190,24 @@ class Ofast_X_Core
             $email_controller->init();
 
             $this->modules['email'] = $email_controller;
+            
+            // Load Queue System
+            $queue_file = OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-email-queue.php';
+            if (file_exists($queue_file)) {
+                require_once $queue_file;
+                $queue = Ofast_X_Email_Queue::get_instance();
+                $queue->init();
+            }
+            
+            // Load Queue Admin (only in admin)
+            if (is_admin()) {
+                $queue_admin_file = OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-queue-admin.php';
+                if (file_exists($queue_admin_file)) {
+                    require_once $queue_admin_file;
+                    $queue_admin = new Ofast_X_Email_Queue_Admin();
+                    $queue_admin->init();
+                }
+            }
         }
     }
 

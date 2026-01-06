@@ -106,14 +106,7 @@ class Ofast_X_Email_Admin
             array($this, 'render_drafts_page')
         );
 
-        add_submenu_page(
-            'ofast-emailer',
-            'Scheduled Emails',
-            'Scheduled',
-            'manage_options',
-            'ofast-scheduled-emails',
-            array($this, 'render_scheduled_page')
-        );
+        // Note: "Scheduled" page removed - replaced by Queue page (class-ofast-email-queue-admin.php)
 
         add_submenu_page(
             'ofast-emailer',
@@ -304,19 +297,20 @@ class Ofast_X_Email_Admin
                         $result_message = Ofast_X_Toast::render('Recipient list limited to ' . $max_recipients . ' users.', 'warning', true);
                     }
 
-                    // FIX #4 & #5: Use configurable batch size
+                    // FIX #4 & #5: Use configurable batch size for immediate sends
                     $batch_size = isset($_POST['batch_size']) ? intval($_POST['batch_size']) : 40;
                     $batch_size = max(10, min(50, $batch_size)); // Clamp between 10-50
 
                     if (count($total_ids) <= $batch_size) {
+                        // Small batch: Send immediately
                         $sent = 0;
                         $headers = $this->get_email_headers();
-                        $sample_body = ''; // Store one sample for log
+                        $sample_body = '';
                         foreach (get_users(['include' => $total_ids]) as $user) {
                             $message = $this->replace_placeholders($body, $user);
                             $full_body = $this->get_email_template($message);
                             if (empty($sample_body)) {
-                                $sample_body = $full_body; // Store first email as sample
+                                $sample_body = $full_body;
                             }
                             if (wp_mail($user->user_email, $subject, $full_body, $headers)) {
                                 $sent++;
@@ -326,50 +320,24 @@ class Ofast_X_Email_Admin
                         $this->log_email($subject, $sent, 'Immediate send', $sample_body);
                         $result_message = Ofast_X_Toast::render('Sent immediately to ' . $sent . ' user(s)', 'success', true);
                     } else {
-                        // Schedule in batches - FIRST BATCH SENDS IMMEDIATELY
-                        $chunks = array_chunk($total_ids, $batch_size);
-                        $scheduled_count = 0;
-                        $immediate_sent = 0;
-
-                        foreach ($chunks as $i => $chunk) {
-                            if ($i === 0) {
-                                // FIRST BATCH: Send immediately
-                                $headers = $this->get_email_headers();
-                                $sample_body = '';
-                                foreach (get_users(['include' => $chunk]) as $user) {
-                                    $message = $this->replace_placeholders($body, $user);
-                                    $full_body = $this->get_email_template($message);
-                                    if (empty($sample_body)) {
-                                        $sample_body = $full_body;
-                                    }
-                                    if (wp_mail($user->user_email, $subject, $full_body, $headers)) {
-                                        $immediate_sent++;
-                                    }
-                                }
-                                $this->log_email($subject, $immediate_sent, 'Immediate batch (1 of ' . count($chunks) . ')', $sample_body);
-                            } else {
-                                // SUBSEQUENT BATCHES: Schedule hourly from NOW
-                                $batch_time = time() + ($i * 3600); // i=1 means 1 hour from now
-
-                                wp_schedule_single_event(
-                                    $batch_time,
-                                    'ofast_send_email_batch',
-                                    array(
-                                        array(
-                                            'subject' => $subject,
-                                            'body' => $body,
-                                            'user_ids' => $chunk
-                                        )
-                                    )
-                                );
-                                $scheduled_count++;
-                            }
-                        }
-
-                        if ($scheduled_count > 0) {
-                            $result_message = Ofast_X_Toast::render('Sent ' . $immediate_sent . ' emails immediately. ' . $scheduled_count . ' more batches scheduled (' . $batch_size . ' users/hour)', 'success', true);
+                        // Large batch: Add to queue system for background processing
+                        require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-email-queue.php';
+                        $queue = Ofast_X_Email_Queue::get_instance();
+                        
+                        $batch_id = $queue->add_batch($subject, $body, $total_ids, time());
+                        
+                        if ($batch_id) {
+                            $total_count = count($total_ids);
+                            $emails_per_hour = get_option('ofast_email_emails_per_cron', 30);
+                            $estimated_hours = ceil($total_count / $emails_per_hour);
+                            
+                            $result_message = Ofast_X_Toast::render(
+                                "Batch queued! {$total_count} emails will be sent at {$emails_per_hour}/hour (~{$estimated_hours}h completion time). <a href='" . admin_url('admin.php?page=ofast-email-queue') . "'>View Queue</a>",
+                                'success',
+                                true
+                            );
                         } else {
-                            $result_message = Ofast_X_Toast::render('Sent ' . $immediate_sent . ' emails immediately.', 'success', true);
+                            $result_message = Ofast_X_Toast::render('Failed to queue emails. Please try again.', 'error', true);
                         }
                     }
                 }

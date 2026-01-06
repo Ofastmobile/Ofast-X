@@ -55,6 +55,49 @@ class Ofast_X_Notification_Channels
         $sheets_configured = class_exists('Ofast_X_Google_Sheets') && Ofast_X_Google_Sheets::get_instance()->is_configured();
 ?>
         <style>
+            /* Header Styles */
+            .ofast-header {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                background: #fff;
+                padding: 25px 30px;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                margin-bottom: 30px;
+                margin-top: 20px;
+            }
+            .ofast-header-icon {
+                width: 56px;
+                height: 56px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                border-radius: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .ofast-header-icon .dashicons {
+                font-size: 28px;
+                width: 28px;
+                height: 28px;
+                color: #667eea;
+            }
+            .ofast-header-content h1 {
+                margin: 0 0 5px 0;
+                font-size: 24px;
+                font-weight: 700;
+                color: #1e293b;
+                display: block;
+                padding: 0;
+            }
+            .ofast-header-content p {
+                margin: 0;
+                color: #64748b;
+                font-size: 14px;
+            }
+
             .ofast-status-cards {
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -120,8 +163,15 @@ class Ofast_X_Notification_Channels
         </style>
 
         <div class="wrap">
-            <h1>Notification Channels</h1>
-            <p>Configure external notification channels for form submissions and other events.</p>
+            <div class="ofast-header">
+                <div class="ofast-header-icon">
+                    <span class="dashicons dashicons-megaphone"></span>
+                </div>
+                <div class="ofast-header-content">
+                    <h1>Notification Channels</h1>
+                    <p>Configure external notification channels for form submissions and other events.</p>
+                </div>
+            </div>
 
             <!-- Status Indicator Cards -->
             <div class="ofast-status-cards">

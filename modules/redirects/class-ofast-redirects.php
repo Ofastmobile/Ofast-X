@@ -546,107 +546,223 @@ class Ofast_X_Redirects
         settings_errors('ofast_redirects');
 ?>
         <div class="wrap">
-            <h1>Redirects Manager</h1>
-            <p class="description">Manage URL redirects with 301, 302, or 307 status codes. Activate/deactivate as needed.</p>
+            <!-- Header -->
+            <div class="ofast-header">
+                <div class="ofast-header-icon">
+                    <span class="dashicons dashicons-randomize"></span>
+                </div>
+                <div class="ofast-header-content">
+                    <h1>Redirects Manager</h1>
+                    <p>Manage URL redirects with 301, 302, or 307 status codes. Activate/deactivate as needed.</p>
+                </div>
+            </div>
 
-            <!-- Add/Edit Form -->
-            <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 20px 0; max-width: 700px;">
-                <h2><?php echo $editing ? 'Edit Redirect' : 'Add New Redirect'; ?></h2>
-                <form method="post" class="ofast-redirect-form">
-                    <?php wp_nonce_field('ofast_redirect_save', '_wpnonce'); ?>
+            <!-- Columns Container -->
+            <div class="ofast-redirects-columns">
+                <!-- Left Column: Add/Edit -->
+                <div class="ofast-column-left">
+                    <div class="ofast-card">
+                        <h2 style="margin-top: 0; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee;"><?php echo $editing ? 'Edit Redirect' : 'Add New Redirect'; ?></h2>
+                        <form method="post" class="ofast-redirect-form">
+                            <?php wp_nonce_field('ofast_redirect_save', '_wpnonce'); ?>
 
-                    <?php if ($editing): ?>
-                        <input type="hidden" name="redirect_id" value="<?php echo $editing; ?>">
+                            <?php if ($editing): ?>
+                                <input type="hidden" name="redirect_id" value="<?php echo $editing; ?>">
+                            <?php endif; ?>
+
+                            <table class="form-table" style="margin-top: 0;">
+                                <tr>
+                                    <th><label for="source_url">Source URL</label></th>
+                                    <td>
+                                        <input type="text" name="source_url" id="source_url" class="regular-text"
+                                            value="<?php echo $edit_redirect ? esc_attr($edit_redirect->source_url) : ''; ?>"
+                                            placeholder="/old-page" required>
+                                        <p class="description">The URL path to redirect from (e.g., /old-page)</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th><label for="target_url">Target URL</label></th>
+                                    <td>
+                                        <input type="text" name="target_url" id="target_url" class="regular-text"
+                                            value="<?php echo $edit_redirect ? esc_attr($edit_redirect->target_url) : ''; ?>"
+                                            placeholder="<?php echo home_url('/new-page'); ?>" required>
+                                        <p class="description">The URL to redirect to (full URL or relative path)</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th><label for="redirect_type">Redirect Type</label></th>
+                                    <td>
+                                        <select name="redirect_type" id="redirect_type">
+                                            <option value="301" <?php selected($edit_redirect ? $edit_redirect->type : '', '301'); ?>>301 - Permanent</option>
+                                            <option value="302" <?php selected($edit_redirect ? $edit_redirect->type : '', '302'); ?>>302 - Temporary</option>
+                                            <option value="307" <?php selected($edit_redirect ? $edit_redirect->type : '', '307'); ?>>307 - Temporary (Preserve Method)</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Options</th>
+                                    <td>
+                                        <label style="display: block; margin-bottom: 10px;">
+                                            <input type="checkbox" name="is_regex" value="1" <?php checked($edit_redirect ? $edit_redirect->is_regex : false); ?>>
+                                            Use Regular Expression
+                                        </label>
+                                        <label style="display: block;">
+                                            <input type="checkbox" name="active" value="1" <?php checked($edit_redirect ? $edit_redirect->active : false); ?>>
+                                            Activate immediately
+                                        </label>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p class="submit" style="margin-bottom: 0; padding-bottom: 0;">
+                                <button type="submit" name="ofast_save_redirect" class="button button-primary button-large">
+                                    <?php echo $editing ? 'Update Redirect' : 'Add Redirect'; ?>
+                                </button>
+                                <?php if ($editing): ?>
+                                    <a href="?page=ofast-redirects" class="button button-large">Cancel</a>
+                                <?php endif; ?>
+                            </p>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Right Column: Import/Export -->
+                <div class="ofast-column-right">
+                    <!-- Import Section -->
+                    <?php if (!empty($import_sources)): ?>
+                        <div class="ofast-card" style="margin-bottom: 20px;">
+                            <h3 style="margin-top: 0;">Import from Plugins</h3>
+                            <p class="description">Imported redirects will be set to INACTIVE.</p>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
+                                <?php foreach ($import_sources as $key => $source): ?>
+                                    <button type="button" class="button import-from-plugin" data-plugin="<?php echo esc_attr($key); ?>">
+                                        Import from <?php echo esc_html($source['name']); ?> (<?php echo $source['count']; ?>)
+                                    </button>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
                     <?php endif; ?>
 
-                    <table class="form-table">
-                        <tr>
-                            <th><label for="source_url">Source URL</label></th>
-                            <td>
-                                <input type="text" name="source_url" id="source_url" class="regular-text"
-                                    value="<?php echo $edit_redirect ? esc_attr($edit_redirect->source_url) : ''; ?>"
-                                    placeholder="/old-page" required>
-                                <p class="description">The URL path to redirect from (e.g., /old-page)</p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th><label for="target_url">Target URL</label></th>
-                            <td>
-                                <input type="text" name="target_url" id="target_url" class="regular-text"
-                                    value="<?php echo $edit_redirect ? esc_attr($edit_redirect->target_url) : ''; ?>"
-                                    placeholder="<?php echo home_url('/new-page'); ?>" required>
-                                <p class="description">The URL to redirect to (full URL or relative path)</p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th><label for="redirect_type">Redirect Type</label></th>
-                            <td>
-                                <select name="redirect_type" id="redirect_type">
-                                    <option value="301" <?php selected($edit_redirect ? $edit_redirect->type : '', '301'); ?>>301 - Permanent</option>
-                                    <option value="302" <?php selected($edit_redirect ? $edit_redirect->type : '', '302'); ?>>302 - Temporary</option>
-                                    <option value="307" <?php selected($edit_redirect ? $edit_redirect->type : '', '307'); ?>>307 - Temporary (Preserve Method)</option>
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>Options</th>
-                            <td>
-                                <label style="display: block; margin-bottom: 10px;">
-                                    <input type="checkbox" name="is_regex" value="1" <?php checked($edit_redirect ? $edit_redirect->is_regex : false); ?>>
-                                    Use Regular Expression
-                                </label>
-                                <label style="display: block;">
-                                    <input type="checkbox" name="active" value="1" <?php checked($edit_redirect ? $edit_redirect->active : false); ?>>
-                                    Activate immediately
-                                </label>
-                            </td>
-                        </tr>
-                    </table>
-
-                    <p class="submit">
-                        <button type="submit" name="ofast_save_redirect" class="button button-primary">
-                            <?php echo $editing ? 'Update Redirect' : 'Add Redirect'; ?>
-                        </button>
-                        <?php if ($editing): ?>
-                            <a href="?page=ofast-redirects" class="button">Cancel</a>
-                        <?php endif; ?>
-                    </p>
-                </form>
-            </div>
-
-            <!-- Import Section -->
-            <?php if (!empty($import_sources)): ?>
-                <div style="background: #f0f7ff; border: 1px solid #c3d9ff; border-radius: 8px; padding: 15px; margin: 20px 0; max-width: 700px;">
-                    <h3 style="margin-top: 0;">Import from Other Plugins</h3>
-                    <p class="description">Imported redirects will be set to INACTIVE until you activate them.</p>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
-                        <?php foreach ($import_sources as $key => $source): ?>
-                            <button type="button" class="button import-from-plugin" data-plugin="<?php echo esc_attr($key); ?>">
-                                Import from <?php echo esc_html($source['name']); ?> (<?php echo $source['count']; ?>)
-                            </button>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            <?php endif; ?>
-
-            <!-- Import from JSON -->
-            <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 20px 0; max-width: 700px;">
-                <h3 style="margin-top: 0;">Import/Export</h3>
-                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                    <div>
-                        <label style="display: block; margin-bottom: 5px; font-weight: 500;">Import from JSON</label>
-                        <input type="file" id="import-json-file" accept=".json">
-                    </div>
-                    <div>
-                        <label style="display: block; margin-bottom: 5px; font-weight: 500;">Export</label>
-                        <button type="button" id="export-redirects" class="button">Export All</button>
+                    <!-- Import from JSON -->
+                    <div class="ofast-card">
+                        <h3 style="margin-top: 0; margin-bottom: 15px;">Import/Export</h3>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Import from JSON</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="file" id="import-json-file" accept=".json" style="flex: 1;">
+                            </div>
+                        </div>
+                        
+                        <div style="border-top: 1px solid #eee; padding-top: 20px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Export Redirects</label>
+                            <button type="button" id="export-redirects" class="button">Export All to JSON</button>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <style>
+                /* Header Styles */
+                .ofast-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 20px;
+                    background: #fff;
+                    padding: 25px 30px;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                    margin-bottom: 30px;
+                    margin-top: 20px;
+                }
+                .ofast-header-icon {
+                    width: 56px;
+                    height: 56px;
+                    background: #fff;
+                    border: 1px solid #e2e8f0;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                    border-radius: 16px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .ofast-header-icon .dashicons {
+                    font-size: 28px;
+                    width: 28px;
+                    height: 28px;
+                    color: #667eea;
+                }
+                .ofast-header-content h1 {
+                    margin: 0 0 5px 0;
+                    font-size: 24px;
+                    font-weight: 700;
+                    color: #1e293b;
+                    display: block;
+                    padding: 0;
+                }
+                .ofast-header-content p {
+                    margin: 0;
+                    color: #64748b;
+                    font-size: 14px;
+                }
+
+                /* Card Styles */
+                .ofast-card {
+                    background: #fff;
+                    border-radius: 16px;
+                    padding: 30px;
+                    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                    border: 1px solid rgba(226, 232, 240, 0.6);
+                }
+
+                /* Button Override */
+                .button.button-primary {
+                    background: #667eea !important;
+                    border-color: #667eea !important;
+                    text-shadow: none !important;
+                    box-shadow: 0 4px 6px rgba(102, 126, 234, 0.25) !important;
+                    transition: all 0.2s !important;
+                    padding-top: 10px !important;
+                    padding-bottom: 10px !important;
+                    height: auto !important;
+                    font-size: 14px !important;
+                    border-radius: 6px !important;
+                }
+                .button.button-primary:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 6px 8px rgba(102, 126, 234, 0.3) !important;
+                }
+                .button.button-primary:active {
+                    transform: translateY(0);
+                }
+
+                .ofast-redirects-columns {
+                    display: flex;
+                    gap: 20px;
+                    align-items: flex-start;
+                    margin: 20px 0;
+                }
+                .ofast-column-left {
+                    flex: 2;
+                    min-width: 300px;
+                }
+                .ofast-column-right {
+                    flex: 1;
+                    min-width: 280px;
+                }
+                @media screen and (max-width: 960px) {
+                    .ofast-redirects-columns {
+                        flex-direction: column;
+                    }
+                    .ofast-column-left, .ofast-column-right {
+                        width: 100%;
+                    }
+                }
+            </style>
 
             <!-- Redirects List -->
             <?php if (!empty($redirects)): ?>
-                <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-top: 20px;">
+                <div class="ofast-card" style="margin-top: 20px;">
                     <h3 style="margin-top: 0;">
                         All Redirects
                         <span style="font-weight: normal; color: #666; font-size: 14px;">(<?php echo count($redirects); ?> total)</span>

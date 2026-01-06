@@ -701,7 +701,9 @@ class Ofast_X_Social_Login
         update_option('ofast_social_default_role', sanitize_text_field($_POST['default_role'] ?? 'subscriber'));
         update_option('ofast_social_redirect_url', esc_url_raw($_POST['redirect_url'] ?? ''));
 
-        add_settings_error('ofast_social_login', 'saved', 'Settings saved!', 'success');
+        // Redirect with success flag
+        wp_redirect(add_query_arg('settings_saved', '1', wp_get_referer()));
+        exit;
     }
 
     /**
@@ -715,122 +717,377 @@ class Ofast_X_Social_Login
 
         $google = $this->get_provider_settings('google');
         $facebook = $this->get_provider_settings('facebook');
+        $default_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'general';
+
+        // Show toast if saved
+        if (isset($_GET['settings_saved'])) {
+            echo Ofast_X_Toast::render('Settings saved successfully!', 'success');
+        }
     ?>
+        <!-- Critical Admin Styles (Inline to ensure loading) -->
+        <style>
+            /* Colors */
+            :root {
+                --ofast-primary: #667eea;
+            }
+
+            .ofast-tabs-nav {
+                display: flex;
+                flex-wrap: nowrap;
+                gap: 8px;
+                margin-bottom: 25px;
+                padding: 10px 12px;
+                background: #fff;
+                border-radius: 12px;
+                border: 1px solid rgba(226, 232, 240, 0.6);
+                position: sticky;
+                top: 47px;
+                z-index: 100;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            }
+            .ofast-tab {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px 20px;
+                background: transparent;
+                border: none;
+                border-radius: 8px;
+                color: #64748b;
+                font-size: 14px;
+                font-weight: 500;
+                text-decoration: none;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                flex-shrink: 0;
+                white-space: nowrap;
+            }
+            .ofast-tab:hover {
+                background: #fff;
+                color: #1e293b;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            }
+            .ofast-tab.active {
+                background: var(--ofast-primary);
+                color: #fff;
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            }
+            .ofast-tab .dashicons {
+                font-size: 16px;
+                width: 16px;
+                height: 16px;
+                line-height: 16px;
+            }
+            .ofast-tab-content { display: none; }
+            .ofast-tab-content.active { display: block; animation: ofastFadeIn 0.3s ease; }
+            
+            /* Card Styling */
+            .ofast-card {
+                background: #fff;
+                border-radius: 16px;
+                padding: 40px;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                margin-top: 20px;
+                border: 1px solid rgba(226, 232, 240, 0.6);
+            }
+            .ofast-card h2 { margin-top: 0; }
+
+            /* Toggle Switch */
+            .ofast-toggle {
+                position: relative;
+                display: inline-block;
+                width: 44px;
+                height: 24px;
+                vertical-align: middle;
+                margin-right: 10px;
+            }
+            .ofast-toggle input { 
+                opacity: 0; 
+                width: 0; 
+                height: 0; 
+            }
+            .ofast-slider {
+                position: absolute;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: #cbd5e1;
+                transition: .4s;
+                border-radius: 34px;
+            }
+            .ofast-slider:before {
+                position: absolute;
+                content: "";
+                height: 18px;
+                width: 18px;
+                left: 3px;
+                bottom: 3px;
+                background-color: white;
+                transition: .4s;
+                border-radius: 50%;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            input:checked + .ofast-slider {
+                background-color: var(--ofast-primary);
+            }
+            input:focus + .ofast-slider {
+                box-shadow: 0 0 1px var(--ofast-primary);
+            }
+            input:checked + .ofast-slider:before {
+                transform: translateX(20px);
+            }
+            
+            /* Button Override */
+            .button.button-primary {
+                background: var(--ofast-primary) !important;
+                border-color: var(--ofast-primary) !important;
+                text-shadow: none !important;
+                box-shadow: 0 4px 6px rgba(102, 126, 234, 0.25) !important;
+                transition: all 0.2s !important;
+                padding-top: 10px !important;
+                padding-bottom: 10px !important;
+                height: auto !important;
+            }
+            .button.button-primary:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 6px 8px rgba(102, 126, 234, 0.3) !important;
+            }
+            .button.button-primary:active {
+                transform: translateY(0);
+            }
+            
+            @keyframes ofastFadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+            /* Header Styles */
+            .ofast-header {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                background: #fff;
+                padding: 25px 30px;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                margin-bottom: 30px;
+                margin-top: 20px;
+            }
+            .ofast-header-icon {
+                width: 56px;
+                height: 56px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                border-radius: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .ofast-header-icon .dashicons {
+                font-size: 28px;
+                width: 28px;
+                height: 28px;
+                color: #667eea;
+            }
+            .ofast-header-content h1 {
+                margin: 0 0 5px 0;
+                font-size: 24px;
+                font-weight: 700;
+                color: #1e293b;
+                display: block;
+                padding: 0;
+            }
+            .ofast-header-content p {
+                margin: 0;
+                color: #64748b;
+                font-size: 14px;
+            }
+        </style>
+
         <div class="wrap">
-            <h1>Social Login Settings</h1>
+            <!-- Header -->
+            <div class="ofast-header">
+                <div class="ofast-header-icon">
+                    <span class="dashicons dashicons-share"></span>
+                </div>
+                <div class="ofast-header-content">
+                    <h1>Social Login</h1>
+                    <p>Configure OAuth providers like Google and Facebook to allow users to log in with their social accounts.</p>
+                </div>
+            </div>
 
             <?php settings_errors('ofast_social_login'); ?>
 
             <form method="post">
                 <?php wp_nonce_field('ofast_social_login_settings', 'ofast_social_nonce'); ?>
 
-                <table class="form-table">
-                    <tr>
-                        <th>Enable Social Login</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="social_login_enabled" value="1" <?php checked(get_option('ofast_social_login_enabled')); ?>>
-                                Enable social login on login and registration forms
-                            </label>
-                        </td>
-                    </tr>
-                </table>
+                <!-- Tabs Navigation -->
+                <nav class="ofast-tabs-nav" id="social-login-tabs-nav">
+                    <a href="#" class="ofast-tab <?php echo $default_tab === 'general' ? 'active' : ''; ?>" data-tab="general">
+                        <span class="dashicons dashicons-admin-settings"></span>
+                        General
+                    </a>
+                    <a href="#" class="ofast-tab <?php echo $default_tab === 'google' ? 'active' : ''; ?>" data-tab="google">
+                        <span class="dashicons dashicons-google"></span>
+                        Google
+                    </a>
+                    <a href="#" class="ofast-tab <?php echo $default_tab === 'facebook' ? 'active' : ''; ?>" data-tab="facebook">
+                        <span class="dashicons dashicons-facebook"></span>
+                        Facebook
+                    </a>
+                </nav>
 
-                <h2>Google</h2>
-                <p>Create credentials at <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a></p>
-                <table class="form-table">
-                    <tr>
-                        <th>Enable Google</th>
-                        <td>
-                            <input type="checkbox" name="google_enabled" value="1" <?php checked($google['enabled']); ?>>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Client ID</th>
-                        <td>
-                            <input type="text" name="google_client_id" value="<?php echo esc_attr($google['client_id']); ?>" class="regular-text">
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Client Secret</th>
-                        <td>
-                            <input type="password" name="google_client_secret" placeholder="<?php echo $google['client_secret'] ? '********' : ''; ?>" class="regular-text">
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Callback URL</th>
-                        <td>
-                            <code><?php echo esc_html($this->get_callback_url('google')); ?></code>
-                            <p class="description">Add this URL to your Google OAuth Authorized redirect URIs</p>
-                        </td>
-                    </tr>
-                </table>
+                <!-- General Tab -->
+                <div id="social-tab-general" class="ofast-tab-content<?php echo $default_tab === 'general' ? ' active' : ''; ?>">
+                    <div class="ofast-card">
+                        <table class="form-table" style="margin-top: 0;">
+                            <tr>
+                                <th>Enable Social Login</th>
+                                <td>
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="social_login_enabled" value="1" <?php checked(get_option('ofast_social_login_enabled')); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                    <span class="description" style="vertical-align: middle;">Enable social login on login and registration forms</span>
+                                </td>
+                            </tr>
+                        </table>
 
-                <h2>Facebook</h2>
-                <p>Create an app at <a href="https://developers.facebook.com/apps/" target="_blank">Meta Developer Portal</a></p>
-                <table class="form-table">
-                    <tr>
-                        <th>Enable Facebook</th>
-                        <td>
-                            <input type="checkbox" name="facebook_enabled" value="1" <?php checked($facebook['enabled']); ?>>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>App ID</th>
-                        <td>
-                            <input type="text" name="facebook_app_id" value="<?php echo esc_attr($facebook['client_id']); ?>" class="regular-text">
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>App Secret</th>
-                        <td>
-                            <input type="password" name="facebook_app_secret" placeholder="<?php echo $facebook['client_secret'] ? '********' : ''; ?>" class="regular-text">
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Callback URL</th>
-                        <td>
-                            <code><?php echo esc_html($this->get_callback_url('facebook')); ?></code>
-                            <p class="description">Add this URL to your Facebook App Valid OAuth Redirect URIs</p>
-                        </td>
-                    </tr>
-                </table>
+                        <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;">
 
-                <h2>Options</h2>
-                <table class="form-table">
-                    <tr>
-                        <th>Button Style</th>
-                        <td>
-                            <select name="button_style">
-                                <option value="icon_text" <?php selected(get_option('ofast_social_button_style'), 'icon_text'); ?>>Icon + Text</option>
-                                <option value="icon" <?php selected(get_option('ofast_social_button_style'), 'icon'); ?>>Icon Only</option>
-                                <option value="text" <?php selected(get_option('ofast_social_button_style'), 'text'); ?>>Text Only</option>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Default Role</th>
-                        <td>
-                            <select name="default_role">
-                                <?php wp_dropdown_roles(get_option('ofast_social_default_role', 'subscriber')); ?>
-                            </select>
-                            <p class="description">Role assigned to new users created via social login</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Redirect After Login</th>
-                        <td>
-                            <input type="url" name="redirect_url" value="<?php echo esc_url(get_option('ofast_social_redirect_url')); ?>" class="regular-text" placeholder="<?php echo esc_url(home_url()); ?>">
-                            <p class="description">Leave empty to redirect to previous page</p>
-                        </td>
-                    </tr>
-                </table>
+                        <h2>Display Options</h2>
+                        <table class="form-table">
+                            <tr>
+                                <th>Button Style</th>
+                                <td>
+                                    <select name="button_style">
+                                        <option value="icon_text" <?php selected(get_option('ofast_social_button_style'), 'icon_text'); ?>>Icon & Text</option>
+                                        <option value="icon" <?php selected(get_option('ofast_social_button_style'), 'icon'); ?>>Icon Only</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Default Role</th>
+                                <td>
+                                    <select name="default_role">
+                                        <?php wp_dropdown_roles(get_option('ofast_social_default_role', 'subscriber')); ?>
+                                    </select>
+                                    <p class="description">New users will be assigned this role.</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Redirect After Login</th>
+                                <td>
+                                    <input type="url" name="redirect_url" value="<?php echo esc_attr(get_option('ofast_social_redirect_url')); ?>" class="regular-text" placeholder="https://">
+                                    <p class="description">Optional: URL to redirect users to after successful login.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
 
-                <p class="submit">
-                    <button type="submit" name="ofast_social_login_save" class="button button-primary">Save Settings</button>
-                </p>
+                <!-- Google Tab -->
+                <div id="social-tab-google" class="ofast-tab-content<?php echo $default_tab === 'google' ? ' active' : ''; ?>">
+                    <div class="ofast-card">
+                        <h2>Google Settings</h2>
+                        <p class="description">Get your credentials from the <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a>.</p>
+                        
+                        <table class="form-table">
+                            <tr>
+                                <th>Enable Google Login</th>
+                                <td>
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="google_enabled" value="1" <?php checked($google['enabled']); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                    <span class="description" style="vertical-align: middle;">Enable</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Client ID</th>
+                                <td>
+                                    <input type="text" name="google_client_id" value="<?php echo esc_attr($google['client_id']); ?>" class="regular-text">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Client Secret</th>
+                                <td>
+                                    <input type="password" name="google_client_secret" value="<?php echo esc_attr($google['client_secret']); ?>" class="regular-text">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Authorized Redirect URI</th>
+                                <td>
+                                    <code><?php echo esc_html($this->get_callback_url('google')); ?></code>
+                                    <p class="description">Copy this URL into your Google OAuth consent screen configuration.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Facebook Tab -->
+                <div id="social-tab-facebook" class="ofast-tab-content<?php echo $default_tab === 'facebook' ? ' active' : ''; ?>">
+                    <div class="ofast-card">
+                        <h2>Facebook Settings</h2>
+                        <p class="description">Get your App ID and Secret from the <a href="https://developers.facebook.com/apps/" target="_blank">Meta for Developers</a> portal.</p>
+                        
+                        <table class="form-table">
+                            <tr>
+                                <th>Enable Facebook Login</th>
+                                <td>
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="facebook_enabled" value="1" <?php checked($facebook['enabled']); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                    <span class="description" style="vertical-align: middle;">Enable</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>App ID</th>
+                                <td>
+                                    <input type="text" name="facebook_app_id" value="<?php echo esc_attr($facebook['client_id']); ?>" class="regular-text">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>App Secret</th>
+                                <td>
+                                    <input type="password" name="facebook_app_secret" value="<?php echo esc_attr($facebook['client_secret']); ?>" class="regular-text">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Valid OAuth Redirect URI</th>
+                                <td>
+                                    <code><?php echo esc_html($this->get_callback_url('facebook')); ?></code>
+                                    <p class="description">Copy this URL into your Facebook Login settings.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="ofast-form-actions" style="margin-top: 30px; padding-top: 20px;">
+                    <button type="submit" name="ofast_social_login_save" class="button button-primary button-large" style="min-width: 150px;">Save Changes</button>
+                </div>
             </form>
         </div>
-<?php
+
+        <script>
+        jQuery(document).ready(function($) {
+            $('.ofast-tab').on('click', function(e) {
+                e.preventDefault();
+                var target = $(this).data('tab');
+                
+                // Update tabs
+                $('.ofast-tab').removeClass('active');
+                $(this).addClass('active');
+                
+                // Update content
+                $('.ofast-tab-content').removeClass('active').hide();
+                $('#social-tab-' + target).addClass('active').fadeIn(200);
+            });
+        });
+        </script>
+    <?php
     }
 }

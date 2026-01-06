@@ -237,7 +237,7 @@ class Ofast_X_Spam_Protection
             wp_die('Permission denied');
         }
 
-        // Handle reCAPTCHA save
+        // Handle POST Save
         if (isset($_POST['ofast_save_recaptcha']) && wp_verify_nonce($_POST['recaptcha_nonce'], 'ofast_recaptcha_save')) {
             update_option('ofast_spam_provider', sanitize_text_field($_POST['spam_provider']));
 
@@ -260,156 +260,394 @@ class Ofast_X_Spam_Protection
                 update_option('ofast_recaptcha_threshold', floatval($_POST['recaptcha_threshold']));
             }
 
-            echo Ofast_X_Toast::render('Settings saved!', 'success');
+            // Redirect with success flag
+            wp_redirect(add_query_arg('settings_saved', '1', wp_get_referer()));
+            exit;
         }
 
+        // Get Options
         $active_provider = get_option('ofast_spam_provider', 'turnstile');
         $recaptcha_site_key = get_option('ofast_recaptcha_site_key', '');
         $recaptcha_threshold = get_option('ofast_recaptcha_threshold', 0.5);
+        $protect_comments = get_option('ofast_spam_protect_comments', false);
+        $protect_cf7 = get_option('ofast_spam_protect_cf7', false);
+        $protect_login = get_option('ofast_spam_protect_login', false);
+
+        // Current Tab
+        $default_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'general';
+
+        // Show toast
+        if (isset($_GET['settings_saved'])) {
+            echo Ofast_X_Toast::render('Settings saved successfully!', 'success');
+        }
 ?>
+        <style>
+            /* Colors */
+            :root {
+                --ofast-primary: #667eea;
+            }
+
+            .ofast-tabs-nav {
+                display: flex;
+                flex-wrap: nowrap;
+                gap: 8px;
+                margin-bottom: 25px;
+                padding: 10px 12px;
+                background: #fff;
+                border-radius: 12px;
+                border: 1px solid rgba(226, 232, 240, 0.6);
+                position: sticky;
+                top: 47px;
+                z-index: 100;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            }
+            .ofast-tab {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px 20px;
+                background: transparent;
+                border: none;
+                border-radius: 8px;
+                color: #64748b;
+                font-size: 14px;
+                font-weight: 500;
+                text-decoration: none;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                flex-shrink: 0;
+                white-space: nowrap;
+            }
+            .ofast-tab:hover {
+                background: #fff;
+                color: #1e293b;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            }
+            .ofast-tab.active {
+                background: var(--ofast-primary);
+                color: #fff;
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            }
+            .ofast-tab .dashicons {
+                font-size: 16px;
+                width: 16px;
+                height: 16px;
+                line-height: 16px;
+            }
+            .ofast-tab-content { display: none; }
+            .ofast-tab-content.active { display: block; animation: ofastFadeIn 0.3s ease; }
+            
+            /* Card Styling */
+            .ofast-card {
+                background: #fff;
+                border-radius: 16px;
+                padding: 40px;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                margin-top: 20px;
+                border: 1px solid rgba(226, 232, 240, 0.6);
+            }
+            .ofast-card h2 { margin-top: 0; }
+
+            /* Toggle Switch */
+            .ofast-toggle {
+                position: relative;
+                display: inline-block;
+                width: 44px;
+                height: 24px;
+                vertical-align: middle;
+                margin-right: 10px;
+            }
+            .ofast-toggle input { 
+                opacity: 0; 
+                width: 0; 
+                height: 0; 
+            }
+            .ofast-slider {
+                position: absolute;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: #cbd5e1;
+                transition: .4s;
+                border-radius: 34px;
+            }
+            .ofast-slider:before {
+                position: absolute;
+                content: "";
+                height: 18px;
+                width: 18px;
+                left: 3px;
+                bottom: 3px;
+                background-color: white;
+                transition: .4s;
+                border-radius: 50%;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            input:checked + .ofast-slider {
+                background-color: var(--ofast-primary);
+            }
+            input:focus + .ofast-slider {
+                box-shadow: 0 0 1px var(--ofast-primary);
+            }
+            input:checked + .ofast-slider:before {
+                transform: translateX(20px);
+            }
+            
+            /* Button Override */
+            .button.button-primary {
+                background: var(--ofast-primary) !important;
+                border-color: var(--ofast-primary) !important;
+                text-shadow: none !important;
+                box-shadow: 0 4px 6px rgba(102, 126, 234, 0.25) !important;
+                transition: all 0.2s !important;
+                padding-top: 10px !important;
+                padding-bottom: 10px !important;
+                height: auto !important;
+            }
+            .button.button-primary:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 6px 8px rgba(102, 126, 234, 0.3) !important;
+            }
+            .button.button-primary:active {
+                transform: translateY(0);
+            }
+            
+            @keyframes ofastFadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+            /* Header Styles */
+            .ofast-header {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                background: #fff;
+                padding: 25px 30px;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                margin-bottom: 30px;
+                margin-top: 20px;
+            }
+            .ofast-header-icon {
+                width: 56px;
+                height: 56px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                border-radius: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .ofast-header-icon .dashicons {
+                font-size: 28px;
+                width: 28px;
+                height: 28px;
+                color: #667eea;
+            }
+            .ofast-header-content h1 {
+                margin: 0 0 5px 0;
+                font-size: 24px;
+                font-weight: 700;
+                color: #1e293b;
+                display: block;
+                padding: 0;
+            }
+            .ofast-header-content p {
+                margin: 0;
+                color: #64748b;
+                font-size: 14px;
+            }
+        </style>
+
         <div class="wrap">
-            <h1>Spam Protection</h1>
-            <p>Configure spam protection for your forms. Choose between Cloudflare Turnstile or Google reCAPTCHA.</p>
+            <!-- Header -->
+            <div class="ofast-header">
+                <div class="ofast-header-icon">
+                    <span class="dashicons dashicons-shield"></span>
+                </div>
+                <div class="ofast-header-content">
+                    <h1>Spam Protection</h1>
+                    <p>Unified settings for Cloudflare Turnstile and Google reCAPTCHA to protect your forms.</p>
+                </div>
+            </div>
 
             <form method="post">
                 <?php wp_nonce_field('ofast_recaptcha_save', 'recaptcha_nonce'); ?>
 
-                <h2>Select Provider</h2>
-                <table class="form-table">
-                    <tr>
-                        <th scope="row">Active Provider</th>
-                        <td>
-                            <fieldset>
-                                <label style="display:block;margin-bottom:10px;">
-                                    <input type="radio" name="spam_provider" value="turnstile" <?php checked($active_provider, 'turnstile'); ?>>
-                                    <strong>Cloudflare Turnstile</strong> (Recommended)
-                                    <p class="description" style="margin-left:25px;">Free, privacy-friendly, invisible challenge</p>
-                                </label>
-                                <label style="display:block;margin-bottom:10px;">
-                                    <input type="radio" name="spam_provider" value="recaptcha_v2" <?php checked($active_provider, 'recaptcha_v2'); ?>>
-                                    <strong>Google reCAPTCHA v2</strong>
-                                    <p class="description" style="margin-left:25px;">Checkbox challenge - "I'm not a robot"</p>
-                                </label>
-                                <label style="display:block;margin-bottom:10px;">
-                                    <input type="radio" name="spam_provider" value="recaptcha_v3" <?php checked($active_provider, 'recaptcha_v3'); ?>>
-                                    <strong>Google reCAPTCHA v3</strong>
-                                    <p class="description" style="margin-left:25px;">Invisible scoring system (0.0 to 1.0)</p>
-                                </label>
-                            </fieldset>
-                        </td>
-                    </tr>
-                </table>
+                <!-- Tabs Navigation -->
+                <nav class="ofast-tabs-nav" id="spam-tabs-nav">
+                    <a href="#" class="ofast-tab <?php echo $default_tab === 'general' ? 'active' : ''; ?>" data-tab="general">
+                        <span class="dashicons dashicons-shield"></span>
+                        General
+                    </a>
+                    <a href="#" class="ofast-tab <?php echo $default_tab === 'turnstile' ? 'active' : ''; ?>" data-tab="turnstile">
+                        <span class="dashicons dashicons-cloud"></span>
+                        Turnstile
+                    </a>
+                    <a href="#" class="ofast-tab <?php echo $default_tab === 'recaptcha' ? 'active' : ''; ?>" data-tab="recaptcha">
+                        <span class="dashicons dashicons-google"></span>
+                        Google reCAPTCHA
+                    </a>
+                </nav>
 
-                <hr>
+                <!-- General Tab -->
+                <div id="tab-general" class="ofast-tab-content<?php echo $default_tab === 'general' ? ' active' : ''; ?>">
+                    <div class="ofast-card">
+                        <h2>Active Provider</h2>
+                        <p class="description">Select which spam protection service to use on your site.</p>
+                        <table class="form-table">
+                            <tr>
+                                <td>
+                                            <fieldset>
+                                        <div style="margin-bottom: 20px;">
+                                            <label class="ofast-toggle">
+                                                <input type="radio" name="spam_provider" value="turnstile" <?php checked($active_provider, 'turnstile'); ?>>
+                                                <span class="ofast-slider"></span>
+                                            </label>
+                                            <span style="vertical-align: middle; font-weight: 600;">Cloudflare Turnstile</span> <span class="description" style="vertical-align: middle;">(Recommended)</span>
+                                            <p class="description" style="margin-left: 54px; margin-top: 5px;">Free, privacy-friendly, invisible challenge.</p>
+                                        </div>
+                                        
+                                        <div style="margin-bottom: 20px;">
+                                            <label class="ofast-toggle">
+                                                <input type="radio" name="spam_provider" value="recaptcha_v2" <?php checked($active_provider, 'recaptcha_v2'); ?>>
+                                                <span class="ofast-slider"></span>
+                                            </label>
+                                            <span style="vertical-align: middle; font-weight: 600;">Google reCAPTCHA v2</span>
+                                            <p class="description" style="margin-left: 54px; margin-top: 5px;">Traditional "I'm not a robot" checkbox.</p>
+                                        </div>
 
-                <!-- Turnstile Settings -->
-                <div id="turnstile-settings" class="provider-settings" style="<?php echo $active_provider !== 'turnstile' ? 'display:none;' : ''; ?>">
-                    <h2>Cloudflare Turnstile Settings</h2>
-                    <?php
-                    if (class_exists('Ofast_X_Turnstile')) {
-                        Ofast_X_Turnstile::get_instance()->render_settings_form();
-                    } else {
-                        Ofast_X_Toast::render('Turnstile class not loaded.', 'warning');
-                    }
-                    ?>
+                                        <div style="margin-bottom: 0;">
+                                            <label class="ofast-toggle">
+                                                <input type="radio" name="spam_provider" value="recaptcha_v3" <?php checked($active_provider, 'recaptcha_v3'); ?>>
+                                                <span class="ofast-slider"></span>
+                                            </label>
+                                            <span style="vertical-align: middle; font-weight: 600;">Google reCAPTCHA v3</span>
+                                            <p class="description" style="margin-left: 54px; margin-top: 5px;">Invisible scoring system.</p>
+                                        </div>
+                                    </fieldset>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;">
+
+                        <h2>Where to Apply</h2>
+                        <table class="form-table">
+                            <tr>
+                                <th>WordPress Comments</th>
+                                <td>
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="protect_comments" value="1" <?php checked($protect_comments); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                    <span class="description" style="vertical-align: middle;">Protect blog post comments</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Contact Form 7</th>
+                                <td>
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="protect_cf7" value="1" <?php checked($protect_cf7); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                    <span class="description" style="vertical-align: middle;">Protect CF7 forms</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>WordPress Login</th>
+                                <td>
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="protect_login" value="1" <?php checked($protect_login); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                    <span class="description" style="vertical-align: middle;">Protect login page</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
                 </div>
 
-                <!-- reCAPTCHA Settings -->
-                <div id="recaptcha-settings" class="provider-settings" style="<?php echo !in_array($active_provider, array('recaptcha_v2', 'recaptcha_v3')) ? 'display:none;' : ''; ?>">
-                    <h2>Google reCAPTCHA Settings</h2>
-                    <p>Get your keys from <a href="https://www.google.com/recaptcha/admin" target="_blank">Google reCAPTCHA Admin</a></p>
-
-                    <table class="form-table">
-                        <tr>
-                            <th scope="row">Site Key</th>
-                            <td>
-                                <input type="text" name="recaptcha_site_key" value="<?php echo esc_attr($recaptcha_site_key); ?>" class="regular-text">
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row">Secret Key</th>
-                            <td>
-                                <input type="password" name="recaptcha_secret_key" value="" class="regular-text" placeholder="<?php echo $recaptcha_site_key ? '(encrypted - enter to change)' : ''; ?>">
-                                <p class="description">Secret keys are encrypted before storage</p>
-                            </td>
-                        </tr>
-                        <tr id="threshold-row" style="<?php echo $active_provider !== 'recaptcha_v3' ? 'display:none;' : ''; ?>">
-                            <th scope="row">Score Threshold (v3 only)</th>
-                            <td>
-                                <input type="number" name="recaptcha_threshold" value="<?php echo esc_attr($recaptcha_threshold); ?>" min="0" max="1" step="0.1" style="width:80px;">
-                                <p class="description">Submissions with scores below this will be rejected (0.0 = bot, 1.0 = human). Default: 0.5</p>
-                            </td>
-                        </tr>
-                    </table>
+                <!-- Turnstile Tab -->
+                <div id="tab-turnstile" class="ofast-tab-content<?php echo $default_tab === 'turnstile' ? ' active' : ''; ?>">
+                    <div class="ofast-card">
+                        <h2>Cloudflare Turnstile Settings</h2>
+                        <?php
+                        if (class_exists('Ofast_X_Turnstile')) {
+                            // We need to capture the output of render_settings_form if it echoes, 
+                            // but since we want it inside our card, we can just call it here.
+                            // Assuming it outputs standard form fields.
+                            Ofast_X_Turnstile::get_instance()->render_settings_form();
+                        } else {
+                            echo '<p>Turnstile module is not loaded.</p>';
+                        }
+                        ?>
+                    </div>
                 </div>
 
-                <hr>
+                <!-- reCAPTCHA Tab -->
+                <div id="tab-recaptcha" class="ofast-tab-content<?php echo $default_tab === 'recaptcha' ? ' active' : ''; ?>">
+                    <div class="ofast-card">
+                        <h2>Google reCAPTCHA Settings</h2>
+                        <p class="description">Get your keys from <a href="https://www.google.com/recaptcha/admin" target="_blank">Google reCAPTCHA Admin</a></p>
 
-                <!-- Where to Apply Protection -->
-                <h2>Where to Apply Protection</h2>
-                <p class="description">Select which forms should be protected by spam protection.</p>
-                <?php
-                $protect_comments = get_option('ofast_spam_protect_comments', false);
-                $protect_cf7 = get_option('ofast_spam_protect_cf7', false);
-                $protect_login = get_option('ofast_spam_protect_login', false);
-                ?>
-                <table class="form-table">
-                    <tr>
-                        <th scope="row">WordPress Comments</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="protect_comments" value="1" <?php checked($protect_comments); ?>>
-                                Add spam protection to comment forms
-                            </label>
-                            <p class="description">Protects blog post comments from spam bots.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Contact Form 7</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="protect_cf7" value="1" <?php checked($protect_cf7); ?>>
-                                Add spam protection to Contact Form 7 forms
-                            </label>
-                            <p class="description">Requires Contact Form 7 plugin to be installed.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">WordPress Login</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="protect_login" value="1" <?php checked($protect_login); ?>>
-                                Add spam protection to login form
-                            </label>
-                            <p class="description">Protect your login page from brute force attacks and bots.</p>
-                        </td>
-                    </tr>
-                </table>
+                        <table class="form-table">
+                            <tr>
+                                <th>Site Key</th>
+                                <td>
+                                    <input type="text" name="recaptcha_site_key" value="<?php echo esc_attr($recaptcha_site_key); ?>" class="regular-text">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Secret Key</th>
+                                <td>
+                                    <input type="password" name="recaptcha_secret_key" value="" class="regular-text" placeholder="<?php echo $recaptcha_site_key ? '(encrypted - enter to change)' : ''; ?>">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Score Threshold (v3)</th>
+                                <td>
+                                    <input type="number" name="recaptcha_threshold" value="<?php echo esc_attr($recaptcha_threshold); ?>" min="0" max="1" step="0.1" style="width:80px;">
+                                    <p class="description">0.0 (bot) to 1.0 (human). Default: 0.5</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
 
-                <p>
-                    <button type="submit" name="ofast_save_recaptcha" class="button button-primary">Save Settings</button>
-                </p>
+                <div class="ofast-form-actions" style="margin-top: 30px; padding-top: 20px;">
+                    <button type="submit" name="ofast_save_recaptcha" class="button button-primary button-large" style="min-width: 150px;">Save Changes</button>
+                </div>
             </form>
         </div>
 
         <script>
-            jQuery(function($) {
-                $('input[name="spam_provider"]').on('change', function() {
-                    var provider = $(this).val();
-
-                    $('.provider-settings').hide();
-
-                    if (provider === 'turnstile') {
-                        $('#turnstile-settings').show();
-                    } else {
-                        $('#recaptcha-settings').show();
-                        if (provider === 'recaptcha_v3') {
-                            $('#threshold-row').show();
-                        } else {
-                            $('#threshold-row').hide();
-                        }
-                    }
+            jQuery(document).ready(function($) {
+                // Tab Switching
+                $('.ofast-tab').on('click', function(e) {
+                    e.preventDefault();
+                    var target = $(this).data('tab');
+                    
+                    // Update classes
+                    $('.ofast-tab').removeClass('active');
+                    $(this).addClass('active');
+                    
+                    $('.ofast-tab-content').removeClass('active');
+                    $('#tab-' + target).addClass('active');
+                    
+                    // Update URL
+                    var url = new URL(window.location);
+                    url.searchParams.set('tab', target);
+                    window.history.pushState({}, '', url);
                 });
+
+                // Handle back button
+                window.onpopstate = function() {
+                    var urlParams = new URLSearchParams(window.location.search);
+                    var tab = urlParams.get('tab') || 'general';
+                    $('.ofast-tab[data-tab="' + tab + '"]').click();
+                };
             });
         </script>
 <?php

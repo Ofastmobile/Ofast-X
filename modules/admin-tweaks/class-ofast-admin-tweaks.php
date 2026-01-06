@@ -363,9 +363,11 @@ class Ofast_X_Admin_Tweaks
 
         update_option('ofast_admin_tweaks', $settings);
 
-        add_action('admin_notices', function () {
-            echo Ofast_X_Toast::render('Admin tweaks settings saved!', 'success');
-        });
+        update_option('ofast_admin_tweaks', $settings);
+
+        // Redirect with success flag
+        wp_redirect(add_query_arg('settings_saved', '1', wp_get_referer()));
+        exit;
     }
 
     /**
@@ -379,133 +381,262 @@ class Ofast_X_Admin_Tweaks
 
         $settings = get_option('ofast_admin_tweaks', array());
         $roles = wp_roles()->roles;
+
+        // Show toast if settings were saved
+        if (isset($_GET['settings_saved']) && $_GET['settings_saved'] == '1') {
+            echo Ofast_X_Toast::render('Admin tweaks settings saved!', 'success');
+        }
 ?>
-        <div class="wrap">
-            <h1>Admin Tweaks</h1>
-            <p>Quick admin customizations to make WordPress work your way.</p>
+        <div class="wrap ofast-tweaks-wrap">
+            <!-- Modern Header -->
+            <div class="ofast-page-header">
+                <div class="ofast-header-content">
+                    <div class="ofast-header-icon">
+                        <span class="dashicons dashicons-admin-tools"></span>
+                    </div>
+                    <div class="ofast-header-text">
+                        <h1>Admin Tweaks</h1>
+                        <p>Quick customization and security hardening for your dashboard</p>
+                    </div>
+                </div>
+            </div>
 
-            <form method="post">
+            <form method="post" action="">
                 <?php wp_nonce_field('ofast_admin_tweaks_save', 'admin_tweaks_nonce'); ?>
+                
+                <div class="ofast-tweaks-container">
+                        
+                    <!-- Interface Tweaks Card -->
+                    <div class="ofast-card">
+                        <div class="ofast-card-header">
+                            <span class="dashicons dashicons-desktop"></span>
+                            <h2>Interface Customizations</h2>
+                        </div>
+                        <div class="ofast-card-body">
+                            
+                            <div class="ofast-tweak-row">
+                                <div class="ofast-tweak-content">
+                                    <label for="ofast_show_post_id">Post/Page ID Column</label>
+                                    <p class="description">Adds a handy ID column to your Posts and Pages lists.</p>
+                                </div>
+                                <div class="ofast-tweak-action">
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="ofast_show_post_id" id="ofast_show_post_id" value="1" <?php checked(!empty($settings['show_post_id'])); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
 
-                <h2 class="title">Admin Interface</h2>
-                <table class="form-table">
-                    <tr>
-                        <th scope="row">Post/Page ID Column</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="ofast_show_post_id" value="1" <?php checked(!empty($settings['show_post_id'])); ?>>
-                                Show ID column in Posts and Pages list tables
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Infinity Media Scroll</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="ofast_infinity_media" value="1" <?php checked(!empty($settings['infinity_media'])); ?>>
-                                Enable infinite scroll in Media Library
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Hide Admin Bar</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="ofast_hide_admin_bar" value="1" <?php checked(!empty($settings['hide_admin_bar'])); ?>>
-                                Hide admin bar on frontend for all users
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Hide Admin Bar by Role</th>
-                        <td>
-                            <?php foreach ($roles as $role_slug => $role_data): ?>
-                                <label style="display: inline-block; margin-right: 15px; margin-bottom: 5px;">
-                                    <input type="checkbox" name="ofast_hide_bar_roles[]" value="<?php echo esc_attr($role_slug); ?>"
-                                        <?php checked(in_array($role_slug, $settings['hide_admin_bar_roles'] ?? array())); ?>>
-                                    <?php echo esc_html(translate_user_role($role_data['name'])); ?>
-                                </label>
-                            <?php endforeach; ?>
-                            <p class="description">Select roles that should not see the admin bar on frontend.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Remove WordPress Logo</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="ofast_remove_wp_logo" value="1" <?php checked(!empty($settings['remove_wp_logo'])); ?>>
-                                Remove WordPress logo from admin bar
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Remove +New Menu</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="ofast_remove_new_content" value="1" <?php checked(!empty($settings['remove_new_content'])); ?>>
-                                Remove the "+New" content menu from admin bar
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Rename "Howdy" to "Hello"</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="ofast_rename_howdy" value="1" <?php checked(!empty($settings['rename_howdy'])); ?>>
-                                Change "Howdy, Username" to "Hello, Username" in admin bar
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Hide Howdy Greeting</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="ofast_hide_howdy" value="1" <?php checked(!empty($settings['hide_howdy'])); ?>>
-                                Completely remove the "Howdy" greeting (shows only username)
-                            </label>
-                        </td>
-                    </tr>
-                </table>
+                            <div class="ofast-tweak-row">
+                                <div class="ofast-tweak-content">
+                                    <label for="ofast_infinity_media">Infinity Media Scroll</label>
+                                    <p class="description">Enables infinite scrolling in the Media Library (no more "Load More").</p>
+                                </div>
+                                <div class="ofast-tweak-action">
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="ofast_infinity_media" id="ofast_infinity_media" value="1" <?php checked(!empty($settings['infinity_media'])); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
 
-                <h2 class="title" style="margin-top:30px;">Security Hardening</h2>
-                <table class="form-table">
-                    <tr>
-                        <th scope="row">Disable XML-RPC</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="ofast_disable_xmlrpc" value="1" <?php checked(!empty($settings['disable_xmlrpc'])); ?>>
-                                Completely disable XML-RPC functionality
-                            </label>
-                            <p class="description">Prevents brute force attacks and DDoS amplification via xmlrpc.php. Safe to enable unless you use mobile apps or Jetpack.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Obfuscate Author Slugs</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="ofast_obfuscate_author_slugs" value="1" <?php checked(!empty($settings['obfuscate_author_slugs'])); ?>>
-                                Hide real usernames from author URLs
-                            </label>
-                            <p class="description">Replaces usernames in author archive URLs with random hashes. Blocks ?author=N enumeration attacks.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Email Address Obfuscator</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="ofast_obfuscate_emails" value="1" <?php checked(!empty($settings['obfuscate_emails'])); ?>>
-                                Encode email addresses in page content
-                            </label>
-                            <p class="description">Converts email addresses to HTML entities (e.g., &#101;&#109;&#97;&#105;&#108;) to prevent spam harvesting bots from collecting them.</p>
-                        </td>
-                    </tr>
-                </table>
+                            <!-- Admin Bar Section -->
+                            <h3 class="ofast-section-title">Admin Bar</h3>
+                            
+                            <div class="ofast-tweak-row">
+                                <div class="ofast-tweak-content">
+                                    <label for="ofast_hide_admin_bar">Hide Admin Bar (Global)</label>
+                                    <p class="description">Completely hides the admin bar on the frontend for everyone.</p>
+                                </div>
+                                <div class="ofast-tweak-action">
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="ofast_hide_admin_bar" id="ofast_hide_admin_bar" value="1" <?php checked(!empty($settings['hide_admin_bar'])); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
 
-                <p class="submit">
-                    <button type="submit" name="ofast_save_admin_tweaks" class="button button-primary">Save Tweaks</button>
-                </p>
+                            <div class="ofast-tweak-row">
+                                <div class="ofast-tweak-content">
+                                    <label for="ofast_remove_wp_logo">Remove WP Logo</label>
+                                    <p class="description">Removes the WordPress logo from the top-left of the admin bar.</p>
+                                </div>
+                                <div class="ofast-tweak-action">
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="ofast_remove_wp_logo" id="ofast_remove_wp_logo" value="1" <?php checked(!empty($settings['remove_wp_logo'])); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="ofast-tweak-row">
+                                <div class="ofast-tweak-content">
+                                    <label for="ofast_remove_new_content">Remove "+New" Menu</label>
+                                    <p class="description">Clean up the admin bar by removing the creation shortcut.</p>
+                                </div>
+                                <div class="ofast-tweak-action">
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="ofast_remove_new_content" id="ofast_remove_new_content" value="1" <?php checked(!empty($settings['remove_new_content'])); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="ofast-tweak-row">
+                                <div class="ofast-tweak-content">
+                                    <label for="ofast_rename_howdy">Rename "Howdy"</label>
+                                    <p class="description">Change "Howdy, Name" to "Hello, Name".</p>
+                                    </div>
+                                <div class="ofast-tweak-action">
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="ofast_rename_howdy" id="ofast_rename_howdy" value="1" <?php checked(!empty($settings['rename_howdy'])); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="ofast-tweak-row">
+                                <div class="ofast-tweak-content">
+                                    <label for="ofast_hide_howdy">Hide Greeting</label>
+                                    <p class="description">Remove the greeting entirely, showing only the username.</p>
+                                </div>
+                                <div class="ofast-tweak-action">
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="ofast_hide_howdy" id="ofast_hide_howdy" value="1" <?php checked(!empty($settings['hide_howdy'])); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Role Hiding -->
+                            <div class="ofast-tweak-row" style="display: block;">
+                                <div style="margin-bottom: 10px;">
+                                    <label style="font-weight: 600; color: #374151;">Hide Admin Bar by Role</label>
+                                    <p class="description">Select roles that should NOT see the admin bar.</p>
+                                </div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                    <?php foreach ($roles as $role_slug => $role_data): ?>
+                                        <label class="ofast-checkbox-pill">
+                                            <input type="checkbox" name="ofast_hide_bar_roles[]" value="<?php echo esc_attr($role_slug); ?>"
+                                                <?php checked(in_array($role_slug, $settings['hide_admin_bar_roles'] ?? array())); ?>>
+                                            <span><?php echo esc_html(translate_user_role($role_data['name'])); ?></span>
+                                        </label>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Security Hardening Card -->
+                    <div class="ofast-card" style="margin-top: 30px;">
+                        <div class="ofast-card-header">
+                            <span class="dashicons dashicons-shield"></span>
+                            <h2>Security Hardening</h2>
+                        </div>
+                        <div class="ofast-card-body">
+                            
+                            <div class="ofast-tweak-row">
+                                <div class="ofast-tweak-content">
+                                    <label for="ofast_disable_xmlrpc">Disable XML-RPC</label>
+                                    <p class="description">Protects against brute force and DDoS attacks. Enable unless you use the WP App or Jetpack.</p>
+                                </div>
+                                <div class="ofast-tweak-action">
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="ofast_disable_xmlrpc" id="ofast_disable_xmlrpc" value="1" <?php checked(!empty($settings['disable_xmlrpc'])); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="ofast-tweak-row">
+                                <div class="ofast-tweak-content">
+                                    <label for="ofast_obfuscate_author_slugs">Obfuscate Author Slugs</label>
+                                    <p class="description">Hides real usernames in URLs (e.g. /author/xyz123/) to prevent enumeration.</p>
+                                </div>
+                                <div class="ofast-tweak-action">
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="ofast_obfuscate_author_slugs" id="ofast_obfuscate_author_slugs" value="1" <?php checked(!empty($settings['obfuscate_author_slugs'])); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="ofast-tweak-row">
+                                <div class="ofast-tweak-content">
+                                    <label for="ofast_obfuscate_emails">Obfuscate Emails</label>
+                                    <p class="description">Encodes email addresses in content to HTML entities to block spambots.</p>
+                                </div>
+                                <div class="ofast-tweak-action">
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="ofast_obfuscate_emails" id="ofast_obfuscate_emails" value="1" <?php checked(!empty($settings['obfuscate_emails'])); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Save Button Section -->
+                    <div class="ofast-form-actions" style="margin-top: 30px;">
+                        <button type="submit" name="ofast_save_admin_tweaks" class="ofast-btn-primary" style="font-size: 16px; padding: 14px 40px;">
+                            Save Changes
+                        </button>
+                    </div>
+
+                </div>
             </form>
         </div>
+
+        <style>
+            .ofast-tweaks-wrap { max-width: 1200px; margin: 20px auto; padding: 0 20px; }            
+            /* Header */
+            .ofast-page-header { background: #ffffff; border-radius: 16px; padding: 30px; margin-bottom: 30px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+            .ofast-header-content { display: flex; align-items: center; gap: 20px; }
+            .ofast-header-icon { width: 60px; height: 60px; background: #ffffff; border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2); border: 1px solid #e2e8f0; color: #667eea; }
+            .ofast-header-icon .dashicons { font-size: 28px; width: 28px; height: 28px; }
+            .ofast-header-text h1 { margin: 0; font-size: 28px; font-weight: 700; color: #1e293b; }
+            .ofast-header-text p { margin: 5px 0 0; color: #64748b; font-size: 15px; }
+
+            /* Grid Layout - SINGLE COLUMN WIDE */
+            .ofast-tweaks-container { display: flex; flex-direction: column; gap: 0; }
+            
+            /* Cards */
+            .ofast-card { background: #fff; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; border: 1px solid rgba(0,0,0,0.05); }
+            .ofast-card-header { display: flex; align-items: center; gap: 12px; padding: 20px 25px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1px solid #e2e8f0; }
+            .ofast-card-header .dashicons { font-size: 20px; width: 20px; height: 20px; color: #667eea; }
+            .ofast-card-header h2 { margin: 0; font-size: 16px; font-weight: 600; color: #1e293b; }
+            .ofast-card-body { padding: 25px; }
+
+            /* Tweak Rows */
+            .ofast-tweak-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f1f5f9; }
+            .ofast-tweak-row:last-child { border-bottom: none; }
+            .ofast-tweak-content label { font-weight: 600; color: #374151; font-size: 15px; display: block; margin-bottom: 4px; }
+            .ofast-tweak-content .description { margin: 0; font-size: 13px; color: #64748b; }
+            .ofast-section-title { margin: 20px 0 10px; font-size: 14px; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.5px; font-weight: 700; }
+
+            /* Modern Toggle Switch */
+            .ofast-toggle { position: relative; display: inline-block; width: 48px; height: 26px; flex-shrink: 0; }
+            .ofast-toggle input { opacity: 0; width: 0; height: 0; }
+            .ofast-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 34px; }
+            .ofast-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            input:checked + .ofast-slider { background-color: #667eea; }
+            input:checked + .ofast-slider:before { transform: translateX(22px); }
+            input:focus + .ofast-slider { box-shadow: 0 0 1px #667eea; }
+
+            /* Checkbox Pills */
+            .ofast-checkbox-pill { display: inline-flex; align-items: center; padding: 6px 12px; background: #f1f5f9; border-radius: 20px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+            .ofast-checkbox-pill input { display: none; }
+            .ofast-checkbox-pill span { font-size: 13px; color: #475569; font-weight: 500; }
+            .ofast-checkbox-pill:hover { background: #e2e8f0; }
+            .ofast-checkbox-pill input:checked + span { color: #667eea; }
+            .ofast-checkbox-pill:has(input:checked) { background: rgba(102, 126, 234, 0.1); border-color: rgba(102, 126, 234, 0.2); }
+
+            /* Buttons */
+            .ofast-btn-primary { display: inline-flex; align-items: center; gap: 10px; padding: 12px 24px; background: #667eea; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.35); }
+            .ofast-btn-primary:hover { background: #5a6fd6; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.45); color: #fff; }
+        </style>
 <?php
     }
 }

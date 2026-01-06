@@ -262,6 +262,7 @@ class Ofast_X_Settings
                             </div>
                         </label>
                     </div>
+                    <p style="margin: 15px 0 0 0; font-style: italic; color: #64748b; font-size: 13px;">Note: This setting only takes effect when the plugin is deleted (not just deactivated). Deactivating the plugin will never remove your data.</p>
                 </div>
 
                 <p class="submit" style="margin-top: 30px; display: flex; gap: 15px; align-items: center;">

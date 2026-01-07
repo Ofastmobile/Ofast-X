@@ -31,10 +31,13 @@ class Ofast_X_User_Roles
         // Add roles column to users list
         add_filter('manage_users_columns', array($this, 'add_roles_column'));
         add_filter('manage_users_custom_column', array($this, 'render_roles_column'), 10, 3);
+        add_action('admin_head', array($this, 'users_table_css'));
 
         // Add admin menu for capabilities manager
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'handle_capabilities_save'));
+        add_action('admin_init', array($this, 'handle_role_create'));
+        add_action('admin_init', array($this, 'handle_role_delete'));
         
         // AJAX handler for live capability toggle
         add_action('wp_ajax_ofast_toggle_capability', array($this, 'ajax_toggle_capability'));
@@ -124,9 +127,7 @@ class Ofast_X_User_Roles
                 <th><label>Manage Capabilities</label></th>
                 <td>
                     <a href="<?php echo admin_url('users.php?page=ofast-role-capabilities&role=' . urlencode($first_role)); ?>" 
-                       class="button button-secondary"
-                       style="display: inline-flex; align-items: center; gap: 8px;">
-                        <span class="dashicons dashicons-admin-generic" style="margin-top: 3px;"></span>
+                       class="button button-secondary">
                         Edit <?php echo esc_html(translate_user_role(ucfirst($first_role))); ?> Capabilities
                     </a>
                     <p class="description" style="margin-top: 10px;">
@@ -188,20 +189,43 @@ class Ofast_X_User_Roles
      */
     public function add_roles_column($columns)
     {
-        // Insert ID and roles after username
+        // Build new columns with ID first
         $new_columns = array();
+        
+        // Add cb (checkbox) first if it exists
+        if (isset($columns['cb'])) {
+            $new_columns['cb'] = $columns['cb'];
+            unset($columns['cb']);
+        }
+        
+        // Add ID as first visible column
+        $new_columns['user_id'] = 'ID';
+        
+        // Add remaining columns
         foreach ($columns as $key => $value) {
-            $new_columns[$key] = $value;
-            if ($key === 'username') {
-                $new_columns['user_id'] = 'ID';
+            if ($key === 'role') {
+                // Replace default role with our enhanced roles column
                 $new_columns['ofast_roles'] = 'Roles';
+            } else {
+                $new_columns[$key] = $value;
             }
         }
 
-        // Remove default role column
-        unset($new_columns['role']);
-
         return $new_columns;
+    }
+
+    /**
+     * Add CSS to shrink ID column width on users table
+     */
+    public function users_table_css()
+    {
+        $screen = get_current_screen();
+        if ($screen && $screen->id === 'users') {
+            echo '<style>
+                .users .column-user_id { width: 30px; text-align: center; }
+                .users th.column-user_id { text-align: center; }
+            </style>';
+        }
     }
 
     /**
@@ -211,7 +235,7 @@ class Ofast_X_User_Roles
     {
         // Handle User ID column
         if ($column_name === 'user_id') {
-            return '<code style="background: #f0f0f1; color: #1e293b; padding: 4px 10px; border-radius: 4px; font-size: 13px; font-weight: 600;">' . esc_html($user_id) . '</code>';
+            return '<code style="background: #f0f0f1; color: #1e293b; padding: 2px 6px; border-radius: 3px; font-size: 12px; font-weight: 600;">' . esc_html($user_id) . '</code>';
         }
 
         // Handle Roles column
@@ -368,6 +392,72 @@ class Ofast_X_User_Roles
                 <?php echo Ofast_X_Toast::render('Role capabilities restored to WordPress defaults!', 'info'); ?>
             <?php endif; ?>
 
+            <?php if (isset($_GET['created'])): ?>
+                <?php echo Ofast_X_Toast::render('New role created successfully!', 'success'); ?>
+            <?php endif; ?>
+
+            <?php if (isset($_GET['deleted'])): ?>
+                <?php echo Ofast_X_Toast::render('Role deleted successfully!', 'success'); ?>
+            <?php endif; ?>
+
+            <?php if (isset($_GET['error'])): ?>
+                <?php
+                $error_messages = array(
+                    'empty_name' => 'Please enter a role name.',
+                    'role_exists' => 'A role with this name already exists.',
+                    'create_failed' => 'Failed to create role. Please try again.',
+                    'core_role' => 'Core WordPress roles cannot be deleted.',
+                    'role_in_use' => 'Cannot delete role - users are still assigned to it.',
+                    'no_role' => 'No role specified.'
+                );
+                $error_key = sanitize_text_field($_GET['error']);
+                $error_msg = isset($error_messages[$error_key]) ? $error_messages[$error_key] : 'An error occurred.';
+                echo Ofast_X_Toast::render($error_msg, 'error');
+                ?>
+            <?php endif; ?>
+
+            <!-- Create New Role Section -->
+            <div class="ofast-card" style="margin-bottom: 20px;">
+                <div class="ofast-card-header" style="cursor: pointer;" onclick="document.getElementById('create-role-form').classList.toggle('hidden');">
+                    <span class="dashicons dashicons-plus-alt2" style="color: #667eea; font-size: 20px;"></span>
+                    <h2 style="flex: 1;">Create New Role</h2>
+                    <span class="dashicons dashicons-arrow-down-alt2"></span>
+                </div>
+                <div id="create-role-form" class="ofast-card-body hidden">
+                    <form method="post" action="">
+                        <?php wp_nonce_field('ofast_create_role', '_wpnonce_create'); ?>
+                        <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">Role Name</label>
+                                <input type="text" name="new_role_name" placeholder="e.g. Content Manager" required
+                                       style="width: 100%; padding: 10px 14px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                            </div>
+                            <div style="flex: 1; min-width: 200px;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">Clone From (Optional)</label>
+                                <select name="clone_from" style="width: 100%; padding: 10px 14px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                                    <option value="">-- Start Empty --</option>
+                                    <?php foreach ($all_roles as $slug => $data): ?>
+                                        <option value="<?php echo esc_attr($slug); ?>">
+                                            <?php echo esc_html(translate_user_role($data['name'])); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div>
+                                <button type="submit" name="ofast_create_role" class="ofast-btn-secondary">
+                                    Create Role
+                                </button>
+                            </div>
+                        </div>
+                        <p class="description" style="margin-top: 12px;">
+                            The role slug will be auto-generated from the name. Clone from an existing role to copy its capabilities.
+                        </p>
+                    </form>
+                </div>
+            </div>
+
+            <style>.hidden { display: none !important; }</style>
+
             <!-- Role Selector + Actions Bar -->
             <div class="ofast-toolbar">
                 <div class="ofast-role-selector">
@@ -379,23 +469,31 @@ class Ofast_X_User_Roles
                         <?php foreach ($all_roles as $slug => $data): ?>
                             <option value="<?php echo esc_attr($slug); ?>" <?php selected($selected_role, $slug); ?>>
                                 <?php echo esc_html(translate_user_role($data['name'])); ?>
+                                <?php if ($this->is_deletable_role($slug)): ?>(Custom)<?php endif; ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
 
                 <div class="ofast-toolbar-actions">
-                    <button type="button" id="select-all-caps" class="button">
-                        <span class="dashicons dashicons-yes-alt"></span> Select All
+                    <button type="button" id="select-all-caps" class="ofast-btn-secondary">
+                        Select All
                     </button>
-                    <button type="button" id="deselect-all-caps" class="button">
-                        <span class="dashicons dashicons-dismiss"></span> Deselect All
+                    <button type="button" id="deselect-all-caps" class="ofast-btn-secondary">
+                        Deselect All
                     </button>
                     <?php if ($backup_exists): ?>
                         <a href="<?php echo wp_nonce_url(admin_url('users.php?page=ofast-role-capabilities&role=' . $selected_role . '&action=restore'), 'ofast_restore_role'); ?>" 
-                           class="button" 
+                           class="ofast-btn-secondary" 
                            onclick="return confirm('Restore <?php echo esc_js(translate_user_role($all_roles[$selected_role]['name'])); ?> to WordPress defaults?');">
-                            <span class="dashicons dashicons-image-rotate"></span> Reset to Defaults
+                            Reset to Defaults
+                        </a>
+                    <?php endif; ?>
+                    <?php if ($this->is_deletable_role($selected_role)): ?>
+                        <a href="<?php echo wp_nonce_url(admin_url('users.php?page=ofast-role-capabilities&role=' . $selected_role . '&action=delete_role'), 'ofast_delete_role'); ?>" 
+                           class="ofast-btn-danger" 
+                           onclick="return confirm('Delete the role \'<?php echo esc_js(translate_user_role($all_roles[$selected_role]['name'])); ?>\'? This cannot be undone.');">
+                            Delete Role
                         </a>
                     <?php endif; ?>
                 </div>
@@ -523,8 +621,12 @@ class Ofast_X_User_Roles
             .ofast-cap-item:has(.ofast-cap-checkbox:checked) { background: #eef2ff; border-color: #667eea; }
 
             /* Buttons */
-            .ofast-btn-primary { display: inline-flex; align-items: center; gap: 10px; padding: 14px 32px; background: #667eea; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.35); }
+            .ofast-btn-primary { display: inline-flex; align-items: center; gap: 10px; padding: 14px 32px; background: #667eea; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.35); text-decoration: none; }
             .ofast-btn-primary:hover { background: #5a6fd6; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.45); color: #fff; }
+            .ofast-btn-secondary { display: inline-flex; align-items: center; justify-content: center; padding: 10px 20px; background: #667eea; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; text-decoration: none; }
+            .ofast-btn-secondary:hover { background: #5a6fd6; transform: translateY(-1px); color: #fff; }
+            .ofast-btn-danger { display: inline-flex; align-items: center; justify-content: center; padding: 10px 20px; background: #dc2626; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; text-decoration: none; }
+            .ofast-btn-danger:hover { background: #b91c1c; transform: translateY(-1px); color: #fff; }
             .ofast-btn-large { padding: 16px 40px; font-size: 17px; }
             .ofast-save-note { margin-left: 15px; font-size: 13px; color: #64748b; }
         </style>
@@ -805,6 +907,157 @@ class Ofast_X_User_Roles
             'Advanced' => '',
         );
 
-        return isset($icons[$group]) ? $icons[$group] : '⚡';
+        return isset($icons[$group]) ? $icons[$group] : '';
+    }
+
+    /**
+     * Get list of core WordPress roles that cannot be deleted
+     */
+    private function get_core_roles()
+    {
+        return array('administrator', 'editor', 'author', 'contributor', 'subscriber');
+    }
+
+    /**
+     * Check if a role can be deleted
+     */
+    public function is_deletable_role($role_slug)
+    {
+        return !in_array($role_slug, $this->get_core_roles());
+    }
+
+    /**
+     * Handle role creation
+     */
+    public function handle_role_create()
+    {
+        if (!isset($_POST['ofast_create_role'])) {
+            return;
+        }
+
+        check_admin_referer('ofast_create_role', '_wpnonce_create');
+
+        if (!current_user_can('manage_options')) {
+            wp_die('Insufficient permissions');
+        }
+
+        $role_name = isset($_POST['new_role_name']) ? sanitize_text_field($_POST['new_role_name']) : '';
+        $clone_from = isset($_POST['clone_from']) ? sanitize_text_field($_POST['clone_from']) : '';
+
+        if (empty($role_name)) {
+            wp_redirect(add_query_arg(array(
+                'page' => 'ofast-role-capabilities',
+                'error' => 'empty_name'
+            ), admin_url('users.php')));
+            exit;
+        }
+
+        // Generate slug from name
+        $role_slug = sanitize_title($role_name);
+        $role_slug = str_replace('-', '_', $role_slug);
+
+        // Check if role already exists
+        if (get_role($role_slug)) {
+            wp_redirect(add_query_arg(array(
+                'page' => 'ofast-role-capabilities',
+                'error' => 'role_exists'
+            ), admin_url('users.php')));
+            exit;
+        }
+
+        // Get capabilities to clone
+        $capabilities = array('read' => true); // Default: at least read capability
+        
+        if (!empty($clone_from) && get_role($clone_from)) {
+            $source_role = get_role($clone_from);
+            $capabilities = $source_role->capabilities;
+        }
+
+        // Create the new role
+        $result = add_role($role_slug, $role_name, $capabilities);
+
+        if ($result) {
+            // Track as custom role
+            $custom_roles = get_option('ofast_custom_roles', array());
+            $custom_roles[] = $role_slug;
+            update_option('ofast_custom_roles', array_unique($custom_roles));
+
+            wp_redirect(add_query_arg(array(
+                'page' => 'ofast-role-capabilities',
+                'role' => $role_slug,
+                'created' => '1'
+            ), admin_url('users.php')));
+            exit;
+        }
+
+        wp_redirect(add_query_arg(array(
+            'page' => 'ofast-role-capabilities',
+            'error' => 'create_failed'
+        ), admin_url('users.php')));
+        exit;
+    }
+
+    /**
+     * Handle role deletion
+     */
+    public function handle_role_delete()
+    {
+        if (!isset($_GET['action']) || $_GET['action'] !== 'delete_role') {
+            return;
+        }
+
+        if (!isset($_GET['page']) || $_GET['page'] !== 'ofast-role-capabilities') {
+            return;
+        }
+
+        check_admin_referer('ofast_delete_role');
+
+        if (!current_user_can('manage_options')) {
+            wp_die('Insufficient permissions');
+        }
+
+        $role_slug = isset($_GET['role']) ? sanitize_text_field($_GET['role']) : '';
+
+        if (empty($role_slug)) {
+            wp_redirect(add_query_arg(array(
+                'page' => 'ofast-role-capabilities',
+                'error' => 'no_role'
+            ), admin_url('users.php')));
+            exit;
+        }
+
+        // Check if deletable
+        if (!$this->is_deletable_role($role_slug)) {
+            wp_redirect(add_query_arg(array(
+                'page' => 'ofast-role-capabilities',
+                'error' => 'core_role'
+            ), admin_url('users.php')));
+            exit;
+        }
+
+        // Check if any users have this role
+        $users_with_role = get_users(array('role' => $role_slug));
+        if (!empty($users_with_role)) {
+            wp_redirect(add_query_arg(array(
+                'page' => 'ofast-role-capabilities',
+                'error' => 'role_in_use',
+                'role' => $role_slug
+            ), admin_url('users.php')));
+            exit;
+        }
+
+        // Remove the role
+        remove_role($role_slug);
+
+        // Remove from custom roles tracking
+        $custom_roles = get_option('ofast_custom_roles', array());
+        $custom_roles = array_diff($custom_roles, array($role_slug));
+        update_option('ofast_custom_roles', $custom_roles);
+
+        wp_redirect(add_query_arg(array(
+            'page' => 'ofast-role-capabilities',
+            'deleted' => '1'
+        ), admin_url('users.php')));
+        exit;
     }
 }

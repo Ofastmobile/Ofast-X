@@ -68,6 +68,15 @@ function ofast_x_init_plugin()
     // Load Turnstile spam protection
     require_once OFAST_X_PLUGIN_DIR . 'includes/security/class-ofast-turnstile.php';
 
+    // Load Honeypot spam protection (fallback)
+    require_once OFAST_X_PLUGIN_DIR . 'includes/security/class-ofast-honeypot.php';
+
+    // Load Universal Spam protection (force injection)
+    require_once OFAST_X_PLUGIN_DIR . 'includes/security/class-ofast-universal-spam.php';
+
+    // Load Math CAPTCHA (arithmetic challenge)
+    require_once OFAST_X_PLUGIN_DIR . 'includes/security/class-ofast-math-captcha.php';
+
     // Load Notification Hub (central dispatcher)
     require_once OFAST_X_PLUGIN_DIR . 'includes/notifications/class-ofast-notification-hub.php';
 
@@ -76,6 +85,7 @@ function ofast_x_init_plugin()
 
     // Load Google Sheets integration
     require_once OFAST_X_PLUGIN_DIR . 'modules/google-sheets/class-ofast-google-sheets.php';
+    Ofast_X_Google_Sheets::get_instance()->init();
 
     // Load Contact Forms module
     require_once OFAST_X_PLUGIN_DIR . 'modules/forms/class-ofast-forms.php';

@@ -22,6 +22,21 @@ class Ofast_X_Spam_Protection
         // Admin menu
         add_action('admin_menu', array($this, 'add_admin_menu'));
 
+        // Initialize honeypot if enabled
+        if (class_exists('Ofast_X_Honeypot') && get_option('ofast_spam_honeypot_enabled', true)) {
+            Ofast_X_Honeypot::get_instance()->init();
+        }
+
+        // Initialize universal spam protection if force-all is enabled
+        if (class_exists('Ofast_X_Universal_Spam') && get_option('ofast_spam_force_all_forms', false)) {
+            Ofast_X_Universal_Spam::get_instance()->init();
+        }
+
+        // Initialize Math CAPTCHA if selected as provider
+        if (class_exists('Ofast_X_Math_Captcha') && $this->get_active_provider() === 'math_captcha') {
+            Ofast_X_Math_Captcha::get_instance()->init();
+        }
+
         // Get protection settings
         $protect_comments = get_option('ofast_spam_protect_comments', false);
         $protect_cf7 = get_option('ofast_spam_protect_cf7', false);
@@ -77,14 +92,19 @@ class Ofast_X_Spam_Protection
     }
 
     /**
-     * Render Turnstile widget in comment form
+     * Render spam protection widget in comment form
      */
     public function render_comment_widget()
     {
         $provider = $this->get_active_provider();
+        
         if ($provider === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
             echo '<p class="comment-form-turnstile" style="margin: 10px 0;">';
             echo Ofast_X_Turnstile::get_instance()->render_widget('comment');
+            echo '</p>';
+        } elseif ($provider === 'math_captcha' && class_exists('Ofast_X_Math_Captcha')) {
+            echo '<p class="comment-form-math-captcha" style="margin: 10px 0;">';
+            echo Ofast_X_Math_Captcha::get_instance()->render_widget('comment');
             echo '</p>';
         }
     }
@@ -114,19 +134,28 @@ class Ofast_X_Spam_Protection
     }
 
     /**
-     * Add Turnstile widget to Contact Form 7
+     * Add spam protection widget to Contact Form 7
      */
     public function add_cf7_widget($elements)
     {
         $provider = $this->get_active_provider();
+        $widget = '';
+        
         if ($provider === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
             $widget = '<div class="wpcf7-turnstile" style="margin: 15px 0;">';
             $widget .= Ofast_X_Turnstile::get_instance()->render_widget('cf7');
             $widget .= '</div>';
+        } elseif ($provider === 'math_captcha' && class_exists('Ofast_X_Math_Captcha')) {
+            $widget = '<div class="wpcf7-math-captcha" style="margin: 15px 0;">';
+            $widget .= Ofast_X_Math_Captcha::get_instance()->render_widget('cf7');
+            $widget .= '</div>';
+        }
 
+        if (!empty($widget)) {
             // Add before submit button if possible
             $elements = preg_replace('/(<input[^>]*type=["\']submit["\'][^>]*>)/i', $widget . '$1', $elements, 1);
         }
+        
         return $elements;
     }
 
@@ -151,9 +180,14 @@ class Ofast_X_Spam_Protection
     public function render_login_widget()
     {
         $provider = $this->get_active_provider();
+        
         if ($provider === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
             echo '<div class="login-form-turnstile" style="margin: 15px 0;">';
             echo Ofast_X_Turnstile::get_instance()->render_widget('login');
+            echo '</div>';
+        } elseif ($provider === 'math_captcha' && class_exists('Ofast_X_Math_Captcha')) {
+            echo '<div class="login-form-math-captcha" style="margin: 15px 0;">';
+            echo Ofast_X_Math_Captcha::get_instance()->render_widget('login');
             echo '</div>';
         }
     }
@@ -245,6 +279,17 @@ class Ofast_X_Spam_Protection
             update_option('ofast_spam_protect_comments', isset($_POST['protect_comments']) ? 1 : 0);
             update_option('ofast_spam_protect_cf7', isset($_POST['protect_cf7']) ? 1 : 0);
             update_option('ofast_spam_protect_login', isset($_POST['protect_login']) ? 1 : 0);
+            
+            // New extended options
+            update_option('ofast_spam_force_all_forms', isset($_POST['force_all_forms']) ? 1 : 0);
+            update_option('ofast_spam_honeypot_enabled', isset($_POST['honeypot_enabled']) ? 1 : 0);
+            update_option('ofast_spam_protect_woocommerce', isset($_POST['protect_woocommerce']) ? 1 : 0);
+            update_option('ofast_spam_protect_tutor', isset($_POST['protect_tutor']) ? 1 : 0);
+
+            // Save Math CAPTCHA settings
+            if (class_exists('Ofast_X_Math_Captcha')) {
+                Ofast_X_Math_Captcha::save_settings($_POST);
+            }
 
             if (!empty($_POST['recaptcha_site_key'])) {
                 update_option('ofast_recaptcha_site_key', sanitize_text_field($_POST['recaptcha_site_key']));
@@ -272,6 +317,12 @@ class Ofast_X_Spam_Protection
         $protect_comments = get_option('ofast_spam_protect_comments', false);
         $protect_cf7 = get_option('ofast_spam_protect_cf7', false);
         $protect_login = get_option('ofast_spam_protect_login', false);
+        
+        // New extended options
+        $force_all_forms = get_option('ofast_spam_force_all_forms', false);
+        $honeypot_enabled = get_option('ofast_spam_honeypot_enabled', true);
+        $protect_woocommerce = get_option('ofast_spam_protect_woocommerce', false);
+        $protect_tutor = get_option('ofast_spam_protect_tutor', false);
 
         // Current Tab
         $default_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'general';
@@ -468,14 +519,13 @@ class Ofast_X_Spam_Protection
                 </div>
                 <div class="ofast-header-content">
                     <h1>Spam Protection</h1>
-                    <p>Unified settings for Cloudflare Turnstile and Google reCAPTCHA to protect your forms.</p>
+                    <p>Unified settings for Cloudflare Turnstile, Google reCAPTCHA, and Math CAPTCHA.</p>
                 </div>
             </div>
 
             <form method="post">
                 <?php wp_nonce_field('ofast_recaptcha_save', 'recaptcha_nonce'); ?>
 
-                <!-- Tabs Navigation -->
                 <nav class="ofast-tabs-nav" id="spam-tabs-nav">
                     <a href="#" class="ofast-tab <?php echo $default_tab === 'general' ? 'active' : ''; ?>" data-tab="general">
                         <span class="dashicons dashicons-shield"></span>
@@ -484,6 +534,10 @@ class Ofast_X_Spam_Protection
                     <a href="#" class="ofast-tab <?php echo $default_tab === 'turnstile' ? 'active' : ''; ?>" data-tab="turnstile">
                         <span class="dashicons dashicons-cloud"></span>
                         Turnstile
+                    </a>
+                    <a href="#" class="ofast-tab <?php echo $default_tab === 'math_captcha' ? 'active' : ''; ?>" data-tab="math_captcha">
+                        <span class="dashicons dashicons-calculator"></span>
+                        Math CAPTCHA
                     </a>
                     <a href="#" class="ofast-tab <?php echo $default_tab === 'recaptcha' ? 'active' : ''; ?>" data-tab="recaptcha">
                         <span class="dashicons dashicons-google"></span>
@@ -507,6 +561,15 @@ class Ofast_X_Spam_Protection
                                             </label>
                                             <span style="vertical-align: middle; font-weight: 600;">Cloudflare Turnstile</span> <span class="description" style="vertical-align: middle;">(Recommended)</span>
                                             <p class="description" style="margin-left: 54px; margin-top: 5px;">Free, privacy-friendly, invisible challenge.</p>
+                                        </div>
+                                        
+                                        <div style="margin-bottom: 20px;">
+                                            <label class="ofast-toggle">
+                                                <input type="radio" name="spam_provider" value="math_captcha" <?php checked($active_provider, 'math_captcha'); ?>>
+                                                <span class="ofast-slider"></span>
+                                            </label>
+                                            <span style="vertical-align: middle; font-weight: 600;">Math CAPTCHA</span> <span class="description" style="vertical-align: middle; color: #10b981;">(No API keys needed)</span>
+                                            <p class="description" style="margin-left: 54px; margin-top: 5px;">Simple arithmetic challenge (e.g. 5 + 3 = ?). Works offline.</p>
                                         </div>
                                         
                                         <div style="margin-bottom: 20px;">
@@ -565,6 +628,57 @@ class Ofast_X_Spam_Protection
                                     <span class="description" style="vertical-align: middle;">Protect login page</span>
                                 </td>
                             </tr>
+                            <tr>
+                                <th>WooCommerce</th>
+                                <td>
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="protect_woocommerce" value="1" <?php checked($protect_woocommerce); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                    <span class="description" style="vertical-align: middle;">Protect WooCommerce login & registration</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Tutor LMS</th>
+                                <td>
+                                    <span class="description" style="color: #94a3b8;">
+                                        <span class="dashicons dashicons-info-outline" style="font-size: 16px; vertical-align: text-bottom;"></span>
+                                        Requires <strong>Tutor LMS Pro</strong> - Use their built-in CAPTCHA settings
+                                    </span>
+                                </td>
+                            </tr>
+                        </table>
+                        
+                        <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;">
+                        
+                        <h2>Advanced Protection</h2>
+                        <table class="form-table">
+                            <tr>
+                                <th>
+                                    <span style="color: #667eea;"> </span> Force All Forms
+                                </th>
+                                <td>
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="force_all_forms" value="1" <?php checked($force_all_forms); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                    <span class="description" style="vertical-align: middle;"><strong>Universal protection</strong> - Injects into ALL login/registration forms (WooCommerce, Tutor LMS, BuddyPress, MemberPress, etc.)</span>
+                                    <p class="description" style="margin-top: 8px; color: #666;">Uses JavaScript injection to add protection to any form, even from plugins that don't have native integration.</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>
+                                    <span style="color: #10b981;"> </span> Honeypot Fallback
+                                </th>
+                                <td>
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="honeypot_enabled" value="1" <?php checked($honeypot_enabled); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                    <span class="description" style="vertical-align: middle;">Enable honeypot as backup protection</span>
+                                    <p class="description" style="margin-top: 8px; color: #666;">Adds invisible fields that only bots fill. Works when Turnstile/reCAPTCHA fails (network issues, blocked, etc.)</p>
+                                </td>
+                            </tr>
                         </table>
                     </div>
                 </div>
@@ -581,6 +695,20 @@ class Ofast_X_Spam_Protection
                             Ofast_X_Turnstile::get_instance()->render_settings_form();
                         } else {
                             echo '<p>Turnstile module is not loaded.</p>';
+                        }
+                        ?>
+                    </div>
+                </div>
+
+                <!-- Math CAPTCHA Tab -->
+                <div id="tab-math_captcha" class="ofast-tab-content<?php echo $default_tab === 'math_captcha' ? ' active' : ''; ?>">
+                    <div class="ofast-card">
+                        <h2>Math CAPTCHA Settings</h2>
+                        <?php
+                        if (class_exists('Ofast_X_Math_Captcha')) {
+                            Ofast_X_Math_Captcha::get_instance()->render_settings_form();
+                        } else {
+                            echo '<p>Math CAPTCHA module is not loaded.</p>';
                         }
                         ?>
                     </div>
@@ -675,6 +803,10 @@ class Ofast_X_Spam_Protection
                 }
                 return false;
 
+            case 'math_captcha':
+                // Math CAPTCHA is always configured - no API keys needed
+                return true;
+
             case 'recaptcha_v2':
             case 'recaptcha_v3':
                 $site_key = get_option('ofast_recaptcha_site_key', '');
@@ -699,6 +831,12 @@ class Ofast_X_Spam_Protection
                     return Ofast_X_Turnstile::get_instance()->verify($token);
                 }
                 return array('success' => false, 'error' => 'Turnstile not available');
+
+            case 'math_captcha':
+                if (class_exists('Ofast_X_Math_Captcha')) {
+                    return Ofast_X_Math_Captcha::get_instance()->verify();
+                }
+                return array('success' => false, 'error' => 'Math CAPTCHA not available');
 
             case 'recaptcha_v2':
             case 'recaptcha_v3':

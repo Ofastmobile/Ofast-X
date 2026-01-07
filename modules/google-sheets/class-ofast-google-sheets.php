@@ -38,6 +38,35 @@ class Ofast_X_Google_Sheets
     }
 
     /**
+     * Initialize Google Sheets module
+     */
+    public function init()
+    {
+        // Register AJAX handler for testing connection
+        add_action('wp_ajax_ofast_test_google_sheets', array($this, 'ajax_test_connection'));
+    }
+
+    /**
+     * Validate credentials by attempting to get an access token
+     * @return array ['valid' => bool, 'message' => string]
+     */
+    public function validate_credentials()
+    {
+        if (empty($this->credentials['private_key']) || empty($this->credentials['client_email'])) {
+            return array('valid' => false, 'message' => 'Missing required credential fields (private_key or client_email)');
+        }
+
+        // Attempt to get access token (this will fail if credentials are invalid)
+        $token = $this->get_access_token();
+        
+        if ($token) {
+            return array('valid' => true, 'message' => 'Credentials validated successfully!');
+        }
+        
+        return array('valid' => false, 'message' => 'Failed to authenticate with Google. Check that your service account credentials are correct.');
+    }
+
+    /**
      * Load settings from database
      */
     private function load_settings()
@@ -290,7 +319,18 @@ class Ofast_X_Google_Sheets
 
             self::save_settings($_POST, $_FILES);
             $this->load_settings();
-            echo Ofast_X_Toast::render('Google Sheets settings saved!', 'success');
+
+            // Validate credentials if any were provided/changed
+            if (!empty($_POST['credentials']) || !empty($_FILES['credentials_file']['tmp_name'])) {
+                $validation = $this->validate_credentials();
+                if ($validation['valid']) {
+                    echo Ofast_X_Toast::render('✓ Credentials validated! ' . $validation['message'], 'success');
+                } else {
+                    echo Ofast_X_Toast::render('⚠ Credentials saved but validation failed: ' . $validation['message'], 'warning');
+                }
+            } else {
+                echo Ofast_X_Toast::render('Google Sheets settings saved!', 'success');
+            }
         }
 
         $settings = get_option('ofast_google_sheets', array());
@@ -354,7 +394,7 @@ class Ofast_X_Google_Sheets
 
             <p>
                 <button type="submit" name="ofast_save_google_sheets" class="button button-primary">Save Google Sheets Settings</button>
-                <?php if ($this->is_configured()): ?>
+                <?php if ($has_credentials): ?>
                     <button type="button" class="button" onclick="testGoogleSheets()">Test Connection</button>
                 <?php endif; ?>
             </p>

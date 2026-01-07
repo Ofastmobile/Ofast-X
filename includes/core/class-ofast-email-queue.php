@@ -265,14 +265,15 @@ class Ofast_X_Email_Queue {
         $delay_seconds = 3600 / $emails_per_hour;
         
         // Get next batch that's ready to send
-        $batch = $wpdb->get_row($wpdb->prepare("
-            SELECT * FROM {$wpdb->prefix}ofast_email_queue
+        $table = $wpdb->prefix . 'ofast_email_queue';
+        $batch = $wpdb->get_row("
+            SELECT * FROM {$table}
             WHERE status = 'pending'
             AND scheduled_time <= NOW()
             AND (next_allowed_send IS NULL OR next_allowed_send <= NOW())
             ORDER BY scheduled_time ASC, id ASC
             LIMIT 1
-        "));
+        ");
         
         if (!$batch) {
             set_transient('ofast_queue_empty', true, 60);

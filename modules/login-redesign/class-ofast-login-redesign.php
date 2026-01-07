@@ -186,7 +186,8 @@ class Ofast_X_Login_Redesign
             update_option('ofast_login_tc_bg_color', '#f0f0f1');
 
             Ofast_X_Toast::add('Settings reset to defaults!', 'success');
-            return;
+            wp_redirect(add_query_arg('ofast_status', 'reset', wp_get_referer()));
+            exit;
         }
 
         // Handle Save
@@ -240,6 +241,8 @@ class Ofast_X_Login_Redesign
         update_option('ofast_login_tc_bg_color', sanitize_hex_color($_POST['tc_bg_color'] ?? '#f0f0f1'));
 
         Ofast_X_Toast::add('Settings saved!', 'success');
+        wp_redirect(add_query_arg('ofast_status', 'saved', wp_get_referer()));
+        exit;
     }
 
     /**
@@ -636,92 +639,152 @@ class Ofast_X_Login_Redesign
         $s = $this->get_settings();
         $wp_logo = admin_url('images/wordpress-logo.svg');
         $current_template = $s['template'];
-?>
-        <div class="wrap">
-            <h1>Login Page Redesign</h1>
+        if (isset($_GET['ofast_status'])) {
+            switch ($_GET['ofast_status']) {
+                case 'saved':
+                    echo Ofast_X_Toast::render('Settings saved successfully!', 'success');
+                    break;
+                case 'reset':
+                    echo Ofast_X_Toast::render('Settings reset to defaults!', 'info');
+                    break;
+            }
+        }
+        ?>
+        <div class="wrap" style="max-width: 1200px;">
+            <!-- Header -->
+            <div class="ofast-header" style="margin-top: 20px;">
+                <div class="ofast-header-icon">
+                    <span class="dashicons dashicons-admin-appearance"></span>
+                </div>
+                <div class="ofast-header-content">
+                    <h1>Login Page Redesign</h1>
+                    <p>Customize your WordPress login page with modern templates and deep styling options.</p>
+                </div>
+            </div>
 
-            <?php settings_errors('ofast_login_redesign'); ?>
+            <style>
+                /* Header Styles */
+                .ofast-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 20px;
+                    background: #fff;
+                    padding: 25px 30px;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                    margin-bottom: 30px;
+                }
+                .ofast-header-icon {
+                    width: 56px;
+                    height: 56px;
+                    background: #fff;
+                    border: 1px solid #e2e8f0;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                    border-radius: 16px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .ofast-header-icon .dashicons {
+                    font-size: 28px;
+                    width: 28px;
+                    height: 28px;
+                    color: #667eea;
+                }
+                .ofast-header-content h1 {
+                    margin: 0 0 5px 0;
+                    font-size: 24px;
+                    font-weight: 700;
+                    color: #1e293b;
+                    display: block;
+                    padding: 0;
+                }
+                .ofast-header-content p {
+                    margin: 0;
+                    color: #64748b;
+                    font-size: 14px;
+                }
+
+                /* Template Cards */
+                .ofast-template-card {
+                    display: block;
+                    cursor: pointer;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    padding: 20px;
+                    text-align: center;
+                    background: #fff;
+                    width: 220px;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    position: relative;
+                }
+                .ofast-template-card:hover {
+                    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+                    border-color: #667eea;
+                    transform: translateY(-2px);
+                }
+                .ofast-template-card input:checked + .ofast-template-inner {
+                    border-color: #667eea;
+                }
+                .ofast-template-card.active {
+                    border: 2px solid #667eea;
+                    background: #f8fafc;
+                    box-shadow: 0 4px 6px -1px rgba(102, 126, 234, 0.1);
+                }
+                .ofast-template-card .preview-box {
+                    width: 100%;
+                    height: 120px;
+                    background: #f1f5f9;
+                    border-radius: 8px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    overflow: hidden;
+                    margin-bottom: 15px;
+                    border: 1px solid #e2e8f0;
+                }
+                .ofast-template-card strong {
+                    display: block;
+                    font-size: 16px;
+                    color: #1e293b;
+                    margin-bottom: 5px;
+                }
+                .ofast-template-card p {
+                    font-size: 13px;
+                    color: #64748b;
+                    margin: 0;
+                }
+            </style>
 
             <form method="post">
                 <?php wp_nonce_field('ofast_login_redesign_settings', 'ofast_login_nonce'); ?>
 
                 <!-- Template Selector Tabs -->
                 <div style="margin: 20px 0;">
-                    <h2 style="margin-bottom: 15px;">Choose Template</h2>
-                    <div class="ofast-flex-wrap" style="gap: 20px;">
+                    <h2 style="font-size: 18px; font-weight: 600; color: #1e293b; margin-bottom: 20px;">Choose Template</h2>
+                    <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+                        
                         <!-- Simple Template -->
-                        <label style="
-                            display: block;
-                            cursor: pointer;
-                            border: 3px solid <?php echo $current_template === 'simple' ? '#2271b1' : '#ddd'; ?>;
-                            border-radius: 8px;
-                            padding: 15px;
-                            text-align: center;
-                            background: <?php echo $current_template === 'simple' ? '#f0f7fc' : '#fff'; ?>;
-                            width: 200px;
-                        ">
+                        <label class="ofast-template-card <?php echo $current_template === 'simple' ? 'active' : ''; ?>">
                             <input type="radio" name="template" value="simple" <?php checked($current_template, 'simple'); ?> style="display:none;">
-                            <div style="
-                                width: 100%;
-                                height: 120px;
-                                background: #f0f0f1;
-                                border-radius: 4px;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                margin-bottom: 10px;
-                            ">
-                                <div style="
-                                    width: 60px;
-                                    height: 70px;
-                                    background: #fff;
-                                    border-radius: 4px;
-                                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                                "></div>
+                            <div class="preview-box">
+                                <div style="width: 60px; height: 70px; background: #fff; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;"></div>
                             </div>
                             <strong>Simple</strong>
-                            <p style="margin: 5px 0 0; font-size: 12px; color: #666;">Centered form with background</p>
+                            <p>Centered form with custom background</p>
                         </label>
 
                         <!-- Two-Column Template -->
-                        <label style="
-                            display: block;
-                            cursor: pointer;
-                            border: 3px solid <?php echo $current_template === 'two-column' ? '#2271b1' : '#ddd'; ?>;
-                            border-radius: 8px;
-                            padding: 15px;
-                            text-align: center;
-                            background: <?php echo $current_template === 'two-column' ? '#f0f7fc' : '#fff'; ?>;
-                            width: 200px;
-                        ">
+                        <label class="ofast-template-card <?php echo $current_template === 'two-column' ? 'active' : ''; ?>">
                             <input type="radio" name="template" value="two-column" <?php checked($current_template, 'two-column'); ?> style="display:none;">
-                            <div style="
-                                width: 100%;
-                                height: 120px;
-                                background: #f0f0f1;
-                                border-radius: 4px;
-                                display: flex;
-                                overflow: hidden;
-                                margin-bottom: 10px;
-                            ">
-                                <div style="
-                                    width: 50%;
-                                    height: 100%;
-                                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                "></div>
-                                <div style="
-                                    width: 50%;
-                                    height: 100%;
-                                    background: #fff;
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                ">
-                                    <div style="width: 30px; height: 40px; background: #eee; border-radius: 2px;"></div>
+                            <div class="preview-box" style="display: flex; padding: 0;">
+                                <div style="width: 50%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                                <div style="width: 50%; height: 100%; background: #fff; display: flex; align-items: center; justify-content: center;">
+                                    <div style="width: 30px; height: 40px; background: #f1f5f9; border-radius: 3px; border: 1px solid #e2e8f0;"></div>
                                 </div>
                             </div>
                             <strong>Two-Column</strong>
-                            <p style="margin: 5px 0 0; font-size: 12px; color: #666;">Split screen with image</p>
+                            <p>Modern split-screen with side panel</p>
                         </label>
                     </div>
                 </div>
@@ -1086,14 +1149,11 @@ class Ofast_X_Login_Redesign
                         $('#two-column-settings').hide();
                         $('#simple-bg-settings').show();
                     }
-                    // Update tab styles
-                    $('input[name="template"]').each(function() {
-                        var isChecked = $(this).is(':checked');
-                        $(this).closest('label').css({
-                            'border-color': isChecked ? '#2271b1' : '#ddd',
-                            'background': isChecked ? '#f0f7fc' : '#fff'
-                        });
-                    });
+                    
+                    // Update card active states
+                    $('.ofast-template-card').removeClass('active');
+                    $(this).closest('.ofast-template-card').addClass('active');
+                    
                     updatePreview();
                 });
 

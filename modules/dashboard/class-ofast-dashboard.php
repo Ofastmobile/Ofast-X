@@ -161,88 +161,129 @@ class Ofast_X_Dashboard
 
     ?>
         <style>
+            /* Dashboard Foundation */
             .ofast-dashboard {
                 max-width: 1200px;
+                padding-right: 20px;
             }
 
+            /* Header Styles */
             .ofast-header {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                padding: 30px;
-                border-radius: 16px;
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                background: #fff;
+                padding: 25px 30px;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
                 margin-bottom: 30px;
-                color: #fff;
+                margin-top: 20px;
             }
-
-            .ofast-header h1 {
-                margin: 0;
+            .ofast-header-icon {
+                width: 56px;
+                height: 56px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                border-radius: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .ofast-header-icon .dashicons {
                 font-size: 28px;
+                width: 28px;
+                height: 28px;
+                color: #667eea;
+            }
+            .ofast-header-content h1 {
+                margin: 0 0 5px 0;
+                font-size: 24px;
                 font-weight: 700;
+                color: #1e293b;
+                display: block;
+                padding: 0;
+            }
+            .ofast-header-content p {
+                margin: 0;
+                color: #64748b;
+                font-size: 14px;
             }
 
-            .ofast-header p {
-                margin: 8px 0 0;
-                opacity: 0.9;
-                font-size: 15px;
-            }
-
+            /* Stats Grid */
             .ofast-stats-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-                gap: 16px;
-                margin-bottom: 30px;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px;
+                margin-bottom: 40px;
             }
 
             .ofast-stat-card {
                 background: #fff;
-                padding: 20px;
-                border-radius: 12px;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-                border: 1px solid #e5e7eb;
-                transition: transform 0.2s, box-shadow 0.2s;
+                padding: 25px;
+                border-radius: 16px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                border: 1px solid rgba(226, 232, 240, 0.6);
+                transition: all 0.3s ease;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
             }
 
             .ofast-stat-card:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+                transform: translateY(-4px);
+                box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
+                border-color: #667eea;
             }
 
             .ofast-stat-card.primary {
-                background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-                color: #fff;
+                background: #f8fafc;
+                border-left: 4px solid #667eea;
             }
 
             .ofast-stat-label {
                 font-size: 13px;
-                opacity: 0.8;
-                margin: 0;
+                color: #64748b;
+                margin: 0 0 8px 0;
+                font-weight: 600;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
             }
 
             .ofast-stat-value {
-                font-size: 32px;
-                font-weight: 700;
-                margin: 8px 0 0;
+                font-size: 36px;
+                font-weight: 800;
+                margin: 0;
+                color: #1e293b;
                 line-height: 1;
             }
 
-            .ofast-stat-card.primary .ofast-stat-label {
-                color: rgba(255, 255, 255, 0.85);
+            .ofast-stat-card.primary .ofast-stat-value {
+                color: #667eea;
             }
 
+            /* Section Headers */
             .ofast-section-title {
                 font-size: 18px;
-                font-weight: 600;
+                font-weight: 700;
                 color: #1e293b;
-                margin: 0 0 16px;
-                padding-bottom: 12px;
-                border-bottom: 2px solid #e5e7eb;
+                margin: 40px 0 20px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .ofast-section-title::after {
+                content: '';
+                flex: 1;
+                height: 1px;
+                background: #e2e8f0;
             }
 
+            /* Modules Grid */
             .ofast-modules-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: 12px;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 15px;
             }
 
             .ofast-module-item {
@@ -250,65 +291,76 @@ class Ofast_X_Dashboard
                 justify-content: space-between;
                 align-items: center;
                 background: #fff;
-                padding: 14px 18px;
-                border-radius: 10px;
-                border: 1px solid #e5e7eb;
+                padding: 16px 20px;
+                border-radius: 12px;
+                border: 1px solid #e2e8f0;
+                transition: all 0.2s;
+            }
+            .ofast-module-item:hover {
+                border-color: #667eea;
+                background: #f9fafb;
             }
 
             .ofast-module-name {
                 font-size: 14px;
-                font-weight: 500;
-                color: #1e293b;
-            }
-
-            .ofast-module-status {
-                padding: 4px 10px;
-                border-radius: 20px;
-                font-size: 11px;
                 font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 0.3px;
+                color: #334155;
             }
 
             .ofast-module-status.active {
-                background: #dcfce7;
-                color: #166534;
+                background: #ecfdf5;
+                color: #059669;
+                padding: 4px 12px;
+                border-radius: 99px;
+                font-size: 11px;
+                font-weight: 700;
+                text-transform: uppercase;
             }
 
+            /* Quick Links */
             .ofast-quick-links {
-                display: flex;
-                gap: 12px;
-                flex-wrap: wrap;
-                margin-top: 30px;
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 15px;
+                margin-top: 10px;
             }
 
             .ofast-quick-link {
-                display: inline-flex;
+                display: flex;
                 align-items: center;
-                gap: 8px;
-                padding: 12px 20px;
+                justify-content: center;
+                padding: 18px 15px;
                 background: #fff;
-                border: 1px solid #e5e7eb;
-                border-radius: 8px;
-                color: #1e293b;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                color: #475569;
                 text-decoration: none;
                 font-size: 14px;
-                font-weight: 500;
+                font-weight: 600;
                 transition: all 0.2s;
+                text-align: center;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.02);
             }
 
             .ofast-quick-link:hover {
-                background: #f8fafc;
+                background: #fff;
                 border-color: #667eea;
                 color: #667eea;
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+                transform: translateY(-2px);
             }
         </style>
 
         <div class="wrap ofast-dashboard">
             <!-- Header -->
             <div class="ofast-header">
-                <h1>Ofast X Dashboard</h1>
-                <p>Welcome back! Here's an overview of your site's users and active modules.</p>
+                <div class="ofast-header-icon">
+                    <span class="dashicons dashicons-chart-bar"></span>
+                </div>
+                <div class="ofast-header-content">
+                    <h1>Ofast X Dashboard</h1>
+                    <p>Welcome back! Here's an overview of your site's users and active modules.</p>
+                </div>
             </div>
 
             <!-- User Statistics -->
@@ -324,7 +376,7 @@ class Ofast_X_Dashboard
                     <?php $label = isset($roles[$role]['name']) ? $roles[$role]['name'] : ucfirst($role); ?>
                     <div class="ofast-stat-card">
                         <p class="ofast-stat-label"><?php echo esc_html($label); ?></p>
-                        <p class="ofast-stat-value" style="color: #3b82f6;"><?php echo esc_html($count); ?></p>
+                        <p class="ofast-stat-value"><?php echo esc_html($count); ?></p>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -342,25 +394,13 @@ class Ofast_X_Dashboard
 
             <!-- Quick Access -->
             <h3 class="ofast-section-title" style="margin-top:30px;">Quick Access</h3>
-            <div class="ofast-grid-3 ofast-quick-links" style="gap:12px;">
-                <a href="<?php echo admin_url('admin.php?page=ofast-emailer'); ?>" class="ofast-quick-link">
-                    <span>Send Email</span>
-                </a>
-                <a href="<?php echo admin_url('admin.php?page=ofast-smtp'); ?>" class="ofast-quick-link">
-                    <span>SMTP Settings</span>
-                </a>
-                <a href="<?php echo admin_url('admin.php?page=ofast-forms'); ?>" class="ofast-quick-link">
-                    <span>Contact Forms</span>
-                </a>
-                <a href="<?php echo admin_url('admin.php?page=ofast-notification-channels'); ?>" class="ofast-quick-link">
-                    <span>Notifications</span>
-                </a>
-                <a href="<?php echo admin_url('admin.php?page=ofast-snippets'); ?>" class="ofast-quick-link">
-                    <span>Code Snippets</span>
-                </a>
-                <a href="<?php echo admin_url('admin.php?page=ofast-login-redesign'); ?>" class="ofast-quick-link">
-                    <span>Login Redesign</span>
-                </a>
+            <div class="ofast-quick-links">
+                <a href="<?php echo admin_url('admin.php?page=ofast-emailer'); ?>" class="ofast-quick-link">Send Email</a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-smtp'); ?>" class="ofast-quick-link">SMTP Settings</a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-forms'); ?>" class="ofast-quick-link">Contact Forms</a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-notification-channels'); ?>" class="ofast-quick-link">Notifications</a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-snippets'); ?>" class="ofast-quick-link">Code Snippets</a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-login-redesign'); ?>" class="ofast-quick-link">Login Redesign</a>
             </div>
 
         </div>

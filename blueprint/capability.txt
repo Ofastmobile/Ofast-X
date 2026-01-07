@@ -791,20 +791,281 @@ class Ofast_X_User_Roles
     private function get_group_icon($group)
     {
         $icons = array(
-            'Posts & Content' => '',
-            'Pages' => '',
-            'Media' => '',
-            'Categories & Tags' => '',
-            'Comments' => '',
-            'Appearance' => '',
-            'Plugins' => '',
-            'Users' => '',
-            'Settings & Tools' => '',
-            'WooCommerce' => '',
-            'Custom Post Types' => '',
-            'Advanced' => '',
+            'Posts & Content' => '📝',
+            'Pages' => '📄',
+            'Media' => '🖼️',
+            'Categories & Tags' => '🏷️',
+            'Comments' => '💬',
+            'Appearance' => '🎨',
+            'Plugins' => '🔌',
+            'Users' => '👥',
+            'Settings & Tools' => '⚙️',
+            'WooCommerce' => '🛒',
+            'Custom Post Types' => '📦',
+            'Advanced' => '🔧',
         );
 
         return isset($icons[$group]) ? $icons[$group] : '⚡';
+    }
+}
+
+
+
+
+
+
+I've created the complete User Roles & Capabilities Manager module. Here's what I built:
+Key Features:
+1. Menu Structure ✅
+
+Added as Users → Capabilities submenu (WordPress standard for user management)
+Keeps it organized under native WordPress Users section
+
+2. User Edit Page Integration ✅
+
+Quick link appears on user profile: "Edit [Role] Capabilities"
+Direct jump to capabilities page for that specific role
+Shows after role selection checkboxes
+
+3. Modern UI (Matches Your Design) ✅
+
+White container with gradient header
+Glassmorphism icon (matching Who's Admin, Social Login)
+Live statistics bar (Total/Enabled/Disabled counts)
+Grouped capabilities by category (Posts, Pages, WooCommerce, etc.)
+Toggle switches (not boring checkboxes)
+
+4. Senior Engineer Features ⚡
+Smart Grouping:
+
+Auto-detects custom post types (Products, Events, etc.)
+WooCommerce integration (if installed)
+12 organized categories with emoji icons
+
+Safety First:
+
+Auto-backup before first edit (stored in wp_options)
+"Reset to Defaults" button
+Stats update live as you toggle
+
+Performance:
+
+Single form submit (batch save)
+No page reload needed for stats
+AJAX toggle ready (optional instant save)
+
+Developer-Friendly:
+
+Filter hook: ofast_all_capabilities for adding custom caps
+Clean code structure
+Proper nonce security
+
+5. What Makes It Different:
+vs. User Role Editor plugin:
+
+Cleaner, modern UI
+Groups capabilities logically
+Better visual feedback
+Integrated with your existing design system
+
+vs. Members plugin:
+
+Simpler - just capabilities (no cloning/deleting roles)
+Faster UI - no accordion menus
+Live stats bar
+
+Usage Flow:
+
+Users → Capabilities (or click link from user profile)
+Select role from dropdown
+Toggle capabilities on/off
+See live stats update
+Click "Save All Changes"
+Done!
+
+The code includes:
+
+WooCommerce detection (adds shop caps if active)
+Custom post type detection (auto-adds their caps)
+Backup system (WordPress defaults preserved)
+Security checks (only admins can edit)
+
+
+
+
+
+
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+class Ofast_X_User_Roles
+{
+    /**
+     * Initialize module
+     */
+    public function init()
+    {
+        // NOTE: Module enabled check removed - core loader already verified this
+        // before calling init(). See class-ofast-core.php is_module_enabled()
+
+        // Add role checkboxes to user profile
+        add_action('show_user_profile', array($this, 'render_role_checkboxes'));
+        add_action('edit_user_profile', array($this, 'render_role_checkboxes'));
+
+        // Save roles on profile update
+        add_action('personal_options_update', array($this, 'save_user_roles'));
+        add_action('edit_user_profile_update', array($this, 'save_user_roles'));
+
+        // Add roles column to users list
+        add_filter('manage_users_columns', array($this, 'add_roles_column'));
+        add_filter('manage_users_custom_column', array($this, 'render_roles_column'), 10, 3);
+    }
+
+    /**
+     * Render role checkboxes on user profile
+     */
+    public function render_role_checkboxes($user)
+    {
+        if (!current_user_can('promote_users') && !current_user_can('edit_users')) {
+            return;
+        }
+
+        // Don't allow users to change their own role (unless admin)
+        if ($user->ID === get_current_user_id() && !current_user_can('administrator')) {
+            return;
+        }
+
+        $all_roles = wp_roles()->roles;
+        $user_roles = $user->roles;
+
+?>
+        <h3>User Roles (Multiple Selection)</h3>
+        <p class="description">Assign one or more roles to this user.</p>
+
+        <table class="form-table" role="presentation">
+            <tr>
+                <th><label>Assigned Roles</label></th>
+                <td>
+                    <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                        <?php foreach ($all_roles as $role_slug => $role_data): ?>
+                            <label style="display: flex; align-items: center; gap: 5px; padding: 8px 12px; background: #f0f0f1; border-radius: 5px; cursor: pointer;">
+                                <input type="checkbox"
+                                    name="ofast_user_roles[]"
+                                    value="<?php echo esc_attr($role_slug); ?>"
+                                    <?php checked(in_array($role_slug, $user_roles)); ?>>
+                                <?php echo esc_html(translate_user_role($role_data['name'])); ?>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <p class="description" style="margin-top: 10px;">
+                        At least one role is required. If no roles are selected, the user will be assigned "Subscriber".
+                    </p>
+                </td>
+            </tr>
+        </table>
+
+        <?php wp_nonce_field('ofast_save_user_roles', 'ofast_roles_nonce'); ?>
+<?php
+    }
+
+    /**
+     * Save user roles
+     */
+    public function save_user_roles($user_id)
+    {
+        // Security checks
+        if (!current_user_can('promote_users') && !current_user_can('edit_users')) {
+            return;
+        }
+
+        if (!isset($_POST['ofast_roles_nonce']) || !wp_verify_nonce($_POST['ofast_roles_nonce'], 'ofast_save_user_roles')) {
+            return;
+        }
+
+        // Don't allow users to change their own role (unless admin)
+        if ($user_id === get_current_user_id() && !current_user_can('administrator')) {
+            return;
+        }
+
+        // Get selected roles
+        $new_roles = isset($_POST['ofast_user_roles']) ? array_map('sanitize_text_field', $_POST['ofast_user_roles']) : array();
+
+        // Ensure at least one role
+        if (empty($new_roles)) {
+            $new_roles = array('subscriber');
+        }
+
+        // Validate roles exist
+        $all_roles = array_keys(wp_roles()->roles);
+        $new_roles = array_intersect($new_roles, $all_roles);
+
+        // Get user object
+        $user = new WP_User($user_id);
+
+        // Remove all current roles
+        foreach ($user->roles as $role) {
+            $user->remove_role($role);
+        }
+
+        // Add new roles
+        foreach ($new_roles as $role) {
+            $user->add_role($role);
+        }
+    }
+
+    /**
+     * Add ID and roles columns to users list
+     */
+    public function add_roles_column($columns)
+    {
+        // Insert ID and roles after username
+        $new_columns = array();
+        foreach ($columns as $key => $value) {
+            $new_columns[$key] = $value;
+            if ($key === 'username') {
+                $new_columns['user_id'] = 'ID';
+                $new_columns['ofast_roles'] = 'Roles';
+            }
+        }
+
+        // Remove default role column
+        unset($new_columns['role']);
+
+        return $new_columns;
+    }
+
+    /**
+     * Render ID and roles column content
+     */
+    public function render_roles_column($output, $column_name, $user_id)
+    {
+        // Handle User ID column
+        if ($column_name === 'user_id') {
+            return '<code style="background: #f0f0f1; color: #1e293b; padding: 4px 10px; border-radius: 4px; font-size: 13px; font-weight: 600;">' . esc_html($user_id) . '</code>';
+        }
+
+        // Handle Roles column
+        if ($column_name !== 'ofast_roles') {
+            return $output;
+        }
+
+        $user = get_userdata($user_id);
+        if (!$user) {
+            return $output;
+        }
+
+        $roles = $user->roles;
+        $role_names = array();
+
+        foreach ($roles as $role) {
+            $role_obj = get_role($role);
+            if ($role_obj) {
+                $role_names[] = '<span style="background: #e7f3ff; color: #0073aa; padding: 2px 8px; border-radius: 3px; font-size: 11px; display: inline-block; margin: 2px;">' . esc_html(translate_user_role(ucfirst($role))) . '</span>';
+            }
+        }
+
+        return implode(' ', $role_names);
     }
 }

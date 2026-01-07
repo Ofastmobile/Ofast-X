@@ -225,9 +225,16 @@ class Ofast_X_Menu_Editor
 
         settings_errors('ofast_menu_editor');
 ?>
-        <div class="wrap">
-            <h1>Admin Menu Editor</h1>
-            <p class="description">Drag rows to reorder, rename, or hide WordPress admin menu items. Save to apply changes.</p>
+        <div class="wrap" style="max-width: 1200px;">
+            <div class="ofast-header">
+                <div class="ofast-header-icon">
+                    <span class="dashicons dashicons-menu-alt3"></span>
+                </div>
+                <div class="ofast-header-content">
+                    <h1>Admin Menu Editor</h1>
+                    <p>Drag rows to reorder, rename, or hide WordPress admin menu items. Save to apply changes.</p>
+                </div>
+            </div>
 
             <form method="post" action="">
                 <?php wp_nonce_field('ofast_menu_editor_save', '_wpnonce'); ?>
@@ -409,22 +416,18 @@ class Ofast_X_Menu_Editor
                     </table>
                 </div>
 
-                <!-- Reset Button -->
-                <div style="margin-top: 15px;">
-                    <button type="submit" name="ofast_reset_menu" class="button" onclick="return confirm('Reset all menu customizations to default? This will unhide all menus.');">
+                <div class="ofast-action-bar" style="display: flex; gap: 12px; align-items: center; margin-top: 25px;">
+                    <button type="submit" name="ofast_reset_menu" class="button button-large" onclick="return confirm('Reset all menu customizations to default? This will unhide all menus.');">
                         Reset to Default
                     </button>
-                </div>
-
-                <p class="submit">
                     <button type="submit" name="ofast_save_menu_editor" class="button button-primary button-large">
                         Save Menu Changes
                     </button>
-                </p>
+                </div>
             </form>
 
             <!-- Help Box -->
-            <div style="background: #f0f6fc; border: 1px solid #c3d9ed; border-radius: 8px; padding: 15px; margin-top: 20px; max-width: 800px;">
+            <div class="ofast-tips-card" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-top: 30px; max-width: 800px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
                 <h3 style="margin-top: 0;">Tips</h3>
                 <ul style="margin-bottom: 0;">
                     <li><strong>Drag & Drop:</strong> Use the <span class="dashicons dashicons-menu" style="font-size: 16px; vertical-align: middle;"></span> handle to drag rows and reorder.</li>
@@ -436,6 +439,48 @@ class Ofast_X_Menu_Editor
         </div>
 
         <style>
+            .ofast-header {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                background: #fff;
+                padding: 25px 30px;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                margin-bottom: 30px;
+                margin-top: 20px;
+            }
+            .ofast-header-icon {
+                width: 56px;
+                height: 56px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                border-radius: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .ofast-header-icon .dashicons {
+                font-size: 28px;
+                width: 28px;
+                height: 28px;
+                color: #667eea;
+            }
+            .ofast-header-content h1 {
+                margin: 0 0 5px 0 !important;
+                font-size: 24px !important;
+                font-weight: 700 !important;
+                color: #1e293b !important;
+                display: block !important;
+                padding: 0 !important;
+            }
+            .ofast-header-content p {
+                margin: 0 !important;
+                color: #64748b !important;
+                font-size: 14px !important;
+            }
+
             #menu-items-list tr.ui-sortable-helper {
                 background: #fff;
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);

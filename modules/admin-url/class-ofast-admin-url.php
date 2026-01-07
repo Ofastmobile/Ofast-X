@@ -112,9 +112,9 @@ class Ofast_X_Admin_Url
             if (current_user_can('manage_options')) {
                 delete_option('ofast_admin_custom_slug');
                 delete_option('ofast_admin_emergency_key');
-                add_settings_error('ofast_admin_url', 'deleted', 'Custom URL protection has been disabled. Default login URLs are now active.', 'success');
+                wp_redirect(add_query_arg('ofast_status', 'deleted', wp_get_referer()));
+                exit;
             }
-            return;
         }
 
         // Handle resend email
@@ -125,12 +125,13 @@ class Ofast_X_Admin_Url
                 $emergency_key = get_option('ofast_admin_emergency_key', '');
                 if (!empty($custom_slug) && !empty($emergency_key)) {
                     $this->send_admin_notification($custom_slug, $emergency_key);
-                    add_settings_error('ofast_admin_url', 'resent', 'Login details have been sent to ' . get_option('admin_email') . '!', 'success');
+                    wp_redirect(add_query_arg('ofast_status', 'resent', wp_get_referer()));
+                    exit;
                 } else {
-                    add_settings_error('ofast_admin_url', 'no_url', 'No custom URL is configured. Set one first.', 'error');
+                    wp_redirect(add_query_arg('ofast_status', 'no_url', wp_get_referer()));
+                    exit;
                 }
             }
-            return;
         }
 
         if (!isset($_POST['ofast_save_admin_url'])) {
@@ -188,6 +189,9 @@ class Ofast_X_Admin_Url
         update_option('ofast_security_max_attempts', $max_attempts);
         update_option('ofast_security_lockout_duration', $lockout_duration);
         update_option('ofast_security_ip_whitelist', $ip_whitelist);
+
+        wp_redirect(add_query_arg('ofast_status', 'saved', wp_get_referer()));
+        exit;
     }
 
     /**
@@ -450,147 +454,365 @@ a new key will be generated and emailed to you.
         $emergency_key = get_option('ofast_admin_emergency_key', '');
         $site_url = home_url();
 
-        settings_errors('ofast_admin_url');
-?>
-        <div class="wrap">
-            <h1>Admin URL Security</h1>
-            <p class="description">Hide your WordPress login page behind a secret custom URL.</p>
+        if (isset($_GET['ofast_status'])) {
+            switch ($_GET['ofast_status']) {
+                case 'saved':
+                    echo Ofast_X_Toast::render('Settings saved successfully!', 'success');
+                    break;
+                case 'deleted':
+                    echo Ofast_X_Toast::render('Custom URL protection disabled.', 'warning');
+                    break;
+                case 'resent':
+                    echo Ofast_X_Toast::render('Login details resent to admin email!', 'success');
+                    break;
+                case 'no_url':
+                    echo Ofast_X_Toast::render('No custom URL configured.', 'error');
+                    break;
+            }
+        }
+        ?>
+        <!-- Critical Admin Styles -->
+        <style>
+            /* Colors */
+            :root {
+                --ofast-primary: #667eea;
+                --ofast-danger: #ef4444;
+                --ofast-warning-bg: #fef2f2;
+                --ofast-warning-border: #fee2e2;
+                --ofast-text: #1e293b;
+                --ofast-text-muted: #64748b;
+            }
 
-            <!-- Warning Box -->
-            <div style="background: #fff; border: 1px solid #dc3545; border-radius: 8px; padding: 15px; margin: 20px 0;">
-                <h3 style="margin-top: 0; color: #dc3545;">Important Warning</h3>
-                <ul style="color: #dc3545; margin-bottom: 0;">
-                    <li>When you enable this, the default <code>/wp-admin</code> and <code>/wp-login.php</code> URLs will return 404 errors</li>
-                    <li>You MUST remember your custom URL to log in</li>
-                    <li>An email with your new URL and emergency backup will be sent to the admin email</li>
-                    <li>If you get locked out, add <code>define('OFAST_DISABLE_ADMIN_PROTECTION', true);</code> to wp-config.php</li>
-                </ul>
+            /* Header Styles */
+            .ofast-header {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                background: #fff;
+                padding: 25px 30px;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                margin-bottom: 30px;
+                margin-top: 20px;
+            }
+            .ofast-header-icon {
+                width: 56px;
+                height: 56px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                border-radius: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .ofast-header-icon .dashicons {
+                font-size: 28px;
+                width: 28px;
+                height: 28px;
+                color: #667eea;
+            }
+            .ofast-header-content h1 {
+                margin: 0 0 5px 0;
+                font-size: 24px;
+                font-weight: 700;
+                color: #1e293b;
+                display: block;
+                padding: 0;
+            }
+            .ofast-header-content p {
+                margin: 0;
+                color: #64748b;
+                font-size: 14px;
+            }
+
+            /* Card Styles */
+            .ofast-card {
+                background: #fff;
+                border-radius: 16px;
+                padding: 40px;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                border: 1px solid rgba(226, 232, 240, 0.6);
+            }
+            
+            /* Warning Box */
+            .ofast-warning-box {
+                background: #fff;
+                border: 1px solid var(--ofast-warning-border);
+                border-radius: 12px;
+                padding: 20px;
+                margin-bottom: 30px;
+            }
+            .ofast-warning-box h3 {
+                color: #000;
+                margin-top: 0;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 16px;
+            }
+            .ofast-warning-box ul {
+                color: #000;
+                margin-bottom: 0;
+                padding-left: 20px;
+            }
+            
+            /* Inputs */
+            .ofast-input-group {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+            .ofast-card input[type="text"],
+            .ofast-card input[type="number"],
+            .ofast-card textarea {
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                padding: 8px 12px;
+                font-size: 14px;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                transition: all 0.2s;
+            }
+            .ofast-card input:focus,
+            .ofast-card textarea:focus {
+                border-color: var(--ofast-primary);
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                outline: none;
+            }
+
+            /* Button Override */
+            .button.button-primary {
+                background: var(--ofast-primary) !important;
+                border-color: var(--ofast-primary) !important;
+                text-shadow: none !important;
+                box-shadow: 0 4px 6px rgba(102, 126, 234, 0.25) !important;
+                transition: all 0.2s !important;
+                padding: 10px 25px !important;
+                height: auto !important;
+                font-size: 15px !important;
+                border-radius: 8px !important;
+            }
+            .button.button-primary:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 6px 8px rgba(102, 126, 234, 0.3) !important;
+            }
+            .button.button-primary:active {
+                transform: translateY(0);
+            }
+
+            /* Secondary Button Override (Outline Style) */
+            .ofast-card .button.button-small:not(.delete-btn),
+            .ofast-card .button:not(.button-primary):not(.delete-btn) {
+                color: var(--ofast-primary) !important;
+                border-color: var(--ofast-primary) !important;
+                background: #fff !important;
+                border-radius: 6px !important;
+                border-width: 1px !important;
+                transition: all 0.2s !important;
+            }
+            .ofast-card .button:not(.button-primary):not(.delete-btn):hover {
+                background: #eff6ff !important;
+                transform: translateY(-1px);
+            }
+            /* Explicitly exclude delete button from purple override if it doesn't have a specific class, 
+               but in the HTML it has inline styles. To be safe, adding a check or ensuring inline precedence works. 
+               The 'delete' button in HTML has inline style="color: #ef4444...", so !important here might break it.
+               I'll rely on the fact that inline !important (if used) overrides, but the inline style there doesn't have !important.
+               I should exclude it via attribute selector or add a class. 
+               Looking at HTML: <button ... style="color: #dc3545; ..."> 
+               I'll try to target only specific buttons or exclude by style attribute presence? No, CSS can't easily do that.
+               I will modify the HTML to add a class to the delete button in a separate step or just assume the inline style is sufficient? 
+               Wait, my CSS above uses !important `color: var(--ofast-primary) !important`. This WILL override inline styles.
+               I must be careful.
+               The delete button has `name="ofast_delete_custom_url"`.
+               I can use `.ofast-card .button[name="ofast_delete_custom_url"]` to reset it or exclude it.
+            */
+            .ofast-card .button[name="ofast_delete_custom_url"] {
+                color: var(--ofast-danger) !important;
+                border-color: var(--ofast-danger) !important;
+            }
+
+            /* Recovery Box */
+            .ofast-recovery-box {
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                padding: 25px;
+                margin-top: 40px;
+            }
+            .ofast-recovery-box h3 {
+                color: #1e293b;
+                margin-top: 0;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 16px;
+                font-weight: 700;
+            }
+            .ofast-recovery-box p {
+                margin: 12px 0;
+                font-size: 13px;
+                color: #475569;
+                line-height: 1.5;
+            }
+            .ofast-recovery-box pre {
+                background: #fff;
+                padding: 12px;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                font-size: 12px;
+                color: #334155;
+                overflow-x: auto;
+                margin: 10px 0;
+            }
+        </style>
+
+        <div class="wrap">
+            <!-- Header -->
+            <div class="ofast-header">
+                <div class="ofast-header-icon">
+                    <span class="dashicons dashicons-lock"></span>
+                </div>
+                <div class="ofast-header-content">
+                    <h1>Admin URL Security</h1>
+                    <p>Hide your WordPress login page behind a secret custom URL to prevent brute force attacks.</p>
+                </div>
             </div>
 
-            <form method="post" action="">
-                <?php wp_nonce_field('ofast_admin_url_save', '_wpnonce'); ?>
+            <div class="ofast-card">
+                <!-- Warning Box -->
+                <div class="ofast-warning-box">
+                    <h3><span class="dashicons dashicons-warning" style="color: #000;"></span> Important Warning</h3>
+                    <ul>
+                        <li>When enabled, <code>/wp-admin</code> and <code>/wp-login.php</code> will return 404 errors. You <strong>MUST</strong> remember your custom URL to log in.</li>
+                        <li>An email with your new URL and emergency backup will be sent to the admin email. If locked out, add <code>define('OFAST_DISABLE_ADMIN_PROTECTION', true);</code> to <code>wp-config.php</code>.</li>
+                    </ul>
+                </div>
 
-                <table class="form-table">
-                    <tr>
-                        <th><label for="custom_slug">Custom Login URL Slug</label></th>
-                        <td>
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <span style="color: #666;"><?php echo esc_html($site_url); ?>/</span>
-                                <input type="text" name="custom_slug" id="custom_slug"
-                                    value="<?php echo esc_attr($custom_slug); ?>"
-                                    class="regular-text"
-                                    placeholder="my-secret-login"
-                                    pattern="[a-z0-9\-]+"
-                                    style="width: 200px;">
-                            </div>
-                            <p class="description">
-                                Only lowercase letters, numbers, and hyphens allowed.<br>
-                                Leave empty to disable protection and use default URLs.
-                            </p>
-                        </td>
-                    </tr>
-                    <?php if (!empty($custom_slug) && !empty($emergency_key)): ?>
+                <form method="post" action="">
+                    <?php wp_nonce_field('ofast_admin_url_save', '_wpnonce'); ?>
+
+                    <table class="form-table">
                         <tr>
-                            <th>Current Custom URL</th>
+                            <th style="padding-top: 15px;"><label for="custom_slug" style="font-weight: 600; color: #1e293b;">Custom Login URL</label></th>
                             <td>
-                                <code style="background: #d4edda; padding: 5px 10px; border-radius: 3px;">
-                                    <?php echo esc_html(trailingslashit($site_url) . $custom_slug); ?>
-                                </code>
-                                <button type="button" class="button button-small" onclick="navigator.clipboard.writeText('<?php echo esc_attr(trailingslashit($site_url) . $custom_slug); ?>'); alert('Copied!');">
-                                    Copy
-                                </button>
-                                <button type="submit" name="ofast_delete_custom_url" class="button button-small" style="color: #dc3545; border-color: #dc3545;" onclick="return confirm('Are you sure you want to disable custom URL protection?');">
-                                    Delete
-                                </button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>Emergency Bypass URL</th>
-                            <td>
-                                <code style="background: #f8d7da; padding: 5px 10px; border-radius: 3px; font-size: 11px;">
-                                    <?php echo esc_html(wp_login_url() . '?ofast_emergency=' . $emergency_key); ?>
-                                </code>
-                                <button type="button" class="button button-small" onclick="navigator.clipboard.writeText('<?php echo esc_attr(wp_login_url() . '?ofast_emergency=' . $emergency_key); ?>'); alert('Copied!');">
-                                    Copy
-                                </button>
-                                <p class="description" style="color: #dc3545;">
-                                    <strong>⚠️ ONE-TIME USE:</strong> After using this link, a NEW key is generated and emailed to you.<br>
-                                    The old key becomes invalid immediately. Grants 1-hour bypass access.
+                                <div class="ofast-input-group">
+                                    <span style="color: #64748b; font-family: monospace; background: #f1f5f9; padding: 8px 10px; border-radius: 6px 0 0 6px; border: 1px solid #e2e8f0; border-right: none;"><?php echo esc_html($site_url); ?>/</span>
+                                    <input type="text" name="custom_slug" id="custom_slug"
+                                        value="<?php echo esc_attr($custom_slug); ?>"
+                                        class="regular-text"
+                                        placeholder="my-secret-login"
+                                        pattern="[a-z0-9\-]+"
+                                        style="border-radius: 0 6px 6px 0; width: 250px;">
+                                </div>
+                                <p class="description" style="margin-top: 8px;">
+                                    Only lowercase letters, numbers, and hyphens allowed.<br>
+                                    Leave empty to disable protection and restore default login URLs.
                                 </p>
                             </td>
                         </tr>
+                        <?php if (!empty($custom_slug) && !empty($emergency_key)): ?>
+                            <tr>
+                                <th style="padding-top: 20px;">current_URLs</th>
+                                <td>
+                                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; display: inline-block; width: 100%; max-width: 600px;">
+                                        <div style="margin-bottom: 15px;">
+                                            <strong style="display: block; margin-bottom: 5px; color: #1e293b;">Custom Login URL:</strong>
+                                            <code style="background: #fff; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 4px; color: #059669; display: block; margin-bottom: 8px;">
+                                                <?php echo esc_html(trailingslashit($site_url) . $custom_slug); ?>
+                                            </code>
+                                            <button type="button" class="button button-small" onclick="navigator.clipboard.writeText('<?php echo esc_attr(trailingslashit($site_url) . $custom_slug); ?>'); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000);">
+                                                Copy
+                                            </button>
+                                            <button type="submit" name="ofast_delete_custom_url" class="button button-small" style="color: #ef4444; border-color: #ef4444; margin-left: 5px;" onclick="return confirm('Are you sure you want to disable custom URL protection?');">
+                                                Delete & Disable
+                                            </button>
+                                        </div>
+
+                                        <div>
+                                            <strong style="display: block; margin-bottom: 5px; color: #1e293b;">Emergency Bypass URL (One-Time Use):</strong>
+                                            <code style="background: #fff; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 4px; color: #ef4444; display: block; margin-bottom: 8px; font-size: 11px;">
+                                                <?php echo esc_html(wp_login_url() . '?ofast_emergency=' . $emergency_key); ?>
+                                            </code>
+                                            <button type="button" class="button button-small" onclick="navigator.clipboard.writeText('<?php echo esc_attr(wp_login_url() . '?ofast_emergency=' . $emergency_key); ?>'); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000);">
+                                                Copy
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="margin-top: 15px;">
+                                         <button type="submit" name="resend_email" class="button">
+                                            Resend Login Details
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
+                    </table>
+
+                    <hr style="margin: 30px 0; border: 0; border-top: 1px solid #e2e8f0;">
+
+                    <!-- Security Settings Section -->
+                    <h2 style="font-size: 18px; color: #1e293b; margin-bottom: 5px;">Login Limit Settings</h2>
+                    <p style="color: #64748b; margin-top: 0; margin-bottom: 20px;">Configure brute force protection parameters.</p>
+
+                    <?php
+                    $max_attempts = get_option('ofast_security_max_attempts', 5);
+                    $lockout_duration = get_option('ofast_security_lockout_duration', 15);
+                    $ip_whitelist = get_option('ofast_security_ip_whitelist', '');
+                    ?>
+
+                    <table class="form-table">
                         <tr>
-                            <th>Resend Email</th>
+                            <th><label for="max_attempts">Max Failed Attempts</label></th>
                             <td>
-                                <button type="submit" name="resend_email" class="button">
-                                    Resend Login Details to Admin
-                                </button>
-                                <p class="description">Sends the custom URL and emergency link to <?php echo esc_html(get_option('admin_email')); ?></p>
+                                <input type="number" name="max_attempts" id="max_attempts"
+                                    value="<?php echo esc_attr($max_attempts); ?>"
+                                    min="1" max="20" style="width: 80px;">
+                                <span class="description"> attempts before lockout</span>
                             </td>
                         </tr>
-                    <?php endif; ?>
-                </table>
+                        <tr>
+                            <th><label for="lockout_duration">Lockout Duration</label></th>
+                            <td>
+                                <input type="number" name="lockout_duration" id="lockout_duration"
+                                    value="<?php echo esc_attr($lockout_duration); ?>"
+                                    min="1" max="1440" style="width: 80px;">
+                                <span class="description"> minutes</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th><label for="ip_whitelist">IP Whitelist</label></th>
+                            <td>
+                                <textarea name="ip_whitelist" id="ip_whitelist" rows="4" class="large-text code"
+                                    placeholder="192.168.1.1&#10;10.0.0.1"><?php echo esc_textarea($ip_whitelist); ?></textarea>
+                                <p class="description" style="margin-top: 8px;">
+                                    One IP address per line. These IPs will never be locked out.<br>
+                                    Your current IP: <code style="background: #f1f5f9;"><?php echo esc_html($this->get_client_ip()); ?></code>
+                                    <button type="button" class="button button-small" style="margin-left: 5px;" onclick="document.getElementById('ip_whitelist').value += '\n<?php echo esc_attr($this->get_client_ip()); ?>'; this.disabled=true; this.textContent='Added!';">Add My IP</button>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
 
-                <!-- Security Settings Section -->
-                <h2 style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">Login Security Settings</h2>
-                <p>Configure brute force protection to prevent unauthorized login attempts.</p>
+                    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                        <button type="submit" name="ofast_save_admin_url" class="button button-primary button-large" style="min-width: 150px;">
+                            Save Settings
+                        </button>
+                    </div>
+                </form>
 
-                <?php
-                $max_attempts = get_option('ofast_security_max_attempts', 5);
-                $lockout_duration = get_option('ofast_security_lockout_duration', 15);
-                $ip_whitelist = get_option('ofast_security_ip_whitelist', '');
-                ?>
-
-                <table class="form-table">
-                    <tr>
-                        <th><label for="max_attempts">Max Failed Attempts</label></th>
-                        <td>
-                            <input type="number" name="max_attempts" id="max_attempts"
-                                value="<?php echo esc_attr($max_attempts); ?>"
-                                min="1" max="20" style="width: 80px;">
-                            <span>attempts before lockout</span>
-                            <p class="description">How many failed login attempts before an IP is locked out (default: 5)</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th><label for="lockout_duration">Lockout Duration</label></th>
-                        <td>
-                            <input type="number" name="lockout_duration" id="lockout_duration"
-                                value="<?php echo esc_attr($lockout_duration); ?>"
-                                min="1" max="1440" style="width: 80px;">
-                            <span>minutes</span>
-                            <p class="description">How long an IP stays locked out (default: 15 minutes, max: 24 hours)</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th><label for="ip_whitelist">IP Whitelist</label></th>
-                        <td>
-                            <textarea name="ip_whitelist" id="ip_whitelist" rows="4" class="large-text code"
-                                placeholder="192.168.1.1&#10;10.0.0.1"><?php echo esc_textarea($ip_whitelist); ?></textarea>
-                            <p class="description">
-                                One IP address per line. These IPs will never be locked out.<br>
-                                Your current IP: <code><?php echo esc_html($this->get_client_ip()); ?></code>
-                                <button type="button" class="button button-small" onclick="document.getElementById('ip_whitelist').value += '\n<?php echo esc_attr($this->get_client_ip()); ?>'; this.disabled=true; this.textContent='Added!';">Add My IP</button>
-                            </p>
-                        </td>
-                    </tr>
-                </table>
-
-                <p class="submit">
-                    <button type="submit" name="ofast_save_admin_url" class="button button-primary button-large">
-                        Save Changes
-                    </button>
-                </p>
-            </form>
-
-            <!-- Bypass Instructions -->
-            <div style="background: #f0f6fc; border: 1px solid #c3d9ed; border-radius: 8px; padding: 15px; margin-top: 20px;">
-                <h3 style="margin-top: 0; color: #1d4ed8;">Recovery Options</h3>
-                <p><strong>Option 1: Emergency URL</strong> - Use the emergency bypass URL (Expires upon one usage)</p>
-                <p><strong>Option 2: wp-config.php</strong> - Add this line to your wp-config.php file:</p>
-                <pre style="background: #fff; padding: 10px; border-radius: 4px; overflow-x: auto;">define('OFAST_DISABLE_ADMIN_PROTECTION', true);</pre>
-                <p><strong>Option 3: Database</strong> - Delete the <code>ofast_admin_custom_slug</code> option from wp_options table</p>
+                <!-- Recovery Options -->
+                <div class="ofast-recovery-box">
+                    <h3>Recovery Options</h3>
+                    <p><strong>Option 1: Emergency URL</strong> — Use the emergency bypass URL sent to your email (Expires upon entry).</p>
+                    <p><strong>Option 2: wp-config.php</strong> — Add this line to your <code>wp-config.php</code> file to disable protection:</p>
+                    <pre>define('OFAST_DISABLE_ADMIN_PROTECTION', true);</pre>
+                    <p><strong>Option 3: Database</strong> — Delete the <code>ofast_admin_custom_slug</code> entry from the <code>wp_options</code> table.</p>
+                </div>
             </div>
+            
+
         </div>
 <?php
     }

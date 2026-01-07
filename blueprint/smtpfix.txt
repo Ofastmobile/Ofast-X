@@ -1,14 +1,14 @@
+question:
 I added php mailer as default for smtp (at least for shared hosting, their wouldn't be need to fetch data but easy to use). So two things
 
-4:23 AM
-So two things I need, 
+So these are the things I need, 
 1. I want you to help me take a critical and professional look at it maybe its well put together (php mailer) 
 2. If I set default (php) and save tye dashboard doesn't reflect it, instead it say inactive, but if I use other smtp and use any of the available ones, once the credentials are correct and save it will show active on tye smtp dashboard and other boxes will show the host 
 3. I want you address the issue as if the plugin is been vet for wordpress publishing, so act as a wordpress senior enginner.
 4. No long talk or repetition,  straight to the point 
 5. After everything, provide artifact or code and where and how to use the code. Don't rewrite the module again just provide codes for where it needs to be fix
 
-4:33 AM
+answer:
 Critical Analysis & Fixes for SMTP Module
 Issues Identified
 1. Dashboard Status Logic Flaw

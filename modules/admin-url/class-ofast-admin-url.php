@@ -82,8 +82,12 @@ class Ofast_X_Admin_Url
         // Register custom URL handler
         add_action('init', array($this, 'handle_custom_url'), 1);
 
-        // Block default login/admin pages
-        add_action('init', array($this, 'block_default_access'), 1);
+        // Block default login page - uses login_init which fires only on wp-login.php
+        add_action('login_init', array($this, 'block_login_page'), 0);
+        
+        // Block wp-admin pages - uses template_redirect which fires after all plugins load
+        // This ensures WooCommerce, Tutor LMS, etc. are ready before loading 404 template
+        add_action('template_redirect', array($this, 'block_admin_pages'), 1);
     }
 
     /**
@@ -350,11 +354,61 @@ a new key will be generated and emailed to you.
     }
 
     /**
-     * Block default wp-admin and wp-login.php access
+     * Block wp-login.php access for unauthorized users
+     * Uses wp_die() instead of full 404 template to avoid plugin conflicts
      */
-    public function block_default_access()
+    public function block_login_page()
+    {
+        // Allow if custom login cookie is set
+        if (isset($_COOKIE['ofast_custom_login'])) {
+            return;
+        }
+
+        // Allow logout action (must be able to logout!)
+        if (isset($_GET['action']) && $_GET['action'] === 'logout') {
+            return;
+        }
+        
+        // Allow logged-out redirect
+        if (isset($_GET['loggedout']) && $_GET['loggedout'] === 'true') {
+            return;
+        }
+        
+        // Allow password reset actions
+        if (isset($_GET['action']) && in_array($_GET['action'], array('lostpassword', 'rp', 'resetpass'), true)) {
+            return;
+        }
+        
+        // If user is already logged in, allow access
+        if (is_user_logged_in()) {
+            return;
+        }
+
+        // Block access with a simple 404 response (no full template to avoid WooCommerce/Tutor LMS errors)
+        status_header(404);
+        nocache_headers();
+        wp_die(
+            'Page not found',
+            '404 Not Found',
+            array(
+                'response' => 404,
+                'back_link' => false,
+            )
+        );
+    }
+
+    /**
+     * Block /wp-admin access for unauthorized users
+     * Uses full 404 template since this fires on template_redirect (after plugins are ready)
+     */
+    public function block_admin_pages()
     {
         $request_uri = $_SERVER['REQUEST_URI'];
+
+        // Only block wp-admin requests
+        if (strpos($request_uri, '/wp-admin') === false) {
+            return;
+        }
 
         // Allow if custom login cookie is set
         if (isset($_COOKIE['ofast_custom_login'])) {
@@ -376,30 +430,17 @@ a new key will be generated and emailed to you.
             return;
         }
 
-        // Allow logout action (must be able to logout!)
-        if (isset($_GET['action']) && $_GET['action'] === 'logout') {
-            return;
-        }
-
-        // If user is already logged in, allow all admin/login access
-        // This allows admins to preview login page from Login Redesign settings
+        // If user is already logged in, allow all admin access
         if (is_user_logged_in()) {
             return;
         }
 
-        // Block direct access to wp-login.php (for non-logged-in users)
-        if (strpos($request_uri, 'wp-login.php') !== false) {
-            $this->show_404();
+        // Don't block admin assets (images, css, js)
+        if (preg_match('/\.(css|js|png|jpg|gif|ico|svg|woff|woff2|ttf|eot)$/i', $request_uri)) {
+            return;
         }
 
-        // Block direct /wp-admin access for non-logged in users  
-        if (strpos($request_uri, '/wp-admin') !== false) {
-            // Don't block admin assets (images, css, js)
-            if (preg_match('/\.(css|js|png|jpg|gif|ico|svg|woff|woff2|ttf|eot)$/i', $request_uri)) {
-                return;
-            }
-            $this->show_404();
-        }
+        $this->show_404();
     }
 
     /**

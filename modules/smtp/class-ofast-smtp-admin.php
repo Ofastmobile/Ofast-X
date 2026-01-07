@@ -207,13 +207,18 @@ class Ofast_X_SMTP_Admin
         $table_name = $wpdb->prefix . 'ofast_smtp_log';
 
         $enabled = get_option('ofast_smtp_enabled', false);
+        $mailer_type = get_option('ofast_smtp_mailer_type', 'default');
         $provider = get_option('ofast_smtp_provider', 'custom');
         $host = get_option('ofast_smtp_host', '');
+        $username = get_option('ofast_smtp_username', '');
         $encryption = get_option('ofast_smtp_encryption', 'tls');
         $from_email = get_option('ofast_smtp_from_email', '');
 
         $presets = Ofast_X_SMTP::get_provider_presets();
-        $provider_name = $presets[$provider]['name'] ?? 'Custom SMTP';
+        
+        // Determine if mailer is active
+        $is_active = $enabled && ($mailer_type === 'default' || (!empty($host) && !empty($username)));
+        $mailer_name = $mailer_type === 'default' ? 'PHP Mail (Default)' : ($presets[$provider]['name'] ?? 'Custom SMTP');
 
         $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_name}'") === $table_name;
 
@@ -247,24 +252,24 @@ class Ofast_X_SMTP_Admin
 
         <!-- Connection Status -->
         <div class="ofast-grid-3" style="margin: 25px 0;">
-            <div style="background: <?php echo $enabled && $host ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #6b7280, #4b5563)'; ?>; padding: 25px; border-radius: 12px; color: #fff; text-align: center;">
+            <div style="background: <?php echo $is_active ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #6b7280, #4b5563)'; ?>; padding: 25px; border-radius: 12px; color: #fff; text-align: center;">
                 <div style="font-size: 28px; margin-bottom: 5px;">
-                    <?php echo $enabled && $host ? '✓' : '✗'; ?>
+                    <?php echo $is_active ? '✓' : '✗'; ?>
                 </div>
                 <div style="font-size: 18px; font-weight: 600;">
-                    <?php echo $enabled && $host ? 'SMTP Active' : 'SMTP Inactive'; ?>
+                    <?php echo $is_active ? 'Mailer Active' : 'Mailer Inactive'; ?>
                 </div>
                 <div style="font-size: 13px; opacity: 0.9; margin-top: 5px;">
-                    <?php echo $enabled ? esc_html($provider_name) : 'Not Configured'; ?>
+                    <?php echo $is_active ? esc_html($mailer_name) : 'Not Configured'; ?>
                 </div>
             </div>
             <div style="background: linear-gradient(135deg, #6366f1, #4f46e5); padding: 25px; border-radius: 12px; color: #fff; text-align: center;">
                 <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Provider</div>
                 <div style="font-size: 18px; font-weight: 600;">
-                    <?php echo $host ? esc_html($host) : 'Not Set'; ?>
+                    <?php echo $mailer_type === 'default' ? 'Server Mail' : ($host ? esc_html($host) : 'Not Set'); ?>
                 </div>
                 <div style="font-size: 13px; opacity: 0.9; margin-top: 5px;">
-                    Port <?php echo esc_html(get_option('ofast_smtp_port', 587)); ?> / <?php echo strtoupper(esc_html($encryption)); ?>
+                    <?php echo $mailer_type === 'default' ? 'PHP mail() function' : 'Port ' . esc_html(get_option('ofast_smtp_port', 587)) . ' / ' . strtoupper(esc_html($encryption)); ?>
                 </div>
             </div>
             <div style="background: linear-gradient(135deg, #3b82f6, #2563eb); padding: 25px; border-radius: 12px; color: #fff; text-align: center;">
@@ -787,8 +792,8 @@ class Ofast_X_SMTP_Admin
         $encryption = get_option('ofast_smtp_encryption', 'tls');
         $from_email = get_option('ofast_smtp_from_email', '');
 
-        // Determine if mailer is active (default mode OR smtp with host configured)
-        $is_active = $enabled && ($mailer_type === 'default' || !empty($host));
+        // Determine if mailer is active (default mode OR smtp with host AND username configured)
+        $is_active = $enabled && ($mailer_type === 'default' || (!empty($host) && !empty($username)));
         $mailer_name = $mailer_type === 'default' ? 'PHP Mail (Default)' : (Ofast_X_SMTP::get_provider_presets()[$provider]['name'] ?? 'Custom SMTP');
 
         // Check if table exists

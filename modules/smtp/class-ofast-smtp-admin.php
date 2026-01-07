@@ -304,14 +304,19 @@ class Ofast_X_SMTP_Admin
 
         <!-- Weekly Chart & Recent -->
         <div class="ofast-flex-layout" style="margin: 25px 0;">
-            <div class="ofast-main" style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                <h3 style="margin: 0 0 20px 0; font-size: 16px; color: #374151;">Emails Last 7 Days</h3>
-                <div style="display: flex; align-items: flex-end; justify-content: space-between; height: 120px; gap: 8px;">
+            <div class="ofast-main" style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; flex-direction: column;">
+                <h3 style="margin: 0; font-size: 16px; color: #374151;">Emails Last 7 Days</h3>
+                <div style="flex: 1;"></div>
+                <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;">
                     <?php foreach ($weekly_data as $day): ?>
-                        <?php $height = $max_weekly > 0 ? ($day['count'] / $max_weekly) * 100 : 0; ?>
+                        <?php 
+                        // Max height 80px for bars
+                        $bar_height = $max_weekly > 0 ? round(($day['count'] / $max_weekly) * 80) : 0;
+                        $bar_height = max(5, $bar_height);
+                        ?>
                         <div style="flex: 1; text-align: center;">
-                            <div style="background: linear-gradient(to top, #6366f1, #818cf8); height: <?php echo max(5, $height); ?>px; border-radius: 4px 4px 0 0; margin-bottom: 8px;" title="<?php echo $day['count']; ?> emails"></div>
-                            <div style="font-size: 11px; color: #6b7280;"><?php echo esc_html($day['day']); ?></div>
+                            <div style="background: linear-gradient(to top, #6366f1, #818cf8); height: <?php echo $bar_height; ?>px; border-radius: 4px 4px 0 0; min-height: 5px;" title="<?php echo $day['count']; ?> emails"></div>
+                            <div style="font-size: 11px; color: #6b7280; margin-top: 8px;"><?php echo esc_html($day['day']); ?></div>
                             <div style="font-size: 12px; font-weight: 600; color: #374151;"><?php echo $day['count']; ?></div>
                         </div>
                     <?php endforeach; ?>

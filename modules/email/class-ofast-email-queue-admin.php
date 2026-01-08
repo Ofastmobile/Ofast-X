@@ -23,16 +23,18 @@ class Ofast_X_Email_Queue_Admin {
     
     /**
      * Add menu page
+     * NOTE: Disabled - Queue is now a tab in the main Emailer page
      */
     public function add_menu() {
-        add_submenu_page(
-            'ofast-emailer',
-            'Email Queue',
-            'Queue',
-            'manage_options',
-            'ofast-email-queue',
-            array($this, 'render_page')
-        );
+        // Submenu disabled - Queue is now integrated as a tab in the main Ofast Emailer page
+        // add_submenu_page(
+        //     'ofast-emailer',
+        //     'Email Queue',
+        //     'Queue',
+        //     'manage_options',
+        //     'ofast-email-queue',
+        //     array($this, 'render_page')
+        // );
     }
     
     /**
@@ -116,9 +118,35 @@ class Ofast_X_Email_Queue_Admin {
         
         <style>
             .ofast-queue-wrap { max-width: 1400px; }
-            .ofast-queue-header { margin-bottom: 25px; }
-            .ofast-queue-header h1 { margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #1e293b; }
-            .ofast-queue-header p { margin: 0; color: #64748b; font-size: 14px; }
+            
+            /* Header Styles */
+            .ofast-header {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                background: #fff;
+                padding: 25px 30px;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                margin-bottom: 30px;
+            }
+            .ofast-header-icon {
+                width: 56px;
+                height: 56px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                border-radius: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .ofast-header-icon .dashicons {
+                font-size: 28px;
+                width: 28px;
+                height: 28px;
+                color: #6366f1;
+            }
             
             .ofast-stats-grid { 
                 display: grid; 
@@ -305,9 +333,15 @@ class Ofast_X_Email_Queue_Admin {
         </style>
         
         <div class="wrap ofast-queue-wrap">
-            <div class="ofast-queue-header">
-                <h1>Email Queue</h1>
-                <p>Background email processing with throttle control (<?php echo $emails_per_hour; ?> emails/hour = 1 email every <?php echo round($delay); ?> seconds)</p>
+            <!-- Header -->
+            <div class="ofast-header" style="margin-top: 20px;">
+                <div class="ofast-header-icon">
+                    <span class="dashicons dashicons-list-view"></span>
+                </div>
+                <div class="ofast-header-content">
+                    <h1 style="margin: 0 0 5px 0; font-size: 24px; font-weight: 700; color: #1e293b; padding: 0;">Email Queue</h1>
+                    <p style="margin: 0; color: #64748b; font-size: 14px;">Background email processing with throttle control (<?php echo $emails_per_hour; ?> emails/hour = 1 email every <?php echo round($delay); ?> seconds)</p>
+                </div>
             </div>
             
             <!-- Stats Cards -->

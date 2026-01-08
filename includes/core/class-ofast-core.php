@@ -313,6 +313,12 @@ class Ofast_X_Core
         $admin_footer->init();
 
         $this->modules['admin-footer'] = $admin_footer;
+
+        // Custom Dashboard
+        require_once OFAST_X_PLUGIN_DIR . 'modules/custom-dashboard/class-ofast-custom-dashboard.php';
+        $custom_dashboard = new Ofast_X_Custom_Dashboard();
+        $custom_dashboard->init();
+        $this->modules['custom-dashboard'] = $custom_dashboard;
     }
 
     /**

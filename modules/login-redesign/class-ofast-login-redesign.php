@@ -86,7 +86,7 @@ class Ofast_X_Login_Redesign
             // Two-column specific
             'tc_side_image' => get_option('ofast_login_tc_side_image', ''),
             'tc_use_color' => get_option('ofast_login_tc_use_color', false),
-            'tc_side_color' => get_option('ofast_login_tc_side_color', '#667eea'),
+            'tc_side_color' => get_option('ofast_login_tc_side_color', '#6366f1'),
             'tc_side_color_end' => get_option('ofast_login_tc_side_color_end', '#764ba2'),
             'tc_image_position' => get_option('ofast_login_tc_image_position', 'left'),
             'tc_overlay_color' => get_option('ofast_login_tc_overlay_color', '#000000'),
@@ -172,7 +172,7 @@ class Ofast_X_Login_Redesign
             // Two-column
             update_option('ofast_login_tc_side_image', '');
             update_option('ofast_login_tc_use_color', false);
-            update_option('ofast_login_tc_side_color', '#667eea');
+            update_option('ofast_login_tc_side_color', '#6366f1');
             update_option('ofast_login_tc_side_color_end', '#764ba2');
             update_option('ofast_login_tc_image_position', 'left');
             update_option('ofast_login_tc_overlay_color', '#000000');
@@ -227,7 +227,7 @@ class Ofast_X_Login_Redesign
         // Two-column settings
         update_option('ofast_login_tc_side_image', esc_url_raw($_POST['tc_side_image'] ?? ''));
         update_option('ofast_login_tc_use_color', isset($_POST['tc_use_color']));
-        update_option('ofast_login_tc_side_color', sanitize_hex_color($_POST['tc_side_color'] ?? '#667eea'));
+        update_option('ofast_login_tc_side_color', sanitize_hex_color($_POST['tc_side_color'] ?? '#6366f1'));
         update_option('ofast_login_tc_side_color_end', sanitize_hex_color($_POST['tc_side_color_end'] ?? '#764ba2'));
         update_option('ofast_login_tc_image_position', sanitize_text_field($_POST['tc_image_position'] ?? 'left'));
         update_option('ofast_login_tc_overlay_color', sanitize_hex_color($_POST['tc_overlay_color'] ?? '#000000'));
@@ -689,7 +689,7 @@ class Ofast_X_Login_Redesign
                     font-size: 28px;
                     width: 28px;
                     height: 28px;
-                    color: #667eea;
+                    color: #6366f1;
                 }
                 .ofast-header-content h1 {
                     margin: 0 0 5px 0;
@@ -720,16 +720,16 @@ class Ofast_X_Login_Redesign
                 }
                 .ofast-template-card:hover {
                     box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-                    border-color: #667eea;
+                    border-color: #6366f1;
                     transform: translateY(-2px);
                 }
                 .ofast-template-card input:checked + .ofast-template-inner {
-                    border-color: #667eea;
+                    border-color: #6366f1;
                 }
                 .ofast-template-card.active {
-                    border: 2px solid #667eea;
+                    border: 2px solid #6366f1;
                     background: #f8fafc;
-                    box-shadow: 0 4px 6px -1px rgba(102, 126, 234, 0.1);
+                    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.1);
                 }
                 .ofast-template-card .preview-box {
                     width: 100%;
@@ -778,7 +778,7 @@ class Ofast_X_Login_Redesign
                         <label class="ofast-template-card <?php echo $current_template === 'two-column' ? 'active' : ''; ?>">
                             <input type="radio" name="template" value="two-column" <?php checked($current_template, 'two-column'); ?> style="display:none;">
                             <div class="preview-box" style="display: flex; padding: 0;">
-                                <div style="width: 50%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                                <div style="width: 50%; height: 100%; background: linear-gradient(135deg, #6366f1 0%, #764ba2 100%);"></div>
                                 <div style="width: 50%; height: 100%; background: #fff; display: flex; align-items: center; justify-content: center;">
                                     <div style="width: 30px; height: 40px; background: #f1f5f9; border-radius: 3px; border: 1px solid #e2e8f0;"></div>
                                 </div>
@@ -1252,7 +1252,7 @@ class Ofast_X_Login_Redesign
                         // Two-column preview
                         var sideImage = $('#tc_side_image').val() || $('#bg_image').val() || '';
                         var useColor = $('input[name="tc_use_color"]').is(':checked') || !sideImage;
-                        var sideColor = $('.wp-color-picker[name="tc_side_color"]').val() || '#667eea';
+                        var sideColor = $('.wp-color-picker[name="tc_side_color"]').val() || '#6366f1';
                         var sideColorEnd = $('.wp-color-picker[name="tc_side_color_end"]').val() || '#764ba2';
                         var imgPos = $('input[name="tc_image_position"]:checked').val() || 'left';
                         var overlayColor = $('.wp-color-picker[name="tc_overlay_color"]').val() || '#000000';

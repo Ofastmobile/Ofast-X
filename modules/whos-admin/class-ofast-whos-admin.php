@@ -299,9 +299,9 @@ class Ofast_X_Whos_Admin
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
                 border: 1px solid #e2e8f0;
-                color: #667eea;
+                color: #6366f1;
             }
             .ofast-header-icon .dashicons {
                 font-size: 28px;
@@ -352,7 +352,7 @@ class Ofast_X_Whos_Admin
                 font-size: 20px;
                 width: 20px;
                 height: 20px;
-                color: #667eea;
+                color: #6366f1;
             }
             .ofast-card-header h2 {
                 margin: 0;
@@ -381,7 +381,7 @@ class Ofast_X_Whos_Admin
                 font-size: 16px;
                 width: 16px;
                 height: 16px;
-                color: #667eea;
+                color: #6366f1;
             }
             .ofast-modern-form input[type="text"],
             .ofast-modern-form input[type="email"],
@@ -396,9 +396,9 @@ class Ofast_X_Whos_Admin
             }
             .ofast-modern-form input:focus {
                 outline: none;
-                border-color: #667eea;
+                border-color: #6366f1;
                 background: #fff;
-                box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+                box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
             }
             .ofast-modern-form input::placeholder {
                 color: #94a3b8;
@@ -421,7 +421,7 @@ class Ofast_X_Whos_Admin
                 align-items: center;
                 gap: 10px;
                 padding: 14px 28px;
-                background: #667eea;
+                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
                 color: #fff;
                 border: none;
                 border-radius: 10px;
@@ -429,12 +429,12 @@ class Ofast_X_Whos_Admin
                 font-weight: 600;
                 cursor: pointer;
                 transition: all 0.3s ease;
-                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.35);
+                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
             }
             .ofast-btn-primary:hover {
-                background: #5a6fd6;
+                background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
                 transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(102, 126, 234, 0.45);
+                box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
             }
             .ofast-btn-primary .dashicons {
                 font-size: 18px;
@@ -471,7 +471,7 @@ class Ofast_X_Whos_Admin
                 font-weight: 500;
             }
             .ofast-link {
-                color: #667eea;
+                color: #6366f1;
                 text-decoration: none;
             }
             .ofast-link:hover {

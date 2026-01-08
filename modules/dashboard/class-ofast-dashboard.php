@@ -194,7 +194,7 @@ class Ofast_X_Dashboard
                 font-size: 28px;
                 width: 28px;
                 height: 28px;
-                color: #667eea;
+                color: #6366f1;
             }
             .ofast-header-content h1 {
                 margin: 0 0 5px 0;
@@ -233,12 +233,12 @@ class Ofast_X_Dashboard
             .ofast-stat-card:hover {
                 transform: translateY(-4px);
                 box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
-                border-color: #667eea;
+                border-color: #6366f1;
             }
 
             .ofast-stat-card.primary {
                 background: #f8fafc;
-                border-left: 4px solid #667eea;
+                border-left: 4px solid #6366f1;
             }
 
             .ofast-stat-label {
@@ -259,7 +259,7 @@ class Ofast_X_Dashboard
             }
 
             .ofast-stat-card.primary .ofast-stat-value {
-                color: #667eea;
+                color: #6366f1;
             }
 
             /* Section Headers */
@@ -297,7 +297,7 @@ class Ofast_X_Dashboard
                 transition: all 0.2s;
             }
             .ofast-module-item:hover {
-                border-color: #667eea;
+                border-color: #6366f1;
                 background: #f9fafb;
             }
 
@@ -344,9 +344,9 @@ class Ofast_X_Dashboard
 
             .ofast-quick-link:hover {
                 background: #fff;
-                border-color: #667eea;
-                color: #667eea;
-                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+                border-color: #6366f1;
+                color: #6366f1;
+                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
                 transform: translateY(-2px);
             }
         </style>

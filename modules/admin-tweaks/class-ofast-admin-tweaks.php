@@ -594,7 +594,7 @@ class Ofast_X_Admin_Tweaks
             /* Header */
             .ofast-page-header { background: #ffffff; border-radius: 16px; padding: 30px; margin-bottom: 30px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
             .ofast-header-content { display: flex; align-items: center; gap: 20px; }
-            .ofast-header-icon { width: 60px; height: 60px; background: #ffffff; border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2); border: 1px solid #e2e8f0; color: #667eea; }
+            .ofast-header-icon { width: 60px; height: 60px; background: #ffffff; border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2); border: 1px solid #e2e8f0; color: #6366f1; }
             .ofast-header-icon .dashicons { font-size: 28px; width: 28px; height: 28px; }
             .ofast-header-text h1 { margin: 0; font-size: 28px; font-weight: 700; color: #1e293b; }
             .ofast-header-text p { margin: 5px 0 0; color: #64748b; font-size: 15px; }
@@ -605,7 +605,7 @@ class Ofast_X_Admin_Tweaks
             /* Cards */
             .ofast-card { background: #fff; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; border: 1px solid rgba(0,0,0,0.05); }
             .ofast-card-header { display: flex; align-items: center; gap: 12px; padding: 20px 25px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1px solid #e2e8f0; }
-            .ofast-card-header .dashicons { font-size: 20px; width: 20px; height: 20px; color: #667eea; }
+            .ofast-card-header .dashicons { font-size: 20px; width: 20px; height: 20px; color: #6366f1; }
             .ofast-card-header h2 { margin: 0; font-size: 16px; font-weight: 600; color: #1e293b; }
             .ofast-card-body { padding: 25px; }
 
@@ -621,21 +621,21 @@ class Ofast_X_Admin_Tweaks
             .ofast-toggle input { opacity: 0; width: 0; height: 0; }
             .ofast-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 34px; }
             .ofast-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-            input:checked + .ofast-slider { background-color: #667eea; }
+            input:checked + .ofast-slider { background-color: #6366f1; }
             input:checked + .ofast-slider:before { transform: translateX(22px); }
-            input:focus + .ofast-slider { box-shadow: 0 0 1px #667eea; }
+            input:focus + .ofast-slider { box-shadow: 0 0 1px #6366f1; }
 
             /* Checkbox Pills */
             .ofast-checkbox-pill { display: inline-flex; align-items: center; padding: 6px 12px; background: #f1f5f9; border-radius: 20px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
             .ofast-checkbox-pill input { display: none; }
             .ofast-checkbox-pill span { font-size: 13px; color: #475569; font-weight: 500; }
             .ofast-checkbox-pill:hover { background: #e2e8f0; }
-            .ofast-checkbox-pill input:checked + span { color: #667eea; }
-            .ofast-checkbox-pill:has(input:checked) { background: rgba(102, 126, 234, 0.1); border-color: rgba(102, 126, 234, 0.2); }
+            .ofast-checkbox-pill input:checked + span { color: #6366f1; }
+            .ofast-checkbox-pill:has(input:checked) { background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.2); }
 
             /* Buttons */
-            .ofast-btn-primary { display: inline-flex; align-items: center; gap: 10px; padding: 12px 24px; background: #667eea; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.35); }
-            .ofast-btn-primary:hover { background: #5a6fd6; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.45); color: #fff; }
+            .ofast-btn-primary { display: inline-flex; align-items: center; gap: 10px; padding: 12px 24px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
+            .ofast-btn-primary:hover { background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); color: #fff; }
         </style>
 <?php
     }

@@ -372,75 +372,342 @@ class Ofast_X_Email_Admin
         $draft_roles = $draft ? (json_decode($draft->roles, true) ?: array()) : array();
         $draft_user_ids = $draft ? (json_decode($draft->user_ids, true) ?: array()) : array();
 
-        // Toast notification - $result_message already contains complete toast from Ofast_X_Toast::render()
-        // Just output it directly since it includes styles, script, and JS call
+        // Toast notification
         $toast_html = !empty($result_message) ? $result_message : '';
+        ?>
+        <style>
+            /* Colors */
+            :root {
+                --ofast-primary: #6366f1;
+            }
 
-        echo '<div class="wrap"><h2>Send Email</h2>' . $toast_html . '
-        <form method="post" enctype="multipart/form-data" id="email-form">';
-        wp_nonce_field('ofast_send_email_action', 'ofast_email_nonce');
-        // Hidden draft_id for updating
-        if ($draft_id > 0) {
-            echo '<input type="hidden" name="draft_id" value="' . esc_attr($draft_id) . '">';
-            echo '<div class="notice notice-info"><p>📝 Editing draft: <strong>' . esc_html($draft_subject ?: '(No subject)') . '</strong> — <a href="' . admin_url('admin.php?page=ofast-emailer') . '">Start fresh instead</a></p></div>';
-        }
-        // Double-submit protection token
-        echo '<input type="hidden" name="ofast_submit_token" value="' . esc_attr(wp_generate_password(16, false)) . '">';
-        echo '<p><label><strong>Email Subject:</strong><br>
-            <input type="text" name="subject" style="width: 100%;" required value="' . esc_attr($draft_subject) . '"></label></p>
+            /* Header Styles */
+            .ofast-header {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                background: #fff;
+                padding: 25px 30px;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                margin-bottom: 30px;
+                margin-top: 20px;
+            }
+            .ofast-header-icon {
+                width: 56px;
+                height: 56px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                border-radius: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .ofast-header-icon .dashicons {
+                font-size: 28px;
+                width: 28px;
+                height: 28px;
+                color: #6366f1;
+            }
+            .ofast-header-content h1 {
+                margin: 0 0 5px 0;
+                font-size: 24px;
+                font-weight: 700;
+                color: #1e293b;
+                display: block;
+                padding: 0;
+            }
+            .ofast-header-content p {
+                margin: 0;
+                color: #64748b;
+                font-size: 14px;
+            }
 
-            <p><label><strong>Message Body:</strong><br>';
-        wp_editor($draft_body, 'message', [
-            'textarea_name' => 'message',
-            'media_buttons' => true,
-            'textarea_rows' => 10,
-        ]);
+            /* Card Styling */
+            .ofast-card {
+                background: #fff;
+                border-radius: 16px;
+                padding: 30px;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                border: 1px solid rgba(226, 232, 240, 0.6);
+                margin-bottom: 20px;
+            }
+            .ofast-card h2 { margin-top: 0; }
 
-        // FIX #8: Add placeholder tags display
-        echo '</label></p>
-        <p style="background:#f0f0f1;padding:10px;border-left:4px solid #2271b1;">
-            <strong>Available Placeholders:</strong><br>
-            <code>{{user_id}}</code>, <code>{{username}}</code>, <code>{{user_display_name}}</code>, 
-            <code>{{user_first_name}}</code>, <code>{{user_last_name}}</code>, <code>{{user_email}}</code>
-        </p>
+            /* Two Column Layout */
+            .ofast-email-form-layout {
+                display: grid;
+                grid-template-columns: 1fr 320px;
+                gap: 30px;
+            }
+            @media screen and (max-width: 1024px) {
+                .ofast-email-form-layout {
+                    grid-template-columns: 1fr;
+                }
+            }
+            .ofast-form-main {}
+            .ofast-form-sidebar {}
 
-            <p><strong>Select Roles:</strong><br>';
-        foreach ($roles as $key => $label) {
-            echo '<label><input type="checkbox" name="roles[]" value="' . esc_attr($key) . '"> ' . esc_html($label) . '</label><br>';
-        }
-        echo '</p>
-
-            <p><label><strong>User ID(s) or Ranges (e.g. 5,12,30-35):</strong><br>
-            <input type="text" name="user_ids" style="width: 100%;"></label></p>
-
-            <p>
-                <label><strong>Schedule Time (optional):</strong><br>
-                <input type="datetime-local" name="schedule_time" style="width: 250px;">
-                <small>Leave blank to send immediately. Large batches will auto-schedule.</small></label>
-            </p>
+            /* Form Styling */
+            .ofast-form-group {
+                margin-bottom: 20px;
+            }
+            .ofast-form-group label strong {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: 600;
+                color: #1e293b;
+            }
+            .ofast-form-group input[type="text"],
+            .ofast-form-group input[type="datetime-local"],
+            .ofast-form-group select {
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                padding: 10px 14px;
+                font-size: 14px;
+                transition: all 0.2s;
+                width: 100%;
+            }
+            .ofast-form-group input:focus,
+            .ofast-form-group select:focus {
+                border-color: var(--ofast-primary);
+                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+                outline: none;
+            }
             
-            <p>
-                <label><strong>Emails Per Hour:</strong>
-                <select name="batch_size" style="margin-left: 10px;">
-                    <option value="20">20 per hour (safest)</option>
-                    <option value="30">30 per hour</option>
-                    <option value="40" selected>40 per hour (recommended)</option>
-                    <option value="50">50 per hour (max)</option>
-                </select>
-                </label>
-                <br><small>Higher values may trigger spam limits on shared hosting or Gmail SMTP.</small>
-            </p>
+            /* Placeholders box */
+            .ofast-placeholders-box {
+                background: #f8fafc;
+                padding: 15px;
+                border-left: 4px solid #6366f1;
+                border-radius: 0 8px 8px 0;
+                margin-bottom: 20px;
+            }
+            .ofast-placeholders-box strong {
+                color: #1e293b;
+            }
+            .ofast-placeholders-box code {
+                background: #e2e8f0;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 12px;
+            }
 
+            /* Roles grid */
+            .ofast-roles-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                gap: 8px;
+            }
+            .ofast-role-item {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 12px;
+                background: #f8fafc;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .ofast-role-item:hover {
+                background: #eff6ff;
+            }
+            .ofast-role-item input[type="checkbox"] {
+                margin: 0;
+            }
 
-            <p><label><input type="checkbox" name="test_email"> Send to me as test only</label></p>
+            /* Sidebar card */
+            .ofast-sidebar-card {
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                padding: 20px;
+                margin-bottom: 15px;
+            }
+            .ofast-sidebar-card h4 {
+                margin: 0 0 15px 0;
+                font-size: 14px;
+                font-weight: 600;
+                color: #1e293b;
+            }
+            .ofast-sidebar-card .description {
+                font-size: 12px;
+                color: #64748b;
+                margin-top: 8px;
+            }
 
-            <p>
-                <button type="submit" name="send_email" class="button button-primary"> Send / Schedule</button>
-                <button type="submit" name="save_draft" class="button button-secondary" style="margin-left:10px;"> Save as Draft</button>
-                <button type="button" id="preview-email-btn" class="button button-secondary" style="margin-left:10px;">Preview Email</button>
-            </p>
+            /* Button Override */
+            .button.button-primary {
+                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+                border-color: #6366f1 !important;
+                text-shadow: none !important;
+                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+                transition: all 0.3s ease !important;
+                padding: 10px 24px !important;
+                height: auto !important;
+                border-radius: 8px !important;
+                font-size: 14px !important;
+            }
+            .button.button-primary:hover {
+                background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
+            }
+            .button.button-primary:active {
+                transform: translateY(0);
+            }
+            .button.button-secondary {
+                border-radius: 8px !important;
+                padding: 10px 20px !important;
+                height: auto !important;
+            }
+
+            /* Notice styling */
+            .ofast-draft-notice {
+                background: #eff6ff;
+                border: 1px solid #bfdbfe;
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin-bottom: 20px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .ofast-draft-notice .dashicons {
+                color: #6366f1;
+            }
+
+            /* WP Editor override */
+            .ofast-card .wp-editor-container {
+                border-radius: 8px;
+                border: 1px solid #e2e8f0;
+            }
+            .ofast-card .mce-panel {
+                border-radius: 8px 8px 0 0;
+            }
+        </style>
+
+        <div class="wrap">
+            <?php echo $toast_html; ?>
             
-        <hr><h3> Select Users Manually (Optional)</h3>
+            <!-- Header -->
+            <div class="ofast-header">
+                <div class="ofast-header-icon">
+                    <span class="dashicons dashicons-email-alt"></span>
+                </div>
+                <div class="ofast-header-content">
+                    <h1>Send Email</h1>
+                    <p>Compose and send emails to your users with personalized placeholders and scheduling options.</p>
+                </div>
+            </div>
+
+            <form method="post" enctype="multipart/form-data" id="email-form">
+                <?php wp_nonce_field('ofast_send_email_action', 'ofast_email_nonce'); ?>
+                
+                <?php if ($draft_id > 0): ?>
+                    <input type="hidden" name="draft_id" value="<?php echo esc_attr($draft_id); ?>">
+                    <div class="ofast-draft-notice">
+                        <span class="dashicons dashicons-edit"></span>
+                        <span>Editing draft: <strong><?php echo esc_html($draft_subject ?: '(No subject)'); ?></strong></span>
+                        <a href="<?php echo admin_url('admin.php?page=ofast-emailer'); ?>" style="margin-left: auto;">Start fresh</a>
+                    </div>
+                <?php endif; ?>
+                
+                <input type="hidden" name="ofast_submit_token" value="<?php echo esc_attr(wp_generate_password(16, false)); ?>">
+
+                <div class="ofast-email-form-layout">
+                    <!-- Left Column - Main Content -->
+                    <div class="ofast-form-main">
+                        <div class="ofast-card">
+                            <div class="ofast-form-group">
+                                <label>
+                                    <strong>Email Subject</strong>
+                                    <input type="text" name="subject" required value="<?php echo esc_attr($draft_subject); ?>" placeholder="Enter email subject...">
+                                </label>
+                            </div>
+
+                            <div class="ofast-form-group">
+                                <label><strong>Message Body</strong></label>
+                                <?php 
+                                wp_editor($draft_body, 'message', [
+                                    'textarea_name' => 'message',
+                                    'media_buttons' => true,
+                                    'textarea_rows' => 12,
+                                ]);
+                                ?>
+                            </div>
+
+                            <div class="ofast-placeholders-box">
+                                <strong>Available Placeholders:</strong><br>
+                                <code>{{user_id}}</code>, <code>{{username}}</code>, <code>{{user_display_name}}</code>, 
+                                <code>{{user_first_name}}</code>, <code>{{user_last_name}}</code>, <code>{{user_email}}</code>
+                            </div>
+
+                            <div class="ofast-form-group">
+                                <label><strong>Select Roles</strong></label>
+                                <div class="ofast-roles-grid">
+                                    <?php foreach ($roles as $key => $label): ?>
+                                        <label class="ofast-role-item">
+                                            <input type="checkbox" name="roles[]" value="<?php echo esc_attr($key); ?>" <?php checked(in_array($key, $draft_roles)); ?>>
+                                            <?php echo esc_html($label); ?>
+                                        </label>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+
+                            <div class="ofast-form-group">
+                                <label>
+                                    <strong>User ID(s) or Ranges (e.g. 5,12,30-35)</strong>
+                                    <input type="text" name="user_ids" placeholder="Enter specific user IDs or ranges...">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column - Sidebar -->
+                    <div class="ofast-form-sidebar">
+                        <div class="ofast-sidebar-card">
+                            <h4>Schedule</h4>
+                            <div class="ofast-form-group" style="margin-bottom: 15px;">
+                                <label>
+                                    <strong style="font-size: 13px;">Schedule Time (optional)</strong>
+                                    <input type="datetime-local" name="schedule_time" style="margin-top: 5px;">
+                                </label>
+                                <p class="description">Leave blank to send immediately. Large batches will auto-schedule.</p>
+                            </div>
+                            
+                            <div class="ofast-form-group" style="margin-bottom: 0;">
+                                <label>
+                                    <strong style="font-size: 13px;">Emails Per Hour</strong>
+                                    <select name="batch_size" style="margin-top: 5px;">
+                                        <option value="20">20 per hour (safest)</option>
+                                        <option value="30">30 per hour</option>
+                                        <option value="40" selected>40 per hour (recommended)</option>
+                                        <option value="50">50 per hour (max)</option>
+                                    </select>
+                                </label>
+                                <p class="description">Higher values may trigger spam limits on shared hosting.</p>
+                            </div>
+                        </div>
+
+                        <div class="ofast-sidebar-card">
+                            <h4>Actions</h4>
+                            <label class="ofast-role-item" style="margin-bottom: 10px; background: #fff;">
+                                <input type="checkbox" name="test_email">
+                                Send to me as test only
+                            </label>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
+                                <button type="submit" name="send_email" class="button button-primary" style="width: 100%;">Send / Schedule</button>
+                                <button type="submit" name="save_draft" class="button button-secondary" style="width: 100%;">Save as Draft</button>
+                                <button type="button" id="preview-email-btn" class="button button-secondary" style="width: 100%;">Preview Email</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            
+        <hr style="margin: 30px 0; border: 0; border-top: 1px solid #e2e8f0;"><h3 style="margin-bottom: 15px;">Select Users Manually (Optional)</h3>
 
         <label>Search: <input type="text" id="user-search" style="margin-left:5px;"></label>
         <label style="margin-left:20px;">Show 
@@ -464,7 +731,7 @@ class Ofast_X_Email_Admin
                     <th>User ID</th>
                     <th>Role(s)</th>
                 </tr></thead>
-                <tbody>';
+                <tbody><?php
 
         $users = get_users();
         $i = 1;
@@ -877,7 +1144,7 @@ class Ofast_X_Email_Admin
                 $time_display = date('Y-m-d H:i:s', $batch['timestamp']);
 
                 if ($time_diff > 0) {
-                    $status = '<span style="color:#0073aa;">Pending (' . human_time_diff(time(), $batch['timestamp']) . ')</span>';
+                    $status = '<span style="color:#6366f1;">Pending (' . human_time_diff(time(), $batch['timestamp']) . ')</span>';
                 } else {
                     $status = '<span style="color:#f0ad4e;">Waiting for cron...</span>';
                 }
@@ -908,7 +1175,7 @@ class Ofast_X_Email_Admin
             <div style="
                 margin-top: 30px;
                 padding: 40px;
-                background: linear-gradient(135deg, #0073aa 0%, #005177 100%);
+                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
                 border-radius: 16px;
                 text-align: center;
                 color: white;
@@ -1084,17 +1351,17 @@ class Ofast_X_Email_Admin
                         <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
                             <h3 style="margin: 0 0 15px 0; font-size: 14px;">Template Style</h3>
                             <div style="display: flex; gap: 10px;">
-                                <label style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'modern' ? '#2271b1' : '#ddd'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'modern' ? '#f0f6fc' : '#fff'; ?>;">
+                                <label style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'modern' ? '#6366f1' : '#ddd'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'modern' ? '#f0f6fc' : '#fff'; ?>;">
                                     <input type="radio" name="template_style" value="modern" <?php checked($style, 'modern'); ?> style="display: none;">
                                     <div style="font-weight: 600;">Modern</div>
                                     <small style="color: #666;">Gradient header</small>
                                 </label>
-                                <label style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'classic' ? '#2271b1' : '#ddd'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'classic' ? '#f0f6fc' : '#fff'; ?>;">
+                                <label style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'classic' ? '#6366f1' : '#ddd'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'classic' ? '#f0f6fc' : '#fff'; ?>;">
                                     <input type="radio" name="template_style" value="classic" <?php checked($style, 'classic'); ?> style="display: none;">
                                     <div style="font-weight: 600;">Classic</div>
                                     <small style="color: #666;">Solid header</small>
                                 </label>
-                                <label style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'minimal' ? '#2271b1' : '#ddd'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'minimal' ? '#f0f6fc' : '#fff'; ?>;">
+                                <label style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'minimal' ? '#6366f1' : '#ddd'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'minimal' ? '#f0f6fc' : '#fff'; ?>;">
                                     <input type="radio" name="template_style" value="minimal" <?php checked($style, 'minimal'); ?> style="display: none;">
                                     <div style="font-weight: 600;">Minimal</div>
                                     <small style="color: #666;">Clean, no header</small>
@@ -1323,7 +1590,7 @@ class Ofast_X_Email_Admin
                         var $label = $(this).closest('label');
                         if ($(this).is(':checked')) {
                             $label.css({
-                                'border-color': '#2271b1',
+                                'border-color': '#6366f1',
                                 'background': '#f0f6fc'
                             });
                         } else {

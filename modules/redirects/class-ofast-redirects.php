@@ -690,7 +690,7 @@ class Ofast_X_Redirects
                     font-size: 28px;
                     width: 28px;
                     height: 28px;
-                    color: #667eea;
+                    color: #6366f1;
                 }
                 .ofast-header-content h1 {
                     margin: 0 0 5px 0;
@@ -717,10 +717,10 @@ class Ofast_X_Redirects
 
                 /* Button Override */
                 .button.button-primary {
-                    background: #667eea !important;
-                    border-color: #667eea !important;
+                    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+                    border-color: #6366f1 !important;
                     text-shadow: none !important;
-                    box-shadow: 0 4px 6px rgba(102, 126, 234, 0.25) !important;
+                    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
                     transition: all 0.2s !important;
                     padding-top: 10px !important;
                     padding-bottom: 10px !important;
@@ -729,8 +729,9 @@ class Ofast_X_Redirects
                     border-radius: 6px !important;
                 }
                 .button.button-primary:hover {
-                    transform: translateY(-1px);
-                    box-shadow: 0 6px 8px rgba(102, 126, 234, 0.3) !important;
+                    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
                 }
                 .button.button-primary:active {
                     transform: translateY(0);
@@ -757,6 +758,70 @@ class Ofast_X_Redirects
                     .ofast-column-left, .ofast-column-right {
                         width: 100%;
                     }
+                }
+
+                /* Table Action Buttons - Edit/Delete */
+                .ofast-redirect-delete {
+                    background: transparent !important;
+                    border: none !important;
+                    color: #ef4444 !important;
+                    box-shadow: none !important;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+                .ofast-redirect-delete:hover {
+                    color: #dc2626 !important;
+                    text-decoration: underline;
+                }
+                
+                /* Edit button styling */
+                .wp-list-table .button.button-small:not(.button-primary):not(.ofast-redirect-toggle):not(.ofast-redirect-delete) {
+                    background: transparent !important;
+                    border: none !important;
+                    color: #6366f1 !important;
+                    box-shadow: none !important;
+                    padding: 4px 8px !important;
+                }
+                .wp-list-table .button.button-small:not(.button-primary):not(.ofast-redirect-toggle):not(.ofast-redirect-delete):hover {
+                    color: #4f46e5 !important;
+                    text-decoration: underline;
+                }
+                
+                /* ON/OFF Toggle Button */
+                .ofast-redirect-toggle {
+                    border: 1px solid #d1d5db !important;
+                    background: #f9fafb !important;
+                    color: #6b7280 !important;
+                    transition: all 0.2s ease;
+                }
+                .ofast-redirect-toggle:hover {
+                    border-color: #9ca3af !important;
+                    background: #f3f4f6 !important;
+                }
+                .ofast-redirect-toggle.button-primary {
+                    border-color: #6366f1 !important;
+                    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+                    color: #fff !important;
+                }
+                .ofast-redirect-toggle.button-primary:hover {
+                    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+                    border-color: #4f46e5 !important;
+                }
+                
+                /* Export button */
+                #export-redirects {
+                    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+                    color: #fff !important;
+                    border: none !important;
+                    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+                    padding: 8px 16px !important;
+                    border-radius: 6px !important;
+                    transition: all 0.3s ease !important;
+                }
+                #export-redirects:hover {
+                    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
                 }
             </style>
 

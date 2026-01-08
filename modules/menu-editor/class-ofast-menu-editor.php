@@ -465,7 +465,7 @@ class Ofast_X_Menu_Editor
                 font-size: 28px;
                 width: 28px;
                 height: 28px;
-                color: #667eea;
+                color: #6366f1;
             }
             .ofast-header-content h1 {
                 margin: 0 0 5px 0 !important;
@@ -497,7 +497,7 @@ class Ofast_X_Menu_Editor
             }
 
             .drag-handle:hover {
-                color: #2271b1 !important;
+                color: #6366f1 !important;
             }
 
             /* Icon Picker Styles */
@@ -582,11 +582,44 @@ class Ofast_X_Menu_Editor
             }
 
             .icon-option.selected {
-                background: #2271b1;
+                background: #6366f1;
             }
 
             .icon-option.selected .dashicons {
                 color: #fff;
+            }
+
+            /* Button Override */
+            .button.button-primary {
+                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+                border-color: #6366f1 !important;
+                text-shadow: none !important;
+                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+                transition: all 0.3s ease !important;
+                padding: 10px 24px !important;
+                height: auto !important;
+                border-radius: 8px !important;
+                font-size: 14px !important;
+            }
+            .button.button-primary:hover {
+                background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
+            }
+            .button.button-primary:active {
+                transform: translateY(0);
+            }
+            
+            /* Reset button styling */
+            .ofast-action-bar .button:not(.button-primary) {
+                background: #fff !important;
+                border: 2px solid #fecaca !important;
+                color: #ef4444 !important;
+                transition: all 0.2s ease !important;
+            }
+            .ofast-action-bar .button:not(.button-primary):hover {
+                background: #fef2f2 !important;
+                border-color: #ef4444 !important;
             }
         </style>
 

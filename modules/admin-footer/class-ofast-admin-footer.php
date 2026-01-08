@@ -272,9 +272,9 @@ class Ofast_X_Admin_Footer
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
                 border: 1px solid #e2e8f0;
-                color: #667eea;
+                color: #6366f1;
             }
             .ofast-header-icon .dashicons {
                 font-size: 28px;
@@ -325,7 +325,7 @@ class Ofast_X_Admin_Footer
                 font-size: 20px;
                 width: 20px;
                 height: 20px;
-                color: #667eea;
+                color: #6366f1;
             }
             .ofast-card-header h2 {
                 margin: 0;
@@ -354,7 +354,7 @@ class Ofast_X_Admin_Footer
                 font-size: 16px;
                 width: 16px;
                 height: 16px;
-                color: #667eea;
+                color: #6366f1;
             }
             .ofast-modern-form input[type="text"],
             .ofast-modern-form textarea {
@@ -374,9 +374,9 @@ class Ofast_X_Admin_Footer
             .ofast-modern-form input:focus,
             .ofast-modern-form textarea:focus {
                 outline: none;
-                border-color: #667eea;
+                border-color: #6366f1;
                 background: #fff;
-                box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+                box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
             }
             .ofast-modern-form input::placeholder,
             .ofast-modern-form textarea::placeholder {
@@ -393,7 +393,7 @@ class Ofast_X_Admin_Footer
                 padding: 2px 6px;
                 border-radius: 4px;
                 font-size: 12px;
-                color: #667eea;
+                color: #6366f1;
             }
 
             /* Checkbox styling */
@@ -409,13 +409,13 @@ class Ofast_X_Admin_Footer
                 transition: all 0.2s ease;
             }
             .ofast-checkbox-label:hover {
-                border-color: #667eea;
+                border-color: #6366f1;
                 background: #fff;
             }
             .ofast-checkbox-label input[type="checkbox"] {
                 width: 20px;
                 height: 20px;
-                accent-color: #667eea;
+                accent-color: #6366f1;
             }
             .ofast-checkbox-text {
                 display: flex;
@@ -424,7 +424,7 @@ class Ofast_X_Admin_Footer
                 flex: 1;
             }
             .ofast-checkbox-text .dashicons {
-                color: #667eea;
+                color: #6366f1;
             }
             .ofast-security-badge {
                 background: linear-gradient(135deg, #10b981 0%, #059669 100%);
@@ -448,7 +448,7 @@ class Ofast_X_Admin_Footer
                 align-items: center;
                 gap: 10px;
                 padding: 14px 28px;
-                background: #667eea;
+                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
                 color: #fff;
                 border: none;
                 border-radius: 10px;
@@ -456,12 +456,12 @@ class Ofast_X_Admin_Footer
                 font-weight: 600;
                 cursor: pointer;
                 transition: all 0.3s ease;
-                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.35);
+                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
             }
             .ofast-btn-primary:hover {
-                background: #5a6fd6;
+                background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
                 transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(102, 126, 234, 0.45);
+                box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
             }
             .ofast-btn-primary:disabled {
                 background: #94a3b8;
@@ -534,7 +534,7 @@ class Ofast_X_Admin_Footer
                 transition: color 0.2s ease;
             }
             .ofast-tooltip:hover .dashicons {
-                color: #667eea;
+                color: #6366f1;
             }
         </style>
 

@@ -728,7 +728,7 @@ class Ofast_X_Social_Login
         <style>
             /* Colors */
             :root {
-                --ofast-primary: #667eea;
+                --ofast-primary: #6366f1;
             }
 
             .ofast-tabs-nav {
@@ -770,7 +770,7 @@ class Ofast_X_Social_Login
             .ofast-tab.active {
                 background: var(--ofast-primary);
                 color: #fff;
-                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
             }
             .ofast-tab .dashicons {
                 font-size: 16px;
@@ -841,18 +841,19 @@ class Ofast_X_Social_Login
             
             /* Button Override */
             .button.button-primary {
-                background: var(--ofast-primary) !important;
-                border-color: var(--ofast-primary) !important;
+                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+                border-color: #6366f1 !important;
                 text-shadow: none !important;
-                box-shadow: 0 4px 6px rgba(102, 126, 234, 0.25) !important;
-                transition: all 0.2s !important;
+                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+                transition: all 0.3s ease !important;
                 padding-top: 10px !important;
                 padding-bottom: 10px !important;
                 height: auto !important;
             }
             .button.button-primary:hover {
-                transform: translateY(-1px);
-                box-shadow: 0 6px 8px rgba(102, 126, 234, 0.3) !important;
+                background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
             }
             .button.button-primary:active {
                 transform: translateY(0);
@@ -887,7 +888,7 @@ class Ofast_X_Social_Login
                 font-size: 28px;
                 width: 28px;
                 height: 28px;
-                color: #667eea;
+                color: #6366f1;
             }
             .ofast-header-content h1 {
                 margin: 0 0 5px 0;

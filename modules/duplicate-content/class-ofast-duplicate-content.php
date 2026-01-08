@@ -55,7 +55,7 @@ class Ofast_X_Duplicate_Content
         );
 
         $actions['duplicate'] = sprintf(
-            '<a href="%s" title="%s" style="color: #2271b1;">%s</a>',
+            '<a href="%s" title="%s" style="color: #6366f1;">%s</a>',
             esc_url($url),
             esc_attr__('Duplicate this item'),
             'Duplicate'

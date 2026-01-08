@@ -132,8 +132,18 @@ class Ofast_X_Settings
 
 ?>
         <div class="wrap ofast-settings-wrap">
-            <h1>Ofast X Settings</h1>
-            <p class="description">Enable or disable plugin modules. Only enabled modules will load.</p>
+            <!-- Modern Header - Unified Style -->
+            <div class="ofast-page-header">
+                <div class="ofast-header-content">
+                    <div class="ofast-header-icon">
+                        <span class="dashicons dashicons-admin-generic"></span>
+                    </div>
+                    <div class="ofast-header-text">
+                        <h1>Ofast X Settings</h1>
+                        <p>Enable or disable plugin modules. Only enabled modules will load.</p>
+                    </div>
+                </div>
+            </div>
 
             <?php if ($saved): ?>
                 <?php echo Ofast_X_Toast::render('Settings saved successfully!', 'success'); ?>
@@ -276,6 +286,50 @@ class Ofast_X_Settings
 
         <style>
             .ofast-settings-wrap { max-width: 1400px; }
+
+            /* Page Header - Unified Style */
+            .ofast-page-header {
+                background: #ffffff;
+                border-radius: 16px;
+                padding: 30px;
+                margin-bottom: 30px;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            }
+            .ofast-header-content {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+            }
+            .ofast-header-icon {
+                width: 60px;
+                height: 60px;
+                background: #ffffff;
+                border-radius: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2); /* Matching brand color */
+                border: 1px solid #e2e8f0;
+                color: #6366f1; /* Matching brand color */
+            }
+            .ofast-header-icon .dashicons {
+                font-size: 28px;
+                width: 28px;
+                height: 28px;
+            }
+            .ofast-header-text h1 {
+                margin: 0;
+                font-size: 28px;
+                font-weight: 700;
+                color: #1e293b;
+            }
+            .ofast-header-text p {
+                margin: 5px 0 0;
+                color: #64748b;
+                font-size: 15px;
+            }
+
             
             /* Toolbar */
             .ofast-toolbar { background: #fff; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }

@@ -29,13 +29,13 @@ class Ofast_X_Forms_Render
         $design = $settings['design'] ?? array();
         $form_width = absint($design['form_width'] ?? 600);
         $label_size = absint($design['label_size'] ?? 14);
-        $btn_bg = esc_attr($design['btn_bg'] ?? '#2271b1');
+        $btn_bg = esc_attr($design['btn_bg'] ?? '#6366f1');
         $btn_text = esc_attr($design['btn_text'] ?? '#ffffff');
         $btn_radius = absint($design['btn_radius'] ?? 5);
         $form_bg = esc_attr($design['form_bg'] ?? '#ffffff');
         $form_radius = absint($design['form_radius'] ?? 8);
         $input_border = esc_attr($design['input_border'] ?? '#dddddd');
-        $input_focus = esc_attr($design['input_focus'] ?? '#2271b1');
+        $input_focus = esc_attr($design['input_focus'] ?? '#6366f1');
 
         ob_start();
 ?>
@@ -134,7 +134,7 @@ class Ofast_X_Forms_Render
             .ofast-form-wrapper .ofast-form-field textarea:focus,
             .ofast-form-wrapper .ofast-form-field select:focus {
                 outline: none;
-                border-color: #2271b1;
+                border-color: #6366f1;
             }
 
             .ofast-form-wrapper .ofast-form-field textarea {
@@ -158,7 +158,7 @@ class Ofast_X_Forms_Render
             }
 
             .ofast-form-wrapper .ofast-form-button {
-                background: #2271b1;
+                background: #6366f1;
                 color: #fff;
                 border: none;
                 padding: 14px 30px;
@@ -170,7 +170,7 @@ class Ofast_X_Forms_Render
             }
 
             .ofast-form-wrapper .ofast-form-button:hover {
-                background: #135e96;
+                background: #4f46e5;
             }
 
             .ofast-form-wrapper .ofast-form-button:disabled {

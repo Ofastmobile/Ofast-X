@@ -499,7 +499,7 @@ class Ofast_X_Snippets
                                         </span>
                                     </div>
                                     <details style="margin-bottom: 10px;">
-                                        <summary style="cursor: pointer; color: #0073aa; font-size: 12px;">Preview Code</summary>
+                                        <summary style="cursor: pointer; color: #6366f1; font-size: 12px;">Preview Code</summary>
                                         <pre style="background: #1e1e1e; color: #d4d4d4; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin-top: 8px; max-height: 200px;"><?php echo esc_html($template['code']); ?></pre>
                                     </details>
                                     <button type="button" class="button button-primary use-library-template"
@@ -777,7 +777,7 @@ class Ofast_X_Snippets
 
                 .ofast-snippet-form input[type="text"]:focus,
                 .ofast-snippet-form select:focus {
-                    border-color: #2271b1;
+                    border-color: #6366f1;
                     box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.1);
                     outline: none;
                 }
@@ -795,7 +795,7 @@ class Ofast_X_Snippets
                 }
 
                 .ofast-snippet-form textarea#snippet_description:focus {
-                    border-color: #2271b1;
+                    border-color: #6366f1;
                     box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.1);
                     outline: none;
                 }
@@ -818,7 +818,7 @@ class Ofast_X_Snippets
                 }
 
                 .ofast-snippet-form .CodeMirror-focused {
-                    border-color: #2271b1;
+                    border-color: #6366f1;
                     box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.1);
                 }
 
@@ -980,7 +980,7 @@ class Ofast_X_Snippets
                 }
 
                 .ofast-toggle-switch input:checked+.ofast-toggle-slider {
-                    background-color: #2271b1;
+                    background-color: #6366f1;
                 }
 
                 .ofast-toggle-switch input:checked+.ofast-toggle-slider:before {
@@ -1016,7 +1016,7 @@ class Ofast_X_Snippets
                 .snippet-name-edit {
                     width: 300px;
                     padding: 4px 8px;
-                    border: 1px solid #2271b1;
+                    border: 1px solid #6366f1;
                     border-radius: 3px;
                 }
             </style>
@@ -1114,7 +1114,7 @@ class Ofast_X_Snippets
                                         <?php if ($duplicate_warning['has_duplicate']): ?>
                                             <span class="duplicate-warning" title="<?php echo esc_attr(implode(' | ', $duplicate_warning['reasons'])); ?>" style="display: inline-block; width: 10px; height: 10px; background: #dc3545; border-radius: 50%; margin-right: 5px; cursor: help; vertical-align: middle;" data-tooltip="<?php echo esc_attr(implode("\n", $duplicate_warning['reasons'])); ?>"></span>
                                         <?php endif; ?>
-                                        <span class="snippet-name-display" data-id="<?php echo $snippet->id; ?>" style="cursor: pointer; color: #0073aa;" title="Click to rename">
+                                        <span class="snippet-name-display" data-id="<?php echo $snippet->id; ?>" style="cursor: pointer; color: #6366f1;" title="Click to rename">
                                             <strong><?php echo esc_html($snippet->name); ?></strong>
                                         </span>
                                         <input type="text" class="snippet-name-edit" data-id="<?php echo $snippet->id; ?>" value="<?php echo esc_attr($snippet->name); ?>" style="display:none; width: 100%;">
@@ -1125,7 +1125,7 @@ class Ofast_X_Snippets
                                     </td>
                                     <td>
                                         <?php if (!empty($snippet_category)): ?>
-                                            <span style="background: #e7f3ff; color: #0073aa; padding: 2px 8px; border-radius: 3px; font-size: 11px;"><?php echo esc_html($snippet_category); ?></span>
+                                            <span style="background: #e7f3ff; color: #6366f1; padding: 2px 8px; border-radius: 3px; font-size: 11px;"><?php echo esc_html($snippet_category); ?></span>
                                         <?php else: ?>
                                             <span style="color: #999;">—</span>
                                         <?php endif; ?>

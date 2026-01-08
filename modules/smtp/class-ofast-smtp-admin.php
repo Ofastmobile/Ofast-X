@@ -81,9 +81,9 @@ class Ofast_X_SMTP_Admin
                 box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             }
             .ofast-tab.active {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #6366f1 0%, #764ba2 100%);
                 color: #fff;
-                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
             }
             .ofast-tab .dashicons {
                 font-size: 16px;

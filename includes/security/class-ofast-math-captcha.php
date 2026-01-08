@@ -176,7 +176,7 @@ class Ofast_X_Math_Captcha
         
         $html = '<div class="ofast-math-captcha" style="margin: 15px 0;">';
         $html .= '<label style="display: flex; align-items: center; gap: 10px; font-weight: 500; color: #334155;">';
-        $html .= '<span style="background: #667eea; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 16px; font-weight: 600;">';
+        $html .= '<span style="background: #6366f1; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 16px; font-weight: 600;">';
         $html .= esc_html($problem['question']) . ' = ?';
         $html .= '</span>';
         $html .= '<input type="number" name="ofast_math_answer" required autocomplete="off" ';

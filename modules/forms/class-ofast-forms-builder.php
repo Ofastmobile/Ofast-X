@@ -180,8 +180,8 @@ class Ofast_X_Forms_Builder
                                 <tr>
                                     <th>Button Background</th>
                                     <td>
-                                        <input type="color" name="settings[design][btn_bg]" value="<?php echo esc_attr($design['btn_bg'] ?? '#2271b1'); ?>">
-                                        <input type="text" name="settings[design][btn_bg_text]" value="<?php echo esc_attr($design['btn_bg'] ?? '#2271b1'); ?>" style="width:80px;" class="color-text" data-target="btn_bg">
+                                        <input type="color" name="settings[design][btn_bg]" value="<?php echo esc_attr($design['btn_bg'] ?? '#6366f1'); ?>">
+                                        <input type="text" name="settings[design][btn_bg_text]" value="<?php echo esc_attr($design['btn_bg'] ?? '#6366f1'); ?>" style="width:80px;" class="color-text" data-target="btn_bg">
                                     </td>
                                 </tr>
                                 <tr>
@@ -194,8 +194,8 @@ class Ofast_X_Forms_Builder
                                 <tr>
                                     <th>Button Hover Background</th>
                                     <td>
-                                        <input type="color" name="settings[design][btn_hover]" value="<?php echo esc_attr($design['btn_hover'] ?? '#135e96'); ?>">
-                                        <input type="text" name="settings[design][btn_hover_text]" value="<?php echo esc_attr($design['btn_hover'] ?? '#135e96'); ?>" style="width:80px;" class="color-text" data-target="btn_hover">
+                                        <input type="color" name="settings[design][btn_hover]" value="<?php echo esc_attr($design['btn_hover'] ?? '#4f46e5'); ?>">
+                                        <input type="text" name="settings[design][btn_hover_text]" value="<?php echo esc_attr($design['btn_hover'] ?? '#4f46e5'); ?>" style="width:80px;" class="color-text" data-target="btn_hover">
                                     </td>
                                 </tr>
                                 <tr>
@@ -227,8 +227,8 @@ class Ofast_X_Forms_Builder
                                 <tr>
                                     <th>Input Focus Color</th>
                                     <td>
-                                        <input type="color" name="settings[design][input_focus]" value="<?php echo esc_attr($design['input_focus'] ?? '#2271b1'); ?>">
-                                        <input type="text" name="settings[design][input_focus_text]" value="<?php echo esc_attr($design['input_focus'] ?? '#2271b1'); ?>" style="width:80px;" class="color-text" data-target="input_focus">
+                                        <input type="color" name="settings[design][input_focus]" value="<?php echo esc_attr($design['input_focus'] ?? '#6366f1'); ?>">
+                                        <input type="text" name="settings[design][input_focus_text]" value="<?php echo esc_attr($design['input_focus'] ?? '#6366f1'); ?>" style="width:80px;" class="color-text" data-target="input_focus">
                                     </td>
                                 </tr>
                             </table>
@@ -318,7 +318,7 @@ class Ofast_X_Forms_Builder
             }
 
             .ofast-form-builder .field-row:hover {
-                border-color: #2271b1;
+                border-color: #6366f1;
             }
 
             .ofast-form-builder .field-header {
@@ -329,7 +329,7 @@ class Ofast_X_Forms_Builder
             }
 
             .ofast-form-builder .field-type-badge {
-                background: #2271b1;
+                background: #6366f1;
                 color: #fff;
                 padding: 2px 8px;
                 border-radius: 3px;
@@ -359,7 +359,7 @@ class Ofast_X_Forms_Builder
             }
 
             .ofast-form-builder .duplicate-field {
-                color: #2271b1;
+                color: #6366f1;
                 cursor: pointer;
             }
 
@@ -461,13 +461,13 @@ class Ofast_X_Forms_Builder
                     // Get design settings
                     var formWidth = $('input[name="settings[design][form_width]"]').val() || 600;
                     var labelSize = $('input[name="settings[design][label_size]"]').val() || 14;
-                    var btnBg = $('input[name="settings[design][btn_bg]"]').val() || '#2271b1';
+                    var btnBg = $('input[name="settings[design][btn_bg]"]').val() || '#6366f1';
                     var btnText = $('input[name="settings[design][btn_text]"]').val() || '#ffffff';
                     var btnRadius = $('input[name="settings[design][btn_radius]"]').val() || 5;
                     var formBg = $('input[name="settings[design][form_bg]"]').val() || '#ffffff';
                     var formRadius = $('input[name="settings[design][form_radius]"]').val() || 8;
                     var inputBorder = $('input[name="settings[design][input_border]"]').val() || '#dddddd';
-                    var inputFocus = $('input[name="settings[design][input_focus]"]').val() || '#2271b1';
+                    var inputFocus = $('input[name="settings[design][input_focus]"]').val() || '#6366f1';
                     var submitText = $('input[name="settings[submit_text]"]').val() || 'Send Message';
 
                     var html = '<div style="max-width:' + formWidth + 'px;margin:0 auto;">';

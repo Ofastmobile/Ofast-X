@@ -23,7 +23,7 @@ class Ofast_X_Forms_Notifications
         $html .= '<div style="max-width:600px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;">';
 
         // Header
-        $html .= '<div style="background:#2271b1;padding:20px;text-align:center;">';
+        $html .= '<div style="background:#6366f1;padding:20px;text-align:center;">';
         $html .= '<h1 style="color:#fff;margin:0;">New Form Submission</h1>';
         $html .= '</div>';
 

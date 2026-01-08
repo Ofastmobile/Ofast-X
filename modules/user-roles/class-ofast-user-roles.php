@@ -254,7 +254,7 @@ class Ofast_X_User_Roles
         foreach ($roles as $role) {
             $role_obj = get_role($role);
             if ($role_obj) {
-                $role_names[] = '<span style="background: #e7f3ff; color: #0073aa; padding: 2px 8px; border-radius: 3px; font-size: 11px; display: inline-block; margin: 2px;">' . esc_html(translate_user_role(ucfirst($role))) . '</span>';
+                $role_names[] = '<span style="background: #e7f3ff; color: #6366f1; padding: 2px 8px; border-radius: 3px; font-size: 11px; display: inline-block; margin: 2px;">' . esc_html(translate_user_role(ucfirst($role))) . '</span>';
             }
         }
 
@@ -419,7 +419,7 @@ class Ofast_X_User_Roles
             <!-- Create New Role Section -->
             <div class="ofast-card" style="margin-bottom: 20px;">
                 <div class="ofast-card-header" style="cursor: pointer;" onclick="document.getElementById('create-role-form').classList.toggle('hidden');">
-                    <span class="dashicons dashicons-plus-alt2" style="color: #667eea; font-size: 20px;"></span>
+                    <span class="dashicons dashicons-plus-alt2" style="color: #6366f1; font-size: 20px;"></span>
                     <h2 style="flex: 1;">Create New Role</h2>
                     <span class="dashicons dashicons-arrow-down-alt2"></span>
                 </div>
@@ -569,7 +569,7 @@ class Ofast_X_User_Roles
             /* Header */
             .ofast-page-header { background: #ffffff; border-radius: 16px; padding: 30px; margin-bottom: 30px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
             .ofast-header-content { display: flex; align-items: center; gap: 20px; }
-            .ofast-header-icon { width: 60px; height: 60px; background: #ffffff; border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2); border: 1px solid #e2e8f0; color: #667eea; }
+            .ofast-header-icon { width: 60px; height: 60px; background: #ffffff; border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2); border: 1px solid #e2e8f0; color: #6366f1; }
             .ofast-header-icon .dashicons { font-size: 28px; width: 28px; height: 28px; }
             .ofast-header-text h1 { margin: 0; font-size: 28px; font-weight: 700; color: #1e293b; }
             .ofast-header-text p { margin: 5px 0 0; color: #64748b; font-size: 15px; }
@@ -578,7 +578,7 @@ class Ofast_X_User_Roles
             .ofast-toolbar { background: #fff; padding: 20px 25px; margin-bottom: 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
             .ofast-role-selector { display: flex; align-items: center; gap: 10px; }
             .ofast-role-selector label { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #374151; }
-            .ofast-role-selector .dashicons { color: #667eea; }
+            .ofast-role-selector .dashicons { color: #6366f1; }
             .ofast-role-selector select { padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-weight: 500; min-width: 180px; }
             .ofast-toolbar-actions { display: flex; gap: 10px; flex-wrap: wrap; }
             .ofast-toolbar-actions .button { display: inline-flex; align-items: center; gap: 6px; }
@@ -605,7 +605,7 @@ class Ofast_X_User_Roles
 
             /* Capability Item */
             .ofast-cap-item { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 10px; transition: all 0.2s ease; }
-            .ofast-cap-item:hover { border-color: #667eea; background: #fff; }
+            .ofast-cap-item:hover { border-color: #6366f1; background: #fff; }
             .ofast-cap-label { display: flex; align-items: center; gap: 12px; padding: 12px 15px; cursor: pointer; }
             .ofast-cap-info { flex: 1; min-width: 0; }
             .ofast-cap-name { display: block; font-weight: 600; color: #1e293b; font-size: 14px; margin-bottom: 2px; }
@@ -616,19 +616,45 @@ class Ofast_X_User_Roles
             .ofast-cap-checkbox { opacity: 0; width: 0; height: 0; position: absolute; }
             .ofast-toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 24px; }
             .ofast-toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-            .ofast-cap-checkbox:checked + .ofast-toggle-slider { background-color: #667eea; }
+            .ofast-cap-checkbox:checked + .ofast-toggle-slider { background-color: #6366f1; }
             .ofast-cap-checkbox:checked + .ofast-toggle-slider:before { transform: translateX(20px); }
-            .ofast-cap-item:has(.ofast-cap-checkbox:checked) { background: #eef2ff; border-color: #667eea; }
+            .ofast-cap-item:has(.ofast-cap-checkbox:checked) { background: #eef2ff; border-color: #6366f1; }
 
             /* Buttons */
-            .ofast-btn-primary { display: inline-flex; align-items: center; gap: 10px; padding: 14px 32px; background: #667eea; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.35); text-decoration: none; }
-            .ofast-btn-primary:hover { background: #5a6fd6; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.45); color: #fff; }
-            .ofast-btn-secondary { display: inline-flex; align-items: center; justify-content: center; padding: 10px 20px; background: #667eea; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; text-decoration: none; }
-            .ofast-btn-secondary:hover { background: #5a6fd6; transform: translateY(-1px); color: #fff; }
+            .ofast-btn-primary { display: inline-flex; align-items: center; gap: 10px; padding: 14px 32px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); text-decoration: none; }
+            .ofast-btn-primary:hover { background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); color: #fff; }
+            .ofast-btn-secondary { display: inline-flex; align-items: center; justify-content: center; padding: 10px 20px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; text-decoration: none; }
+            .ofast-btn-secondary:hover { background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%); transform: translateY(-1px); color: #fff; }
             .ofast-btn-danger { display: inline-flex; align-items: center; justify-content: center; padding: 10px 20px; background: #dc2626; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; text-decoration: none; }
             .ofast-btn-danger:hover { background: #b91c1c; transform: translateY(-1px); color: #fff; }
             .ofast-btn-large { padding: 16px 40px; font-size: 17px; }
             .ofast-save-note { margin-left: 15px; font-size: 13px; color: #64748b; }
+
+            /* Mobile Responsive */
+            @media (max-width: 782px) {
+                .ofast-capabilities-wrap { padding: 0 10px; }
+                .ofast-page-header { padding: 20px; }
+                .ofast-header-content { flex-direction: column; text-align: center; }
+                .ofast-header-icon { width: 50px; height: 50px; }
+                .ofast-header-text h1 { font-size: 22px; }
+                
+                .ofast-toolbar { flex-direction: column; padding: 15px; gap: 15px; }
+                .ofast-role-selector { width: 100%; flex-direction: column; align-items: stretch; }
+                .ofast-role-selector label { margin-bottom: 8px; }
+                .ofast-role-selector select { width: 100%; min-width: unset; }
+                .ofast-toolbar-actions { width: 100%; flex-wrap: wrap; justify-content: center; }
+                .ofast-btn-secondary, .ofast-btn-danger { flex: 1; min-width: 120px; padding: 12px 15px; font-size: 13px; }
+                
+                .ofast-stats-bar { flex-wrap: wrap; padding: 15px; gap: 15px; }
+                .ofast-stat-item { flex: 1; min-width: 80px; justify-content: center; }
+                
+                .ofast-card-header { padding: 15px; flex-wrap: wrap; }
+                .ofast-card-body { padding: 15px; }
+                
+                .ofast-form-actions { padding: 15px !important; flex-direction: column; text-align: center; }
+                .ofast-btn-primary.ofast-btn-large { width: 100%; justify-content: center; padding: 14px 20px; }
+                .ofast-save-note { margin: 10px 0 0; }
+            }
         </style>
 
         <script>

@@ -65,6 +65,9 @@ function ofast_x_init_plugin()
     // Load Toast Notification system
     require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-toast.php';
 
+    // Load Unified Button component
+    require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-button.php';
+
     // Load Turnstile spam protection
     require_once OFAST_X_PLUGIN_DIR . 'includes/security/class-ofast-turnstile.php';
 

@@ -233,7 +233,7 @@ class Ofast_X_Content_Ordering
             }
 
             .ofast-item-order {
-                background: #2271b1;
+                background: #6366f1;
                 color: #fff;
                 width: 28px;
                 height: 28px;
@@ -279,7 +279,7 @@ class Ofast_X_Content_Ordering
             }
 
             .ofast-item-edit {
-                color: #2271b1;
+                color: #6366f1;
                 text-decoration: none;
                 font-size: 13px;
             }
@@ -291,7 +291,7 @@ class Ofast_X_Content_Ordering
 
             .ofast-sortable-placeholder {
                 background: #e7f3ff !important;
-                border: 2px dashed #2271b1;
+                border: 2px dashed #6366f1;
                 height: 50px;
             }
 

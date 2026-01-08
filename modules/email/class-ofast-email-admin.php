@@ -924,13 +924,11 @@ class Ofast_X_Email_Admin
                     </div>
                     
                     <!-- Buttons -->
-                    <div style="display: flex; gap: 10px; margin-top: 20px;">
-                        <button type="submit" name="ofast_save_template" class="button button-primary button-large" style="flex: 1; justify-content: center;">Save Changes</button>
-                    </div>
-                    <div style="margin-top: 15px; display: flex; gap: 10px;">
-                        <button type="submit" name="ofast_send_test_template" class="button button-large" style="flex: 1;">Send Test Email</button>
-                        <button type="submit" name="ofast_reset_template" class="button button-large" style="color: #b32d2e; border-color: #b32d2e;" onclick="return confirm('Reset all template settings details?');">Reset Defaults</button>
-                    </div>
+                    <div style="margin-top: 30px; display: flex; gap: 12px; flex-wrap: wrap;">
+                    <button type="submit" name="ofast_save_template" class="button button-primary button-large ofast-template-btn" style="flex: 1;"><span class="dashicons dashicons-saved"></span> Save Changes</button>
+                    <button type="submit" name="ofast_send_test_template" class="button button-secondary button-large ofast-template-btn" style="flex: 1;"><span class="dashicons dashicons-email"></span> Send Test</button>
+                    <button type="submit" name="ofast_reset_template" class="button button-large ofast-template-btn ofast-reset-btn" style="flex: 1;" onclick="return confirm('Reset all template settings details?');"><span class="dashicons dashicons-image-rotate"></span> Reset</button>
+                </div>
 
                 </form>
             </div>
@@ -1438,8 +1436,8 @@ class Ofast_X_Email_Admin
             .ofast-placeholders-box {
                 background: #f8fafc;
                 padding: 15px;
-                border-left: 4px solid #6366f1;
-                border-radius: 0 8px 8px 0;
+                border-left: none;
+                border-radius: 8px;
                 margin-bottom: 20px;
             }
             .ofast-placeholders-box strong {
@@ -1473,6 +1471,17 @@ class Ofast_X_Email_Admin
             }
             .ofast-role-item input[type="checkbox"] {
                 margin: 0;
+            }
+            input[type="checkbox"]:checked {
+                background-color: #fff !important;
+                border-color: #6366f1 !important;
+            }
+            input[type="checkbox"]:checked::before {
+                content: url("data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2020%2020%27%3E%3Cpath%20d%3D%27M14.83%204.89l1.34.94-5.81%208.38H9.02L5.78%209.67l1.34-1.25%202.57%202.4z%27%20fill%3D%27%236366f1%27%2F%3E%3C%2Fsvg%3E") !important;
+            }
+            input[type="checkbox"]:focus {
+                border-color: #6366f1;
+                box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
             }
 
             /* Sidebar card */
@@ -1515,10 +1524,76 @@ class Ofast_X_Email_Admin
             .button.button-primary:active {
                 transform: translateY(0);
             }
-            .button.button-secondary {
+            .button.button-secondary,
+            .wp-media-buttons .button {
                 border-radius: 8px !important;
                 padding: 10px 20px !important;
                 height: auto !important;
+                color: #6366f1 !important;
+                border: 1px solid #6366f1 !important;
+                background: transparent !important;
+                transition: all 0.2s ease !important;
+                display: inline-flex !important;
+                align-items: center !important;
+            }
+            .button.button-secondary:hover,
+            .wp-media-buttons .button:hover {
+                background: #eff6ff !important;
+                border-color: #4f46e5 !important;
+                color: #4f46e5 !important;
+            }
+            .wp-media-buttons .dashicons {
+                color: #6366f1 !important;
+            }
+            .wp-media-buttons .button:hover .dashicons {
+                color: #4f46e5 !important;
+            }
+            .preview-log-btn {
+                color: #6366f1 !important;
+                border: 1px solid #6366f1 !important;
+                background: transparent !important;
+                border-radius: 4px !important;
+                transition: all 0.2s ease !important;
+            }
+            .preview-log-btn:hover {
+                background: #eff6ff !important;
+                border-color: #4f46e5 !important;
+                color: #4f46e5 !important;
+            }
+
+            /* Template buttons */
+            /* Template buttons */
+            .ofast-template-btn {
+                padding: 10px 20px !important;
+                height: auto !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 8px !important;
+                font-weight: 500 !important;
+                border-radius: 8px !important;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            }
+            .ofast-template-btn:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            }
+            .ofast-template-btn .dashicons {
+                font-size: 18px;
+                width: 18px;
+                height: 18px;
+                margin-top: 1px;
+            }
+            .ofast-reset-btn {
+                color: #ef4444 !important;
+                border: 1px solid #fee2e2 !important;
+                background: #fff !important;
+            }
+            .ofast-reset-btn:hover {
+                background: #fef2f2 !important;
+                border-color: #fca5a5 !important;
+                color: #dc2626 !important;
             }
 
             /* Notice styling */
@@ -1667,7 +1742,8 @@ class Ofast_X_Email_Admin
                     </div>
                 </div>
             
-        <hr style="margin: 30px 0; border: 0; border-top: 1px solid #e2e8f0;"><h3 style="margin-bottom: 15px;">Select Users Manually (Optional)</h3>
+        <div class="ofast-card" style="margin-top: 30px;">
+            <h3 style="margin-top: 0; margin-bottom: 15px;">Select Users Manually (Optional)</h3>
 
         <label>Search: <input type="text" id="user-search" style="margin-left:5px;"></label>
         <label style="margin-left:20px;">Show 
@@ -1711,6 +1787,7 @@ class Ofast_X_Email_Admin
         }
         echo '</tbody></table>';
         echo '<div id="user-pagination" style="margin-top:10px;"></div>';
+        echo '</div>'; // End ofast-card
 
         // FIX #6: Fixed search functionality
         echo '<script>

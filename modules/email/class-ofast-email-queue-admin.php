@@ -41,7 +41,7 @@ class Ofast_X_Email_Queue_Admin {
      * Handle pause/resume/delete actions
      */
     public function handle_actions() {
-        if (!isset($_GET['page']) || $_GET['page'] !== 'ofast-email-queue') {
+        if (!isset($_GET['page']) || !in_array($_GET['page'], array('ofast-email-queue', 'ofast-emailer'))) {
             return;
         }
         
@@ -80,7 +80,7 @@ class Ofast_X_Email_Queue_Admin {
         }
         
         if ($message) {
-            wp_redirect(add_query_arg('queue_message', urlencode($message), admin_url('admin.php?page=ofast-email-queue')));
+            wp_redirect(add_query_arg('queue_message', urlencode($message), admin_url('admin.php?page=ofast-emailer&tab=queue')));
             exit;
         }
     }
@@ -435,17 +435,17 @@ class Ofast_X_Email_Queue_Admin {
                                 </td>
                                 <td>
                                     <?php if ($batch->status === 'pending'): ?>
-                                        <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-email-queue&action=pause&batch_id=' . $batch->batch_id), 'ofast_queue_action'); ?>" class="ofast-action-btn">
+                                        <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-emailer&tab=queue&action=pause&batch_id=' . $batch->batch_id), 'ofast_queue_action'); ?>" class="ofast-action-btn">
                                             <span class="dashicons dashicons-controls-pause"></span> Pause
                                         </a>
                                     <?php elseif ($batch->status === 'paused'): ?>
-                                        <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-email-queue&action=resume&batch_id=' . $batch->batch_id), 'ofast_queue_action'); ?>" class="ofast-action-btn">
+                                        <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-emailer&tab=queue&action=resume&batch_id=' . $batch->batch_id), 'ofast_queue_action'); ?>" class="ofast-action-btn">
                                             <span class="dashicons dashicons-controls-play"></span> Resume
                                         </a>
                                     <?php endif; ?>
                                     
                                     <?php if (in_array($batch->status, array('completed', 'failed', 'paused'))): ?>
-                                        <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-email-queue&action=delete&batch_id=' . $batch->batch_id), 'ofast_queue_action'); ?>" class="ofast-action-btn" onclick="return confirm('Delete this batch?')" style="color: #ef4444;">
+                                        <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-emailer&tab=queue&action=delete&batch_id=' . $batch->batch_id), 'ofast_queue_action'); ?>" class="ofast-action-btn" onclick="return confirm('Delete this batch?')" style="color: #ef4444;">
                                             <span class="dashicons dashicons-trash"></span> Delete
                                         </a>
                                     <?php endif; ?>
@@ -459,10 +459,342 @@ class Ofast_X_Email_Queue_Admin {
         </div>
         <?php
     }
-    
+
     /**
-     * Render cron setup instructions
+     * Render page content only (for tabbed view)
      */
+    public function render_content_only() {
+        require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-email-queue.php';
+        $queue = Ofast_X_Email_Queue::get_instance();
+        $stats = $queue->get_queue_stats();
+        
+        global $wpdb;
+        $batches = $wpdb->get_results("
+            SELECT * FROM {$wpdb->prefix}ofast_email_queue
+            ORDER BY 
+                CASE status
+                    WHEN 'processing' THEN 1
+                    WHEN 'pending' THEN 2
+                    WHEN 'paused' THEN 3
+                    WHEN 'completed' THEN 4
+                    WHEN 'failed' THEN 5
+                END,
+                scheduled_time ASC
+            LIMIT 100
+        ");
+        
+        $emails_per_hour = get_option('ofast_email_emails_per_cron', 30);
+        $delay = 3600 / $emails_per_hour;
+        
+        if (isset($_GET['queue_message'])) {
+            echo Ofast_X_Toast::render(urldecode($_GET['queue_message']), 'success');
+        }
+        ?>
+        
+        <style>
+            .ofast-queue-wrap { max-width: 1400px; }
+            
+            .ofast-stats-grid { 
+                display: grid; 
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+                gap: 16px; 
+                margin-bottom: 24px; 
+            }
+            .ofast-stat-card { 
+                background: #fff; 
+                padding: 24px; 
+                border-radius: 12px; 
+                border: 1px solid #e5e7eb; 
+                text-align: center;
+                transition: all 0.2s ease;
+            }
+            .ofast-stat-card:hover { 
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); 
+                transform: translateY(-2px); 
+            }
+            .ofast-stat-value { font-size: 36px; font-weight: 700; line-height: 1.2; }
+            .ofast-stat-label { color: #64748b; font-size: 13px; font-weight: 500; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+            
+            .ofast-queue-table { 
+                background: #fff; 
+                border-radius: 12px; 
+                border: 1px solid #e5e7eb; 
+                overflow-x: auto; 
+            }
+            .ofast-queue-table table { border: none; min-width: 800px !important; table-layout: auto !important; }
+            .ofast-queue-table th { 
+                background: #f8fafc; 
+                font-weight: 600; 
+                color: #475569; 
+                font-size: 12px; 
+                text-transform: uppercase; 
+                letter-spacing: 0.5px;
+                padding: 14px 16px;
+                white-space: nowrap;
+            }
+            .ofast-queue-table td { padding: 14px 16px; vertical-align: middle; }
+            
+            .ofast-progress-bar { 
+                background: #e5e7eb; 
+                border-radius: 6px; 
+                overflow: hidden; 
+                height: 8px; 
+            }
+            .ofast-progress-fill { 
+                height: 100%; 
+                transition: width 0.3s ease; 
+                border-radius: 6px;
+            }
+            .ofast-progress-text { font-size: 12px; color: #64748b; margin-top: 4px; }
+            
+            .ofast-status-badge { 
+                display: inline-block; 
+                padding: 5px 10px; 
+                border-radius: 6px; 
+                font-size: 11px; 
+                font-weight: 600; 
+                text-transform: uppercase; 
+                letter-spacing: 0.3px;
+            }
+            
+            .ofast-action-btn { 
+                display: inline-flex; 
+                align-items: center; 
+                gap: 4px; 
+                padding: 6px 12px; 
+                border-radius: 6px; 
+                font-size: 12px; 
+                font-weight: 500; 
+                text-decoration: none; 
+                border: 1px solid #e5e7eb;
+                background: #fff;
+                color: #475569;
+                transition: all 0.15s ease;
+            }
+            .ofast-action-btn:hover { 
+                background: #f8fafc; 
+                border-color: #cbd5e1;
+                color: #1e293b;
+            }
+            .ofast-action-btn .dashicons { font-size: 14px; width: 14px; height: 14px; }
+            
+            .ofast-cron-card { 
+                background: #fff; 
+                padding: 24px; 
+                margin-bottom: 24px; 
+                border-radius: 12px; 
+                border: 1px solid #e5e7eb; 
+            }
+            .ofast-cron-card h3 { 
+                margin: 0 0 16px 0; 
+                font-size: 16px; 
+                font-weight: 600; 
+                color: #1e293b;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .ofast-cron-card h3 .dashicons { color: #6366f1; }
+            
+            .ofast-alert { 
+                padding: 16px 20px; 
+                border-radius: 12px; 
+                margin-bottom: 16px; 
+                display: flex; 
+                align-items: flex-start; 
+                gap: 14px;
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+            }
+            .ofast-alert-warning { 
+                background: transparent;
+                border: 1px solid rgba(245, 158, 11, 0.2);
+            }
+            .ofast-alert-success { 
+                background: transparent;
+                border: 1px solid rgba(16, 185, 129, 0.2);
+            }
+            .ofast-alert-info { 
+                background: transparent;
+                border: 1px solid rgba(99, 102, 241, 0.2);
+            }
+            .ofast-alert .dashicons { 
+                flex-shrink: 0; 
+                margin-top: 2px;
+                width: 20px;
+                height: 20px;
+                font-size: 20px;
+            }
+            .ofast-alert-warning .dashicons { color: #b45309; }
+            .ofast-alert-success .dashicons { color: #047857; }
+            .ofast-alert-info .dashicons { color: #4f46e5; }
+            .ofast-alert-content { flex: 1; }
+            .ofast-alert-content strong { display: block; margin-bottom: 4px; color: #1e293b; }
+            .ofast-alert-content p { margin: 0; font-size: 14px; color: #475569; }
+            
+            .ofast-accordion { margin-bottom: 12px; }
+            .ofast-accordion-header { 
+                cursor: pointer; 
+                font-weight: 600; 
+                padding: 14px 16px; 
+                background: #f8fafc; 
+                border-radius: 8px; 
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                transition: background 0.15s ease;
+            }
+            .ofast-accordion-header:hover { background: #f1f5f9; }
+            .ofast-accordion-header .dashicons { color: #64748b; transition: transform 0.2s ease; }
+            .ofast-accordion[open] .ofast-accordion-header .dashicons { transform: rotate(90deg); }
+            .ofast-accordion-content { 
+                padding: 16px; 
+                background: #f8fafc; 
+                margin-top: 8px; 
+                border-radius: 8px; 
+            }
+            
+            .ofast-code-block { 
+                background: #1e293b; 
+                color: #10b981; 
+                padding: 14px 16px; 
+                border-radius: 8px; 
+                margin: 12px 0; 
+                font-family: ui-monospace, monospace; 
+                font-size: 13px; 
+                overflow-x: auto; 
+            }
+            
+            .ofast-empty-state { 
+                text-align: center; 
+                padding: 60px 20px; 
+                color: #64748b; 
+            }
+            .ofast-empty-state .dashicons { 
+                font-size: 48px; 
+                width: 48px; 
+                height: 48px; 
+                color: #cbd5e1;
+                margin-bottom: 16px;
+            }
+        </style>
+        
+        <div class="ofast-queue-wrap">
+            <!-- Stats Cards -->
+            <div class="ofast-stats-grid">
+                <div class="ofast-stat-card">
+                    <div class="ofast-stat-value" style="color: #f59e0b;"><?php echo number_format($stats['pending'] ?? 0); ?></div>
+                    <div class="ofast-stat-label">Pending Batches</div>
+                </div>
+                <div class="ofast-stat-card">
+                    <div class="ofast-stat-value" style="color: #ef4444;"><?php echo number_format($stats['emails_remaining'] ?? 0); ?></div>
+                    <div class="ofast-stat-label">Emails Remaining</div>
+                </div>
+                <div class="ofast-stat-card">
+                    <div class="ofast-stat-value" style="color: #10b981;"><?php echo number_format($stats['completed'] ?? 0); ?></div>
+                    <div class="ofast-stat-label">Completed Batches</div>
+                </div>
+                <div class="ofast-stat-card">
+                    <div class="ofast-stat-value" style="color: #6366f1;"><?php echo $emails_per_hour; ?>/hr</div>
+                    <div class="ofast-stat-label">Send Rate</div>
+                </div>
+            </div>
+            
+            <!-- Server Cron Setup Instructions -->
+            <?php $this->render_cron_setup_instructions(); ?>
+            
+            <!-- Queue Table -->
+            <div class="ofast-queue-table">
+                <table class="wp-list-table widefat fixed striped">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">ID</th>
+                            <th>Subject</th>
+                            <th style="width: 120px;">Progress</th>
+                            <th style="width: 90px;">Status</th>
+                            <th style="width: 150px;">Scheduled</th>
+                            <th style="width: 100px;">Next Send</th>
+                            <th style="width: 160px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($batches)): ?>
+                            <tr>
+                                <td colspan="7">
+                                    <div class="ofast-empty-state">
+                                        <span class="dashicons dashicons-email-alt"></span>
+                                        <p>No batches in queue. Send a bulk email to see it here.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($batches as $batch): 
+                                $progress = ($batch->total_users > 0) ? round(($batch->sent_count / $batch->total_users) * 100) : 0;
+                                $status_colors = array(
+                                    'pending' => '#f59e0b',
+                                    'processing' => '#3b82f6',
+                                    'completed' => '#10b981',
+                                    'failed' => '#ef4444',
+                                    'paused' => '#6b7280'
+                                );
+                                $color = $status_colors[$batch->status] ?? '#6b7280';
+                            ?>
+                            <tr>
+                                <td><?php echo $batch->id; ?></td>
+                                <td><strong><?php echo esc_html(wp_trim_words($batch->subject, 8)); ?></strong></td>
+                                <td>
+                                    <div class="ofast-progress-bar">
+                                        <div class="ofast-progress-fill" style="background: <?php echo $color; ?>; width: <?php echo $progress; ?>%;"></div>
+                                    </div>
+                                    <div class="ofast-progress-text"><?php echo $batch->sent_count; ?>/<?php echo $batch->total_users; ?></div>
+                                </td>
+                                <td>
+                                    <span class="ofast-status-badge" style="background: <?php echo $color; ?>15; color: <?php echo $color; ?>;">
+                                        <?php echo strtoupper($batch->status); ?>
+                                    </span>
+                                </td>
+                                <td style="font-size: 13px; color: #64748b;"><?php echo esc_html($batch->scheduled_time); ?></td>
+                                <td>
+                                    <?php if ($batch->next_allowed_send && $batch->status === 'pending'): ?>
+                                        <?php 
+                                        $next = strtotime($batch->next_allowed_send);
+                                        $now = time();
+                                        if ($next > $now) {
+                                            echo '<span style="color: #f59e0b; font-weight: 500;">' . human_time_diff($now, $next) . '</span>';
+                                        } else {
+                                            echo '<span style="color: #10b981; font-weight: 500;">Ready</span>';
+                                        }
+                                        ?>
+                                    <?php else: ?>
+                                        <span style="color: #cbd5e1;">—</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if ($batch->status === 'pending'): ?>
+                                        <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-emailer&tab=queue&action=pause&batch_id=' . $batch->batch_id), 'ofast_queue_action'); ?>" class="ofast-action-btn">
+                                            <span class="dashicons dashicons-controls-pause"></span> Pause
+                                        </a>
+                                    <?php elseif ($batch->status === 'paused'): ?>
+                                        <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-emailer&tab=queue&action=resume&batch_id=' . $batch->batch_id), 'ofast_queue_action'); ?>" class="ofast-action-btn">
+                                            <span class="dashicons dashicons-controls-play"></span> Resume
+                                        </a>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (in_array($batch->status, array('completed', 'failed', 'paused'))): ?>
+                                        <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-emailer&tab=queue&action=delete&batch_id=' . $batch->batch_id), 'ofast_queue_action'); ?>" class="ofast-action-btn" onclick="return confirm('Delete this batch?')" style="color: #ef4444;">
+                                            <span class="dashicons dashicons-trash"></span> Delete
+                                        </a>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <?php
+    }
     private function render_cron_setup_instructions() {
         $secret = get_option('ofast_queue_cron_secret');
         if (empty($secret)) {

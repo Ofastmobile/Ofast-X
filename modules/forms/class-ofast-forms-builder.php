@@ -302,6 +302,19 @@ class Ofast_X_Forms_Builder
                 font-weight: 600;
             }
 
+            #preview-form-btn {
+                border-color: #6366f1;
+                color: #6366f1;
+                padding-top: 10px;
+                padding-bottom: 10px;
+                border-radius: 8px;
+            }
+            #preview-form-btn:hover {
+                background: #f5f3ff;
+                border-color: #4f46e5;
+                color: #4f46e5;
+            }
+
             .ofast-form-builder .field-row {
                 background: #f8fafc;
                 border: 1px solid #e2e8f0;

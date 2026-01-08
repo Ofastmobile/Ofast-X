@@ -240,8 +240,9 @@ class Ofast_X_Menu_Editor
                 <?php wp_nonce_field('ofast_menu_editor_save', '_wpnonce'); ?>
 
                 <!-- Scrollable Table Container -->
-                <div style="overflow-x: auto; max-width: 100%;">
-                    <table class="wp-list-table widefat fixed striped" style="min-width: 900px; margin-top: 20px;" id="menu-editor-table">
+                <div class="ofast-table-card">
+                    <div style="overflow-x: auto; max-width: 100%;">
+                        <table class="ofast-modern-table" style="table-layout: fixed; min-width: 900px;" id="menu-editor-table">
                         <thead>
                             <tr>
                                 <th style="width: 30px;"></th>
@@ -399,10 +400,13 @@ class Ofast_X_Menu_Editor
                                         </div>
                                     </td>
                                     <td style="text-align: center;">
-                                        <input type="checkbox"
-                                            name="menu_items[<?php echo esc_attr($slug); ?>][hidden]"
-                                            value="1"
-                                            <?php checked($is_hidden); ?>>
+                                        <label class="ofast-toggle">
+                                            <input type="checkbox"
+                                                name="menu_items[<?php echo esc_attr($slug); ?>][hidden]"
+                                                value="1"
+                                                <?php checked($is_hidden); ?>>
+                                            <span class="ofast-slider"></span>
+                                        </label>
                                     </td>
                                     <td>
                                         <code style="font-size: 11px; color: #666;"><?php echo esc_html($slug); ?></code>
@@ -414,10 +418,11 @@ class Ofast_X_Menu_Editor
                             ?>
                         </tbody>
                     </table>
+                    </div>
                 </div>
 
                 <div class="ofast-action-bar" style="display: flex; gap: 12px; align-items: center; margin-top: 25px;">
-                    <button type="submit" name="ofast_reset_menu" class="button button-large" onclick="return confirm('Reset all menu customizations to default? This will unhide all menus.');">
+                    <button type="submit" name="ofast_reset_menu" class="button button-large ofast-reset-btn" onclick="return confirm('Reset all menu customizations to default? This will unhide all menus.');">
                         Reset to Default
                     </button>
                     <button type="submit" name="ofast_save_menu_editor" class="button button-primary button-large">
@@ -500,6 +505,68 @@ class Ofast_X_Menu_Editor
                 color: #6366f1 !important;
             }
 
+            /* Modern Table Design */
+            .ofast-table-card {
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                overflow: hidden;
+                margin-top: 20px;
+            }
+
+            .ofast-modern-table {
+                width: 100%;
+                border-collapse: collapse;
+                border-spacing: 0;
+            }
+
+            .ofast-modern-table thead th {
+                background: #f8fafc;
+                color: #64748b;
+                font-weight: 600;
+                text-transform: uppercase;
+                font-size: 11px;
+                letter-spacing: 0.5px;
+                padding: 16px 20px;
+                border-bottom: 1px solid #e2e8f0;
+                text-align: left;
+            }
+
+            .ofast-modern-table tbody td {
+                padding: 16px 20px;
+                border-bottom: 1px solid #f1f5f9;
+                vertical-align: middle;
+                color: #334155;
+                font-size: 14px;
+            }
+
+            .ofast-modern-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .ofast-modern-table tbody tr:hover td {
+                background-color: #f8fafc;
+            }
+
+            /* Improved Form Inputs inside table */
+            .ofast-modern-table input[type="text"],
+            .ofast-modern-table select {
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                padding: 10px 14px;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                transition: all 0.2s;
+                font-size: 14px;
+                color: #334155;
+                background: #fff;
+            }
+            .ofast-modern-table input[type="text"]:focus {
+                border-color: #6366f1;
+                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+                outline: none;
+            }
+
             /* Icon Picker Styles */
             .icon-picker-wrapper {
                 position: relative;
@@ -511,17 +578,29 @@ class Ofast_X_Menu_Editor
                 gap: 6px;
                 padding: 4px 10px !important;
                 min-width: 100px;
+                border: 1px solid #6366f1 !important;
+                color: #6366f1 !important;
+                background: #fff !important;
+                border-radius: 6px !important;
+                transition: all 0.2s ease;
+            }
+
+            .icon-picker-btn:hover {
+                background: #eff6ff !important;
+                box-shadow: 0 2px 4px rgba(99, 102, 241, 0.1);
             }
 
             .icon-picker-btn .dashicons {
                 font-size: 18px;
                 width: 18px;
                 height: 18px;
+                color: #6366f1 !important;
             }
 
             .icon-label {
                 font-size: 11px;
-                color: #666;
+                color: #6366f1;
+                font-weight: 500;
             }
 
             .icon-picker-dropdown {

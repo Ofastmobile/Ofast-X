@@ -59,18 +59,21 @@ class Ofast_X_Forms_Builder
         $settings = $this->form ? $this->form->settings : array();
         $notifications = $this->form ? (isset($this->form->notifications) ? $this->form->notifications : array()) : array();
         $active = $this->form ? $this->form->active : 1;
+        // Content only for tabbed view
+        $is_edit = $this->form_id > 0;
 ?>
-        <div class="wrap ofast-form-builder">
-            <h1><?php echo $this->form_id ? 'Edit Form' : 'Create New Form'; ?></h1>
+        <div class="ofast-form-builder">
+            <!-- Header handled by main page tabs, but we can show section title if needed -->
+            <!-- <h2 style="margin-top:0;"><?php echo $this->form_id ? 'Edit Form' : 'Create New Form'; ?></h2> -->
 
             <form method="post" id="ofast-form-builder-form">
                 <?php wp_nonce_field('ofast_form_save', 'form_nonce'); ?>
                 <input type="hidden" name="form_id" value="<?php echo $this->form_id; ?>">
 
-                <div class="builder-layout ofast-flex-layout">
+                <div class="ofast-builder-layout">
                     <!-- Left: Form Settings -->
-                    <div class="builder-main ofast-main">
-                        <div class="builder-section">
+                    <div class="ofast-builder-main">
+                        <div class="ofast-card">
                             <h2>Form Details</h2>
                             <table class="form-table">
                                 <tr>
@@ -88,7 +91,7 @@ class Ofast_X_Forms_Builder
                             </table>
                         </div>
 
-                        <div class="builder-section">
+                        <div class="ofast-card">
                             <h2>Form Fields</h2>
                             <p class="description">Add and arrange your form fields. Drag to reorder.</p>
 
@@ -112,7 +115,7 @@ class Ofast_X_Forms_Builder
                             </div>
                         </div>
 
-                        <div class="builder-section">
+                        <div class="ofast-card">
                             <h2>Form Settings</h2>
                             <table class="form-table">
                                 <tr>
@@ -133,7 +136,7 @@ class Ofast_X_Forms_Builder
                             </table>
                         </div>
 
-                        <div class="builder-section">
+                        <div class="ofast-card">
                             <h2>Notifications</h2>
                             <table class="form-table">
                                 <tr>
@@ -158,7 +161,7 @@ class Ofast_X_Forms_Builder
                             </table>
                         </div>
 
-                        <div class="builder-section">
+                        <div class="ofast-card">
                             <h2>Design & Styling</h2>
                             <?php
                             $design = $settings['design'] ?? array();
@@ -236,24 +239,24 @@ class Ofast_X_Forms_Builder
                     </div>
 
                     <!-- Right: Sidebar -->
-                    <div class="builder-sidebar ofast-sidebar">
-                        <div class="sidebar-box">
+                    <div class="ofast-builder-sidebar">
+                        <div class="ofast-card sidebar-box">
                             <h3>Publish</h3>
                             <button type="submit" name="ofast_save_form" class="button button-primary button-large" style="width:100%;">Save Form</button>
                             <?php if ($this->form_id): ?>
-                                <p style="margin-top:10px;"><a href="<?php echo admin_url('admin.php?page=ofast-forms'); ?>">Back to All Forms</a></p>
+                                <p style="margin-top:10px;"><a href="#" class="ofast-switch-tab" data-tab="all-forms">Back to All Forms</a></p>
                             <?php endif; ?>
                         </div>
 
                         <?php if ($this->form_id): ?>
-                            <div class="sidebar-box">
+                            <div class="ofast-card sidebar-box">
                                 <h3>Shortcode</h3>
                                 <code style="display:block;padding:10px;background:#f5f5f5;">[ofast_form id="<?php echo $this->form_id; ?>"]</code>
                                 <p class="description">Copy and paste this shortcode to display your form.</p>
                             </div>
                         <?php endif; ?>
 
-                        <div class="sidebar-box">
+                        <div class="ofast-card sidebar-box">
                             <h3>Spam Protection</h3>
                             <?php if (class_exists('Ofast_X_Turnstile') && Ofast_X_Turnstile::get_instance()->is_configured()): ?>
                                 <p style="color:green;">Turnstile is enabled</p>
@@ -262,7 +265,7 @@ class Ofast_X_Forms_Builder
                             <?php endif; ?>
                         </div>
 
-                        <div class="sidebar-box">
+                        <div class="ofast-card sidebar-box">
                             <h3>Preview</h3>
                             <button type="button" id="preview-form-btn" class="button button-secondary" style="width:100%;">Preview Form</button>
                             <p class="description" style="margin-top:8px;">See how your form looks before publishing.</p>
@@ -278,62 +281,55 @@ class Ofast_X_Forms_Builder
         </div>
 
         <style>
-            .ofast-form-builder .builder-layout {
-                display: flex;
-                gap: 20px;
+            .ofast-builder-layout {
+                display: grid;
+                grid-template-columns: 1fr 320px;
+                gap: 30px;
             }
 
-            .ofast-form-builder .builder-main {
-                flex: 1;
+            @media screen and (max-width: 1024px) {
+                .ofast-builder-layout {
+                    grid-template-columns: 1fr;
+                }
             }
-
-            .ofast-form-builder .builder-sidebar {
-                width: 280px;
-            }
-
-            .ofast-form-builder .builder-section {
-                background: #fff;
-                padding: 20px;
-                border: 1px solid #ddd;
-                margin-bottom: 20px;
-            }
-
-            .ofast-form-builder .sidebar-box {
-                background: #fff;
-                padding: 15px;
-                border: 1px solid #ddd;
-                margin-bottom: 15px;
-            }
+            
+            /* Remove old sidebar styles that might conflict */
+            .reset-sidebar-box { margin: 0; padding: 0; background: none; border: none; }
 
             .ofast-form-builder .sidebar-box h3 {
-                margin: 0 0 10px;
+                margin: 0 0 15px 0;
+                font-size: 16px;
+                font-weight: 600;
             }
 
             .ofast-form-builder .field-row {
-                background: #f9f9f9;
-                border: 1px solid #ddd;
-                padding: 15px;
-                margin-bottom: 10px;
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                padding: 20px;
+                margin-bottom: 15px;
                 cursor: move;
+                border-radius: 8px;
             }
 
             .ofast-form-builder .field-row:hover {
                 border-color: #6366f1;
             }
-
+            
             .ofast-form-builder .field-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: 10px;
+                margin-bottom: 15px;
             }
 
             .ofast-form-builder .field-type-badge {
                 background: #6366f1;
                 color: #fff;
-                padding: 2px 8px;
-                border-radius: 3px;
+                padding: 4px 10px;
+                border-radius: 4px;
                 font-size: 11px;
+                font-weight: 600;
+                text-transform: uppercase;
             }
 
             .ofast-form-builder .field-content {
@@ -661,7 +657,7 @@ class Ofast_X_Forms_Builder
         $form_id = $forms->save_form($data);
 
         if ($form_id && !$this->form_id) {
-            wp_redirect(admin_url('admin.php?page=ofast-forms-new&id=' . $form_id . '&saved=1'));
+            wp_redirect(admin_url('admin.php?page=ofast-forms&tab=add-new&id=' . $form_id . '&saved=1'));
             exit;
         }
 

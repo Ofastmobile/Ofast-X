@@ -57,6 +57,9 @@ class Ofast_X_Forms
     /**
      * Add admin menu
      */
+    /**
+     * Add admin menu
+     */
     public function add_admin_menu()
     {
         add_menu_page(
@@ -64,36 +67,9 @@ class Ofast_X_Forms
             'Contact Forms',
             'manage_options',
             'ofast-forms',
-            array($this, 'render_forms_page'),
+            array($this, 'render_main_page'),
             'dashicons-feedback',
             30
-        );
-
-        add_submenu_page(
-            'ofast-forms',
-            'All Forms',
-            'All Forms',
-            'manage_options',
-            'ofast-forms',
-            array($this, 'render_forms_page')
-        );
-
-        add_submenu_page(
-            'ofast-forms',
-            'Add New Form',
-            'Add New',
-            'manage_options',
-            'ofast-forms-new',
-            array($this, 'render_builder_page')
-        );
-
-        add_submenu_page(
-            'ofast-forms',
-            'Submissions',
-            'Submissions',
-            'manage_options',
-            'ofast-forms-submissions',
-            array($this, 'render_submissions_page')
         );
     }
 
@@ -312,19 +288,277 @@ class Ofast_X_Forms
     /**
      * Render forms list page
      */
+    /**
+     * Render main page with tabs
+     */
+    public function render_main_page()
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized');
+        }
+
+        $current_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'all-forms';
+        ?>
+        <style>
+            /* Consolidated Admin Styles matching Email Module */
+            :root {
+                --ofast-primary: #6366f1;
+            }
+
+            /* Header Styles */
+            .ofast-header {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                background: #fff;
+                padding: 25px 30px;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                margin-bottom: 25px;
+                margin-top: 20px;
+            }
+            .ofast-header-icon {
+                width: 56px;
+                height: 56px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                border-radius: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .ofast-header-icon .dashicons {
+                font-size: 28px;
+                width: 28px;
+                height: 28px;
+                color: #6366f1;
+            }
+            .ofast-header-content h1 {
+                margin: 0 0 5px 0;
+                font-size: 24px;
+                font-weight: 700;
+                color: #1e293b;
+                display: block;
+                padding: 0;
+            }
+            .ofast-header-content p {
+                margin: 0;
+                color: #64748b;
+                font-size: 14px;
+            }
+
+            /* Tabs Navigation */
+            .ofast-tabs-nav {
+                display: flex;
+                flex-wrap: nowrap;
+                gap: 8px;
+                margin-bottom: 25px;
+                padding: 10px 12px;
+                background: #fff;
+                border-radius: 12px;
+                border: 1px solid rgba(226, 232, 240, 0.6);
+                position: sticky;
+                top: 40px;
+                z-index: 99;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            .ofast-tabs-nav::-webkit-scrollbar {
+                display: none;
+            }
+            .ofast-tab {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px 20px;
+                background: transparent;
+                border: none;
+                border-radius: 8px;
+                color: #64748b;
+                font-size: 14px;
+                font-weight: 500;
+                text-decoration: none;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                white-space: nowrap;
+            }
+            .ofast-tab:hover {
+                background: #f1f5f9;
+                color: #1e293b;
+            }
+            .ofast-tab.active {
+                background: var(--ofast-primary);
+                color: #fff;
+                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            }
+            .ofast-tab .dashicons {
+                font-size: 16px;
+                width: 16px;
+                height: 16px;
+                line-height: 16px;
+            }
+
+            /* Tab Content Visibility */
+            .ofast-tab-content { display: none; }
+            .ofast-tab-content.active { display: block; animation: ofastFadeIn 0.3s ease; }
+            @keyframes ofastFadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            /* Card Styling */
+            .ofast-card {
+                background: #fff;
+                border-radius: 16px;
+                padding: 30px;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                border: 1px solid rgba(226, 232, 240, 0.6);
+                margin-bottom: 20px;
+            }
+            .ofast-card h2 { margin-top: 0; }
+
+            /* Table Styles Override within Card */
+            .ofast-card .wp-list-table {
+                border: none;
+                box-shadow: none;
+            }
+            .ofast-card .wp-list-table th {
+                padding: 15px 20px;
+                background: #f8fafc;
+                border-bottom: 1px solid #e2e8f0;
+                font-weight: 600;
+                color: #475569;
+            }
+            .ofast-card .wp-list-table td {
+                padding: 15px 20px;
+                vertical-align: middle;
+            }
+            .ofast-card .wp-list-table tr:hover td {
+                background: #f8fafc;
+            }
+            
+            /* Button Override */
+            .button.button-primary {
+                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+                border-color: #6366f1 !important;
+                text-shadow: none !important;
+                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+                transition: all 0.3s ease !important;
+                padding: 10px 24px !important;
+                height: auto !important;
+                border-radius: 8px !important;
+                font-size: 14px !important;
+            }
+            .button.button-primary:hover {
+                background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
+            }
+            .button.button-primary:active { transform: translateY(0); }
+            
+            .page-title-action { display: none; } /* Hide default WP Add New */
+        </style>
+
+        <div class="wrap">
+            <!-- Header -->
+            <div class="ofast-header">
+                <div class="ofast-header-icon">
+                    <span class="dashicons dashicons-feedback"></span>
+                </div>
+                <div class="ofast-header-content">
+                    <h1>Contact Forms</h1>
+                    <p>Build, manage, and track your contact forms and submissions.</p>
+                </div>
+            </div>
+
+            <nav class="ofast-tabs-nav">
+                <a href="#" class="ofast-tab <?php echo $current_tab === 'all-forms' ? 'active' : ''; ?>" data-tab="all-forms">
+                    <span class="dashicons dashicons-list-view"></span> All Forms
+                </a>
+                <a href="#" class="ofast-tab <?php echo $current_tab === 'add-new' ? 'active' : ''; ?>" data-tab="add-new">
+                    <span class="dashicons dashicons-plus-alt2"></span> Add New
+                </a>
+                <a href="#" class="ofast-tab <?php echo $current_tab === 'submissions' ? 'active' : ''; ?>" data-tab="submissions">
+                    <span class="dashicons dashicons-email-alt"></span> Submissions
+                </a>
+            </nav>
+
+            <div id="tab-all-forms" class="ofast-tab-content <?php echo $current_tab === 'all-forms' ? 'active' : ''; ?>">
+                <div class="ofast-card">
+                    <?php $this->render_forms_page(); ?>
+                </div>
+            </div>
+
+            <div id="tab-add-new" class="ofast-tab-content <?php echo $current_tab === 'add-new' ? 'active' : ''; ?>">
+                <!-- Content here manages its own cards -->
+                <?php $this->render_builder_page(); ?>
+            </div>
+
+            <div id="tab-submissions" class="ofast-tab-content <?php echo $current_tab === 'submissions' ? 'active' : ''; ?>">
+                <div class="ofast-card">
+                    <?php $this->render_submissions_page(); ?>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            jQuery(document).ready(function($) {
+                // Tab Switching
+                $('.ofast-tab').on('click', function(e) {
+                    e.preventDefault();
+                    var target = $(this).data('tab');
+                    
+                    $('.ofast-tab').removeClass('active');
+                    $(this).addClass('active');
+                    
+                    $('.ofast-tab-content').removeClass('active');
+                    $('#tab-' + target).addClass('active');
+                    
+                    var url = new URL(window.location);
+                    url.searchParams.set('tab', target);
+                    window.history.pushState({}, '', url);
+                });
+
+                // Handle external links to tabs (e.g., Edit links)
+                $('body').on('click', '.ofast-switch-tab', function(e) {
+                    var target = $(this).data('tab');
+                    if(target) {
+                        e.preventDefault();
+                        $('.ofast-tab[data-tab="' + target + '"]').click();
+                    }
+                });
+
+                // Handle browser back button
+                window.onpopstate = function() {
+                    var urlParams = new URLSearchParams(window.location.search);
+                    var tab = urlParams.get('tab') || 'all-forms';
+                    $('.ofast-tab[data-tab="' + tab + '"]').click();
+                };
+            });
+        </script>        <?php
+    }
+
+    /**
+     * Render forms list page
+     */
     public function render_forms_page()
     {
         $forms = $this->get_all_forms();
 ?>
-        <div class="wrap">
-            <h1>Contact Forms <a href="<?php echo admin_url('admin.php?page=ofast-forms-new'); ?>" class="page-title-action">Add New</a></h1>
-
+        <!-- Replaced content for tabbed view -->
+        <div class="ofast-forms-list">
             <?php if (empty($forms)): ?>
-                <?php echo Ofast_X_Toast::render('No forms yet. <a href="' . admin_url('admin.php?page=ofast-forms-new') . '" style="color:#fff;text-decoration:underline;">Create your first form</a>', 'info'); ?>
+                <div style="padding: 40px; text-align: center;">
+                    <?php echo Ofast_X_Toast::render('No forms yet. <a href="#" class="ofast-switch-tab" data-tab="add-new">Create your first form</a>', 'info'); ?>
+                </div>
             <?php else: ?>
                 <!-- Scrollable Table Container -->
                 <div style="overflow-x: auto; max-width: 100%;">
-                    <table class="wp-list-table widefat fixed striped" style="min-width: 800px;">
+                    <table class="wp-list-table widefat fixed striped" style="min-width: 800px; margin: 0; box-shadow: none;">
                         <thead>
                             <tr>
                                 <th>Title</th>
@@ -338,23 +572,48 @@ class Ofast_X_Forms
                         <tbody>
                             <?php foreach ($forms as $form): ?>
                                 <tr>
-                                    <td><strong><?php echo esc_html($form->title); ?></strong></td>
-                                    <td><code>[ofast_form id="<?php echo $form->id; ?>"]</code></td>
+                                    <td style="font-weight: 500; color: #1e293b;">
+                                        <?php echo esc_html($form->title); ?>
+                                        <div class="row-actions">
+                                            <a href="#" class="ofast-switch-tab" data-tab="add-new" onclick="
+                                                var url = new URL(window.location);
+                                                url.searchParams.set('form_id', '<?php echo $form->id; ?>');
+                                                window.history.pushState({}, '', url);
+                                                location.reload(); 
+                                            ">Edit</a> | 
+                                            <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-forms&action=delete&id=' . $form->id), 'delete_form_' . $form->id); ?>" 
+                                               class="delete" onclick="return confirm('Are you sure?');">Delete</a>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <code style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; color: #6366f1; white-space: nowrap;">[ofast_form id="<?php echo $form->id; ?>"]</code>
+                                        <span class="dashicons dashicons-admin-page" title="Copy Shortcode" style="cursor:pointer; color:#94a3b8; font-size:16px; margin-left:5px;" onclick="navigator.clipboard.writeText('[ofast_form id=&quot;<?php echo $form->id; ?>&quot;]'); alert('Copied!');"></span>
+                                    </td>
                                     <td>
                                         <?php
                                         $count = $this->get_submission_count($form->id);
                                         $unread = $this->get_unread_count($form->id);
                                         echo $count;
                                         if ($unread > 0) {
-                                            echo ' <span class="count-bubble">' . $unread . ' new</span>';
+                                            echo ' <span class="count-bubble" style="background:#6366f1; color:white; padding:2px 6px; border-radius:10px; font-size:10px; margin-left:5px;">' . $unread . ' new</span>';
                                         }
                                         ?>
                                     </td>
-                                    <td><?php echo $form->active ? '<span style="color:green;">Active</span>' : '<span style="color:gray;">Inactive</span>'; ?></td>
-                                    <td><?php echo date('M j, Y', strtotime($form->created_at)); ?></td>
                                     <td>
-                                        <a href="<?php echo admin_url('admin.php?page=ofast-forms-new&id=' . $form->id); ?>">Edit</a> |
-                                        <a href="#" class="delete-form" data-id="<?php echo $form->id; ?>" style="color:red;">Delete</a>
+                                        <?php if ($form->active): ?>
+                                            <span style="display:inline-flex; align-items:center; gap:4px; padding: 4px 10px; border-radius: 20px; background: #dcfce7; color: #15803d; font-size: 12px; font-weight: 500;">
+                                                <span style="width:6px; height:6px; background:#15803d; border-radius:50%;"></span> Active
+                                            </span>
+                                        <?php else: ?>
+                                            <span style="display:inline-flex; align-items:center; gap:4px; padding: 4px 10px; border-radius: 20px; background: #f1f5f9; color: #64748b; font-size: 12px; font-weight: 500;">
+                                                <span style="width:6px; height:6px; background:#64748b; border-radius:50%;"></span> Inactive
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="color: #64748b;"><?php echo date('M j, Y', strtotime($form->created_at)); ?></td>
+                                    <td>
+                                        <a href="<?php echo admin_url('admin.php?page=ofast-forms&tab=add-new&id=' . $form->id); ?>" style="color:#6366f1; font-weight:500;">Edit</a> |
+                                        <a href="#" class="delete-form" data-id="<?php echo $form->id; ?>" style="color:#ef4444;">Delete</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

@@ -179,7 +179,8 @@ class Ofast_X_Math_Captcha
         $html .= '<span style="background: #6366f1; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 16px; font-weight: 600;">';
         $html .= esc_html($problem['question']) . ' = ?';
         $html .= '</span>';
-        $html .= '<input type="number" name="ofast_math_answer" required autocomplete="off" ';
+        $required = ($form_id === 'preview') ? '' : 'required';
+        $html .= '<input type="number" name="ofast_math_answer" ' . $required . ' autocomplete="off" ';
         $html .= 'style="width: 80px; padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 16px; text-align: center;" ';
         $html .= 'placeholder="?">';
         $html .= '</label>';

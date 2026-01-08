@@ -283,19 +283,29 @@ class Ofast_X_Forms_Submissions
         $total = $wpdb->get_var("SELECT COUNT(*) FROM {$table}");
         $unread = $wpdb->get_var("SELECT COUNT(*) FROM {$table} WHERE status = 'unread'");
         $spam = $wpdb->get_var("SELECT COUNT(*) FROM {$table} WHERE status = 'spam'");
+        // In tabbed view, we only render if active?  Actually main page handles visibility.
+        // But we might need to handle form submissions filters reloading the page.
+        // They currently redirect to admin.php?page=ofast-forms-submissions... needs update.
+        if (isset($_GET['tab']) && $_GET['tab'] !== 'submissions') {
+            // Placeholder for potentially handling separate page loads vs tab switching
+        }
+
+        // Fix pagination/filter URLs to maintain tab
+        $base_url = admin_url('admin.php?page=ofast-forms&tab=submissions');
 ?>
-        <div class="wrap">
-            <h1>Form Submissions</h1>
+        <div class="ofast-submissions-list">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <!-- Status Filters -->
+                <div class="ofast-status-filters" style="display: flex; gap: 10px;">
+                    <a href="<?php echo $base_url; ?>" class="ofast-filter-pill <?php echo empty($status) ? 'active' : ''; ?>">All (<?php echo $total; ?>)</a>
+                    <a href="<?php echo add_query_arg('status', 'unread', $base_url); ?>" class="ofast-filter-pill <?php echo $status === 'unread' ? 'active' : ''; ?>">Unread (<?php echo $unread; ?>)</a>
+                    <a href="<?php echo add_query_arg('status', 'spam', $base_url); ?>" class="ofast-filter-pill <?php echo $status === 'spam' ? 'active' : ''; ?>">Spam (<?php echo $spam; ?>)</a>
+                </div>
 
-            <ul class="subsubsub">
-                <li><a href="<?php echo admin_url('admin.php?page=ofast-forms-submissions'); ?>" <?php echo empty($status) ? 'class="current"' : ''; ?>>All (<?php echo $total; ?>)</a> |</li>
-                <li><a href="<?php echo admin_url('admin.php?page=ofast-forms-submissions&status=unread'); ?>" <?php echo $status === 'unread' ? 'class="current"' : ''; ?>>Unread (<?php echo $unread; ?>)</a> |</li>
-                <li><a href="<?php echo admin_url('admin.php?page=ofast-forms-submissions&status=spam'); ?>" <?php echo $status === 'spam' ? 'class="current"' : ''; ?>>Spam (<?php echo $spam; ?>)</a></li>
-            </ul>
-
-            <div class="tablenav top">
-                <div class="alignleft actions">
-                    <select id="filter-form" onchange="window.location='<?php echo admin_url('admin.php?page=ofast-forms-submissions&form_id='); ?>' + this.value">
+                <!-- Form Filter -->
+                <div class="ofast-form-filter">
+                    <select id="filter-form" onchange="window.location='<?php echo esc_url($base_url); ?>&form_id=' + this.value" style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 6px 12px;">
                         <option value="">All Forms</option>
                         <?php foreach ($forms as $f): ?>
                             <option value="<?php echo $f->id; ?>" <?php selected($form_id, $f->id); ?>><?php echo esc_html($f->title); ?></option>
@@ -303,6 +313,30 @@ class Ofast_X_Forms_Submissions
                     </select>
                 </div>
             </div>
+
+            <style>
+                .ofast-filter-pill {
+                    padding: 6px 16px;
+                    border-radius: 20px;
+                    background: #f1f5f9;
+                    color: #64748b;
+                    text-decoration: none;
+                    font-size: 13px;
+                    font-weight: 500;
+                    transition: all 0.2s;
+                    border: 1px solid transparent;
+                }
+                .ofast-filter-pill:hover {
+                    background: #e2e8f0;
+                    color: #1e293b;
+                }
+                .ofast-filter-pill.active {
+                    background: #eff6ff;
+                    color: #6366f1;
+                    border-color: #c7d2fe;
+                }
+                .ofast-card a { text-decoration: none; }
+            </style>
 
             <?php if (empty($submissions)): ?>
                 <?php echo Ofast_X_Toast::render('No submissions found.', 'info'); ?>
@@ -328,32 +362,42 @@ class Ofast_X_Forms_Submissions
                                     $first_two = array_slice($data, 0, 2);
                                     foreach ($first_two as $k => $v) {
                                         if (is_array($v)) $v = implode(', ', $v);
-                                        $preview .= '<strong>' . esc_html($k) . ':</strong> ' . esc_html(substr($v, 0, 50)) . '<br>';
+                                        $preview .= '<strong style="color:#1e293b;">' . esc_html($k) . ':</strong> <span style="color:#64748b;">' . esc_html(substr($v, 0, 50)) . '</span><br>';
                                     }
                                 }
-                                $bg = $sub->status === 'unread' ? '#fff8e5' : '';
+                                $bg = $sub->status === 'unread' ? '#fffbeb' : '#fff'; // Softer yellow for unread
                                 ?>
-                                <tr style="<?php echo $bg ? "background:{$bg};" : ''; ?>">
-                                    <td><?php echo $preview; ?></td>
-                                    <td><?php echo esc_html($sub->form_title ?: 'Unknown'); ?></td>
-                                    <td>
+                                <tr style="background-color: <?php echo $bg; ?>; border-bottom: 1px solid #f1f5f9;">
+                                    <td style="padding: 15px 20px; vertical-align: middle;"><?php echo $preview; ?></td>
+                                    <td style="padding: 15px 20px; vertical-align: middle; font-weight: 500; color: #1e293b;"><?php echo esc_html($sub->form_title ?: 'Unknown'); ?></td>
+                                    <td style="padding: 15px 20px; vertical-align: middle;">
                                         <?php
-                                        $status_colors = array('unread' => 'orange', 'read' => 'green', 'spam' => 'red', 'trash' => 'gray');
-                                        echo '<span style="color:' . ($status_colors[$sub->status] ?? 'gray') . ';">' . ucfirst($sub->status) . '</span>';
+                                        $status_styles = array(
+                                            'unread' => 'background:#fef3c7; color:#b45309;',
+                                            'read' => 'background:#dcfce7; color:#15803d;',
+                                            'spam' => 'background:#fee2e2; color:#b91c1c;',
+                                            'trash' => 'background:#f1f5f9; color:#64748b;'
+                                        );
+                                        $style = $status_styles[$sub->status] ?? $status_styles['trash'];
+                                        echo '<span style="display:inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; ' . $style . '">' . ucfirst($sub->status) . '</span>';
                                         ?>
                                     </td>
-                                    <td><?php echo date('M j, Y g:i a', strtotime($sub->submitted_at)); ?></td>
-                                    <td>
+                                    <td style="padding: 15px 20px; vertical-align: middle; color: #64748b;"><?php echo date('M j, Y g:i a', strtotime($sub->submitted_at)); ?></td>
+                                    <td style="padding: 15px 20px; vertical-align: middle;">
                                         <?php
                                         $nonce = wp_create_nonce('submission_action_' . $sub->id);
-                                        $base_url = add_query_arg(array('id' => $sub->id, '_wpnonce' => $nonce));
+                                        $action_url = add_query_arg(array('id' => $sub->id, '_wpnonce' => $nonce));
                                         ?>
-                                        <a href="#" class="view-submission" data-id="<?php echo $sub->id; ?>" data-data="<?php echo esc_attr(wp_json_encode($data)); ?>">View</a> |
-                                        <?php if ($sub->status === 'unread'): ?>
-                                            <a href="<?php echo esc_url(add_query_arg('action', 'mark_read', $base_url)); ?>">Mark Read</a> |
-                                        <?php endif; ?>
-                                        <a href="<?php echo esc_url(add_query_arg('action', 'mark_spam', $base_url)); ?>" style="color:orange;">Spam</a> |
-                                        <a href="<?php echo esc_url(add_query_arg('action', 'delete', $base_url)); ?>" style="color:red;" onclick="return confirm('Delete this submission?');">Delete</a>
+                                        <div style="display: flex; gap: 8px; align-items: center;">
+                                            <a href="#" class="view-submission" data-id="<?php echo $sub->id; ?>" data-data="<?php echo esc_attr(wp_json_encode($data)); ?>" style="color:#6366f1; font-weight:500;">View</a>
+                                            
+                                            <?php if ($sub->status === 'unread'): ?>
+                                                <a href="<?php echo esc_url(add_query_arg('action', 'mark_read', $action_url)); ?>" style="color:#64748b; font-size: 13px;">Read</a>
+                                            <?php endif; ?>
+                                            
+                                            <a href="<?php echo esc_url(add_query_arg('action', 'mark_spam', $action_url)); ?>" style="color:#d97706; font-size: 13px;">Spam</a>
+                                            <a href="<?php echo esc_url(add_query_arg('action', 'delete', $action_url)); ?>" style="color:#ef4444; font-size: 13px;" onclick="return confirm('Delete this submission?');">Delete</a>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -363,11 +407,20 @@ class Ofast_X_Forms_Submissions
             <?php endif; ?>
 
             <!-- View Modal -->
-            <div id="submission-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:100000;">
-                <div style="background:#fff;max-width:600px;margin:50px auto;padding:20px;border-radius:5px;max-height:80vh;overflow:auto;">
-                    <h2 style="margin-top:0;">Submission Details</h2>
-                    <div id="submission-content"></div>
-                    <p><button type="button" class="button" onclick="document.getElementById('submission-modal').style.display='none';">Close</button></p>
+            <div id="submission-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:100000; padding: 20px; display: flex; align-items: center; justify-content: center;">
+                <div style="background:#fff; width:100%; max-width:600px; border-radius:12px; max-height:85vh; display: flex; flex-direction: column; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+                    <div style="padding: 20px 25px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                        <h2 style="margin:0; font-size: 18px; color: #1e293b;">Submission Details</h2>
+                        <button type="button" onclick="document.getElementById('submission-modal').style.display='none';" style="background:none; border:none; font-size: 24px; color: #64748b; cursor: pointer; padding: 0;">&times;</button>
+                    </div>
+                    
+                    <div id="submission-content" style="padding: 25px; overflow-y: auto;">
+                        <!-- Content injected via JS -->
+                    </div>
+                    
+                    <div style="padding: 15px 25px; border-top: 1px solid #e2e8f0; text-align: right; background: #f8fafc; border-radius: 0 0 12px 12px;">
+                        <button type="button" class="button" onclick="document.getElementById('submission-modal').style.display='none';">Close</button>
+                    </div>
                 </div>
             </div>
 
@@ -376,14 +429,21 @@ class Ofast_X_Forms_Submissions
                     $('.view-submission').on('click', function(e) {
                         e.preventDefault();
                         var data = $(this).data('data');
-                        var html = '<table class="widefat">';
+                        var html = '<table class="widefat striped" style="border:none; box-shadow: none;">';
                         $.each(data, function(k, v) {
                             if (Array.isArray(v)) v = v.join(', ');
-                            html += '<tr><th>' + k + '</th><td>' + v + '</td></tr>';
+                            html += '<tr><th style="width: 30%; color: #1e293b;">' + k + '</th><td style="color: #475569;">' + v + '</td></tr>';
                         });
                         html += '</table>';
                         $('#submission-content').html(html);
-                        $('#submission-modal').show();
+                        $('#submission-modal').css('display', 'flex'); // Flex to center
+                    });
+                    
+                    // Close on overlay click
+                    $('#submission-modal').on('click', function(e) {
+                        if(e.target === this) {
+                            $(this).hide();
+                        }
                     });
                 });
             </script>

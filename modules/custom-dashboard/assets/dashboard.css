@@ -541,7 +541,7 @@ body.ofast-dark-theme #ofast-switch-btn-classic {
 
 @media (max-width: 600px) {
     .ofast-dashboard-takeover {
-        padding: 10px;
+        padding: 40px 15px 20px 15px;
     }
 
     .ofast-stats-grid {
@@ -564,6 +564,7 @@ body.ofast-dark-theme #ofast-switch-btn-classic {
 
     .ofast-welcome h1 {
         font-size: 20px;
+        margin-top: 10px;
     }
 
     .dark-card {
@@ -587,5 +588,6 @@ body.ofast-dark-theme #ofast-switch-btn-classic {
 @media screen and (max-width: 782px) {
     body.ofast-clean-dashboard #wpcontent {
         padding-left: 0 !important;
+        padding-top: 20px !important;
     }
 }

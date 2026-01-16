@@ -1,0 +1,450 @@
+========================================================
+ADMIN URL CUSTOMIZER - TECHNICAL DOCUMENTATION
+MODULE NAME
+Ofast X - Admin URL Customizer Module
+===========================================================
+
+PURPOSE
+Security module that hides WordPress default login endpoints (/wp-admin, /wp-login.php) behind a custom secret URL to prevent brute force attacks, user enumeration, and unauthorized login attempts. Includes emergency bypass system, login attempt tracking, IP-based lockout, and email notifications.
+
+FILES INCLUDED
+modules/admin-url/class-ofast-admin-url.php
+modules/admin-url/class-ofast-admin-url-emergency.php (EMPTY FILE - UNUSED)
+modules/admin-url/class-ofast-admin-url-rewrite.php (EMPTY FILE - UNUSED)
+PUBLIC HOOKS
+Filters Used:
+logout_redirect - Redirects logout to homepage instead of login page
+authenticate - Checks IP lockout before authentication
+Actions Used:
+admin_menu - Registers settings submenu page
+admin_init - Processes form submissions (save/delete/resend)
+init - Handles custom URL access and sets login cookie
+login_init - Blocks unauthorized wp-login.php access, handles logout redirect
+template_redirect - Blocks unauthorized /wp-admin access
+wp_login_failed - Records failed login attempts
+wp_login - Clears lockout on successful login
+INTERNAL FUNCTIONS
+Public Methods:
+init() - Initializes module, registers hooks, checks bypass conditions
+add_admin_menu() - Registers admin submenu page
+handle_save() - Processes settings save/delete/resend email
+handle_custom_url() - Detects custom URL access, sets cookie, redirects to wp-login
+block_login_page() - Returns 404 for unauthorized wp-login.php access
+block_admin_pages() - Returns 404 for unauthorized /wp-admin access
+custom_logout_redirect($redirect_to, $requested_redirect_to, $user) - Redirects logout to home
+handle_logout_redirect() - Fallback logout redirect handler
+render_settings_page() - Outputs admin settings page HTML
+record_failed_login($username) - Tracks failed attempts, triggers lockout
+record_successful_login($user_login, $user) - Clears lockout on success
+check_lockout_before_auth($user, $username, $password) - Blocks locked IPs from authenticating
+register_security_hooks() - Registers authentication tracking hooks
+rotate_emergency_key() - Generates new emergency key (one-time use security)
+Private Methods:
+send_admin_notification($custom_slug, $emergency_key) - Emails login details to admin
+send_new_emergency_key_email($new_key) - Emails new emergency key after rotation
+show_404() - Loads 404 template or wp_die()
+is_ip_locked_out($ip) - Checks if IP is currently locked
+get_failed_attempts($ip) - Retrieves attempt count for IP
+is_ip_whitelisted($ip) - Checks if IP bypasses lockout
+get_client_ip() - Extracts client IP from server variables
+log_security_event($event_type, $data) - Logs events to hourly transients
+send_security_alert($ip, $username, $attempts) - Emails admin about lockout
+DATA FLOW
+Settings Storage:
+Options:
+  - ofast_admin_custom_slug (string) - Custom login URL slug
+  - ofast_admin_emergency_key (string) - 32-char emergency bypass key
+  - ofast_admin_url_enabled (0|1) - Module enabled state
+  - ofast_security_max_attempts (int, default: 5) - Max failed login attempts
+  - ofast_security_lockout_duration (int, default: 15) - Lockout minutes
+  - ofast_security_ip_whitelist (string) - Newline-separated IP list
+
+Transients (per IP):
+  - ofast_login_attempts_{md5(ip)} (int) - Failed attempt count
+  - ofast_login_lockout_{md5(ip)} (timestamp) - Lockout start time
+  - ofast_bypass_session_{md5(token)} (bool) - Emergency bypass session
+
+Transients (hourly logs):
+  - ofast_security_log_{YYYY-MM-DD-HH} (array) - Security events log
+
+Cookies:
+  - ofast_custom_login (value: 1, duration: 1 hour) - Custom URL access granted
+  - ofast_admin_bypass (value: session_token, duration: 1 hour) - Emergency bypass session
+Request Flow - Normal Login:
+User accesses example.com/my-secret-login
+handle_custom_url() detects slug match
+Sets ofast_custom_login cookie (1 hour)
+Redirects to wp-login.php
+block_login_page() checks cookie, allows access
+User logs in successfully
+record_successful_login() clears lockout transients
+Request Flow - Emergency Bypass:
+User accesses wp-login.php?ofast_emergency={key}
+init() checks emergency key with hash_equals()
+If valid: Rotates key, sets session cookie, sends new key email
+User has 1 hour to log in before session expires
+Old key is now invalid (one-time use)
+Request Flow - Lockout:
+User fails login attempt
+record_failed_login() increments ofast_login_attempts_{ip}
+If attempts >= max_attempts: Set ofast_login_lockout_{ip} transient
+send_security_alert() emails admin
+Next login attempt: check_lockout_before_auth() returns WP_Error
+User cannot authenticate until transient expires
+Request Flow - Unauthorized Access:
+User accesses /wp-admin or /wp-login.php without cookie
+Not logged in, no cookie, no emergency key
+block_login_page() or block_admin_pages() fires
+Returns 404 template or wp_die()
+SECURITY NOTES
+CRITICAL VULNERABILITIES:
+ISSUE 1: Cookie Hijacking - No Secure/HttpOnly Flags Verification Lines 75, 90, 116 use setcookie() without verifying HTTPS context.
+
+php
+setcookie('ofast_admin_bypass', $session_token, time() + 3600, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+PROBLEM: If is_ssl() returns false on HTTPS site (misconfigured server), cookie sent over HTTP = interceptable.
+
+FIX: Force secure flag on production:
+
+php
+$secure = (is_ssl() || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https'));
+setcookie('ofast_admin_bypass', $session_token, time() + 3600, COOKIEPATH, COOKIE_DOMAIN, $secure, true);
+ISSUE 2: Timing Attack on Emergency Key (MITIGATED) Line 71 uses hash_equals() - CORRECT implementation. No issue here.
+
+ISSUE 3: Session Token Not Cryptographically Random Line 73:
+
+php
+$session_token = wp_generate_password(32, false);
+wp_generate_password() uses rand() which is NOT cryptographically secure.
+
+FIX:
+
+php
+$session_token = bin2hex(random_bytes(32));
+ISSUE 4: Emergency Key Stored in Plain Text Emergency key stored in wp_options without encryption. If database is compromised, attacker has bypass key.
+
+RECOMMENDATION: Encrypt key at rest:
+
+php
+$encrypted_key = openssl_encrypt($emergency_key, 'AES-256-CBC', AUTH_KEY, 0, substr(md5(AUTH_SALT), 0, 16));
+update_option('ofast_admin_emergency_key', $encrypted_key);
+ISSUE 5: IP Spoofing via X-Forwarded-For Lines 579-583:
+
+php
+if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+    $ip = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0];
+}
+PROBLEM: X-Forwarded-For is user-controllable. Attacker can bypass lockout by setting header.
+
+FIX: Only trust X-Forwarded-For if behind known proxy:
+
+php
+$trusted_proxies = array('127.0.0.1', '::1'); // Add your proxy IPs
+if (in_array($_SERVER['REMOTE_ADDR'], $trusted_proxies) && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+    $ip = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0];
+} else {
+    $ip = $_SERVER['REMOTE_ADDR'];
+}
+ISSUE 6: No CSRF Protection on Delete Action Line 134-141: Delete custom URL uses nonce but doesn't check referer.
+
+RECOMMENDATION: Add referer check:
+
+php
+check_admin_referer('ofast_admin_url_save', '_wpnonce');
+if (!wp_verify_nonce($_POST['_wpnonce'], 'ofast_admin_url_save') || !check_admin_referer('ofast_admin_url_save', '_wpnonce')) {
+    wp_die('Security check failed');
+}
+ISSUE 7: Insufficient Emergency Key Entropy Line 74, 170, 343:
+
+php
+$emergency_key = wp_generate_password(32, false);
+Only alphanumeric (62 chars^32) ≈ 190 bits entropy. Good, but not using special chars.
+
+RECOMMENDATION: Use full entropy:
+
+php
+$emergency_key = wp_generate_password(32, true, true); // Include special chars
+ISSUE 8: Email Injection in Notification Lines 229, 274, 348: Email headers not sanitized if admin email is malicious.
+
+FIX: Validate admin email:
+
+php
+$admin_email = get_option('admin_email');
+if (!is_email($admin_email)) {
+    return; // Don't send if invalid
+}
+ISSUE 9: No Rate Limiting on Emergency Key Access Attacker can brute force emergency key by making unlimited requests to ?ofast_emergency={key}.
+
+FIX: Add rate limiting:
+
+php
+if (isset($_GET['ofast_emergency'])) {
+    $attempt_key = 'ofast_emergency_attempts_' . md5($this->get_client_ip());
+    $attempts = get_transient($attempt_key) ?: 0;
+    if ($attempts >= 5) {
+        wp_die('Too many emergency access attempts', 'Rate Limited', 429);
+    }
+    set_transient($attempt_key, $attempts + 1, MINUTE_IN_SECONDS);
+    // ... rest of emergency key validation
+}
+ISSUE 10: Cookie Domain Misconfiguration Lines 75, 90, 116 use COOKIE_DOMAIN constant which may be misconfigured or undefined.
+
+FIX: Validate domain:
+
+php
+$domain = defined('COOKIE_DOMAIN') && !empty(COOKIE_DOMAIN) ? COOKIE_DOMAIN : '';
+setcookie('ofast_custom_login', '1', time() + 3600, COOKIEPATH, $domain, $secure, true);
+ISSUE 11: Bypass via Direct File Access If attacker knows plugin file structure, they could directly include files. Missing ABSPATH check at top of file would allow this.
+
+STATUS: Line 8 has check - GOOD:
+
+php
+if (!defined('ABSPATH')) {
+    exit;
+}
+ISSUE 12: Information Disclosure in 404 Response Line 160: Full wp_die() with error message reveals plugin exists.
+
+RECOMMENDATION: Generic 404 without details:
+
+php
+wp_die('', '404 Not Found', array('response' => 404, 'back_link' => false));
+NON-CRITICAL SECURITY ISSUES:
+ISSUE 13: Logout Action Not Validated Line 152-154: Allows logout action without checking nonce. While WP core handles logout security, this bypasses plugin protection early.
+
+ISSUE 14: AJAX Not Whitelisted by User Role Line 181-183: Allows all AJAX requests if URL contains admin-ajax.php. Could allow unauthorized AJAX actions.
+
+RECOMMENDATION: Check user login status for non-public AJAX:
+
+php
+if (strpos($request_uri, 'admin-ajax.php') !== false) {
+    if (!is_user_logged_in() && !isset($_REQUEST['action']) || !in_array($_REQUEST['action'], array('public_action_1', 'public_action_2'))) {
+        $this->show_404();
+    }
+    return;
+}
+PERFORMANCE NOTES
+CRITICAL PERFORMANCE ISSUES:
+ISSUE 1: Database Write on Every Failed Login Lines 504-507:
+
+php
+set_transient('ofast_login_attempts_' . md5($ip), $attempts, $lockout_duration * MINUTE_IN_SECONDS);
+IMPACT: Each failed login writes to wp_options table. On shared hosting with 1000 brute force attempts/hour, this causes table lock contention.
+
+FIX: Use object cache if available:
+
+php
+if (function_exists('wp_cache_set')) {
+    wp_cache_set('ofast_login_attempts_' . md5($ip), $attempts, 'ofast_security', $lockout_duration * MINUTE_IN_SECONDS);
+} else {
+    set_transient('ofast_login_attempts_' . md5($ip), $attempts, $lockout_duration * MINUTE_IN_SECONDS);
+}
+ISSUE 2: Regex on Every Request Lines 109, 113, 176:
+
+php
+if (strpos($request_uri, '/wp-admin') === false) {
+    return;
+}
+IMPACT: String operations on every template_redirect. Negligible but could be optimized.
+
+FIX: Cache result:
+
+php
+static $is_admin_request = null;
+if ($is_admin_request === null) {
+    $is_admin_request = (strpos($_SERVER['REQUEST_URI'], '/wp-admin') !== false);
+}
+if (!$is_admin_request) {
+    return;
+}
+ISSUE 3: Multiple Transient Reads Per Request Lines 475-478, 485-488: Each request may call get_transient() multiple times for same IP.
+
+FIX: Cache in class property:
+
+php
+private $ip_cache = array();
+
+private function is_ip_locked_out($ip) {
+    if (!isset($this->ip_cache[$ip])) {
+        $this->ip_cache[$ip] = get_transient('ofast_login_lockout_' . md5($ip));
+    }
+    return (bool) $this->ip_cache[$ip];
+}
+ISSUE 4: Security Log Unbounded Growth Lines 593-606: Logs stored in hourly transients with 24-hour expiry. On high-traffic site with 10,000 events/hour, this could be 50KB+ per transient × 24 hours = 1.2MB in wp_options.
+
+FIX: Add max events per hour AND shorter expiry:
+
+php
+if (count($log) >= 50) {
+    $log = array_slice($log, -49); // Already implemented - GOOD
+}
+set_transient($log_key, $log, HOUR_IN_SECONDS * 2); // Reduce from 24 hours to 2 hours
+ISSUE 5: Email Sent on Every Lockout Line 520: send_security_alert() called on every max attempt lockout. If attacker triggers 100 lockouts/hour from different IPs, admin gets 100 emails.
+
+FIX: Rate limit alert emails:
+
+php
+$alert_key = 'ofast_last_alert_' . md5($ip);
+if (!get_transient($alert_key)) {
+    $this->send_security_alert($ip, $username, $attempts);
+    set_transient($alert_key, time(), HOUR_IN_SECONDS); // Max 1 alert per IP per hour
+}
+ISSUE 6: parse_url() on Every Request Line 107:
+
+php
+$request_uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+IMPACT: Minor overhead on every init hook.
+
+FIX: Use explode:
+
+php
+$request_uri = explode('?', $_SERVER['REQUEST_URI'])[0];
+ISSUE 7: No Object Cache Invalidation If using persistent object cache (Redis/Memcached), lockout data persists even after admin clears it from database.
+
+FIX: Use cache groups or manual invalidation:
+
+php
+wp_cache_delete('ofast_login_attempts_' . md5($ip), 'ofast_security');
+DEPENDENCIES
+WordPress Core:
+Requires: WordPress 5.0+ (uses transient API, wp_safe_redirect(), wp_generate_password())
+Authentication: is_user_logged_in(), wp_get_current_user(), authenticate filter
+Email: wp_mail(), get_option('admin_email')
+Routing: init, login_init, template_redirect hooks
+Templates: get_404_template()
+External Dependencies:
+Ofast_X_Toast class (line 126) - Dependency not included in provided files
+Main plugin loader checking ofastx_modules_enabled option
+Assumes ofast-dashboard parent menu exists (line 125)
+PHP Requirements:
+PHP 7.0+ (uses random_bytes() if fixed, hash_equals())
+OpenSSL extension (if encryption fix implemented)
+Server Requirements:
+Cookie support in browser
+Correctly configured $_SERVER['REQUEST_URI']
+Correct timezone for current_time()
+WORDPRESS.ORG READINESS
+BLOCKING ISSUES:
+IP Spoofing Vulnerability - Must fix X-Forwarded-For handling
+Weak Session Token - Must use random_bytes() instead of wp_generate_password()
+No Rate Limiting on Emergency Key - Must prevent brute force
+Missing Toast Class - Include dependency or remove
+Empty Dependency Files - Remove unused files (class-ofast-admin-url-emergency.php, class-ofast-admin-url-rewrite.php)
+Cookie Security - Must force secure flag on HTTPS
+CRITICAL ISSUES:
+Email Not Validated - Could cause email injection
+No Object Cache Support - Performance issues on high-traffic sites
+Unbounded Email Alerts - Could flood admin inbox
+Information Disclosure - 404 messages reveal plugin presence
+MINOR ISSUES:
+No Uninstall Hook - Should clean up transients, options, cookies
+Missing Textdomain - No i18n support
+Inline CSS - 200+ lines of CSS should be external file
+No Logging UI - Security log stored but not viewable
+Hardcoded Strings - Email templates should be filterable
+No Audit Trail - No record of who changed settings
+Emergency Key Not Hashed - Stored in plain text in database
+DEAD CODE:
+class-ofast-admin-url-emergency.php - EMPTY FILE, referenced but unused
+class-ofast-admin-url-rewrite.php - EMPTY FILE, referenced but unused
+Line 135: ofast_admin_url_enabled option saved but never checked (module check happens in core loader)
+UNUSED DATABASE ENTRIES:
+Transients (expire automatically):
+
+ofast_login_attempts_{hash} - Auto-expires after lockout duration
+ofast_login_lockout_{hash} - Auto-expires after lockout duration
+ofast_bypass_session_{hash} - Auto-expires after 1 hour
+ofast_security_log_{date-hour} - Auto-expires after 24 hours
+Options (persist until deleted):
+
+No unused options detected, but no cleanup on uninstall
+REPETITIVE CODE:
+ISSUE 1: Duplicate Cookie Setting Pattern Lines 75, 90, 116 - Same cookie parameters repeated 3 times.
+
+FIX: Create helper method:
+
+php
+private function set_secure_cookie($name, $value, $expire) {
+    $secure = (is_ssl() || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https'));
+    $domain = defined('COOKIE_DOMAIN') && !empty(COOKIE_DOMAIN) ? COOKIE_DOMAIN : '';
+    setcookie($name, $value, $expire, COOKIEPATH, $domain, $secure, true);
+}
+ISSUE 2: Duplicate IP Transient Key Pattern Lines 476, 486, 504, 516 - 'ofast_login_lockout_' . md5($ip) and 'ofast_login_attempts_' . md5($ip) repeated.
+
+FIX: Create helper methods:
+
+php
+private function get_lockout_key($ip) {
+    return 'ofast_login_lockout_' . md5($ip);
+}
+private function get_attempts_key($ip) {
+    return 'ofast_login_attempts_' . md5($ip);
+}
+ISSUE 3: Duplicate Transient Operations Lines 559-563, 569-571: delete_transient() pattern repeated.
+
+FIX: Create helper:
+
+php
+private function clear_ip_data($ip) {
+    delete_transient($this->get_attempts_key($ip));
+    delete_transient($this->get_lockout_key($ip));
+}
+LOOPHOLES:
+LOOPHOLE 1: Admin Can Lock Themselves Out If admin changes custom slug, forgets it, and doesn't receive email (spam filter, typo, server issue), they're locked out.
+
+MITIGATION: Already implemented with OFAST_DISABLE_ADMIN_PROTECTION constant - GOOD.
+
+LOOPHOLE 2: Shared IP Lockout Users behind NAT/corporate firewall share IP. One user's failed attempts lock out entire office.
+
+MITIGATION: IP whitelist feature implemented - GOOD. Should document this prominently.
+
+LOOPHOLE 3: Custom Slug Collision If custom slug matches existing page/post slug (e.g., user creates page /secret-login), WordPress routing takes precedence, custom login breaks.
+
+FIX: Add slug validation:
+
+php
+$existing_post = get_page_by_path($new_slug);
+if ($existing_post) {
+    add_settings_error('ofast_admin_url', 'collision', 'That URL already exists as a page/post. Please choose another.', 'error');
+    return;
+}
+LOOPHOLE 4: Emergency Key Shown in Browser History Emergency URL contains key in GET parameter. Stays in browser history, server logs, analytics.
+
+MITIGATION: Key rotation implemented (one-time use) - GOOD. Should also add:
+
+php
+// Clear URL from history after use
+if (isset($_GET['ofast_emergency'])) {
+    wp_redirect(wp_login_url());
+    exit;
+}
+LOOPHOLE 5: Cookie Not Cleared on Logout ofast_custom_login cookie persists after logout. User could access login page for up to 1 hour after logout.
+
+FIX: Clear cookie on logout:
+
+php
+add_action('wp_logout', array($this, 'clear_login_cookie'));
+
+public function clear_login_cookie() {
+    setcookie('ofast_custom_login', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+}
+RECOMMENDATION FOR PUBLICATION:
+STATUS: NOT READY - CRITICAL SECURITY ISSUES
+
+MUST FIX BEFORE PUBLICATION:
+
+Fix IP spoofing vulnerability (X-Forwarded-For)
+Replace wp_generate_password() with random_bytes() for session tokens
+Add rate limiting on emergency key attempts
+Validate admin email before sending
+Remove empty dependency files
+Force secure cookie flag on HTTPS
+Add slug collision detection
+Clear login cookie on logout
+SHOULD FIX: 9. Implement object cache support 10. Rate limit security alert emails 11. Add i18n support (textdomain) 12. Enqueue CSS as external file 13. Add security log viewing UI in admin 14. Create helper methods to reduce code duplication 15. Add uninstall.php to clean up data 16. Encrypt emergency key at rest 17. Add admin capability check to all public methods
+
+NICE TO HAVE: 18. Make email templates filterable 19. Add settings export/import 20. Add WP-CLI commands for emergency access 21. Add two-factor authentication integration hooks 22. Add geolocation blocking (via IP database)
+
+ESTIMATED TIME TO PUBLICATION READINESS: 16-24 hours of development work
+
+SECURITY RISK LEVEL: HIGH (IP spoofing allows complete lockout bypass)
+

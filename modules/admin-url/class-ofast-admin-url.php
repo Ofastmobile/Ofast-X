@@ -92,17 +92,12 @@ class Ofast_X_Admin_Url
 
     /**
      * Add admin menu
+     * NOTE: Submenu removed - Admin URL settings are now inline in Admin Tweaks page
      */
     public function add_admin_menu()
     {
-        add_submenu_page(
-            'ofast-dashboard',
-            'Admin URL Security',
-            'Admin URL',
-            'manage_options',
-            'ofast-admin-url',
-            array($this, 'render_settings_page')
-        );
+        // Submenu removed - settings are inline in Admin Tweaks
+        // Keep this method for backward compatibility (hook still registered in init)
     }
 
     /**

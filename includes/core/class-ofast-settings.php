@@ -20,6 +20,12 @@ class Ofast_X_Settings
         add_action('admin_menu', array($this, 'add_settings_menu'));
         add_action('admin_init', array($this, 'handle_save'));
         add_action('admin_init', array($this, 'handle_reset'));
+
+        // Add Chat Us menu at very end (priority 9999)
+        add_action('admin_menu', array($this, 'add_chat_menu'), 9999);
+        // Reorder admin menu
+        add_filter('custom_menu_order', '__return_true');
+        add_filter('menu_order', array($this, 'reorder_admin_menu'), 999);
     }
 
     /**
@@ -27,13 +33,23 @@ class Ofast_X_Settings
      */
     public function add_settings_menu()
     {
+        add_menu_page(
+            'Ofast X',
+            'Ofast X',
+            'manage_options',
+            'ofast-dashboard',
+            array($this, 'render_settings_page'),
+            'dashicons-chart-bar', /* Keeping the chart icon or using 'dashicons-admin-generic' */
+            2
+        );
+
+        // Rename first submenu to Settings
         add_submenu_page(
             'ofast-dashboard',
-            'Ofast X Settings',
+            'Settings',
             'Settings',
             'manage_options',
-            'ofast-settings',
-            array($this, 'render_settings_page')
+            'ofast-dashboard'
         );
     }
 
@@ -118,6 +134,74 @@ class Ofast_X_Settings
     }
 
     /**
+     * Add Chat Us menu at the very end
+     */
+    public function add_chat_menu()
+    {
+        global $submenu;
+        $whatsapp_number = '2348069727836';
+        $message = urlencode('Hello! I need help with Ofast X plugin.');
+        $whatsapp_url = 'https://wa.me/' . $whatsapp_number . '?text=' . $message;
+
+        $submenu['ofast-dashboard'][] = array(
+            'Chat Us',
+            'read',
+            $whatsapp_url
+        );
+        add_action('admin_head', array($this, 'chat_button_styles'));
+    }
+
+    /**
+     * Chat Button Styles
+     */
+    public function chat_button_styles()
+    {
+    ?>
+        <style>
+            #adminmenu .toplevel_page_ofast-dashboard ul.wp-submenu a[href*="wa.me"] {
+                background: #25D366 !important;
+                color: #fff !important;
+                border-radius: 10px !important;
+                padding: 8px 12px !important;
+                margin: 5px 10px !important;
+                display: inline-block !important;
+                transition: all 0.3s ease !important;
+            }
+            #adminmenu .toplevel_page_ofast-dashboard ul.wp-submenu a[href*="wa.me"]:hover {
+                background: #128C7E !important;
+                transform: scale(1.05) !important;
+            }
+        </style>
+    <?php
+    }
+
+    /**
+     * Reorder admin menu
+     */
+    public function reorder_admin_menu($menu_order)
+    {
+        if (!$menu_order) return true;
+
+        $ofast_menus = array('ofast-dashboard', 'ofast-email', 'ofast-smtp', 'ofast-forms');
+        $new_order = array();
+
+        if (in_array('index.php', $menu_order)) $new_order[] = 'index.php';
+        $new_order[] = 'separator1';
+
+        foreach ($ofast_menus as $menu_slug) {
+            if (in_array($menu_slug, $menu_order)) $new_order[] = $menu_slug;
+        }
+
+        $new_order[] = 'separator2';
+
+        foreach ($menu_order as $menu) {
+            if (!in_array($menu, $new_order) && $menu !== 'separator1' && $menu !== 'separator2') {
+                $new_order[] = $menu;
+            }
+        }
+        return $new_order;
+    }
+    /**
      * Render settings page
      */
     public function render_settings_page()
@@ -140,10 +224,86 @@ class Ofast_X_Settings
                     </div>
                     <div class="ofast-header-text">
                         <h1>Ofast X Settings</h1>
-                        <p>Enable or disable plugin modules. Only enabled modules will load.</p>
+                        <p>Manage your plugin modules and view system status.</p>
                     </div>
                 </div>
             </div>
+
+            <!-- Stats Section -->
+            <?php
+            $roles = wp_roles()->roles;
+            $all_users = count_users();
+            $total_users = $all_users['total_users'];
+            
+            // Simulation Mode for Testing
+            if (isset($_GET['sim_roles'])) {
+                for ($i = 1; $i <= 15; $i++) {
+                    $all_users['avail_roles']['test_role_' . $i] = rand(10, 500);
+                    $roles['test_role_' . $i] = array('name' => 'Test Role ' . $i);
+                }
+            }
+
+            // Prepare Data
+            $visible_limit = 5;
+            $role_counts = $all_users['avail_roles'];
+            $visible_roles = array_slice($role_counts, 0, $visible_limit, true);
+            $hidden_roles = array_slice($role_counts, $visible_limit, null, true);
+            ?>
+
+            <div class="ofast-stats-container">
+                <div class="ofast-stats-row">
+                     <div class="ofast-stat-item total">
+                        <span class="label">Total Users</span>
+                        <span class="value"><?php echo esc_html($total_users); ?></span>
+                     </div>
+                     <?php foreach ($visible_roles as $role => $role_count): 
+                        $label = isset($roles[$role]['name']) ? $roles[$role]['name'] : ucfirst($role);
+                     ?>
+                     <div class="ofast-stat-item">
+                        <span class="label"><?php echo esc_html($label); ?></span>
+                        <span class="value"><?php echo esc_html($role_count); ?></span>
+                     </div>
+                     <?php endforeach; ?>
+
+                     <?php if (!empty($hidden_roles)): ?>
+                     <div class="ofast-stat-item expand-trigger" id="ofast-show-more-roles">
+                        <span class="dashicons dashicons-plus"></span>
+                        <span class="label"><?php echo count($hidden_roles); ?> More</span>
+                     </div>
+                     <?php endif; ?>
+                </div>
+
+                <?php if (!empty($hidden_roles)): ?>
+                <div class="ofast-stats-row hidden-row" id="ofast-hidden-roles" style="display: none; margin-top: 15px;">
+                     <?php foreach ($hidden_roles as $role => $role_count): 
+                        $label = isset($roles[$role]['name']) ? $roles[$role]['name'] : ucfirst($role);
+                     ?>
+                     <div class="ofast-stat-item secondary">
+                        <span class="label"><?php echo esc_html($label); ?></span>
+                        <span class="value"><?php echo esc_html($role_count); ?></span>
+                     </div>
+                     <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+
+            <script>
+            jQuery(document).ready(function($) {
+                $('#ofast-show-more-roles').on('click', function() {
+                    $('#ofast-hidden-roles').slideToggle();
+                    // Also toggle class on parent row for mobile CSS handling
+                    $(this).closest('.ofast-stats-row').toggleClass('expanded');
+                    
+                    $(this).toggleClass('active');
+                    var icon = $(this).find('.dashicons');
+                    if ($(this).hasClass('active')) {
+                        icon.removeClass('dashicons-plus').addClass('dashicons-minus');
+                    } else {
+                        icon.removeClass('dashicons-minus').addClass('dashicons-plus');
+                    }
+                });
+            });
+            </script>
 
             <?php if ($saved): ?>
                 <?php echo Ofast_X_Toast::render('Settings saved successfully!', 'success'); ?>
@@ -190,10 +350,10 @@ class Ofast_X_Settings
                 <?php
                 // Group modules by category
                 $categories = array(
-                    'communication' => array('icon' => 'dashicons-email', 'title' => 'Communication Features'),
-                    'security' => array('icon' => 'dashicons-lock', 'title' => 'Security Features'),
-                    'content' => array('icon' => 'dashicons-edit', 'title' => 'Content Management'),
                     'customization' => array('icon' => 'dashicons-admin-appearance', 'title' => 'Customization Features'),
+                    'communication' => array('icon' => 'dashicons-email', 'title' => 'Communication Features'),
+                    'content' => array('icon' => 'dashicons-edit', 'title' => 'Content Management'),
+                    'security' => array('icon' => 'dashicons-lock', 'title' => 'Security Features'),
                     'utility' => array('icon' => 'dashicons-admin-tools', 'title' => 'Utility Features'),
                 );
                 
@@ -300,6 +460,94 @@ class Ofast_X_Settings
                 display: flex;
                 align-items: center;
                 gap: 20px;
+            }
+            
+            /* Stats Row */
+            .ofast-stats-container { margin-bottom: 30px; }
+            .ofast-stats-row {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+                gap: 15px;
+            }
+            @media (max-width: 600px) {
+                /* On mobile, force grid to show 2 columns */
+                .ofast-stats-row {
+                    grid-template-columns: 1fr 1fr;
+                }
+                /* Hide items after the first 3 (Total + 2 Roles) on mobile initially */
+                .ofast-stats-row > .ofast-stat-item:nth-child(n+4) {
+                    display: none;
+                }
+                /* Always show the expand trigger if it exists */
+                .ofast-stats-row > .ofast-stat-item.expand-trigger {
+                    display: flex !important;
+                    grid-column: span 2; /* Make button full width on mobile */
+                }
+                /* When expanded, show all items */
+                .ofast-stats-row.expanded > .ofast-stat-item {
+                    display: flex !important;
+                }
+            }
+            .ofast-stat-item {
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+                padding: 15px 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                justify-content: center;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+                transition: all 0.2s ease;
+            }
+            .ofast-stat-item:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+                border-color: #cbd5e1;
+            }
+            .ofast-stat-item.total {
+                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+                border: none;
+                color: #fff;
+                grid-column: span 1; /* Ensure it doesn't break grid */
+            }
+            .ofast-stat-item.total .label { color: rgba(255,255,255,0.9); }
+            .ofast-stat-item.total .value { color: #fff; }
+            
+            .ofast-stat-item.secondary { background: #f8fafc; }
+
+            .ofast-stat-item.expand-trigger {
+                cursor: pointer;
+                background: #f1f5f9;
+                border-style: dashed;
+                align-items: center;
+                justify-content: center;
+            }
+            .ofast-stat-item.expand-trigger:hover {
+                background: #e2e8f0;
+                border-color: #94a3b8;
+            }
+            .ofast-stat-item.expand-trigger .dashicons {
+                font-size: 24px;
+                width: 24px;
+                height: 24px;
+                color: #64748b;
+                margin-bottom: 5px;
+            }
+            
+            .ofast-stat-item .label {
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                color: #64748b;
+                font-weight: 600;
+                margin-bottom: 5px;
+            }
+            .ofast-stat-item .value {
+                font-size: 24px;
+                font-weight: 700;
+                color: #1e293b;
+                line-height: 1;
             }
             .ofast-header-icon {
                 width: 60px;
@@ -484,29 +732,14 @@ class Ofast_X_Settings
                 'category' => 'customization',
                 'locked' => true,
             ),
-            'admin-design' => array(
-                'name' => 'WP Admin Design',
-                'description' => 'Modern glassmorphism styling for WordPress admin with gradient animations',
-                'category' => 'customization',
-            ),
             'admin-tweaks' => array(
                 'name' => 'Admin Tweaks',
-                'description' => 'Quick admin customizations: hide admin bar, remove WP logo, rename howdy, infinite scroll',
-                'category' => 'customization',
-            ),
-            'menu-editor' => array(
-                'name' => 'Admin Menu Editor',
-                'description' => 'Reorder and rename WordPress admin menu items - perfect for white-label sites',
+                'description' => 'Admin customizations including User Roles, Menu Editor, Admin URL, Admin Design, and more',
                 'category' => 'customization',
             ),
             'admin-footer' => array(
                 'name' => 'Custom Admin Footer',
                 'description' => 'Add custom branding text to admin footer - replace "Thank you for creating"',
-                'category' => 'customization',
-            ),
-            'whos-admin' => array(
-                'name' => "Who's Admin Widget",
-                'description' => 'Dashboard widget showing admin users and designer details - white-label friendly',
                 'category' => 'customization',
             ),
             
@@ -521,11 +754,6 @@ class Ofast_X_Settings
                 'description' => 'Configure SendGrid, Mailgun, Zoho, or Gmail to ensure emails reach inboxes',
                 'category' => 'communication',
             ),
-            'newsletter' => array(
-                'name' => 'Newsletter Subscriptions',
-                'description' => 'Frontend signup forms, double opt-in, subscriber export, and one-click unsubscribe',
-                'category' => 'communication',
-            ),
             'forms' => array(
                 'name' => 'Contact Forms',
                 'description' => 'Custom contact form builder with multi-channel notifications (email, SMS, WhatsApp)',
@@ -538,11 +766,6 @@ class Ofast_X_Settings
             ),
             
             // === SECURITY ===
-            'admin-url' => array(
-                'name' => 'Admin URL Customizer',
-                'description' => 'Hide /wp-admin behind a secret custom URL for security (e.g., /mylogin)',
-                'category' => 'security',
-            ),
             'spam-protection' => array(
                 'name' => 'Spam Protection',
                 'description' => 'Cloudflare Turnstile and Google reCAPTCHA v2/v3 integration to block spam',
@@ -565,16 +788,6 @@ class Ofast_X_Settings
                 'description' => 'Manage code snippets with visual toggle switches - easier than Code Snippets plugin',
                 'category' => 'content',
             ),
-            'duplicate-content' => array(
-                'name' => 'Content Duplicator',
-                'description' => 'Duplicate posts and pages with one click - saves hours of copy-paste work',
-                'category' => 'content',
-            ),
-            'content-ordering' => array(
-                'name' => 'Content Ordering',
-                'description' => 'Drag-and-drop reordering for posts, pages, and custom post types',
-                'category' => 'content',
-            ),
             'redirects' => array(
                 'name' => 'Redirects Manager',
                 'description' => '301/302/307 redirects with import/export and usage tracking - SEO essential',
@@ -585,11 +798,6 @@ class Ofast_X_Settings
             'debug' => array(
                 'name' => 'Debug Indicator',
                 'description' => 'Warns you if WP_DEBUG is active on production sites (security risk alert)',
-                'category' => 'utility',
-            ),
-            'user-roles' => array(
-                'name' => 'User Role Manager',
-                'description' => 'Assign multiple roles to WordPress users - essential for ecommerce sites',
                 'category' => 'utility',
             ),
         );

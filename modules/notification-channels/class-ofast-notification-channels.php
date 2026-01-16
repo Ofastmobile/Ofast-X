@@ -50,9 +50,8 @@ class Ofast_X_Notification_Channels
             wp_die('Permission denied');
         }
 
-        // Get channel statuses
+        // Get channel status
         $whatsapp_configured = class_exists('Ofast_X_WhatsApp') && Ofast_X_WhatsApp::get_instance()->is_configured();
-        $sheets_configured = class_exists('Ofast_X_Google_Sheets') && Ofast_X_Google_Sheets::get_instance()->is_configured();
 ?>
         <style>
             /* Header Styles */
@@ -130,11 +129,6 @@ class Ofast_X_Notification_Channels
                 color: #166534;
             }
 
-            .ofast-status-icon.sheets {
-                background: #dbeafe;
-                color: #1d4ed8;
-            }
-
             .ofast-status-icon.inactive {
                 background: #f3f4f6;
                 color: #6b7280;
@@ -206,18 +200,6 @@ class Ofast_X_Notification_Channels
                         </div>
                     </div>
                 </div>
-
-                <div class="ofast-status-card">
-                    <div class="ofast-status-icon <?php echo $sheets_configured ? 'sheets' : 'inactive'; ?>">
-                        <?php echo $sheets_configured ? '✓' : '○'; ?>
-                    </div>
-                    <div class="ofast-status-info">
-                        <h3>Google Sheets</h3>
-                        <div class="status <?php echo $sheets_configured ? 'connected' : 'not-configured'; ?>">
-                            <?php echo $sheets_configured ? 'Connected' : 'Not Configured'; ?>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <?php
@@ -228,15 +210,6 @@ class Ofast_X_Notification_Channels
                 echo '</div>';
             } else {
                 echo Ofast_X_Toast::render('WhatsApp integration not loaded.', 'warning');
-            }
-
-            // Google Sheets Settings
-            if (class_exists('Ofast_X_Google_Sheets')) {
-                echo '<div class="ofast-channel-section" style="background:#fff;padding:20px;border:1px solid #ddd;border-radius:8px;margin-top:20px;">';
-                Ofast_X_Google_Sheets::get_instance()->render_settings_form();
-                echo '</div>';
-            } else {
-                echo Ofast_X_Toast::render('Google Sheets integration not loaded.', 'warning');
             }
             ?>
         </div>

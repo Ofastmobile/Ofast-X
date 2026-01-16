@@ -1,17 +1,15 @@
-( ! ) Notice: Function wpdb::prepare was called <strong>incorrectly</strong>. The query argument of wpdb::prepare() must have a placeholder. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 3.9.0.) in C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-includes\functions.php on line 6131
+
+( ! ) Fatal error: Uncaught TypeError: call_user_func_array(): Argument #1 ($callback) must be a valid callback, class Ofast_X_Admin_Tweaks does not have a method "sort_users_by_registration_date" in C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-includes\class-wp-hook.php on line 341
+( ! ) TypeError: call_user_func_array(): Argument #1 ($callback) must be a valid callback, class Ofast_X_Admin_Tweaks does not have a method "sort_users_by_registration_date" in C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-includes\class-wp-hook.php on line 341
 Call Stack
 #	Time	Memory	Function	Location
-1	1.2304	370248	{main}( )	...\index.php:0
-2	1.2312	371448	require( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-blog-header.php )	...\index.php:17
-3	2.9011	72236616	require_once( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-includes\template-loader.php )	...\wp-blog-header.php:19
-4	2.9698	73273248	include( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-includes\template-canvas.php )	...\template-loader.php:125
-5	3.3227	75333464	wp_footer( )	...\template-canvas.php:25
-6	3.3227	75333464	do_action( $hook_name = 'wp_footer' )	...\general-template.php:3213
-7	3.3227	75333680	WP_Hook->do_action( $args = [0 => ''] )	...\plugin.php:522
-8	3.3227	75333680	WP_Hook->apply_filters( $value = '', $args = [0 => ''] )	...\class-wp-hook.php:365
-9	3.3874	75474440	Ofast_X_Email_Queue->process_queue_frontend( '' )	...\class-wp-hook.php:341
-10	3.4605	75463840	Ofast_X_Email_Queue->process_next_emails( )	...\class-ofast-email-queue.php:229
-11	3.5262	75466272	wpdb->prepare( $query = '\r\n SELECT * FROM wp_ofast_email_queue\r\n WHERE status = \'pending\'\r\n AND scheduled_time <= NOW()\r\n AND (next_allowed_send IS NULL OR next_allowed_send <= NOW())\r\n ORDER BY scheduled_time ASC, id ASC\r\n LIMIT 1\r\n ' )	...\class-ofast-email-queue.php:268
-12	3.5262	75467000	_doing_it_wrong( $function_name = 'wpdb::prepare', $message = 'The query argument of wpdb::prepare() must have a placeholder.', $version = '3.9.0' )	...\class-wpdb.php:1478
-13	3.5262	75467832	wp_trigger_error( $function_name = '', $message = 'Function wpdb::prepare was called <strong>incorrectly</strong>. The query argument of wpdb::prepare() must have a placeholder. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 3.9.0.)', $error_level = ??? )	...\functions.php:6071
-14	3.5265	75468176	trigger_error( $message = 'Function wpdb::prepare was called <strong>incorrectly</strong>. The query argument of wpdb::prepare() must have a placeholder. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 3.9.0.)', $error_level = 1024 )	...\functions.php:6131
+1	2.0300	376200	{main}( )	...\index.php:0
+2	8.2504	6539584	wp_dashboard( )	...\index.php:204
+3	8.2504	6539584	do_meta_boxes( $screen = 'dashboard', $context = 'normal', $data_object = '' )	...\dashboard.php:271
+4	9.1565	6635944	Ofast_X_Whos_Admin->render_admin_users_widget( '', ['id' => 'ofast_admin_users_widget', 'title' => 'Administrator', 'callback' => [0 => class Ofast_X_Whos_Admin { ... }, 1 => 'render_admin_users_widget'], 'args' => []] )	...\template.php:1453
+5	9.1565	6635944	get_users( $args = ['role' => 'administrator', 'orderby' => 'registered', 'order' => 'DESC'] )	...\class-ofast-whos-admin.php:62
+6	9.1565	6636576	WP_User_Query->__construct( $query = ['role' => 'administrator', 'orderby' => 'registered', 'order' => 'DESC', 'count_total' => FALSE] )	...\user.php:879
+7	9.1565	6702112	WP_User_Query->prepare_query( $query = ['role' => 'administrator', 'orderby' => 'registered', 'order' => 'DESC', 'count_total' => FALSE] )	...\class-wp-user-query.php:79
+8	9.1565	6704976	do_action_ref_array( $hook_name = 'pre_get_users', $args = [0 => class WP_User_Query { public $query_vars = [...]; private $results = NULL; private $total_users = 0; public $meta_query = FALSE; public $request = NULL; private $compat_fields = [...]; public $query_fields = NULL; public $query_from = NULL; public $query_where = NULL; public $query_orderby = NULL; public $query_limit = NULL }] )	...\class-wp-user-query.php:283
+9	9.1565	6704976	WP_Hook->do_action( $args = [0 => class WP_User_Query { public $query_vars = [...]; private $results = NULL; private $total_users = 0; public $meta_query = FALSE; public $request = NULL; private $compat_fields = [...]; public $query_fields = NULL; public $query_from = NULL; public $query_where = NULL; public $query_orderby = NULL; public $query_limit = NULL }] )	...\plugin.php:570
+10	9.1565	6704976	WP_Hook->apply_filters( $value = '', $args = [0 => class WP_User_Query { public $query_vars = [...]; private $results = NULL; private $total_users = 0; public $meta_query = FALSE; public $request = NULL; private $compat_fields = [...]; public $query_fields = NULL; public $query_from = NULL; public $query_where = NULL; public $query_orderby = NULL; public $query_limit = NULL }] )	...\class-wp-hook.php:365

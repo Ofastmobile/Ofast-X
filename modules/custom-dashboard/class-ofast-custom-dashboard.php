@@ -16,6 +16,11 @@ class Ofast_X_Custom_Dashboard
     private static $instance = null;
 
     /**
+     * Mode: 'modern' or 'classic'
+     */
+    private $mode = 'modern';
+
+    /**
      * Return an instance of this class.
      */
     public static function get_instance()
@@ -31,11 +36,19 @@ class Ofast_X_Custom_Dashboard
      */
     public function __construct()
     {
-        // Enqueue Assets
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
+        // Get user preference
+        $this->mode = get_user_meta(get_current_user_id(), 'ofast_dashboard_mode', true) ?: 'modern';
+
+        // Enqueue Assets (Only in Modern Mode)
+        if ($this->mode === 'modern') {
+            add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
+        }
         
-        // Inject Dashboard
+        // Inject Dashboard (Checks mode inside)
         add_action('in_admin_header', array($this, 'render_dashboard'));
+
+        // Add Switch Button to Classic Dashboard if in Classic Mode
+        add_action('admin_notices', array($this, 'render_switch_to_modern_button'));
         
         // Add body class for styling
         add_filter('admin_body_class', array($this, 'add_body_class'));
@@ -45,6 +58,15 @@ class Ofast_X_Custom_Dashboard
      * Initialize the module
      */
     public function init() {
+        // Check global toggle from Admin Footer settings
+        $footer_settings = get_option('ofast_admin_footer_settings', array());
+        if (empty($footer_settings['enable_custom_dashboard'])) {
+            return;
+        }
+
+        // Handle Dashboard Switch Action
+        add_action('admin_action_ofast_switch_dashboard', array($this, 'handle_switch_dashboard'));
+
         // Hooks are in constructor
     }
 
@@ -63,6 +85,12 @@ class Ofast_X_Custom_Dashboard
     public function enqueue_assets($hook)
     {
         if ($hook !== 'index.php') {
+            return;
+        }
+
+        // Check global toggle
+        $footer_settings = get_option('ofast_admin_footer_settings', array());
+        if (empty($footer_settings['enable_custom_dashboard'])) {
             return;
         }
 
@@ -104,7 +132,14 @@ class Ofast_X_Custom_Dashboard
     public function add_body_class($classes)
     {
         global $pagenow;
-        if ($pagenow === 'index.php') {
+        
+        // Check global toggle
+        $footer_settings = get_option('ofast_admin_footer_settings', array());
+        if (empty($footer_settings['enable_custom_dashboard'])) {
+            return $classes;
+        }
+
+        if ($pagenow === 'index.php' && $this->mode === 'modern') {
             $classes .= ' ofast-clean-dashboard ofast-dark-theme ';
         }
         return $classes;
@@ -117,6 +152,17 @@ class Ofast_X_Custom_Dashboard
     {
         global $pagenow;
         if ($pagenow !== 'index.php') {
+            return;
+        }
+
+        // Check global toggle
+        $footer_settings = get_option('ofast_admin_footer_settings', array());
+        if (empty($footer_settings['enable_custom_dashboard'])) {
+            return;
+        }
+
+        // Check if we are in Modern Mode
+        if ($this->mode !== 'modern') {
             return;
         }
         
@@ -136,7 +182,7 @@ class Ofast_X_Custom_Dashboard
             <!-- Header -->
             <div class="ofast-dashboard-header">
                 <div class="ofast-welcome">
-                    <h1><?php echo esc_html($greeting); ?>, <?php echo esc_html($user->display_name); ?> <span class="wave">👋</span></h1>
+                    <h1><?php echo esc_html($greeting); ?>, <?php echo esc_html($user->display_name); ?></h1>
                     <p><?php esc_html_e('Dashboard Analytics & Overview', 'ofast-x'); ?></p>
                 </div>
                 
@@ -282,7 +328,9 @@ class Ofast_X_Custom_Dashboard
             </div>
             
             <div class="ofast-legacy-toggle">
-                <button id="toggle-legacy-widgets"><?php esc_html_e('Switch to Classic Dashboard', 'ofast-x'); ?></button>
+                <a href="<?php echo esc_url(admin_url('admin.php?action=ofast_switch_dashboard&mode=classic&_wpnonce=' . wp_create_nonce('ofast_switch_dashboard'))); ?>" class="button button-secondary">
+                    <?php esc_html_e('Switch to Classic Dashboard', 'ofast-x'); ?>
+                </a>
             </div>
         </div>
         <?php
@@ -470,5 +518,43 @@ class Ofast_X_Custom_Dashboard
         } else {
             return 'Good Evening';
         }
+    }
+
+    /**
+     * Handle Dashboard Switch Action
+     */
+    public function handle_switch_dashboard()
+    {
+        check_admin_referer('ofast_switch_dashboard');
+
+        $mode = isset($_GET['mode']) && $_GET['mode'] === 'classic' ? 'classic' : 'modern';
+        update_user_meta(get_current_user_id(), 'ofast_dashboard_mode', $mode);
+
+        wp_redirect(admin_url('index.php'));
+        exit;
+    }
+
+    /**
+     * Render "Switch to Modern Dashboard" button on classic dashboard
+     */
+    public function render_switch_to_modern_button()
+    {
+        global $pagenow;
+        if ($pagenow !== 'index.php' || $this->mode === 'modern') {
+            return;
+        }
+
+        // Check global toggle
+        $footer_settings = get_option('ofast_admin_footer_settings', array());
+        if (empty($footer_settings['enable_custom_dashboard'])) {
+            return;
+        }
+        ?>
+        <div style="position: fixed; top: 80px; right: 20px; z-index: 9999;">
+            <a href="<?php echo esc_url(admin_url('admin.php?action=ofast_switch_dashboard&mode=modern&_wpnonce=' . wp_create_nonce('ofast_switch_dashboard'))); ?>" class="button button-secondary" style="border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding: 5px 15px; font-size: 12px; border: 1px solid #ccc;">
+                Switch to Modern View
+            </a>
+        </div>
+        <?php
     }
 }

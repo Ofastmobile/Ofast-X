@@ -19,8 +19,9 @@ class Ofast_X_Admin_Footer
         // Only load if module is enabled
         $enabled = get_option('ofastx_modules_enabled', array());
         if (empty($enabled['admin-footer'])) {
-            return;
         }
+
+        $settings = get_option('ofast_admin_footer_settings', array());
 
         // Add settings submenu
         add_action('admin_menu', array($this, 'add_admin_menu'));
@@ -29,6 +30,137 @@ class Ofast_X_Admin_Footer
         // Override admin footer text
         add_filter('admin_footer_text', array($this, 'custom_footer_left'), 999);
         add_filter('update_footer', array($this, 'custom_footer_right'), 999);
+
+        // Dark Mode Toggle
+        if (!empty($settings['enable_dark_mode'])) {
+            add_action('admin_bar_menu', array($this, 'add_dark_mode_toggle'), 999);
+            add_action('admin_enqueue_scripts', array($this, 'enqueue_dark_mode_scripts'));
+            add_action('wp_ajax_ofast_toggle_dark_mode', array($this, 'ajax_toggle_dark_mode'));
+        }
+    }
+
+    /**
+     * Add Dark Mode Toggle to Admin Bar
+     */
+    public function add_dark_mode_toggle($wp_admin_bar)
+    {
+        $is_dark = get_user_meta(get_current_user_id(), 'ofast_dark_mode', true);
+        $icon = $is_dark ? 'dashicons-sun' : 'dashicons-moon';
+        $title = $is_dark ? 'Light Mode' : 'Dark Mode';
+
+        $wp_admin_bar->add_node(array(
+            'id'    => 'ofast-dark-mode',
+            'title' => '<span class="ab-icon dashicons ' . $icon . '" style="margin-top: 4px;"></span><span class="ab-label">' . $title . '</span>',
+            'href'  => '#',
+            'meta'  => array(
+                'onclick' => 'return false;',
+                'class'   => 'ofast-dark-mode-toggle',
+                'title'   => 'Toggle Dark Mode'
+            ),
+        ));
+    }
+
+    /**
+     * AJAX Handler for toggling dark mode
+     */
+    public function ajax_toggle_dark_mode()
+    {
+        check_ajax_referer('ofast_dark_mode_nonce', 'nonce');
+        
+        $current_mode = get_user_meta(get_current_user_id(), 'ofast_dark_mode', true);
+        $new_mode = !$current_mode;
+        
+        update_user_meta(get_current_user_id(), 'ofast_dark_mode', $new_mode);
+        
+        wp_send_json_success(array('is_dark' => $new_mode));
+    }
+
+    /**
+     * Enqueue Dark Mode Scripts & Styles
+     */
+    public function enqueue_dark_mode_scripts()
+    {
+        $is_dark = get_user_meta(get_current_user_id(), 'ofast_dark_mode', true);
+        
+        // CSS Variables for Dark Mode
+        $css = "
+            :root {
+                --ofast-dark-bg: #111827;
+                --ofast-dark-card: #1f2937;
+                --ofast-dark-text: #f3f4f6;
+                --ofast-dark-border: #374151;
+            }
+            
+            body.ofast-dark-mode {
+                background: var(--ofast-dark-bg) !important;
+                color: var(--ofast-dark-text) !important;
+            }
+            body.ofast-dark-mode #wpadminbar,
+            body.ofast-dark-mode #adminmenu,
+            body.ofast-dark-mode #adminmenuback,
+            body.ofast-dark-mode #adminmenuwrap {
+                background: #000 !important;
+            }
+            body.ofast-dark-mode .postbox,
+            body.ofast-dark-mode .wrap .ofast-card,
+            body.ofast-dark-mode #wpbody-content .wrap {
+                background-color: var(--ofast-dark-card) !important;
+                color: var(--ofast-dark-text) !important;
+                border-color: var(--ofast-dark-border) !important;
+            }
+            body.ofast-dark-mode input,
+            body.ofast-dark-mode textarea,
+            body.ofast-dark-mode select {
+                background-color: #374151 !important;
+                color: #fff !important;
+                border-color: #4b5563 !important;
+            }
+            body.ofast-dark-mode a {
+                color: #818cf8;
+            }
+            body.ofast-dark-mode h1, body.ofast-dark-mode h2, body.ofast-dark-mode h3 {
+                color: #fff !important;
+            }
+        ";
+
+        if ($is_dark) {
+            $css .= "body { background: #111827 !important; }"; // Instant apply to prevent flash
+        }
+
+        wp_add_inline_style('common', $css);
+
+        // JS for Toggle
+        wp_enqueue_script('jquery');
+        wp_add_inline_script('jquery', "
+            jQuery(document).ready(function($) {
+                var isDark = " . ($is_dark ? 'true' : 'false') . ";
+                if(isDark) $('body').addClass('ofast-dark-mode');
+
+                $('#wp-admin-bar-ofast-dark-mode').on('click', function(e) {
+                    e.preventDefault();
+                    
+                    $('body').toggleClass('ofast-dark-mode');
+                    isDark = !isDark;
+                    
+                    // Update Text & Icon
+                    var label = isDark ? 'Light Mode' : 'Dark Mode';
+                    var iconRemove = isDark ? 'dashicons-moon' : 'dashicons-sun';
+                    var iconAdd = isDark ? 'dashicons-sun' : 'dashicons-moon';
+                    
+                    $(this).find('.ab-label').text(label);
+                    $(this).find('.ab-icon').removeClass(iconRemove).addClass(iconAdd);
+                    
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: {
+                            action: 'ofast_toggle_dark_mode',
+                            nonce: '" . wp_create_nonce('ofast_dark_mode_nonce') . "'
+                        }
+                    });
+                });
+            });
+        ");
     }
 
     /**
@@ -65,6 +197,8 @@ class Ofast_X_Admin_Footer
             'left_text' => wp_kses_post($_POST['footer_left_text'] ?? ''),
             'right_text' => sanitize_text_field($_POST['footer_right_text'] ?? ''),
             'hide_wp_version' => isset($_POST['hide_wp_version']) ? 1 : 0,
+            'enable_custom_dashboard' => isset($_POST['enable_custom_dashboard']) ? 1 : 0,
+            'enable_dark_mode' => isset($_POST['enable_dark_mode']) ? 1 : 0,
         );
 
         update_option('ofast_admin_footer_settings', $settings);
@@ -172,7 +306,6 @@ class Ofast_X_Admin_Footer
 
                             <div class="ofast-form-group">
                                 <label for="footer_left_text">
-                                    <span class="dashicons dashicons-align-left"></span>
                                     Left Footer Text
                                     <span class="ofast-tooltip" title="Replaces 'Thank you for creating with WordPress.' HTML is allowed.">
                                         <span class="dashicons dashicons-info-outline"></span>
@@ -187,7 +320,6 @@ class Ofast_X_Admin_Footer
 
                             <div class="ofast-form-group">
                                 <label for="footer_right_text">
-                                    <span class="dashicons dashicons-align-right"></span>
                                     Right Footer Text
                                     <span class="ofast-tooltip" title="Replaces the WordPress version number on the right side.">
                                         <span class="dashicons dashicons-info-outline"></span>
@@ -205,9 +337,36 @@ class Ofast_X_Admin_Footer
                                         <?php checked(!empty($settings['hide_wp_version'])); ?>>
                                     <span class="ofast-checkbox-custom"></span>
                                     <span class="ofast-checkbox-text">
-                                        <span class="dashicons dashicons-hidden"></span>
                                         Hide WordPress version number
                                         <span class="ofast-security-badge">Security Recommended</span>
+                                    </span>
+                                </label>
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div class="ofast-form-group">
+                                <label class="ofast-checkbox-label">
+                                    <input type="checkbox" name="enable_custom_dashboard" value="1"
+                                        <?php checked(!empty($settings['enable_custom_dashboard'])); ?>>
+                                    <span class="ofast-checkbox-custom"></span>
+                                    <span class="ofast-checkbox-text">
+                                        Enable Custom Dashboard
+                                        <span class="ofast-security-badge" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">New Feature</span>
+                                    </span>
+                                </label>
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div class="ofast-form-group">
+                                <label class="ofast-checkbox-label">
+                                    <input type="checkbox" name="enable_dark_mode" value="1"
+                                        <?php checked(!empty($settings['enable_dark_mode'])); ?>>
+                                    <span class="ofast-checkbox-custom"></span>
+                                    <span class="ofast-checkbox-text">
+                                        Enable Dark/Light Mode Toggle
+                                        <span class="ofast-security-badge" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">UI Feature</span>
                                     </span>
                                 </label>
                             </div>
@@ -294,10 +453,12 @@ class Ofast_X_Admin_Footer
             }
 
             /* Content Grid */
+            /* Content Grid */
             .ofast-content-grid {
                 display: grid;
                 grid-template-columns: 1.5fr 1fr;
                 gap: 25px;
+                align-items: start;
             }
             @media (max-width: 900px) {
                 .ofast-content-grid {

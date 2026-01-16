@@ -20,8 +20,8 @@ class Ofast_X_Menu_Editor
     public function init()
     {
         // Only load if module is enabled
-        $enabled = get_option('ofastx_modules_enabled', array());
-        if (empty($enabled['menu-editor'])) {
+        $admin_tweaks = get_option('ofast_admin_tweaks', array());
+        if (empty($admin_tweaks['enable_menu_editor'])) {
             return;
         }
 

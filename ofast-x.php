@@ -86,10 +86,6 @@ function ofast_x_init_plugin()
     // Load WhatsApp integration
     require_once OFAST_X_PLUGIN_DIR . 'modules/whatsapp/class-ofast-whatsapp.php';
 
-    // Load Google Sheets integration
-    require_once OFAST_X_PLUGIN_DIR . 'modules/google-sheets/class-ofast-google-sheets.php';
-    Ofast_X_Google_Sheets::get_instance()->init();
-
     // Load Contact Forms module
     require_once OFAST_X_PLUGIN_DIR . 'modules/forms/class-ofast-forms.php';
 

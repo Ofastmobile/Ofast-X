@@ -71,11 +71,11 @@ class Ofast_X_Core
             $this->load_debug_indicator();
         }
 
-        if ($this->is_module_enabled('admin-design')) {
+        if ($this->is_admin_tweak_enabled('enable_admin_design')) {
             $this->load_admin_design();
         }
 
-        if ($this->is_module_enabled('whos-admin')) {
+        if ($this->is_admin_tweak_enabled('enable_whos_admin')) {
             $this->load_whos_admin();
         }
 
@@ -83,15 +83,13 @@ class Ofast_X_Core
             $this->load_snippets();
         }
 
-        if ($this->is_module_enabled('newsletter')) {
-            $this->load_newsletter();
-        }
 
-        if ($this->is_module_enabled('user-roles')) {
+
+        if ($this->is_admin_tweak_enabled('enable_user_roles')) {
             $this->load_user_roles();
         }
 
-        if ($this->is_module_enabled('admin-url')) {
+        if ($this->is_admin_tweak_enabled('enable_admin_url')) {
             $this->load_admin_url();
         }
 
@@ -103,7 +101,7 @@ class Ofast_X_Core
             $this->load_duplicate_content();
         }
 
-        if ($this->is_module_enabled('menu-editor')) {
+        if ($this->is_admin_tweak_enabled('enable_menu_editor')) {
             $this->load_menu_editor();
         }
 
@@ -259,21 +257,7 @@ class Ofast_X_Core
 
         $snippets = new Ofast_X_Snippets();
         $snippets->init();
-
         $this->modules['snippets'] = $snippets;
-    }
-
-    /**
-     * Load Newsletter Module
-     */
-    private function load_newsletter()
-    {
-        require_once OFAST_X_PLUGIN_DIR . 'modules/newsletter/class-ofast-newsletter.php';
-
-        $newsletter = new Ofast_X_Newsletter();
-        $newsletter->init();
-
-        $this->modules['newsletter'] = $newsletter;
     }
 
     /**
@@ -362,9 +346,8 @@ class Ofast_X_Core
                 self::$enabled_modules_cache = array(
                     'email' => true,
                     'debug' => true,
-                    'smtp' => true,        // SMTP module for reliable email delivery
-                    'newsletter' => false, // Will be added later
-                    // Add more modules here as you build them
+                    'smtp' => true,
+                    'admin-tweaks' => true,
                 );
                 update_option('ofastx_modules_enabled', self::$enabled_modules_cache);
             }
@@ -372,6 +355,21 @@ class Ofast_X_Core
 
         // Return whether this specific module is enabled
         return isset(self::$enabled_modules_cache[$module_slug]) && self::$enabled_modules_cache[$module_slug];
+    }
+
+    /**
+     * Check if an Admin Tweaks sub-module is enabled
+     * PERFORMANCE: Uses static cache for ofast_admin_tweaks option
+     */
+    private function is_admin_tweak_enabled($tweak_key)
+    {
+        static $admin_tweaks = null;
+        
+        if ($admin_tweaks === null) {
+            $admin_tweaks = get_option('ofast_admin_tweaks', array());
+        }
+        
+        return !empty($admin_tweaks[$tweak_key]);
     }
     
     /**

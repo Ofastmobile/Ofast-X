@@ -1,0 +1,1033 @@
+================================================================================
+OFAST-X CODE SNIPPETS MODULE - SECURITY & CODE AUDIT REPORT
+================================================================================
+Module: Code Snippets (codesnippets)
+Report Date: 2026-01-18
+Auditor: Senior WordPress Core Engineer
+Status: COMPARED AGAINST EXISTING DOCUMENTATION
+
+================================================================================
+MODULE OVERVIEW
+================================================================================
+
+MODULE NAME: 
+Ofast_X_Snippets (Code Snippets Manager)
+
+PURPOSE:
+Standalone snippet manager allowing admins to create, edit, and execute PHP, 
+JavaScript, CSS, and HTML snippets that run on the WordPress site. Features 
+include syntax validation, scope targeting, import/export, library templates, 
+and revision history.
+
+FILES INCLUDED:
+- modules/snippets/class-ofast-snippets.php (3744 lines, 179KB)
+- modules/snippets/css/ofast-snippets-editor.css (EMPTY - 0 bytes)
+- modules/snippets/css/ofast-snippets-switchboard.css (exists but not reviewed)
+- modules/snippets/library/snippets.json (19 pre-built templates)
+
+PUBLIC HOOKS (ACTIONS & FILTERS):
+- wp_dashboard_setup (add_dashboard_widget)
+- admin_menu (add_admin_menu)
+- init:999 (execute_snippets)
+- admin_notices (show_runtime_error_notice)
+- admin_enqueue_scripts (enqueue_codemirror)
+
+INTERNAL FUNCTIONS/CLASSES:
+- Ofast_X_Snippets (main class with 42 methods)
+Key methods:
+  * init() - Initialize module
+  * execute_snippets() - Execute active snippets (USES TRANSIENT CACHING)
+  * execute_php_snippet() - PHP execution with error handling (USES EVAL)
+  * execute_js_snippet() - JS injection via hooks
+  * execute_css_snippet() - CSS injection via hooks  
+  * execute_html_snippet() - HTML injection via hooks
+  * validate_php_code() - Comprehensive security validation
+  * ajax_toggle_snippet() - Toggle snippet active state
+  * ajax_delete_snippet() - Delete snippet
+  * ajax_export_snippets() - Export to JSON
+  * ajax_import_snippets() - Import from JSON
+  * check_rate_limit() - Rate limiting (transient-based)
+  * log_snippet_action() - Audit logging
+
+DATA FLOW:
+1. Admin creates snippet via form with nonce protection
+2. PHP code validated via token_get_all() and pattern matching
+3. Snippet saved to wp_ofast_snippets database table
+4. On init hook (priority 999), active snippets loaded from transient cache
+5. If cache miss, query DB and set 1-hour transient
+6. For each snippet: check scope, check page targeting, execute via eval()
+7. Runtime errors caught via set_error_handler, snippet auto-deactivates
+8. Audit log stored in options table (last 100 entries)
+
+================================================================================
+PHASE 1: ENGINEERING & SECURITY AUDIT
+================================================================================
+
+COMPARISON WITH EXISTING SCAN REPORT (blueprint/scan report/snippets.txt):
+The existing scan report is COMPREHENSIVE and ACCURATE. After full code review,
+I confirm all issues documented in the existing report.
+
+--------------------------------------------------------------------------------
+CRITICAL ISSUES (CONFIRMED FROM EXISTING REPORT)
+--------------------------------------------------------------------------------
+
+1. EVAL() REMOTE CODE EXECUTION [CONFIRMED]
+   File: class-ofast-snippets.php
+   Line: 3310
+   Code: eval($code);
+   Status: PRESENT AND UNCHANGED
+   Impact: Any PHP code bypassing validation = total site compromise
+   Verdict: BLOCKS WORDPRESS.ORG SUBMISSION
+
+2. RATE LIMITING VIA TRANSIENTS [CONFIRMED]
+   File: class-ofast-snippets.php
+   Lines: 3724-3742
+   Issue: Uses transients (deletable) instead of DB table
+   Impact: Attackers can bypass rate limiting by clearing object cache
+   Verdict: SECURITY WEAKNESS
+
+3. EMPTY CSS FILES [CONFIRMED - DEAD CODE]
+   File: modules/snippets/css/ofast-snippets-editor.css
+   Status: 0 bytes, EMPTY
+   Verdict: DELETE OR IMPLEMENT
+
+--------------------------------------------------------------------------------
+ISSUES FIXED SINCE EXISTING REPORT
+--------------------------------------------------------------------------------
+
+1. SQL INJECTION IN EXPORT [FIXED]
+   File: class-ofast-snippets.php, ajax_export_snippets()
+   Lines: 2170-2175
+   Status: NOW USES $wpdb->prepare() correctly with placeholders
+   Code: $wpdb->get_results($wpdb->prepare("SELECT ... WHERE id IN ($placeholders)", $selected_ids))
+
+2. CAPABILITY CHECKS ON AJAX [MOSTLY FIXED]
+   Reviewed AJAX handlers - ALL now have:
+   - check_ajax_referer() 
+   - current_user_can('manage_options')
+   Status: COMPLIANT
+
+3. NONCE VERIFICATION [FIXED]
+   All critical AJAX endpoints now verify nonces server-side.
+
+--------------------------------------------------------------------------------
+REMAINING HIGH PRIORITY ISSUES
+--------------------------------------------------------------------------------
+
+1. NO TRASH/SOFT DELETE SYSTEM
+   Current: Permanent deletion only
+   Impact: Cannot recover mistakenly deleted snippets
+   Recommendation: Add 'status' column with 'trash' value, 30-day auto-cleanup
+
+2. NO PRIORITY COLUMN
+   Current: Snippets execute in DB order (id DESC)
+   Impact: No control over execution order
+   Recommendation: Add 'priority' column like WordPress hooks (default 10)
+
+3. BLOCKS VALID PHP IMPORTS
+   File: validate_php_code() line 3405
+   Issue: Rejects code containing <?php tags
+   Impact: Valid code from other plugins cannot be imported
+   Recommendation: Auto-strip tags on import instead of rejecting
+
+4. UNESCAPED OUTPUT
+   File: class-ofast-snippets.php line 157
+   Code: echo $error_indicator; // Contains HTML
+   Issue: Variable contains HTML, not escaped
+   Fix: Use wp_kses_post() or proper escaping
+
+5. INLINE JAVASCRIPT
+   File: class-ofast-snippets.php line 179-215
+   Issue: Direct inline <script> in PHP
+   Recommendation: Use wp_localize_script() for AJAX data
+
+6. MAGIC NUMBERS
+   Line 3736: if ($attempts >= 30) // Why 30?
+   Recommendation: Use class constant MAX_RATE_LIMIT_ATTEMPTS = 30
+
+7. N+1 QUERY POTENTIAL
+   render_dashboard_widget() calls validate_php_code() for each snippet
+   This is CPU-bound (regex), not DB-bound, but still costly on large datasets
+
+--------------------------------------------------------------------------------
+ADDITIONAL ISSUES DISCOVERED (Deeper Scan)
+--------------------------------------------------------------------------------
+
+8. SECOND EMPTY CSS FILE [NEW FINDING]
+   File: modules/snippets/css/ofast-snippets-switchboard.css
+   Status: 0 bytes, EMPTY
+   Action: DELETE OR IMPLEMENT
+
+9. INLINE JAVASCRIPT - MASSIVE BLOCK [NEW FINDING]
+   File: class-ofast-snippets.php lines 1250-2009
+   Issue: ~760 lines of inline JavaScript in PHP echo
+   Problems:
+   - Not minified
+   - Cannot be cached by browser
+   - Harder to maintain
+   - No CSP compliance
+   Recommendation: Extract to external .js file and enqueue properly
+
+10. NONCE IN JAVASCRIPT EXPOSED [NEW FINDING]
+    Lines: 1425, 1508, 1600, 1840, 1941, 1996
+    Code examples:
+        nonce: '<?php echo wp_create_nonce('ofast_export_snippets'); ?>'
+        nonce: '<?php echo wp_create_nonce('ofast_import_snippets'); ?>'
+        nonce: '<?php echo wp_create_nonce('ofast_bulk_action'); ?>'
+    Issue: Multiple nonces exposed in page source
+    Risk: CSRF token harvesting if page is cached/CDN'd
+    Recommendation: Use wp_localize_script() for single nonce object
+
+11. NO IMPORT SIZE LIMIT [NEW FINDING]
+    File: ajax_import_snippets() line 2216
+    Code: $import_data = wp_unslash($_POST['import_data']);
+    Issue: No maximum size check on imported JSON
+    Attack: POST 100MB of JSON data = server memory exhaustion
+    Fix: Add strlen() check before json_decode:
+        if (strlen($import_data) > 5242880) { // 5MB limit
+            wp_send_json_error('Import file too large (max 5MB)');
+        }
+
+12. HTMLSPECIALCHARS BUT NOT ESC_HTML [NEW FINDING]
+    Lines: 2691, 2754
+    Code: htmlspecialchars(mb_substr($s->code, 0, 500)...)
+    Issue: Should use WordPress esc_html() for consistency
+    Risk: Character encoding issues on non-UTF8 sites
+
+13. MD5 FOR DUPLICATE DETECTION [SECURITY CONCERN]
+    Lines: 2248, 2659, 2720, etc.
+    Code: $code_hash = md5(trim($snippet['code']));
+    Issue: MD5 is cryptographically broken for collision resistance
+    Risk: Two different snippets could produce same hash (rare but possible)
+    Recommendation: Use sha256 instead:
+        $code_hash = hash('sha256', trim($code));
+
+14. MISSING RATE LIMIT ON ajax_use_library_template [NEW FINDING]
+    Line: 2296
+    Issue: No rate limit check on template usage
+    Other AJAX handlers have rate limiting, this one doesn't
+    Fix: Add at start of function:
+        if (!$this->check_rate_limit('use_template')) {
+            wp_send_json_error('Too many requests.');
+        }
+
+15. MISSING RATE LIMIT ON ajax_preview_plugin_snippets [NEW FINDING]
+    Line: 2636
+    Issue: No rate limit check
+    Fix: Add rate limit check
+
+16. FILE_GET_CONTENTS ON LOCAL FILE [CONCERN]
+    Line: 2313
+    Code: json_decode(file_get_contents($library_file), true)
+    Issue: Uses file_get_contents() instead of WP filesystem
+    WordPress standard: Use WP_Filesystem for file operations
+    Risk: May fail on some hosts with open_basedir restrictions
+    Fix: 
+        global $wp_filesystem;
+        if (!$wp_filesystem) {
+            require_once ABSPATH . '/wp-admin/includes/file.php';
+            WP_Filesystem();
+        }
+        $content = $wp_filesystem->get_contents($library_file);
+
+17. ALERT() FOR USER MESSAGES [UX ISSUE]
+    Lines: 1476, 1493, 1512, 1515, 1519, 1575, 1586, 1851, 1855, 1980, 2000, 2003
+    Issue: Uses JavaScript alert() for messages instead of modern UI
+    Recommendation: Use toast notifications consistently (Ofast_X_Toast)
+
+18. TEMPLATE LITERALS IN OLDER PHP [POTENTIAL ISSUE]
+    Lines: 1866-1883, 1920-1930
+    Code: Uses backtick template literals in JavaScript
+    Risk: Will break on older browsers (IE11)
+    Note: Acceptable if targeting modern browsers only
+
+19. DUPLICATE CODE - MODAL CREATION [DRY VIOLATION]
+    Lines: 1862-1911 and 1918-1934
+    Issue: Two similar modal implementations
+    Recommendation: Extract to reusable modal function
+
+20. NO ESCAPING ON TEMPLATE LITERAL DATA [XSS RISK]
+    Line: 1874
+    Code: ${data.existing_name} in template literal
+    Issue: If snippet name contains ", it breaks modal
+    Fix: Use proper escaping or sanitize before passing to JS
+
+--------------------------------------------------------------------------------
+DANGEROUS FUNCTION BLACKLIST REVIEW
+--------------------------------------------------------------------------------
+
+CURRENT BLACKLIST (lines 3410-3455):
+exec, shell_exec, system, passthru, popen, proc_open, pcntl_exec,
+eval, assert, create_function, unlink, rmdir, rename, copy,
+file_put_contents, fwrite, fputs, fopen, curl_exec, base64_decode,
+preg_replace, include, include_once, require, require_once,
+exit, die, sleep, usleep, set_time_limit, ini_set, mail, header,
+setcookie, session_start, ob_start, ob_end_clean, ob_end_flush,
+error_reporting, restore_error_handler, register_shutdown_function,
+define, constant
+
+MISSING FROM BLACKLIST:
+- dl() - Load PHP extension
+- ini_alter() - Alias of ini_set
+- apache_setenv() - Set Apache environment vars
+- putenv() - Modify environment
+- proc_nice() - Change process priority
+- proc_terminate() - Kill processes
+- proc_close() - Close process
+- pfsockopen() - Persistent socket
+- fsockopen() - Socket connection
+- socket_create() - Raw socket
+- stream_socket_client() - Network stream
+- gzinflate() - Decompression obfuscation
+- gzuncompress() - Decompression obfuscation
+- str_rot13() - ROT13 encoding
+- hex2bin() - Hex decoding
+- convert_uudecode() - UU decoding
+
+OBFUSCATION PATTERNS NOT DETECTED:
+- Variable variables: ${$var}
+- Character concatenation: chr(101).chr(118).chr(97).chr(108)
+- Call_user_func with dynamic function names
+
+================================================================================
+PHASE 2: WORDPRESS.ORG APPROVAL REVIEW
+================================================================================
+
+SECURITY CHECKLIST:
+[FAIL] No eval()                           - Line 3310 uses eval()
+[PASS] All SQL prepared                    - Fixed
+[FAIL] All output escaped                  - Line 157 unescaped
+[PASS] All input sanitized                 - Good coverage
+[PASS] Nonces verified                     - All AJAX handlers compliant
+[PASS] Capability checks                   - All AJAX handlers compliant
+[PASS] CSRF protection                     - Present
+[WARN] Rate limiting                       - Weak (transient-based)
+[WARN] No sessions                         - Module itself doesn't use sessions
+
+CODING STANDARDS:
+[WARN] Indentation                         - Uses spaces (WP standard is tabs)
+[FAIL] Yoda conditions                     - Uses $var == value, not value == $var
+[WARN] Single quotes                       - Mixed usage
+[WARN] PHPDoc blocks                       - Missing on some methods
+[FAIL] Internationalization                - Many hardcoded strings not wrapped in __()
+[WARN] Table prefix repeated               - $wpdb->prefix used 20+ times, use constant
+
+ARCHITECTURE:
+[PASS] Proper hook usage                   - Uses WordPress hooks correctly
+[PASS] Proper menu registration            - Uses add_submenu_page()
+[PASS] CodeMirror enqueue                  - Uses wp_enqueue_code_editor()
+[WARN] No developer hooks                  - No do_action() for extensibility
+[WARN] No uninstall handling               - Relies on main plugin uninstall
+
+================================================================================
+SECURITY NOTES
+================================================================================
+
+STRENGTHS:
++ Comprehensive dangerous function blacklist
++ Infinite loop detection patterns
++ Memory exhaustion detection patterns  
++ Recursive function detection
++ Dangerous SQL detection
++ Auto-deactivation on runtime errors
++ Audit logging to options table
++ Rate limiting attempt (albeit weak)
++ Syntax validation via token_get_all()
++ Proper nonce and capability checks on AJAX
+
+WEAKNESSES:
+- eval() is fundamentally insecure
+- Blacklist approach can be bypassed with obfuscation
+- Rate limiting deletable via cache clear
+- No input length limits on code field
+- No trash/recovery system
+
+================================================================================
+PERFORMANCE NOTES
+================================================================================
+
+STRENGTHS:
++ Transient caching for active snippets (1 hour TTL)
++ Cache cleared on snippet modifications
++ Targeted scope checking (admin/frontend/global)
++ Page targeting reduces unnecessary execution
+
+CONCERNS:
+- execute_snippets() runs on every init hook
+- Each PHP snippet validation does regex matching
+- Dashboard widget validates all snippets on load
+
+RECOMMENDATIONS:
+- Add database index on (active, scope) columns
+- Consider moving rate limiting to database table
+- Add LIMIT to dashboard widget query (currently max 10)
+
+================================================================================
+DEPENDENCIES
+================================================================================
+
+WORDPRESS CORE:
+- wp_enqueue_code_editor() - CodeMirror integration
+- wp_add_dashboard_widget() - Dashboard widget
+- add_submenu_page() - Admin menu
+- $wpdb - Database operations
+- Transients API - Caching
+- Options API - Audit logging
+- check_ajax_referer() - AJAX security
+- current_user_can() - Capability checks
+
+PLUGIN DEPENDENCIES:
+- Ofast_X_Toast - Toast notification system (from main plugin)
+- Main plugin constants/functions assumed available
+
+DATABASE TABLES:
+- wp_ofast_snippets (created by main plugin activator)
+- wp_ofast_snippet_revisions (for revision history)
+
+================================================================================
+WORDPRESS.ORG READINESS STATUS
+================================================================================
+
+OVERALL SCORE:
+Security:        3/10  [FAIL - eval() is dealbreaker]
+Performance:     7/10  [GOOD - proper caching]
+Code Quality:    6/10  [ACCEPTABLE - needs i18n, escaping fixes]  
+WP Standards:    5/10  [NEEDS WORK - indentation, Yoda, PHPDoc]
+Scalability:     6/10  [ACCEPTABLE]
+Maintainability: 7/10  [GOOD - well organized]
+
+VERDICT: NOT READY FOR WORDPRESS.ORG SUBMISSION
+
+--------------------------------------------------------------------------------
+BLOCKING ISSUES (MUST FIX)
+--------------------------------------------------------------------------------
+1. Remove eval() - Use WordPress hooks API or action builder approach
+2. Escape $error_indicator output (line 157)
+3. Wrap all user-facing strings in __() or _e()
+
+--------------------------------------------------------------------------------
+REQUIRED IMPROVEMENTS (FIX BEFORE APPROVAL)
+--------------------------------------------------------------------------------
+1. Add trash/soft delete system with 30-day retention
+2. Add priority column for execution order control
+3. Auto-strip <?php tags on import instead of rejecting
+4. Add missing dangerous functions to blacklist
+5. Add obfuscation pattern detection
+6. Move rate limiting from transients to database
+7. Add input length limit on code field (suggest 1MB max)
+8. Add developer hooks (do_action, apply_filters)
+9. Change indentation to tabs (WordPress standard)
+10. Use Yoda conditions throughout
+
+--------------------------------------------------------------------------------
+RECOMMENDED IMPROVEMENTS (OPTIONAL)
+--------------------------------------------------------------------------------
+1. Add database indexes on active, scope columns
+2. Extract table name to class constant
+3. Add unit tests for validation functions
+4. Move inline JavaScript to external file
+5. Add more comprehensive PHPDoc blocks
+6. Consider implementing approval queue for PHP snippets
+
+================================================================================
+DETAILED IMPLEMENTATION SOLUTIONS
+================================================================================
+
+--------------------------------------------------------------------------------
+SOLUTION 1: FIX <?php TAG BLOCKING (Auto-Strip Instead of Reject)
+--------------------------------------------------------------------------------
+
+PROBLEM: 
+validate_php_code() rejects code containing <?php tags (line 3405-3407).
+Other plugins accept this code. Users cannot import valid snippets.
+
+CURRENT CODE (class-ofast-snippets.php line 3404-3407):
+    // Check for opening PHP tags (not allowed)
+    if (strpos($code, '<?php') !== false || strpos($code, '<?') !== false) {
+        return 'Do not include <?php tags in your code';
+    }
+
+SOLUTION: Auto-strip tags instead of rejecting
+
+REPLACE WITH:
+    // Auto-strip PHP tags instead of rejecting
+    // This allows importing code from other plugins
+    $code = preg_replace('/<\?php\s*/i', '', $code);
+    $code = preg_replace('/<\?\s*/i', '', $code);
+    $code = preg_replace('/\s*\?>/i', '', $code);
+    $code = trim($code);
+
+AND in render_snippets_page() before saving (around line 251):
+    $code = wp_unslash($_POST['snippet_code']);
+    
+    // Auto-clean PHP tags for compatibility with imports from other plugins
+    $code = preg_replace('/<\?php\s*/i', '', $code);
+    $code = preg_replace('/<\?\s*/i', '', $code);
+    $code = preg_replace('/\s*\?>/i', '', $code);
+    $code = trim($code);
+
+ALSO in ajax_import_snippets() around line 2260:
+    foreach ($data['snippets'] as $snippet) {
+        $code = $snippet['code'];
+        
+        // Auto-strip PHP tags from imports
+        $code = preg_replace('/<\?php\s*/i', '', $code);
+        $code = preg_replace('/<\?\s*/i', '', $code);
+        $code = preg_replace('/\s*\?>/i', '', $code);
+        $code = trim($code);
+        
+        // Continue with validation and insert...
+    }
+
+--------------------------------------------------------------------------------
+SOLUTION 2: ADD PRIORITY COLUMN FOR EXECUTION ORDER
+--------------------------------------------------------------------------------
+
+STEP 1: Database Migration (in class-ofast-activator.php)
+
+Add to create_tables() or run as upgrade:
+    // Add priority column if it doesn't exist
+    $table = $wpdb->prefix . 'ofast_snippets';
+    $column_exists = $wpdb->get_results("SHOW COLUMNS FROM $table LIKE 'priority'");
+    
+    if (empty($column_exists)) {
+        $wpdb->query("ALTER TABLE $table ADD COLUMN priority INT DEFAULT 10 AFTER scope");
+    }
+
+STEP 2: Update execute_snippets() (line 2942)
+
+CHANGE FROM:
+    $snippets = $wpdb->get_results("SELECT ... FROM $table WHERE active = 1");
+
+CHANGE TO:
+    $snippets = $wpdb->get_results(
+        "SELECT id, code, language, scope, location, target_type, target_value, 
+                run_once, executed_at, priority 
+         FROM $table 
+         WHERE active = 1 
+         ORDER BY priority ASC, id ASC"
+    );
+
+STEP 3: Add UI field in render_snippets_page() form (after scope field ~line 620):
+
+    <tr>
+        <th><label for="snippet_priority">Execution Priority</label></th>
+        <td>
+            <?php $priority = ($edit_snippet && isset($edit_snippet->priority)) 
+                              ? $edit_snippet->priority : 10; ?>
+            <input type="number" name="snippet_priority" id="snippet_priority"
+                   value="<?php echo esc_attr($priority); ?>"
+                   min="1" max="999" step="1" class="small-text">
+            <p class="description">
+                Lower numbers execute first (default: 10).<br>
+                1-9: Critical (run first) | 10: Normal | 11-99: Late | 100+: Last
+            </p>
+        </td>
+    </tr>
+
+STEP 4: Save priority in POST handler (around line 275):
+
+    $priority = isset($_POST['snippet_priority']) ? intval($_POST['snippet_priority']) : 10;
+    $priority = max(1, min(999, $priority)); // Clamp to 1-999
+    
+    // Add to update/insert arrays:
+    'priority' => $priority,
+
+STEP 5: Show in snippets table (in the list view):
+
+    <th>Priority</th>
+    ...
+    <td><?php echo esc_html($snippet->priority ?? 10); ?></td>
+
+--------------------------------------------------------------------------------
+SOLUTION 3: ADD TRASH/SOFT DELETE SYSTEM
+--------------------------------------------------------------------------------
+
+STEP 1: Database Migration
+
+Add columns if not exist:
+    $table = $wpdb->prefix . 'ofast_snippets';
+    
+    // Add status column
+    $col = $wpdb->get_results("SHOW COLUMNS FROM $table LIKE 'status'");
+    if (empty($col)) {
+        $wpdb->query("ALTER TABLE $table ADD COLUMN status VARCHAR(20) DEFAULT 'active'");
+    }
+    
+    // Add trashed_at column
+    $col = $wpdb->get_results("SHOW COLUMNS FROM $table LIKE 'trashed_at'");
+    if (empty($col)) {
+        $wpdb->query("ALTER TABLE $table ADD COLUMN trashed_at DATETIME DEFAULT NULL");
+    }
+
+STEP 2: Modify ajax_delete_snippet() - Change to Soft Delete
+
+REPLACE (lines 2078-2111):
+    public function ajax_delete_snippet()
+    {
+        check_ajax_referer('ofast_snippet_delete', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+        
+        if (!$this->check_rate_limit('delete')) {
+            wp_send_json_error('Too many requests. Please wait a moment.');
+        }
+        
+        $id = intval($_POST['id']);
+        $permanent = isset($_POST['permanent']) && $_POST['permanent'] === 'true';
+        
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+        
+        $snippet = $wpdb->get_row($wpdb->prepare(
+            "SELECT name, status FROM $table WHERE id = %d", $id
+        ));
+        
+        if (!$snippet) {
+            wp_send_json_error('Snippet not found');
+        }
+        
+        if ($permanent && $snippet->status === 'trash') {
+            // Permanent delete from trash
+            $wpdb->delete($table, array('id' => $id));
+            $this->log_snippet_action('PERMANENTLY_DELETED', $id, $snippet->name, '');
+        } else {
+            // Soft delete - move to trash
+            $wpdb->update($table, array(
+                'status' => 'trash',
+                'active' => 0,
+                'trashed_at' => current_time('mysql')
+            ), array('id' => $id));
+            $this->log_snippet_action('TRASHED', $id, $snippet->name, '');
+        }
+        
+        $this->clear_snippets_cache();
+        wp_send_json_success();
+    }
+
+STEP 3: Add Restore Function
+
+    public function ajax_restore_snippet()
+    {
+        check_ajax_referer('ofast_snippet_restore', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+        
+        $id = intval($_POST['id']);
+        
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+        
+        $snippet = $wpdb->get_row($wpdb->prepare(
+            "SELECT name FROM $table WHERE id = %d AND status = 'trash'", $id
+        ));
+        
+        if (!$snippet) {
+            wp_send_json_error('Snippet not found in trash');
+        }
+        
+        $wpdb->update($table, array(
+            'status' => 'active',
+            'trashed_at' => null
+        ), array('id' => $id));
+        
+        $this->log_snippet_action('RESTORED', $id, $snippet->name, '');
+        $this->clear_snippets_cache();
+        
+        wp_send_json_success();
+    }
+
+Register AJAX handler in init():
+    add_action('wp_ajax_ofast_restore_snippet', array($this, 'ajax_restore_snippet'));
+
+STEP 4: Modify Queries to Exclude Trashed
+
+In render_snippets_page() line 362:
+    // Only show non-trashed snippets in main list
+    $snippets = $wpdb->get_results(
+        "SELECT * FROM $table WHERE status != 'trash' OR status IS NULL ORDER BY id DESC"
+    );
+
+In execute_snippets() line 2942:
+    $snippets = $wpdb->get_results(
+        "SELECT ... FROM $table WHERE active = 1 AND (status != 'trash' OR status IS NULL)"
+    );
+
+STEP 5: Add Trash Tab UI
+
+Add to render_snippets_page() after main table:
+
+    <?php
+    // Get trashed snippets
+    $trashed = $wpdb->get_results(
+        "SELECT * FROM $table WHERE status = 'trash' ORDER BY trashed_at DESC"
+    );
+    $trash_count = count($trashed);
+    ?>
+    
+    <div style="margin-top: 30px;">
+        <h2>
+            Trash (<?php echo $trash_count; ?>)
+            <button type="button" id="toggle-trash" class="button" style="margin-left: 10px;">
+                <?php echo $trash_count > 0 ? 'Show Trash' : 'Trash Empty'; ?>
+            </button>
+        </h2>
+        
+        <div id="trash-panel" style="display: none;">
+            <?php if ($trash_count > 0): ?>
+                <p style="color: #666;">
+                    Items in trash are automatically deleted after 30 days.
+                </p>
+                <table class="widefat striped">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Deleted</th>
+                            <th>Days Left</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($trashed as $item): 
+                            $days_left = 30 - floor(
+                                (time() - strtotime($item->trashed_at)) / 86400
+                            );
+                        ?>
+                        <tr>
+                            <td><?php echo esc_html($item->name); ?></td>
+                            <td><?php echo date('M j, Y', strtotime($item->trashed_at)); ?></td>
+                            <td><?php echo max(0, $days_left); ?> days</td>
+                            <td>
+                                <button type="button" class="button restore-snippet" 
+                                        data-id="<?php echo $item->id; ?>">
+                                    Restore
+                                </button>
+                                <button type="button" class="button delete-forever" 
+                                        data-id="<?php echo $item->id; ?>"
+                                        style="color: #dc3545;">
+                                    Delete Forever
+                                </button>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                
+                <button type="button" id="empty-trash" class="button" 
+                        style="margin-top: 15px; color: #dc3545;">
+                    Empty Trash (<?php echo $trash_count; ?> items)
+                </button>
+            <?php else: ?>
+                <p>Trash is empty.</p>
+            <?php endif; ?>
+        </div>
+    </div>
+
+STEP 6: Add Cron for Auto-Cleanup (30 days)
+
+In init() method:
+    // Schedule trash cleanup
+    if (!wp_next_scheduled('ofast_cleanup_trash')) {
+        wp_schedule_event(time(), 'daily', 'ofast_cleanup_trash');
+    }
+    add_action('ofast_cleanup_trash', array($this, 'cleanup_old_trash'));
+
+Add cleanup method:
+    public function cleanup_old_trash()
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+        
+        $cutoff = date('Y-m-d H:i:s', strtotime('-30 days'));
+        
+        $deleted = $wpdb->query($wpdb->prepare(
+            "DELETE FROM $table WHERE status = 'trash' AND trashed_at < %s",
+            $cutoff
+        ));
+        
+        if ($deleted > 0) {
+            error_log("[OFAST_SNIPPETS] Auto-deleted $deleted old trash items");
+        }
+    }
+
+STEP 7: JavaScript for Trash Actions
+
+Add to inline script or external JS:
+    // Toggle trash panel
+    $('#toggle-trash').on('click', function() {
+        $('#trash-panel').toggle();
+        $(this).text($('#trash-panel').is(':visible') ? 'Hide Trash' : 'Show Trash');
+    });
+    
+    // Restore snippet
+    $(document).on('click', '.restore-snippet', function() {
+        var id = $(this).data('id');
+        var $row = $(this).closest('tr');
+        
+        $.post(ajaxurl, {
+            action: 'ofast_restore_snippet',
+            nonce: '<?php echo wp_create_nonce("ofast_snippet_restore"); ?>',
+            id: id
+        }, function(response) {
+            if (response.success) {
+                $row.fadeOut(function() { location.reload(); });
+            } else {
+                alert('Error: ' + response.data);
+            }
+        });
+    });
+    
+    // Delete forever
+    $(document).on('click', '.delete-forever', function() {
+        if (!confirm('Permanently delete this snippet? This cannot be undone.')) {
+            return;
+        }
+        
+        var id = $(this).data('id');
+        var $row = $(this).closest('tr');
+        
+        $.post(ajaxurl, {
+            action: 'ofast_delete_snippet',
+            nonce: '<?php echo wp_create_nonce("ofast_snippet_delete"); ?>',
+            id: id,
+            permanent: 'true'
+        }, function(response) {
+            if (response.success) {
+                $row.fadeOut();
+            }
+        });
+    });
+
+================================================================================
+BACKEND HACKING RISKS & PREVENTION
+================================================================================
+
+QUESTION: Can this module be hacked even though it's admin-only/backend?
+ANSWER: YES
+
+Even with backend-only access, the module is vulnerable because eval() executes
+ANY code that passes the blacklist validation.
+
+--------------------------------------------------------------------------------
+ATTACK VECTORS (How it can be hacked)
+--------------------------------------------------------------------------------
+
+1. COMPROMISED ADMIN ACCOUNT
+   - Stolen credentials, session hijacking, password reuse
+   - Once attacker has admin access, full code execution via eval()
+   - Impact: Complete site takeover, database theft, malware injection
+
+2. BLACKLIST BYPASS (Obfuscation)
+   - Attackers can bypass function blacklist using:
+     * String concatenation: $f='ev'.'al'; $f($code);
+     * Variable variables: ${"exec"}("whoami");
+     * Character codes: chr(101).chr(120).chr(101).chr(99) = "exec"
+     * Base64 in variable: $x=base64_decode($encoded); $x();
+   - Impact: Execute blocked functions despite validation
+
+3. MALICIOUS IMPORT
+   - Social engineering: "Install this snippet pack to fix X"
+   - Malicious JSON file with obfuscated payload
+   - Impact: Admin unknowingly imports backdoor
+
+4. CSRF (Cross-Site Request Forgery)
+   - If admin visits malicious site while logged in
+   - Currently mitigated by nonces, but not impossible
+   - Impact: Forced snippet creation/activation
+
+5. INSIDER THREAT
+   - Rogue employee with admin access
+   - No audit trail for who approved what code
+   - Impact: Untraceable backdoor installation
+
+6. SUPPLY CHAIN (Template Library)
+   - If library/snippets.json is compromised
+   - Templates auto-imported without verification
+   - Impact: Trusted templates become attack vector
+
+--------------------------------------------------------------------------------
+PREVENTION MEASURES (Recommended Implementation)
+--------------------------------------------------------------------------------
+
+IMMEDIATE (High Priority):
+1. REMOVE EVAL() - Replace with action builder or hooks-only approach
+2. ADD APPROVAL QUEUE - Snippet saved as "pending", second admin approves
+3. ADD CODE LENGTH LIMIT - Maximum 1MB to prevent DoS
+4. STRENGTHEN BLACKLIST - Add all obfuscation patterns
+
+RECOMMENDED (Medium Priority):
+5. REQUIRE 2FA FOR SNIPPET ACTIONS
+   - Any create/edit/activate requires 2FA confirmation
+   - Prevents compromised password exploitation
+
+6. ADD CODE SIGNING FOR IMPORTS
+   - Verify JSON imports have valid signature
+   - Reject unsigned/modified imports
+
+7. SUPER ADMIN ONLY (Multisite)
+   - Restrict to is_super_admin() on multisite
+   - Prevents site admins from affecting network
+
+8. DETAILED AUDIT LOGGING
+   - Log full code diffs, not just action name
+   - Include IP, user agent, timestamp
+   - Send email notification on snippet activation
+
+9. SANDBOX TESTING
+   - Execute new snippets in isolated environment first
+   - Only activate if no errors/suspicious behavior
+
+10. HASH VERIFICATION
+    - Store hash of approved code
+    - Detect if code modified after approval
+
+OPTIONAL (Future Enhancement):
+11. TIME-LIMITED SNIPPETS
+    - Require re-approval after X days
+12. WEBHOOK NOTIFICATIONS
+    - Alert external monitoring on suspicious activity
+13. RATE LIMITING PER IP
+    - Not just per user, but per IP address
+
+--------------------------------------------------------------------------------
+REALISTIC RISK ASSESSMENT
+--------------------------------------------------------------------------------
+
+IF ATTACKER HAS ADMIN ACCESS:
+- Without eval(): Can still damage site but limited to WP features
+- With eval(): Complete server compromise possible
+
+IF USING CURRENT MODULE AS-IS:
+- Risk Level: HIGH for targeted attacks
+- Risk Level: MEDIUM for opportunistic attacks (admin creds needed)
+
+BOTTOM LINE:
+The module is "secure" only as long as:
+1. All admin accounts have strong unique passwords
+2. No admin ever imports untrusted code
+3. No admin clicks malicious links while logged in
+4. No obfuscation patterns slip through blacklist
+
+This is too many assumptions. eval() is inherently dangerous.
+
+================================================================================
+FINAL VERDICT
+================================================================================
+
+QUESTION 1: Is this module acceptable for WordPress.org submission?
+ANSWER: NO
+
+The use of eval() (line 3310) is an absolute blocker. WordPress.org explicitly
+prohibits any form of arbitrary code execution. The comprehensive validation
+and blacklists are security theater - determined attackers can bypass them
+through obfuscation or exploitation of gaps.
+
+QUESTION 2: What is the recommended remediation path?
+ANSWER: 
+
+OPTION A - ARCHITECTURAL REDESIGN (Recommended for WordPress.org)
+Remove PHP snippet execution entirely. Only allow:
+- JS/CSS/HTML snippets (these are safer)
+- Pre-built action library (user selects from dropdown, you execute safe code)
+Estimated time: 3-4 weeks
+
+OPTION B - REFACTORING ONLY (Not sufficient for WordPress.org)
+Keep eval() but:
+- Fix all escaping issues
+- Add i18n support
+- Add trash system
+- Strengthen blacklist
+This will NOT pass WordPress.org review but may be acceptable for:
+- Private distribution
+- Commercial sale on own website
+
+QUESTION 3: If YES approval, what minor improvements recommended?
+ANSWER: N/A - Module is not approved.
+
+================================================================================
+COMPARISON SUMMARY: NEW FINDINGS VS EXISTING REPORT
+================================================================================
+
+EXISTING REPORT CONFIRMED: All critical issues in snippets.txt are accurate.
+
+NEW ISSUES DISCOVERED (Deeper Scan - 13 Additional Findings):
+8.  Second empty CSS file (ofast-snippets-switchboard.css)
+9.  760 lines of inline JavaScript (should be external file)
+10. Multiple nonces exposed in page source (use wp_localize_script)
+11. No import size limit (DoS risk)
+12. htmlspecialchars() instead of esc_html()
+13. MD5 for duplicate detection (use sha256)
+14. Missing rate limit on ajax_use_library_template
+15. Missing rate limit on ajax_preview_plugin_snippets
+16. file_get_contents() instead of WP_Filesystem
+17. JavaScript alert() instead of toast notifications
+18. Template literals (IE11 incompatible)
+19. Duplicate modal code (DRY violation)
+20. No escaping on template literal data (XSS risk)
+
+ISSUES FIXED SINCE ORIGINAL REPORT:
+1. SQL injection in export - NOW FIXED (uses prepare())
+2. Capability checks - NOW PRESENT on all AJAX handlers
+3. Nonce verification - NOW SERVER-SIDE on all endpoints
+
+TOTAL ISSUE COUNT:
+- Critical (Blocking):     1 (eval)
+- High Priority:           7 (#1-7)
+- Medium Priority:        13 (#8-20)
+- Code Quality:           10+ (i18n, escaping, standards)
+- Dead Code:               2 files (empty CSS)
+
+================================================================================
+ISSUE SEVERITY MATRIX
+================================================================================
+
+ISSUE                                  | SEVERITY | EFFORT | PRIORITY
+---------------------------------------|----------|--------|----------
+eval() usage                           | CRITICAL | HIGH   | 1
+No trash system                        | HIGH     | MEDIUM | 2
+No priority column                     | HIGH     | LOW    | 3
+<?php tag blocking                     | HIGH     | LOW    | 4
+Unescaped output                       | HIGH     | LOW    | 5
+No import size limit                   | HIGH     | LOW    | 6
+Missing rate limits (2 handlers)       | HIGH     | LOW    | 7
+Inline JavaScript (760 lines)          | MEDIUM   | HIGH   | 8
+Multiple nonces in source              | MEDIUM   | MEDIUM | 9
+MD5 instead of SHA256                  | MEDIUM   | LOW    | 10
+file_get_contents vs WP_Filesystem     | MEDIUM   | LOW    | 11
+JavaScript alerts vs toasts            | LOW      | MEDIUM | 12
+Empty CSS files                        | LOW      | LOW    | 13
+Template literal escaping              | LOW      | LOW    | 14
+
+================================================================================
+ESTIMATED FIX TIMES
+================================================================================
+
+Quick Fixes (1-2 hours each):
+- Add rate limits to 2 AJAX handlers
+- Add import size limit
+- Change MD5 to SHA256
+- Fix unescaped output
+- Auto-strip <?php tags
+- Delete empty CSS files
+
+Medium Fixes (4-8 hours each):
+- Add priority column (DB + UI + query changes)
+- Add trash system (DB + AJAX + UI + cron)
+- Extract inline JavaScript to external file
+- Use wp_localize_script for nonces
+
+Major Refactor (2-4 weeks):
+- Remove eval() and redesign execution engine
+
+TOTAL ESTIMATED TIME TO PRODUCTION-READY:
+- Without removing eval(): 20-30 hours
+- With eval() removal (for WordPress.org): 4-6 weeks
+
+================================================================================
+END OF REPORT
+MODULE COMPLETE - READY FOR NEXT MODULE
+================================================================================

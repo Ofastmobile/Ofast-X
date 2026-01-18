@@ -19,6 +19,9 @@ class Ofast_X_Snippets
         // NOTE: Module enabled check removed - core loader already verified this
         // before calling init(). See class-ofast-core.php is_module_enabled()
 
+        // Auto-migrate: Add missing columns for trash system
+        $this->maybe_add_trash_columns();
+
         // Add dashboard widget
         add_action('wp_dashboard_setup', array($this, 'add_dashboard_widget'));
 
@@ -38,6 +41,7 @@ class Ofast_X_Snippets
         add_action('wp_ajax_ofast_use_library_template', array($this, 'ajax_use_library_template'));
         add_action('wp_ajax_ofast_get_revisions', array($this, 'ajax_get_revisions'));
         add_action('wp_ajax_ofast_restore_revision', array($this, 'ajax_restore_revision'));
+        add_action('wp_ajax_ofast_restore_snippet', array($this, 'ajax_restore_snippet'));
 
         // Execute active snippets
         add_action('init', array($this, 'execute_snippets'), 999);
@@ -47,6 +51,12 @@ class Ofast_X_Snippets
 
         // Enqueue CodeMirror for code editor
         add_action('admin_enqueue_scripts', array($this, 'enqueue_codemirror'));
+
+        // Schedule daily trash cleanup
+        if (!wp_next_scheduled('ofast_snippets_cleanup_trash')) {
+            wp_schedule_event(time(), 'daily', 'ofast_snippets_cleanup_trash');
+        }
+        add_action('ofast_snippets_cleanup_trash', array($this, 'cleanup_old_trash'));
     }
 
     /**
@@ -134,7 +144,7 @@ class Ofast_X_Snippets
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_snippets';
 
-        $snippets = $wpdb->get_results("SELECT * FROM $table ORDER BY id DESC LIMIT 10");
+        $snippets = $wpdb->get_results("SELECT * FROM $table WHERE status IS NULL OR status != 'trash' ORDER BY id DESC LIMIT 10");
 
         if (empty($snippets)) {
             echo '<p style="text-align: center; color: #999; padding: 20px;">No snippets yet. <a href="' . admin_url('admin.php?page=ofast-snippets') . '">Add your first snippet</a></p>';
@@ -163,7 +173,7 @@ class Ofast_X_Snippets
             }
             echo '</td>';
             echo '<td style="text-align: center;">';
-            echo '<button class="button button-small ofast-snippet-toggle ' . $active_class . '" data-id="' . $snippet->id . '" data-active="' . $snippet->active . '" data-has-error="' . ($has_error ? '1' : '0') . '">';
+            echo '<button class="button button-small ofast-snippet-toggle ' . esc_attr($active_class) . '" data-id="' . esc_attr($snippet->id) . '" data-active="' . esc_attr($snippet->active) . '" data-has-error="' . ($has_error ? '1' : '0') . '">';
             echo $snippet->active ? 'ON' : 'OFF';
             echo '</button>';
             echo '</td>';
@@ -242,6 +252,8 @@ class Ofast_X_Snippets
             $target_type = isset($_POST['snippet_target_type']) ? sanitize_text_field($_POST['snippet_target_type']) : 'all';
             $target_value = isset($_POST['snippet_target_value']) ? sanitize_text_field($_POST['snippet_target_value']) : '';
             $category = isset($_POST['snippet_category']) ? sanitize_text_field($_POST['snippet_category']) : '';
+            $priority = isset($_POST['snippet_priority']) ? intval($_POST['snippet_priority']) : 10;
+            $priority = max(1, min(999, $priority)); // Clamp to 1-999
 
             // Process tags - convert comma-separated to JSON array
             $tags_raw = isset($_POST['snippet_tags']) ? sanitize_text_field($_POST['snippet_tags']) : '';
@@ -284,7 +296,8 @@ class Ofast_X_Snippets
                     'category' => $category,
                     'tags' => $tags_json,
                     'code' => $code,
-                    'active' => $active
+                    'active' => $active,
+                    'priority' => $priority
                 ), array('id' => $id));
 
                 // Debug logging for live server issues
@@ -333,6 +346,7 @@ class Ofast_X_Snippets
                             'tags' => $tags_json,
                             'code' => $code,
                             'active' => $active,
+                            'priority' => $priority,
                             'created_at' => current_time('mysql')
                         ));
 
@@ -358,8 +372,8 @@ class Ofast_X_Snippets
             }
         }
 
-        // Get all snippets
-        $snippets = $wpdb->get_results("SELECT * FROM $table ORDER BY id DESC");
+        // Get all snippets (exclude trashed)
+        $snippets = $wpdb->get_results("SELECT * FROM $table WHERE status IS NULL OR status != 'trash' ORDER BY id DESC");
 
         // Editing mode
         $editing = isset($_GET['edit']) ? intval($_GET['edit']) : 0;
@@ -668,6 +682,19 @@ class Ofast_X_Snippets
                                             <span class="ofast-toggle-label">Execute only once, then auto-deactivate</span>
                                         </label>
                                         <p class="description">Snippet will run one time and then automatically deactivate itself.</p>
+                                    </td>
+                                </tr>
+                                <tr class="snippet-actions-desktop">
+                                    <th><label for="snippet_priority">Execution Priority</label></th>
+                                    <td>
+                                        <?php $priority = ($edit_snippet && isset($edit_snippet->priority)) ? $edit_snippet->priority : 10; ?>
+                                        <input type="number" name="snippet_priority" id="snippet_priority" 
+                                               value="<?php echo esc_attr($priority); ?>" 
+                                               min="1" max="999" step="1" class="small-text" style="width: 70px;">
+                                        <p class="description">
+                                            Lower numbers run first. Default: 10<br>
+                                            <span style="color: #666;">1-9: Critical | 10: Normal | 11-99: Late | 100+: Last</span>
+                                        </p>
                                     </td>
                                 </tr>
                                 <tr class="snippet-actions-desktop">
@@ -1170,6 +1197,80 @@ class Ofast_X_Snippets
             <?php endif; ?>
         </div>
 
+        <?php
+        // Get trashed snippets for trash panel
+        $trashed_snippets = $wpdb->get_results("SELECT * FROM $table WHERE status = 'trash' ORDER BY trashed_at DESC");
+        $trash_count = count($trashed_snippets);
+        ?>
+        
+        <!-- Trash Panel -->
+        <div class="ofast-trash-panel" style="margin-top: 30px; background: #fff; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+            <div class="trash-header" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; cursor: pointer;" id="toggle-trash-panel">
+                <h3 style="margin: 0; font-size: 14px; font-weight: 500;">
+                    <span class="dashicons dashicons-trash" style="margin-right: 8px;"></span>
+                    Trash (<?php echo $trash_count; ?>)
+                </h3>
+                <span class="toggle-icon" style="font-size: 18px;">▼</span>
+            </div>
+            
+            <div class="trash-content" style="display: none; padding: 20px;">
+                <?php if ($trash_count > 0): ?>
+                    <p style="color: #666; margin: 0 0 15px; font-size: 13px;">
+                        <span class="dashicons dashicons-info" style="color: #2271b1;"></span>
+                        Items in trash are automatically deleted after 30 days.
+                    </p>
+                    
+                    <table class="widefat striped" style="margin-bottom: 15px;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th style="width: 120px;">Deleted</th>
+                                <th style="width: 80px;">Days Left</th>
+                                <th style="width: 180px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($trashed_snippets as $trashed): 
+                                $days_since = floor((time() - strtotime($trashed->trashed_at)) / 86400);
+                                $days_left = max(0, 30 - $days_since);
+                            ?>
+                            <tr class="trash-row" data-id="<?php echo esc_attr($trashed->id); ?>">
+                                <td>
+                                    <strong><?php echo esc_html($trashed->name); ?></strong>
+                                    <br><small style="color: #999;"><?php echo esc_html($trashed->language ?? 'php'); ?></small>
+                                </td>
+                                <td style="font-size: 12px;"><?php echo date('M j, Y', strtotime($trashed->trashed_at)); ?></td>
+                                <td>
+                                    <span style="color: <?php echo $days_left < 7 ? '#dc3545' : '#666'; ?>; font-weight: <?php echo $days_left < 7 ? '600' : '400'; ?>;">
+                                        <?php echo $days_left; ?> days
+                                    </span>
+                                </td>
+                                <td>
+                                    <button type="button" class="button button-small restore-snippet" data-id="<?php echo esc_attr($trashed->id); ?>" style="margin-right: 5px;">
+                                        <span class="dashicons dashicons-undo" style="vertical-align: middle; margin-right: 3px;"></span>Restore
+                                    </button>
+                                    <button type="button" class="button button-small delete-forever" data-id="<?php echo esc_attr($trashed->id); ?>" style="color: #dc3545;">
+                                        <span class="dashicons dashicons-dismiss" style="vertical-align: middle; margin-right: 3px;"></span>Delete
+                                    </button>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                    
+                    <button type="button" id="empty-all-trash" class="button" style="color: #dc3545; border-color: #dc3545;">
+                        <span class="dashicons dashicons-trash" style="vertical-align: middle; margin-right: 5px;"></span>
+                        Empty Trash (<?php echo $trash_count; ?> items)
+                    </button>
+                <?php else: ?>
+                    <p style="text-align: center; color: #999; padding: 30px; margin: 0;">
+                        <span class="dashicons dashicons-yes-alt" style="font-size: 32px; display: block; margin-bottom: 10px; color: #46b450;"></span>
+                        Trash is empty
+                    </p>
+                <?php endif; ?>
+            </div>
+        </div>
+
         <script>
             jQuery(document).ready(function($) {
                 // Initialize CodeMirror on the code textarea
@@ -1301,8 +1402,113 @@ class Ofast_X_Snippets
                             $btn.closest('tr').fadeOut(function() {
                                 $(this).remove();
                             });
+                            // Refresh page to show updated trash
+                            setTimeout(function() { location.reload(); }, 500);
                         }
                     });
+                });
+
+                // Toggle trash panel
+                $('#toggle-trash-panel').on('click', function() {
+                    var $content = $('.trash-content');
+                    var $icon = $(this).find('.toggle-icon');
+                    $content.slideToggle(200);
+                    $icon.text($content.is(':visible') ? '▲' : '▼');
+                });
+
+                // Restore snippet from trash
+                $(document).on('click', '.restore-snippet', function(e) {
+                    e.preventDefault();
+                    var $btn = $(this);
+                    var id = $btn.data('id');
+                    $btn.prop('disabled', true).text('Restoring...');
+
+                    $.post(ajaxurl, {
+                        action: 'ofast_restore_snippet',
+                        nonce: '<?php echo wp_create_nonce('ofast_snippet_restore'); ?>',
+                        id: id
+                    }, function(response) {
+                        if (response.success) {
+                            $btn.closest('tr').fadeOut(function() {
+                                $(this).remove();
+                                // Update trash count
+                                var $header = $('#toggle-trash-panel h3');
+                                var count = parseInt($header.text().match(/\d+/)[0]) - 1;
+                                $header.html('<span class="dashicons dashicons-trash" style="margin-right: 8px;"></span>Trash (' + count + ')');
+                                if (count === 0) {
+                                    $('.trash-content').html('<p style="text-align: center; color: #999; padding: 30px; margin: 0;"><span class="dashicons dashicons-yes-alt" style="font-size: 32px; display: block; margin-bottom: 10px; color: #46b450;"></span>Trash is empty</p>');
+                                }
+                            });
+                        } else {
+                            alert(response.data || 'Error restoring snippet');
+                            $btn.prop('disabled', false).html('<span class="dashicons dashicons-undo" style="vertical-align: middle; margin-right: 3px;"></span>Restore');
+                        }
+                    });
+                });
+
+                // Delete forever from trash
+                $(document).on('click', '.delete-forever', function(e) {
+                    e.preventDefault();
+                    if (!confirm('Are you sure you want to PERMANENTLY delete this snippet? This cannot be undone.')) {
+                        return;
+                    }
+                    var $btn = $(this);
+                    var id = $btn.data('id');
+                    $btn.prop('disabled', true).text('Deleting...');
+
+                    $.post(ajaxurl, {
+                        action: 'ofast_delete_snippet',
+                        nonce: '<?php echo wp_create_nonce('ofast_snippet_delete'); ?>',
+                        id: id,
+                        permanent: 'true'
+                    }, function(response) {
+                        if (response.success) {
+                            $btn.closest('tr').fadeOut(function() {
+                                $(this).remove();
+                                // Update trash count
+                                var $header = $('#toggle-trash-panel h3');
+                                var count = parseInt($header.text().match(/\d+/)[0]) - 1;
+                                $header.html('<span class="dashicons dashicons-trash" style="margin-right: 8px;"></span>Trash (' + count + ')');
+                                $('#empty-all-trash').html('<span class="dashicons dashicons-trash" style="vertical-align: middle; margin-right: 5px;"></span>Empty Trash (' + count + ' items)');
+                                if (count === 0) {
+                                    $('.trash-content').html('<p style="text-align: center; color: #999; padding: 30px; margin: 0;"><span class="dashicons dashicons-yes-alt" style="font-size: 32px; display: block; margin-bottom: 10px; color: #46b450;"></span>Trash is empty</p>');
+                                }
+                            });
+                        }
+                    });
+                });
+
+                // Empty all trash
+                $('#empty-all-trash').on('click', function(e) {
+                    e.preventDefault();
+                    var count = $('.trash-row').length;
+                    if (!confirm('Are you sure you want to PERMANENTLY delete all ' + count + ' items in trash? This cannot be undone.')) {
+                        return;
+                    }
+                    var $btn = $(this);
+                    $btn.prop('disabled', true).text('Deleting all...');
+                    
+                    // Delete each item sequentially
+                    var ids = [];
+                    $('.trash-row').each(function() {
+                        ids.push($(this).data('id'));
+                    });
+                    
+                    var deleteNext = function(index) {
+                        if (index >= ids.length) {
+                            location.reload();
+                            return;
+                        }
+                        $.post(ajaxurl, {
+                            action: 'ofast_delete_snippet',
+                            nonce: '<?php echo wp_create_nonce('ofast_snippet_delete'); ?>',
+                            id: ids[index],
+                            permanent: 'true'
+                        }, function() {
+                            deleteNext(index + 1);
+                        });
+                    };
+                    deleteNext(0);
                 });
 
                 // Inline title editing
@@ -2076,7 +2282,7 @@ class Ofast_X_Snippets
     }
 
     /**
-     * AJAX: Delete snippet
+     * AJAX: Delete snippet (soft delete - moves to trash)
      */
     public function ajax_delete_snippet()
     {
@@ -2092,22 +2298,78 @@ class Ofast_X_Snippets
         }
 
         $id = intval($_POST['id']);
+        $permanent = isset($_POST['permanent']) && $_POST['permanent'] === 'true';
 
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_snippets';
 
-        // Get name for logging before delete
-        $snippet = $wpdb->get_row($wpdb->prepare("SELECT name FROM $table WHERE id = %d", $id));
+        // Get snippet for logging
+        $snippet = $wpdb->get_row($wpdb->prepare(
+            "SELECT name, status FROM $table WHERE id = %d", $id
+        ));
 
-        $wpdb->delete($table, array('id' => $id));
+        if (!$snippet) {
+            wp_send_json_error('Snippet not found');
+        }
 
-        // Audit log
-        $this->log_snippet_action('DELETED', $id, $snippet ? $snippet->name : 'Unknown', '');
+        if ($permanent && isset($snippet->status) && $snippet->status === 'trash') {
+            // Permanent delete from trash
+            $wpdb->delete($table, array('id' => $id));
+            $this->log_snippet_action('PERMANENTLY_DELETED', $id, $snippet->name, '');
+        } else {
+            // Soft delete - move to trash
+            $wpdb->update($table, array(
+                'status' => 'trash',
+                'active' => 0,
+                'trashed_at' => current_time('mysql')
+            ), array('id' => $id));
+            $this->log_snippet_action('TRASHED', $id, $snippet->name, '');
+        }
 
-        // Clear cache when snippet is deleted
+        // Clear cache
         $this->clear_snippets_cache();
 
         wp_send_json_success();
+    }
+
+    /**
+     * AJAX: Restore snippet from trash
+     */
+    public function ajax_restore_snippet()
+    {
+        check_ajax_referer('ofast_snippet_restore', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        // Rate limiting
+        if (!$this->check_rate_limit('restore')) {
+            wp_send_json_error('Too many requests. Please wait a moment.');
+        }
+
+        $id = intval($_POST['id']);
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+
+        $snippet = $wpdb->get_row($wpdb->prepare(
+            "SELECT name FROM $table WHERE id = %d AND status = 'trash'", $id
+        ));
+
+        if (!$snippet) {
+            wp_send_json_error('Snippet not found in trash');
+        }
+
+        $wpdb->update($table, array(
+            'status' => 'active',
+            'trashed_at' => null
+        ), array('id' => $id));
+
+        $this->log_snippet_action('RESTORED', $id, $snippet->name, '');
+        $this->clear_snippets_cache();
+
+        wp_send_json_success(array('message' => 'Snippet restored successfully'));
     }
 
     /**
@@ -2214,6 +2476,13 @@ class Ofast_X_Snippets
         }
 
         $import_data = isset($_POST['import_data']) ? wp_unslash($_POST['import_data']) : '';
+        
+        // SECURITY: Limit import size to prevent DoS
+        $max_import_size = 5 * 1024 * 1024; // 5MB
+        if (strlen($import_data) > $max_import_size) {
+            wp_send_json_error('Import file too large (maximum 5MB)');
+        }
+        
         $data = json_decode($import_data, true);
 
         if (!$data || !isset($data['snippets']) || !is_array($data['snippets'])) {
@@ -2299,6 +2568,11 @@ class Ofast_X_Snippets
 
         if (!current_user_can('manage_options')) {
             wp_send_json_error('Unauthorized');
+        }
+
+        // Rate limiting
+        if (!$this->check_rate_limit('use_template')) {
+            wp_send_json_error('Too many requests. Please wait a moment.');
         }
 
         $index = isset($_POST['index']) ? intval($_POST['index']) : -1;
@@ -2641,6 +2915,11 @@ class Ofast_X_Snippets
             wp_send_json_error('Unauthorized');
         }
 
+        // Rate limiting
+        if (!$this->check_rate_limit('preview_snippets')) {
+            wp_send_json_error('Too many requests. Please wait a moment.');
+        }
+
         $plugin = isset($_POST['plugin']) ? sanitize_text_field($_POST['plugin']) : '';
         if (empty($plugin)) {
             wp_send_json_error('Invalid plugin');
@@ -2938,8 +3217,8 @@ class Ofast_X_Snippets
         if ($snippets === false) {
             global $wpdb;
             $table = $wpdb->prefix . 'ofast_snippets';
-            // Get all active snippets with all relevant fields
-            $snippets = $wpdb->get_results("SELECT id, code, language, scope, location, target_type, target_value, run_once, executed_at FROM $table WHERE active = 1");
+            // Get all active snippets with all relevant fields, ordered by priority (exclude trashed)
+            $snippets = $wpdb->get_results("SELECT id, code, language, scope, location, target_type, target_value, run_once, executed_at, priority FROM $table WHERE active = 1 AND (status IS NULL OR status != 'trash') ORDER BY priority ASC, id ASC");
 
             // Cache for 1 hour (3600 seconds)
             set_transient('ofast_active_snippets_cache', $snippets, 3600);
@@ -3401,10 +3680,12 @@ class Ofast_X_Snippets
             return true;
         }
 
-        // Check for opening PHP tags (not allowed)
-        if (strpos($code, '<?php') !== false || strpos($code, '<?') !== false) {
-            return 'Do not include <?php tags in your code';
-        }
+        // Auto-strip PHP tags instead of rejecting (compatibility with other plugins)
+        // This allows importing code from WPCode, Code Snippets, etc.
+        $code = preg_replace('/<\?php\s*/i', '', $code);
+        $code = preg_replace('/<\?\s*/i', '', $code);
+        $code = preg_replace('/\s*\?>/i', '', $code);
+        $code = trim($code);
 
         // SECURITY: Check for dangerous functions
         $dangerous_functions = array(
@@ -3739,5 +4020,75 @@ class Ofast_X_Snippets
 
         set_transient($transient_key, $attempts + 1, 60);
         return true;
+    }
+
+    /**
+     * Cleanup snippets that have been in trash for more than 30 days
+     * Runs daily via cron job
+     */
+    public function cleanup_old_trash()
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+        
+        // Delete snippets in trash for more than 30 days
+        $deleted = $wpdb->query(
+            "DELETE FROM $table 
+             WHERE status = 'trash' 
+             AND trashed_at IS NOT NULL 
+             AND trashed_at < DATE_SUB(NOW(), INTERVAL 30 DAY)"
+        );
+        
+        if ($deleted > 0) {
+            error_log("Ofast X Snippets: Auto-purged {$deleted} snippet(s) from trash (30+ days old)");
+        }
+        
+        // Clear cache after cleanup
+        $this->clear_snippets_cache();
+    }
+
+    /**
+     * Add missing columns for trash system (auto-migration)
+     * Only runs once, tracks via option
+     */
+    private function maybe_add_trash_columns()
+    {
+        // Only run if not already migrated
+        if (get_option('ofast_snippets_trash_columns_added')) {
+            return;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+
+        // Check if table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table}'");
+        if (!$table_exists) {
+            return;
+        }
+
+        // Get existing columns
+        $columns = $wpdb->get_col("DESCRIBE {$table}", 0);
+
+        // Add status column if missing
+        if (!in_array('status', $columns)) {
+            $wpdb->query("ALTER TABLE {$table} ADD COLUMN status VARCHAR(20) DEFAULT 'active' AFTER priority");
+            error_log("Ofast X Snippets: Added 'status' column");
+        }
+
+        // Add trashed_at column if missing
+        if (!in_array('trashed_at', $columns)) {
+            $wpdb->query("ALTER TABLE {$table} ADD COLUMN trashed_at DATETIME DEFAULT NULL AFTER status");
+            error_log("Ofast X Snippets: Added 'trashed_at' column");
+        }
+
+        // Add priority column if missing
+        if (!in_array('priority', $columns)) {
+            $wpdb->query("ALTER TABLE {$table} ADD COLUMN priority INT(11) DEFAULT 10 AFTER executed_at");
+            error_log("Ofast X Snippets: Added 'priority' column");
+        }
+
+        // Mark as migrated
+        update_option('ofast_snippets_trash_columns_added', true);
     }
 }

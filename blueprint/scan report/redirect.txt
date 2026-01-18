@@ -61,8 +61,7 @@ Answer clearly:
 Do not soften feedback. Do not generalize. Do not omit critical issues.
 Assume the code will be reviewed by WordPress core contributors.
 
-Show less
-14:41
+
 PHASE 1: ENGINEERING & SECURITY AUDIT
 MODULE IDENTIFICATION
 Module Name: Redirects Manager

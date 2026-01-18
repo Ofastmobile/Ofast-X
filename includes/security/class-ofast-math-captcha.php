@@ -37,6 +37,9 @@ class Ofast_X_Math_Captcha
     {
         // Start session if not already started (needed for storing answer)
         add_action('init', array($this, 'maybe_start_session'), 1);
+        
+        // Also start session on login page (fires before authenticate filter)
+        add_action('login_init', array($this, 'maybe_start_session'), 1);
     }
     
     /**

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Ofast X - Admin Tweaks Module
+ * Ofast X - Admin Studio Module
  * Quick admin customizations without separate menus
  * Settings are managed from the main Ofast X Settings page
  */
@@ -135,8 +135,8 @@ class Ofast_X_Admin_Tweaks
     {
         add_submenu_page(
             'ofast-dashboard',
-            'Admin Tweaks',
-            'Admin Tweaks',
+            'Admin Studio',
+            'Admin Studio',
             'manage_options',
             'ofast-admin-tweaks',
             array($this, 'render_page')
@@ -589,7 +589,7 @@ class Ofast_X_Admin_Tweaks
                         <span class="dashicons dashicons-admin-tools"></span>
                     </div>
                     <div class="ofast-header-text">
-                        <h1>Admin Tweaks</h1>
+                        <h1>Admin Studio</h1>
                         <p>Quick customization and security hardening for your dashboard</p>
                     </div>
                 </div>
@@ -602,9 +602,15 @@ class Ofast_X_Admin_Tweaks
                         
                     <!-- Interface Tweaks Card -->
                     <div class="ofast-card">
-                        <div class="ofast-card-header">
-                            <span class="dashicons dashicons-desktop"></span>
-                            <h2>Interface Customizations</h2>
+                        <div class="ofast-card-header" style="justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span class="dashicons dashicons-desktop"></span>
+                                <h2>Interface Customizations</h2>
+                            </div>
+                            <div class="ofast-search-box">
+                                <input type="text" id="ofast-tweaks-search" placeholder="Search tweaks..." autocomplete="off">
+                                <span class="dashicons dashicons-search"></span>
+                            </div>
                         </div>
                         <div class="ofast-card-body">
                             
@@ -931,6 +937,14 @@ class Ofast_X_Admin_Tweaks
             .ofast-header-text h1 { margin: 0; font-size: 28px; font-weight: 700; color: #1e293b; }
             .ofast-header-text p { margin: 5px 0 0; color: #64748b; font-size: 15px; }
 
+            /* Search Box */
+            .ofast-search-box { position: relative; }
+            .ofast-search-box input { width: 200px; padding: 8px 35px 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: #fff; transition: all 0.2s; }
+            .ofast-search-box input:focus { border-color: #6366f1; outline: none; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); width: 260px; }
+            .ofast-search-box .dashicons { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 16px; width: 16px; height: 16px; pointer-events: none; }
+            .ofast-tweak-row.hidden-by-search { display: none !important; }
+            .ofast-section-title.hidden-by-search { display: none !important; }
+
             /* Grid Layout - SINGLE COLUMN WIDE */
             .ofast-tweaks-container { display: flex; flex-direction: column; gap: 0; }
             
@@ -995,6 +1009,38 @@ class Ofast_X_Admin_Tweaks
                 } else {
                     $('#admin-design-settings').slideUp(300);
                 }
+            });
+
+            // Search functionality
+            $('#ofast-tweaks-search').on('input', function() {
+                var searchTerm = $(this).val().toLowerCase().trim();
+                
+                if (searchTerm === '') {
+                    // Show all rows
+                    $('.ofast-tweak-row, .ofast-section-title').removeClass('hidden-by-search');
+                    return;
+                }
+                
+                // Search through all cards
+                $('.ofast-card').each(function() {
+                    $(this).find('.ofast-tweak-row').each(function() {
+                        var labelText = $(this).find('label').first().text().toLowerCase();
+                        var descText = $(this).find('.description').text().toLowerCase();
+                        
+                        if (labelText.includes(searchTerm) || descText.includes(searchTerm)) {
+                            $(this).removeClass('hidden-by-search');
+                        } else {
+                            $(this).addClass('hidden-by-search');
+                        }
+                    });
+                    
+                    // Hide section titles if all their items are hidden
+                    $(this).find('.ofast-section-title').each(function() {
+                        var $nextRows = $(this).nextUntil('.ofast-section-title, .ofast-card-header');
+                        var visibleRows = $nextRows.filter('.ofast-tweak-row:not(.hidden-by-search)').length;
+                        $(this).toggleClass('hidden-by-search', visibleRows === 0);
+                    });
+                });
             });
         });
         

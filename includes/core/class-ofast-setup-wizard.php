@@ -299,7 +299,7 @@ class Ofast_X_Setup_Wizard {
 
             <div class="ofast-category-label"> Customization</div>
             <div class="ofast-module-grid">
-                <?php foreach (array('admin-tweaks' => 'Admin Tweaks', 'login-redesign' => 'Login Redesign', 'menu-editor' => 'Menu Editor', 'whos-admin' => "Who's Admin", 'user-roles' => 'User Roles Manager', 'admin-design' => 'Admin Design', 'admin-footer' => 'Admin Footer') as $slug => $name): ?>
+                <?php foreach (array('admin-tweaks' => 'Admin Studio', 'login-redesign' => 'Login Redesign', 'menu-editor' => 'Menu Editor', 'whos-admin' => 'White Label', 'user-roles' => 'User Roles Manager', 'admin-design' => 'Admin Design') as $slug => $name): ?>
                 <div class="ofast-module-item <?php echo in_array($slug, $recommended) ? 'checked' : ''; ?>">
                     <input type="checkbox" name="modules[<?php echo $slug; ?>]" id="mod_<?php echo $slug; ?>" <?php checked(in_array($slug, $recommended)); ?>>
                     <label for="mod_<?php echo $slug; ?>"><?php echo $name; ?></label>

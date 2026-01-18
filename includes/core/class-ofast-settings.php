@@ -733,15 +733,12 @@ class Ofast_X_Settings
                 'locked' => true,
             ),
             'admin-tweaks' => array(
-                'name' => 'Admin Tweaks',
+                'name' => 'Admin Studio',
                 'description' => 'Admin customizations including User Roles, Menu Editor, Admin URL, Admin Design, and more',
                 'category' => 'customization',
             ),
-            'admin-footer' => array(
-                'name' => 'Custom Admin Footer',
-                'description' => 'Add custom branding text to admin footer - replace "Thank you for creating"',
-                'category' => 'customization',
-            ),
+            // NOTE: Admin Footer module removed - footer text settings now in White Label (whos-admin module)
+            // Dark Mode and Custom Dashboard toggles are handled within Admin Footer module internally
             
             // === COMMUNICATION ===
             'email' => array(

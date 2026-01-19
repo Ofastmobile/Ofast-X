@@ -12,6 +12,21 @@ if (!defined('ABSPATH')) {
 class Ofast_X_Snippets
 {
     /**
+     * Table name suffix (without prefix)
+     */
+    const TABLE_SUFFIX = 'ofast_snippets';
+
+    /**
+     * Get full table name with prefix
+     * @return string
+     */
+    private function get_table_name()
+    {
+        global $wpdb;
+        return $wpdb->prefix . self::TABLE_SUFFIX;
+    }
+
+    /**
      * Initialize module
      */
     public function init()
@@ -42,12 +57,16 @@ class Ofast_X_Snippets
         add_action('wp_ajax_ofast_get_revisions', array($this, 'ajax_get_revisions'));
         add_action('wp_ajax_ofast_restore_revision', array($this, 'ajax_restore_revision'));
         add_action('wp_ajax_ofast_restore_snippet', array($this, 'ajax_restore_snippet'));
+        add_action('wp_ajax_ofast_run_snippet_now', array($this, 'ajax_run_snippet_now'));
 
         // Execute active snippets
         add_action('init', array($this, 'execute_snippets'), 999);
 
         // Show runtime error notices
         add_action('admin_notices', array($this, 'show_runtime_error_notice'));
+        
+        // Show safe mode warning
+        add_action('admin_notices', array($this, 'show_safe_mode_notice'));
 
         // Enqueue CodeMirror for code editor
         add_action('admin_enqueue_scripts', array($this, 'enqueue_codemirror'));
@@ -375,6 +394,9 @@ class Ofast_X_Snippets
         // Get all snippets (exclude trashed)
         $snippets = $wpdb->get_results("SELECT * FROM $table WHERE status IS NULL OR status != 'trash' ORDER BY id DESC");
 
+        // Get trash count for button
+        $trash_count = $wpdb->get_var("SELECT COUNT(*) FROM $table WHERE status = 'trash'");
+
         // Editing mode
         $editing = isset($_GET['edit']) ? intval($_GET['edit']) : 0;
         $edit_snippet = $editing ? $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $editing)) : null;
@@ -389,6 +411,7 @@ class Ofast_X_Snippets
                 <a href="<?php echo admin_url('admin.php?page=ofast-snippets'); ?>" class="button button-primary" style="display: inline-flex; align-items: center; gap: 5px;">
                     New Snippet
                 </a>
+                
                 <select id="ofast-export-type" class="regular-text" style="width: auto;">
                     <option value="json">Export as JSON</option>
                     <option value="code">Export as Code</option>
@@ -400,6 +423,11 @@ class Ofast_X_Snippets
                     Import
                 </button>
                 <input type="file" id="ofast-import-file" accept=".json" style="display: none;">
+                <?php if ($trash_count > 0): ?>
+                <button type="button" class="button" id="ofast-open-trash-modal" style="color: #b32d2e;">
+                    Trash <?php echo $trash_count; ?>
+                </button>
+                <?php endif; ?>
                 <span style="color: #666; font-size: 12px; margin-left: auto;">
                     Total: <?php echo count($snippets); ?> snippet(s)
                 </span>
@@ -460,7 +488,14 @@ class Ofast_X_Snippets
             $library_file = plugin_dir_path(__FILE__) . 'library/snippets.json';
             $library = null;
             if (file_exists($library_file)) {
-                $library = json_decode(file_get_contents($library_file), true);
+                // Use WP_Filesystem if available, fallback to direct read
+                global $wp_filesystem;
+                if (empty($wp_filesystem)) {
+                    require_once ABSPATH . '/wp-admin/includes/file.php';
+                    WP_Filesystem();
+                }
+                $content = $wp_filesystem ? $wp_filesystem->get_contents($library_file) : @file_get_contents($library_file);
+                $library = $content ? json_decode($content, true) : null;
             }
 
             if ($library && !empty($library['snippets'])):
@@ -1076,6 +1111,15 @@ class Ofast_X_Snippets
                                 <?php endforeach; ?>
                             </select>
                         <?php endif; ?>
+                        
+                        <!-- Language Filter -->
+                        <select id="ofast-language-filter" style="width: auto;">
+                            <option value="all">All Languages</option>
+                            <option value="php">PHP</option>
+                            <option value="javascript">JavaScript</option>
+                            <option value="css">CSS</option>
+                            <option value="html">HTML</option>
+                        </select>
                     </div>
                     <div>
                         <input type="text" id="snippet-search" placeholder="Search name, description, code, tags..." style="width: 300px;">
@@ -1133,6 +1177,7 @@ class Ofast_X_Snippets
                                     data-name="<?php echo esc_attr(strtolower($snippet->name)); ?>"
                                     data-description="<?php echo esc_attr(strtolower($snippet->description ?? '')); ?>"
                                     data-category="<?php echo esc_attr($snippet_category); ?>"
+                                    data-language="<?php echo esc_attr($snippet->language ?? 'php'); ?>"
                                     data-code="<?php echo esc_attr(strtolower(substr($snippet->code, 0, 2000))); ?>"
                                     data-tags="<?php echo esc_attr(strtolower($snippet->tags ?? '')); ?>">
                                     <td><input type="checkbox" class="snippet-checkbox" value="<?php echo $snippet->id; ?>"></td>
@@ -1147,6 +1192,9 @@ class Ofast_X_Snippets
                                         <input type="text" class="snippet-name-edit" data-id="<?php echo $snippet->id; ?>" value="<?php echo esc_attr($snippet->name); ?>" style="display:none; width: 100%;">
                                         <div class="row-actions" style="margin-top: 3px; font-size: 12px;">
                                             <a href="?page=ofast-snippets&edit=<?php echo $snippet->id; ?>">Edit</a> |
+                                            <?php if (($snippet->language ?? 'php') === 'php'): ?>
+                                            <a href="#" class="ofast-run-now" data-id="<?php echo $snippet->id; ?>" data-name="<?php echo esc_attr($snippet->name); ?>" style="color: #2271b1;">Run Now</a> |
+                                            <?php endif; ?>
                                             <a href="#" class="ofast-snippet-delete" data-id="<?php echo $snippet->id; ?>" data-active="<?php echo $snippet->active; ?>" data-name="<?php echo esc_attr($snippet->name); ?>" style="color: #b32d2e;">Delete</a>
                                         </div>
                                     </td>
@@ -1198,78 +1246,86 @@ class Ofast_X_Snippets
         </div>
 
         <?php
-        // Get trashed snippets for trash panel
+        // Get trashed snippets for trash modal
         $trashed_snippets = $wpdb->get_results("SELECT * FROM $table WHERE status = 'trash' ORDER BY trashed_at DESC");
-        $trash_count = count($trashed_snippets);
         ?>
         
-        <!-- Trash Panel -->
-        <div class="ofast-trash-panel" style="margin-top: 30px; background: #fff; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
-            <div class="trash-header" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; cursor: pointer;" id="toggle-trash-panel">
-                <h3 style="margin: 0; font-size: 14px; font-weight: 500;">
-                    <span class="dashicons dashicons-trash" style="margin-right: 8px;"></span>
-                    Trash (<?php echo $trash_count; ?>)
-                </h3>
-                <span class="toggle-icon" style="font-size: 18px;">▼</span>
-            </div>
-            
-            <div class="trash-content" style="display: none; padding: 20px;">
-                <?php if ($trash_count > 0): ?>
-                    <p style="color: #666; margin: 0 0 15px; font-size: 13px;">
-                        <span class="dashicons dashicons-info" style="color: #2271b1;"></span>
-                        Items in trash are automatically deleted after 30 days.
-                    </p>
-                    
-                    <table class="widefat striped" style="margin-bottom: 15px;">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th style="width: 120px;">Deleted</th>
-                                <th style="width: 80px;">Days Left</th>
-                                <th style="width: 180px;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($trashed_snippets as $trashed): 
-                                $days_since = floor((time() - strtotime($trashed->trashed_at)) / 86400);
-                                $days_left = max(0, 30 - $days_since);
-                            ?>
-                            <tr class="trash-row" data-id="<?php echo esc_attr($trashed->id); ?>">
-                                <td>
-                                    <strong><?php echo esc_html($trashed->name); ?></strong>
-                                    <br><small style="color: #999;"><?php echo esc_html($trashed->language ?? 'php'); ?></small>
-                                </td>
-                                <td style="font-size: 12px;"><?php echo date('M j, Y', strtotime($trashed->trashed_at)); ?></td>
-                                <td>
-                                    <span style="color: <?php echo $days_left < 7 ? '#dc3545' : '#666'; ?>; font-weight: <?php echo $days_left < 7 ? '600' : '400'; ?>;">
-                                        <?php echo $days_left; ?> days
-                                    </span>
-                                </td>
-                                <td>
-                                    <button type="button" class="button button-small restore-snippet" data-id="<?php echo esc_attr($trashed->id); ?>" style="margin-right: 5px;">
-                                        <span class="dashicons dashicons-undo" style="vertical-align: middle; margin-right: 3px;"></span>Restore
-                                    </button>
-                                    <button type="button" class="button button-small delete-forever" data-id="<?php echo esc_attr($trashed->id); ?>" style="color: #dc3545;">
-                                        <span class="dashicons dashicons-dismiss" style="vertical-align: middle; margin-right: 3px;"></span>Delete
-                                    </button>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                    
+        <!-- Trash Modal -->
+        <div id="ofast-trash-modal" class="ofast-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 100000; justify-content: center; align-items: center;">
+            <div class="ofast-modal-content" style="background: #fff; border-radius: 12px; max-width: 700px; width: 90%; max-height: 80vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                <div class="ofast-modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background: #fff; border-bottom: 1px solid #ddd;">
+                    <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #1e1e1e;">
+                        Trash <?php echo count($trashed_snippets); ?> items
+                    </h3>
+                    <button type="button" id="ofast-close-trash-modal" style="background: none; border: none; color: #666; font-size: 24px; cursor: pointer; padding: 0; line-height: 1;">&times;</button>
+                </div>
+                
+                <div class="ofast-modal-body" style="padding: 20px; max-height: calc(80vh - 140px); overflow-y: auto;">
+                    <?php if (count($trashed_snippets) > 0): ?>
+                        <p style="color: #666; margin: 0 0 15px; font-size: 13px; background: #f0f6fc; padding: 10px; border-radius: 6px;">
+                            <span class="dashicons dashicons-info" style="color: #2271b1;"></span>
+                            Items in trash are automatically deleted after 30 days.
+                        </p>
+                        
+                        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                        <table class="widefat striped" style="margin-bottom: 15px; min-width: 500px;">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th style="width: 100px;">Deleted</th>
+                                    <th style="width: 70px;">Days Left</th>
+                                    <th style="width: 160px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($trashed_snippets as $trashed): 
+                                    $days_since = floor((time() - strtotime($trashed->trashed_at)) / 86400);
+                                    $days_left = max(0, 30 - $days_since);
+                                ?>
+                                <tr class="trash-row" data-id="<?php echo esc_attr($trashed->id); ?>">
+                                    <td>
+                                        <strong><?php echo esc_html($trashed->name); ?></strong>
+                                        <br><small style="color: #999;"><?php echo esc_html($trashed->language ?? 'php'); ?></small>
+                                    </td>
+                                    <td style="font-size: 11px;"><?php echo date('M j', strtotime($trashed->trashed_at)); ?></td>
+                                    <td>
+                                        <span style="color: <?php echo $days_left < 7 ? '#dc3545' : '#666'; ?>; font-weight: <?php echo $days_left < 7 ? '600' : '400'; ?>;">
+                                            <?php echo $days_left; ?>d
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="button button-small restore-snippet" data-id="<?php echo esc_attr($trashed->id); ?>">
+                                            Restore
+                                        </button>
+                                        <button type="button" class="button button-small delete-forever" data-id="<?php echo esc_attr($trashed->id); ?>" style="color: #dc3545;">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                        </div>
+                    <?php else: ?>
+                        <p style="text-align: center; color: #999; padding: 40px; margin: 0;">
+                            <span class="dashicons dashicons-yes-alt" style="font-size: 48px; display: block; margin-bottom: 15px; color: #46b450;"></span>
+                            Trash is empty
+                        </p>
+                    <?php endif; ?>
+                </div>
+                
+                <?php if (count($trashed_snippets) > 0): ?>
+                <div class="ofast-modal-footer" style="padding: 15px 20px; border-top: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
                     <button type="button" id="empty-all-trash" class="button" style="color: #dc3545; border-color: #dc3545;">
                         <span class="dashicons dashicons-trash" style="vertical-align: middle; margin-right: 5px;"></span>
-                        Empty Trash (<?php echo $trash_count; ?> items)
+                        Empty All
                     </button>
-                <?php else: ?>
-                    <p style="text-align: center; color: #999; padding: 30px; margin: 0;">
-                        <span class="dashicons dashicons-yes-alt" style="font-size: 32px; display: block; margin-bottom: 10px; color: #46b450;"></span>
-                        Trash is empty
-                    </p>
+                    <button type="button" class="button" id="ofast-close-trash-modal-btn">Close</button>
+                </div>
                 <?php endif; ?>
             </div>
         </div>
+
 
         <script>
             jQuery(document).ready(function($) {
@@ -1334,6 +1390,19 @@ class Ofast_X_Snippets
                         });
                     }
                 }
+
+                // Language filter
+                $('#ofast-language-filter').on('change', function() {
+                    var selected = $(this).val();
+                    $('.snippet-row').each(function() {
+                        var lang = $(this).data('language') || 'php';
+                        if (selected === 'all' || lang === selected) {
+                            $(this).show();
+                        } else {
+                            $(this).hide();
+                        }
+                    });
+                });
 
                 // Sync desktop action checkboxes with mobile (actual form fields)
                 $('#snippet_run_once_desktop').on('change', function() {
@@ -1408,12 +1477,21 @@ class Ofast_X_Snippets
                     });
                 });
 
-                // Toggle trash panel
-                $('#toggle-trash-panel').on('click', function() {
-                    var $content = $('.trash-content');
-                    var $icon = $(this).find('.toggle-icon');
-                    $content.slideToggle(200);
-                    $icon.text($content.is(':visible') ? '▲' : '▼');
+                // Open trash modal
+                $('#ofast-open-trash-modal').on('click', function() {
+                    $('#ofast-trash-modal').css('display', 'flex');
+                });
+
+                // Close trash modal
+                $('#ofast-close-trash-modal, #ofast-close-trash-modal-btn').on('click', function() {
+                    $('#ofast-trash-modal').hide();
+                });
+
+                // Close modal on backdrop click
+                $('#ofast-trash-modal').on('click', function(e) {
+                    if (e.target === this) {
+                        $(this).hide();
+                    }
                 });
 
                 // Restore snippet from trash
@@ -1429,19 +1507,10 @@ class Ofast_X_Snippets
                         id: id
                     }, function(response) {
                         if (response.success) {
-                            $btn.closest('tr').fadeOut(function() {
-                                $(this).remove();
-                                // Update trash count
-                                var $header = $('#toggle-trash-panel h3');
-                                var count = parseInt($header.text().match(/\d+/)[0]) - 1;
-                                $header.html('<span class="dashicons dashicons-trash" style="margin-right: 8px;"></span>Trash (' + count + ')');
-                                if (count === 0) {
-                                    $('.trash-content').html('<p style="text-align: center; color: #999; padding: 30px; margin: 0;"><span class="dashicons dashicons-yes-alt" style="font-size: 32px; display: block; margin-bottom: 10px; color: #46b450;"></span>Trash is empty</p>');
-                                }
-                            });
+                            location.reload();
                         } else {
                             alert(response.data || 'Error restoring snippet');
-                            $btn.prop('disabled', false).html('<span class="dashicons dashicons-undo" style="vertical-align: middle; margin-right: 3px;"></span>Restore');
+                            $btn.prop('disabled', false).text('Restore');
                         }
                     });
                 });
@@ -1463,18 +1532,42 @@ class Ofast_X_Snippets
                         permanent: 'true'
                     }, function(response) {
                         if (response.success) {
-                            $btn.closest('tr').fadeOut(function() {
-                                $(this).remove();
-                                // Update trash count
-                                var $header = $('#toggle-trash-panel h3');
-                                var count = parseInt($header.text().match(/\d+/)[0]) - 1;
-                                $header.html('<span class="dashicons dashicons-trash" style="margin-right: 8px;"></span>Trash (' + count + ')');
-                                $('#empty-all-trash').html('<span class="dashicons dashicons-trash" style="vertical-align: middle; margin-right: 5px;"></span>Empty Trash (' + count + ' items)');
-                                if (count === 0) {
-                                    $('.trash-content').html('<p style="text-align: center; color: #999; padding: 30px; margin: 0;"><span class="dashicons dashicons-yes-alt" style="font-size: 32px; display: block; margin-bottom: 10px; color: #46b450;"></span>Trash is empty</p>');
-                                }
-                            });
+                            location.reload();
                         }
+                    });
+                });
+
+                // Run Now - On-demand snippet execution
+                $(document).on('click', '.ofast-run-now', function(e) {
+                    e.preventDefault();
+                    var $link = $(this);
+                    var id = $link.data('id');
+                    var name = $link.data('name');
+                    
+                    if (!confirm('Run snippet "' + name + '" now?\n\nThis will execute the PHP code immediately.')) {
+                        return;
+                    }
+                    
+                    var originalText = $link.text();
+                    $link.text('Running...').css('pointer-events', 'none');
+
+                    $.post(ajaxurl, {
+                        action: 'ofast_run_snippet_now',
+                        nonce: '<?php echo wp_create_nonce('ofast_run_snippet_now'); ?>',
+                        id: id
+                    }, function(response) {
+                        if (response.success) {
+                            $link.text('✓ Done').css('color', '#46b450');
+                            setTimeout(function() {
+                                $link.text(originalText).css({'pointer-events': 'auto', 'color': '#2271b1'});
+                            }, 2000);
+                        } else {
+                            alert('Error: ' + (response.data || 'Unknown error'));
+                            $link.text(originalText).css('pointer-events', 'auto');
+                        }
+                    }).fail(function() {
+                        alert('Request failed. Check console for details.');
+                        $link.text(originalText).css('pointer-events', 'auto');
                     });
                 });
 
@@ -2373,6 +2466,68 @@ class Ofast_X_Snippets
     }
 
     /**
+     * AJAX: Run snippet on-demand (immediate execution)
+     */
+    public function ajax_run_snippet_now()
+    {
+        check_ajax_referer('ofast_run_snippet_now', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        // Rate limiting
+        if (!$this->check_rate_limit('run_now')) {
+            wp_send_json_error('Too many requests. Please wait a moment.');
+        }
+
+        $id = intval($_POST['id']);
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+
+        $snippet = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table WHERE id = %d", $id
+        ));
+
+        if (!$snippet) {
+            wp_send_json_error('Snippet not found');
+        }
+
+        // Only allow PHP snippets
+        if (($snippet->language ?? 'php') !== 'php') {
+            wp_send_json_error('Only PHP snippets can be run manually');
+        }
+
+        // Validate the code first
+        $validation = $this->validate_php_code($snippet->code);
+        if ($validation !== true) {
+            wp_send_json_error('Validation failed: ' . $validation);
+        }
+
+        // Capture output
+        ob_start();
+        
+        try {
+            // Execute the PHP code
+            eval($snippet->code);
+            $output = ob_get_clean();
+            
+            // Log the execution
+            $this->log_snippet_action('RUN_NOW', $id, $snippet->name, 'Manual execution successful');
+            
+            wp_send_json_success(array(
+                'message' => 'Snippet executed successfully',
+                'output' => $output
+            ));
+        } catch (Throwable $e) {
+            ob_end_clean();
+            $this->log_snippet_action('RUN_NOW_FAILED', $id, $snippet->name, $e->getMessage());
+            wp_send_json_error('Execution error: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * AJAX: Rename snippet
      */
     public function ajax_rename_snippet()
@@ -2584,7 +2739,14 @@ class Ofast_X_Snippets
             wp_send_json_error('Library file not found');
         }
 
-        $library = json_decode(file_get_contents($library_file), true);
+        // Use WP_Filesystem if available, fallback to direct read
+        global $wp_filesystem;
+        if (empty($wp_filesystem)) {
+            require_once ABSPATH . '/wp-admin/includes/file.php';
+            WP_Filesystem();
+        }
+        $content = $wp_filesystem ? $wp_filesystem->get_contents($library_file) : @file_get_contents($library_file);
+        $library = $content ? json_decode($content, true) : null;
         if (!$library || !isset($library['snippets'][$index])) {
             wp_send_json_error('Template not found');
         }
@@ -2967,7 +3129,7 @@ class Ofast_X_Snippets
                     'existing_id' => $existing_id ? intval($existing_id) : null,
                     'is_safe' => $is_safe,
                     'error_message' => $error_message,
-                    'code_preview' => htmlspecialchars(mb_substr($s->code, 0, 500) . (strlen($s->code) > 500 ? '...' : ''))
+                    'code_preview' => esc_html(mb_substr($s->code, 0, 500) . (strlen($s->code) > 500 ? '...' : ''))
                 );
             }
         } elseif ($plugin === 'wpcode') {
@@ -3030,7 +3192,7 @@ class Ofast_X_Snippets
                     'existing_id' => $existing_id ? intval($existing_id) : null,
                     'is_safe' => $is_safe,
                     'error_message' => $error_message,
-                    'code_preview' => htmlspecialchars(mb_substr($code, 0, 500) . (strlen($code) > 500 ? '...' : ''))
+                    'code_preview' => esc_html(mb_substr($code, 0, 500) . (strlen($code) > 500 ? '...' : ''))
                 );
             }
         } else {
@@ -3211,6 +3373,29 @@ class Ofast_X_Snippets
      */
     public function execute_snippets()
     {
+        // SAFE MODE: Allow bypassing all snippets via URL parameter for recovery
+        // Usage: Add ?ofast_safe_mode=1 to any URL while logged in as admin
+        if (isset($_GET['ofast_safe_mode']) && $_GET['ofast_safe_mode'] === '1') {
+            if (current_user_can('manage_options')) {
+                // Store safe mode activation in options for the session
+                update_option('ofast_snippets_safe_mode', time());
+                return; // Skip all snippet execution
+            }
+        }
+        
+        // Check persistent safe mode (lasts 1 hour)
+        $safe_mode_time = get_option('ofast_snippets_safe_mode', 0);
+        if ($safe_mode_time && (time() - $safe_mode_time) < 3600) {
+            // Safe mode active - check if admin wants to exit
+            if (isset($_GET['ofast_safe_mode']) && $_GET['ofast_safe_mode'] === '0') {
+                if (current_user_can('manage_options')) {
+                    delete_option('ofast_snippets_safe_mode');
+                }
+            } else {
+                return; // Skip all snippet execution
+            }
+        }
+
         // PERFORMANCE: Get active snippets from cache (1 hour TTL)
         $snippets = get_transient('ofast_active_snippets_cache');
 
@@ -3689,16 +3874,24 @@ class Ofast_X_Snippets
 
         // SECURITY: Check for dangerous functions
         $dangerous_functions = array(
+            // COMMAND EXECUTION
             'exec' => 'Execute system commands',
             'shell_exec' => 'Execute shell commands',
             'system' => 'Execute system commands',
             'passthru' => 'Execute commands and output',
             'popen' => 'Open process pipe',
             'proc_open' => 'Execute command via process',
+            'proc_close' => 'Close process handle',
+            'proc_nice' => 'Change process priority',
+            'proc_terminate' => 'Terminate processes',
             'pcntl_exec' => 'Execute program',
+            
+            // CODE EXECUTION
             'eval' => 'Execute arbitrary PHP (nested eval not allowed)',
             'assert' => 'Execute code as assertion',
             'create_function' => 'Create anonymous function (deprecated)',
+            
+            // FILE SYSTEM
             'unlink' => 'Delete files',
             'rmdir' => 'Remove directories',
             'rename' => 'Rename/move files',
@@ -3707,20 +3900,42 @@ class Ofast_X_Snippets
             'fwrite' => 'Write to file handle',
             'fputs' => 'Write to file handle',
             'fopen' => 'Open files (with write mode)',
+            
+            // NETWORK/EXTERNAL
             'curl_exec' => 'Execute external requests',
+            'fsockopen' => 'Open network socket',
+            'pfsockopen' => 'Persistent network socket',
+            'socket_create' => 'Create raw socket',
+            'stream_socket_client' => 'Open network stream',
+            
+            // OBFUSCATION/ENCODING
             'base64_decode' => 'Decode obfuscated code',
-            'preg_replace' => 'Can execute code with /e modifier',
+            'gzinflate' => 'Decompress obfuscated code',
+            'gzuncompress' => 'Decompress obfuscated code',
+            'str_rot13' => 'ROT13 encoding (obfuscation)',
+            'hex2bin' => 'Hex decoding (obfuscation)',
+            'convert_uudecode' => 'UU decoding (obfuscation)',
+            
+            // INCLUDES
             'include' => 'Include external files',
             'include_once' => 'Include external files',
             'require' => 'Include external files',
             'require_once' => 'Include external files',
+            'preg_replace' => 'Can execute code with /e modifier',
+            
+            // ENVIRONMENT
+            'dl' => 'Load PHP extension',
+            'ini_set' => 'Can modify PHP configuration',
+            'ini_alter' => 'Alias of ini_set',
+            'apache_setenv' => 'Set Apache environment vars',
+            'putenv' => 'Modify environment variables',
+            
             // CRASH-CAUSING FUNCTIONS
             'exit' => 'Terminates WordPress execution',
             'die' => 'Terminates WordPress execution',
             'sleep' => 'Causes server delays/timeouts',
             'usleep' => 'Causes server delays/timeouts',
             'set_time_limit' => 'Can cause infinite execution',
-            'ini_set' => 'Can modify PHP configuration',
             'mail' => 'Can be used for spam (use wp_mail instead)',
             'header' => 'Can cause header errors (use wp_redirect instead)',
             'setcookie' => 'Can cause header errors',
@@ -3760,6 +3975,33 @@ class Ofast_X_Snippets
         foreach ($memory_patterns as $pattern => $reason) {
             if (preg_match($pattern, $code)) {
                 return "Memory protection: {$reason}";
+            }
+        }
+
+        // OBFUSCATION PATTERN DETECTION
+        $obfuscation_patterns = array(
+            // Variable variables like ${$var} or $$var
+            '/\$\s*\{\s*\$[a-z_]/i' => 'Variable variable syntax (${$var}) often used for obfuscation',
+            '/\$\$[a-z_]/i' => 'Variable variable syntax ($$var) often used for obfuscation',
+            
+            // Character concatenation like chr(101).chr(118).chr(97).chr(108) = "eval"
+            '/chr\s*\(\s*\d+\s*\)\s*\.\s*chr\s*\(\s*\d+\s*\)/i' => 'chr() concatenation - common obfuscation technique',
+            
+            // call_user_func with string variable (dynamic function names)
+            '/call_user_func(_array)?\s*\(\s*\$[a-z_]/i' => 'call_user_func with variable function name - potential code execution',
+            
+            // Encoded strings passed to eval-like constructs
+            '/\(\s*base64_decode\s*\(/i' => 'Nested encoded function call - common malware pattern',
+            '/\(\s*gzinflate\s*\(/i' => 'Nested compressed code - common malware pattern',
+            '/\(\s*str_rot13\s*\(/i' => 'Nested ROT13 encoding - common obfuscation',
+            
+            // preg_replace with /e modifier (deprecated but dangerous)
+            '/preg_replace\s*\([^,]+\/[a-z]*e[a-z]*[\'\"]/i' => 'preg_replace with /e modifier executes code',
+        );
+
+        foreach ($obfuscation_patterns as $pattern => $reason) {
+            if (preg_match($pattern, $code)) {
+                return "Obfuscation detected: {$reason}";
             }
         }
 
@@ -3996,6 +4238,37 @@ class Ofast_X_Snippets
 
         // Clear the transient after showing
         delete_transient('ofast_failed_snippets');
+    }
+
+    /**
+     * Show admin notice when safe mode is active
+     */
+    public function show_safe_mode_notice()
+    {
+        $safe_mode_time = get_option('ofast_snippets_safe_mode', 0);
+        
+        if (!$safe_mode_time || (time() - $safe_mode_time) >= 3600) {
+            return;
+        }
+        
+        $remaining = 3600 - (time() - $safe_mode_time);
+        $minutes = ceil($remaining / 60);
+        
+        $disable_url = add_query_arg('ofast_safe_mode', '0');
+        
+        ?>
+        <div class="notice notice-warning" style="border-left-color: #dc3545; background: #fff3cd;">
+            <p style="font-size: 14px;">
+                <strong style="color: #dc3545;">⚠️ SAFE MODE ACTIVE</strong> — 
+                All code snippets are currently bypassed for safety. 
+                <?php echo $minutes; ?> minute(s) remaining.
+            </p>
+            <p>
+                <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-snippets')); ?>" class="button">Go to Snippets</a>
+                <a href="<?php echo esc_url($disable_url); ?>" class="button button-primary" style="background: #28a745; border-color: #28a745;">Disable Safe Mode</a>
+            </p>
+        </div>
+        <?php
     }
 
     /**

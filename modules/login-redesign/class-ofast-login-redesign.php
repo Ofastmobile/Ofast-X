@@ -103,6 +103,7 @@ class Ofast_X_Login_Redesign
             'md_card_opacity' => get_option('ofast_login_md_card_opacity', '60'),
             'md_overlay_color' => get_option('ofast_login_md_overlay_color', '#000000'),
             'md_overlay_opacity' => get_option('ofast_login_md_overlay_opacity', '0'),
+            'md_use_ofast_colors' => get_option('ofast_login_md_use_ofast_colors', false),
         );
     }
 
@@ -250,6 +251,7 @@ class Ofast_X_Login_Redesign
         update_option('ofast_login_md_card_opacity', absint($_POST['md_card_opacity'] ?? 60));
         update_option('ofast_login_md_overlay_color', sanitize_hex_color($_POST['md_overlay_color'] ?? '#000000'));
         update_option('ofast_login_md_overlay_opacity', absint($_POST['md_overlay_opacity'] ?? 0));
+        update_option('ofast_login_md_use_ofast_colors', isset($_POST['md_use_ofast_colors']));
 
         Ofast_X_Toast::add('Settings saved!', 'success');
         wp_redirect(add_query_arg('ofast_status', 'saved', wp_get_referer()));
@@ -503,6 +505,9 @@ class Ofast_X_Login_Redesign
         $css .= '}';
 
         // Logo
+        $css .= '#login h1 {';
+        $css .= 'margin-top: 30px;'; // Push logo down a bit
+        $css .= '}';
         $css .= '#login h1 a {';
         if (!empty($s['logo_url'])) {
             $css .= 'background-image: url(' . esc_url($s['logo_url']) . ') !important;';
@@ -512,7 +517,7 @@ class Ofast_X_Login_Redesign
         $css .= 'background-position: center !important;';
         $css .= 'width: ' . esc_attr($s['logo_width']) . 'px !important;';
         $css .= 'height: ' . esc_attr($s['logo_height']) . 'px !important;';
-        $css .= 'margin-bottom: 0px;';
+        $css .= 'margin-bottom: 10px;';
         $css .= '}';
 
         // Labels & Text
@@ -538,11 +543,19 @@ class Ofast_X_Login_Redesign
         $css .= 'box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;';
         $css .= '}';
 
-        // Button
+        // Button - conditionally use Ofast colors or cyan/blue
+        $useOfastColors = !empty($s['md_use_ofast_colors']);
+        $btnGradient = $useOfastColors 
+            ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' // Ofast purple
+            : 'linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)'; // Cyan to Blue
+        $btnHoverShadow = $useOfastColors
+            ? 'rgba(99, 102, 241, 0.4)'  // Purple glow
+            : 'rgba(59, 130, 246, 0.4)'; // Blue glow
+        
         $css .= '.wp-core-ui .button-primary {';
-        $css .= 'width: 100% !important;'; // Full width
+        $css .= 'width: 100% !important;';
         $css .= 'float: none !important;';
-        $css .= 'background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%) !important;'; // Cyan to Blue
+        $css .= 'background: ' . $btnGradient . ' !important;';
         $css .= 'border: none !important;';
         $css .= 'color: #fff !important;';
         $css .= 'text-shadow: none !important;';
@@ -557,7 +570,7 @@ class Ofast_X_Login_Redesign
 
         $css .= '.wp-core-ui .button-primary:hover {';
         $css .= 'transform: translateY(-1px);';
-        $css .= 'box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);';
+        $css .= 'box-shadow: 0 4px 12px ' . $btnHoverShadow . ';';
         $css .= '}';
 
         // Links (Lost Password / Back to blog)
@@ -1029,7 +1042,7 @@ class Ofast_X_Login_Redesign
                                 }
 
                                 .ofast-toggle input:checked+.ofast-toggle-slider {
-                                    background-color: #2271b1;
+                                    background-color: #6366f1;
                                 }
 
                                 .ofast-toggle input:checked+.ofast-toggle-slider:before {
@@ -1190,6 +1203,21 @@ class Ofast_X_Login_Redesign
                                     </td>
                                 </tr>
                             </table>
+                            
+                            <hr style="margin: 20px 0;">
+                            <h4 style="margin-top:0;">Button Style</h4>
+                            <table class="form-table" style="margin:0;">
+                                <tr>
+                                    <th>Use Ofast Colors</th>
+                                    <td>
+                                        <label class="ofast-toggle">
+                                            <input type="checkbox" name="md_use_ofast_colors" id="md_use_ofast_colors" value="1" <?php checked($s['md_use_ofast_colors']); ?>>
+                                            <span class="ofast-toggle-slider"></span>
+                                        </label>
+                                        <p class="description">Applies the signature Ofast purple gradient to the login button</p>
+                                    </td>
+                                </tr>
+                            </table>
                         </div>
 
                         <!-- Simple & Modern Dark Template Background -->
@@ -1328,10 +1356,20 @@ class Ofast_X_Login_Redesign
                             </table>
                         </div>
 
-                        <p style="margin-top:20px;">
-                            <button type="submit" name="ofast_login_redesign_save" class="button button-primary button-large">Save Settings</button>
-                            <button type="submit" name="ofast_login_redesign_reset" class="button button-secondary button-large" onclick="return confirm('Are you sure you want to reset all settings to defaults?');">Reset to Defaults</button>
-                            <a href="<?php echo wp_login_url(); ?>" target="_blank" class="button">View Login Page</a>
+                        <?php echo Ofast_X_Button::get_styles(); ?>
+                        <style>
+                            .ofast-btn-sm { 
+                                padding: 15px 25px !important; 
+                            }
+                        </style>
+                        <p style="margin-top:20px; display: flex; gap: 10px; align-items: center;">
+                            <?php echo Ofast_X_Button::render_primary('Save Settings', ['name' => 'ofast_login_redesign_save', 'class' => 'ofast-btn-sm']); ?>
+                            <?php echo Ofast_X_Button::render_danger('Reset to Defaults', [
+                                'name' => 'ofast_login_redesign_reset',
+                                'class' => 'ofast-btn-sm',
+                                'onclick' => "return confirm('Are you sure you want to reset all settings to defaults?');"
+                            ]); ?>
+                            <a href="<?php echo wp_login_url(); ?>" target="_blank" class="ofast-btn-secondary ofast-btn ofast-btn-sm" style="text-decoration:none;">View Login Page</a>
                         </p>
                     </div>
 

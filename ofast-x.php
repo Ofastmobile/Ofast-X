@@ -96,7 +96,7 @@ function ofast_x_init_plugin()
     require_once OFAST_X_PLUGIN_DIR . 'modules/login-redesign/class-ofast-login-redesign.php';
 
     // Load Content Ordering module
-    require_once OFAST_X_PLUGIN_DIR . 'modules/content-ordering/class-ofast-content-ordering.php';
+    require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-content-ordering.php';
 
     // Load Setup Wizard
     require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-setup-wizard.php';

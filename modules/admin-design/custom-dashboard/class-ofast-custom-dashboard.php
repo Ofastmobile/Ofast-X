@@ -199,10 +199,55 @@ class Ofast_X_Custom_Dashboard
                         <input type="text" placeholder="<?php esc_attr_e('Search...', 'ofast-x'); ?>">
                     </div>
                     <div class="ofast-profile-pill">
-                        <?php echo get_avatar($user->ID, 32); ?>
+                        <?php echo get_avatar($user->ID, 36); ?>
                         <div class="ofast-profile-info">
                             <span class="name"><?php echo esc_html($user->display_name); ?></span>
-                            <span class="status">● <?php esc_html_e('Available', 'ofast-x'); ?></span>
+                            <?php 
+                            $user_roles = $user->roles;
+                            $user_role = !empty($user_roles) ? ucfirst($user_roles[0]) : 'User';
+                            ?>
+                            <span class="role"><?php echo esc_html($user_role); ?></span>
+                        </div>
+                        <span class="dashicons dashicons-arrow-down-alt2 ofast-pill-arrow"></span>
+
+                        <!-- Profile Dropdown -->
+                        <div class="ofast-profile-dropdown">
+                            <div class="ofast-dropdown-header">
+                                <div class="ofast-big-avatar">
+                                    <?php echo get_avatar($user->ID, 80); ?>
+                                    <a href="<?php echo esc_url(get_edit_profile_url()); ?>" class="ofast-edit-badge">
+                                        <span class="dashicons dashicons-edit"></span>
+                                    </a>
+                                </div>
+                                <h3><?php echo esc_html($user->display_name); ?></h3>
+                                <span><?php echo esc_html($user_role); ?></span>
+                            </div>
+                            
+                            <div class="ofast-dropdown-menu">
+                                <a href="<?php echo esc_url(get_edit_profile_url()); ?>#password" class="ofast-menu-item">
+                                    <div class="ofast-item-left">
+                                        <span class="dashicons dashicons-lock"></span>
+                                        <span><?php esc_html_e('Change Password', 'ofast-x'); ?></span>
+                                    </div>
+                                    <span class="ofast-item-right"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
+                                </a>
+
+                                <a href="<?php echo esc_url(admin_url('users.php?page=ofast-user-roles')); ?>" class="ofast-menu-item">
+                                    <div class="ofast-item-left">
+                                        <span class="dashicons dashicons-info-outline"></span>
+                                        <span><?php esc_html_e('Role Info', 'ofast-x'); ?></span>
+                                    </div>
+                                    <span class="ofast-item-right"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
+                                </a>
+                                
+                                <a href="<?php echo esc_url(wp_logout_url()); ?>" class="ofast-menu-item logout">
+                                    <div class="ofast-item-left">
+                                        <span class="dashicons dashicons-exit"></span>
+                                        <span><?php esc_html_e('Sign Out', 'ofast-x'); ?></span>
+                                    </div>
+                                    <span class="ofast-item-right"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>

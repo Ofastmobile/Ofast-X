@@ -242,7 +242,7 @@ class Ofast_X_Core
     private function load_whos_admin()
     {
         // 1. Load White Label (Who's Admin)
-        require_once OFAST_X_PLUGIN_DIR . 'modules/whos-admin/class-ofast-whos-admin.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-whos-admin.php';
         $whos_admin = new Ofast_X_Whos_Admin();
         $whos_admin->init();
         $this->modules['whos-admin'] = $whos_admin;
@@ -254,7 +254,7 @@ class Ofast_X_Core
         $this->modules['admin-footer'] = $admin_footer;
 
         // 3. Load Custom Dashboard
-        require_once OFAST_X_PLUGIN_DIR . 'modules/custom-dashboard/class-ofast-custom-dashboard.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-design/custom-dashboard/class-ofast-custom-dashboard.php';
         $custom_dashboard = new Ofast_X_Custom_Dashboard();
         $custom_dashboard->init();
         $this->modules['custom-dashboard'] = $custom_dashboard;
@@ -277,7 +277,7 @@ class Ofast_X_Core
      */
     private function load_user_roles()
     {
-        require_once OFAST_X_PLUGIN_DIR . 'modules/user-roles/class-ofast-user-roles.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-user-roles.php';
 
         $user_roles = new Ofast_X_User_Roles();
         $user_roles->init();
@@ -290,7 +290,7 @@ class Ofast_X_Core
      */
     private function load_admin_url()
     {
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-url/class-ofast-admin-url.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-admin-url.php';
 
         $admin_url = new Ofast_X_Admin_Url();
         $admin_url->init();
@@ -311,7 +311,7 @@ class Ofast_X_Core
         $this->modules['admin-footer'] = $admin_footer;
 
         // Custom Dashboard
-        require_once OFAST_X_PLUGIN_DIR . 'modules/custom-dashboard/class-ofast-custom-dashboard.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-design/custom-dashboard/class-ofast-custom-dashboard.php';
         $custom_dashboard = new Ofast_X_Custom_Dashboard();
         $custom_dashboard->init();
         $this->modules['custom-dashboard'] = $custom_dashboard;
@@ -322,7 +322,7 @@ class Ofast_X_Core
      */
     private function load_duplicate_content()
     {
-        require_once OFAST_X_PLUGIN_DIR . 'modules/duplicate-content/class-ofast-duplicate-content.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-duplicate-content.php';
 
         $duplicate = new Ofast_X_Duplicate_Content();
         $duplicate->init();
@@ -335,7 +335,7 @@ class Ofast_X_Core
      */
     private function load_menu_editor()
     {
-        require_once OFAST_X_PLUGIN_DIR . 'modules/menu-editor/class-ofast-menu-editor.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-menu-editor.php';
 
         $menu_editor = new Ofast_X_Menu_Editor();
         $menu_editor->init();
@@ -485,7 +485,7 @@ class Ofast_X_Core
      */
     private function load_admin_tweaks()
     {
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-tweaks/class-ofast-admin-tweaks.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-admin-tweaks.php';
         $admin_tweaks = new Ofast_X_Admin_Tweaks();
         $admin_tweaks->init();
         $this->modules['admin-tweaks'] = $admin_tweaks;

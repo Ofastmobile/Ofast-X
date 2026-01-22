@@ -212,31 +212,215 @@ body.ofast-clean-dashboard .wrap>h1 {
     color: var(--ofast-text-muted);
 }
 
+/* Profile Pill & Dropdown */
 .ofast-profile-pill {
     display: flex;
     align-items: center;
     gap: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    /* Subtle background for pill */
+    padding: 6px 12px 6px 6px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: background 0.2s;
+    position: relative;
+    /* For dropdown positioning */
+}
+
+.ofast-profile-pill:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .ofast-profile-pill img {
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
+    object-fit: cover;
     border: 2px solid var(--ofast-primary);
 }
 
 .ofast-profile-info {
     display: flex;
     flex-direction: column;
+    padding-right: 5px;
 }
 
 .ofast-profile-info .name {
     font-size: 14px;
     font-weight: 600;
+    color: var(--ofast-text-main);
+    line-height: 1.2;
 }
 
-.ofast-profile-info .status {
-    font-size: 10px;
-    color: var(--ofast-secondary);
-    text-transform: uppercase;
+.ofast-profile-info .role {
+    font-size: 11px;
+    color: var(--ofast-text-muted);
+}
+
+.ofast-pill-arrow {
+    font-size: 14px;
+    color: var(--ofast-text-muted);
+    margin-left: 5px;
+}
+
+/* Dropdown Menu */
+.ofast-profile-dropdown {
+    position: absolute;
+    top: 120%;
+    right: 0;
+    width: 260px;
+    background: var(--ofast-card-dark);
+    /* Dark background */
+    border-radius: 24px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    /* Slightly stronger shadow for dark mode */
+    padding: 20px;
+    display: none;
+    /* Toggled via JS */
+    z-index: 9999;
+    color: var(--ofast-text-main);
+    /* White text */
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    /* Subtle border */
+    animation: ofastFadeIn 0.2s ease-out;
+}
+
+/* If you want strict dark mode matching, uncomment below and adjust inner colors */
+/*
+body.ofast-dark-theme .ofast-profile-dropdown {
+    background: var(--ofast-card-dark);
+    color: var(--ofast-text-main);
+    border: 1px solid rgba(255,255,255,0.05);
+}
+*/
+
+@keyframes ofastFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Dropdown Header (Big Avatar) */
+.ofast-dropdown-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.ofast-big-avatar {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin-bottom: 12px;
+}
+
+.ofast-big-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.ofast-edit-badge {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 24px;
+    height: 24px;
+    background: #10b981;
+    /* Green */
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fff;
+    color: #fff;
+    font-size: 12px;
+}
+
+.ofast-dropdown-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ofast-text-main);
+}
+
+.ofast-dropdown-header span {
+    font-size: 13px;
+    color: #64748b;
+}
+
+/* Dropdown Menu Items */
+.ofast-dropdown-menu {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 10px;
+}
+
+/* Dark mode adjustment if used */
+/* body.ofast-dark-theme .ofast-dropdown-menu { border-top-color: rgba(255,255,255,0.1); } */
+
+.ofast-menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 10px;
+    color: var(--ofast-text-main);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 12px;
+    transition: all 0.2s;
+    margin-bottom: 5px;
+    opacity: 0.9;
+}
+
+.ofast-menu-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    opacity: 1;
+}
+
+.ofast-menu-item.logout {
+    color: #ef4444;
+    /* Red */
+    margin-top: 10px;
+}
+
+.ofast-menu-item.logout:hover {
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.ofast-item-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ofast-item-left .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #94a3b8;
+    /* Icon color */
+}
+
+.ofast-menu-item.logout .ofast-item-left .dashicons {
+    color: #ef4444;
+}
+
+.ofast-item-right {
+    font-size: 12px;
+    color: #cbd5e1;
 }
 
 /* Stats Grid */

@@ -326,4 +326,27 @@ jQuery(document).ready(function ($) {
         }
     });
 
+    // --- PROFILE DROPDOWN TOGGLE ---
+    var $profilePill = $('.ofast-profile-pill');
+    var $profileDropdown = $('.ofast-profile-dropdown');
+
+    $profilePill.on('click', function (e) {
+        e.stopPropagation();
+        $profileDropdown.fadeToggle(200);
+        $(this).toggleClass('active');
+    });
+
+    // Close dropdown when clicking outside
+    $(document).on('click', function (e) {
+        if (!$(e.target).closest('.ofast-profile-pill').length) {
+            $profileDropdown.fadeOut(200);
+            $profilePill.removeClass('active');
+        }
+    });
+
+    // Prevent closing when clicking inside the dropdown
+    $profileDropdown.on('click', function (e) {
+        e.stopPropagation();
+    });
+
 });

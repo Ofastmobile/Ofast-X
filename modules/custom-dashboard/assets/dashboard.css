@@ -107,6 +107,111 @@ body.ofast-clean-dashboard .wrap>h1 {
     color: var(--ofast-text-muted);
 }
 
+.ofast-search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--ofast-card-dark);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    margin-top: 10px;
+    z-index: 10000;
+    overflow: hidden;
+    display: none;
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Hide Scrollbar but keep functionality */
+.ofast-search-results::-webkit-scrollbar {
+    width: 6px;
+}
+
+.ofast-search-results::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ofast-search-results::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.ofast-search-loading,
+.ofast-search-empty {
+    padding: 15px;
+    text-align: center;
+    color: var(--ofast-text-muted);
+    font-size: 13px;
+}
+
+.ofast-result-header {
+    padding: 8px 15px;
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--ofast-text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ofast-search-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    text-decoration: none;
+    color: var(--ofast-text-main);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.2s;
+}
+
+.ofast-search-item:last-child {
+    border-bottom: none;
+}
+
+.ofast-search-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+}
+
+.ofast-result-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+}
+
+.ofast-search-item .dashicons {
+    color: var(--ofast-text-muted);
+    background: rgba(255, 255, 255, 0.05);
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-size: 16px;
+}
+
+.ofast-result-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ofast-result-title {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.ofast-result-meta {
+    font-size: 11px;
+    color: var(--ofast-text-muted);
+}
+
 .ofast-profile-pill {
     display: flex;
     align-items: center;

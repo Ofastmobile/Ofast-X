@@ -93,9 +93,10 @@ class Ofast_X_Core
             $this->load_admin_url();
         }
 
-        if ($this->is_module_enabled('admin-footer')) {
-            $this->load_admin_footer();
-        }
+        // Admin Footer is now handled by White Label (whos-admin)
+        // if ($this->is_module_enabled('admin-footer')) {
+        //     $this->load_admin_footer();
+        // }
 
         if ($this->is_module_enabled('duplicate-content')) {
             $this->load_duplicate_content();
@@ -240,12 +241,23 @@ class Ofast_X_Core
      */
     private function load_whos_admin()
     {
+        // 1. Load White Label (Who's Admin)
         require_once OFAST_X_PLUGIN_DIR . 'modules/whos-admin/class-ofast-whos-admin.php';
-
         $whos_admin = new Ofast_X_Whos_Admin();
         $whos_admin->init();
-
         $this->modules['whos-admin'] = $whos_admin;
+
+        // 2. Load Admin Footer (handles Dark Mode toggle)
+        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-footer/class-ofast-admin-footer.php';
+        $admin_footer = new Ofast_X_Admin_Footer();
+        $admin_footer->init();
+        $this->modules['admin-footer'] = $admin_footer;
+
+        // 3. Load Custom Dashboard
+        require_once OFAST_X_PLUGIN_DIR . 'modules/custom-dashboard/class-ofast-custom-dashboard.php';
+        $custom_dashboard = new Ofast_X_Custom_Dashboard();
+        $custom_dashboard->init();
+        $this->modules['custom-dashboard'] = $custom_dashboard;
     }
 
     /**

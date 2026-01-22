@@ -231,4 +231,99 @@ jQuery(document).ready(function ($) {
         localStorage.setItem('ofast_dashboard_mode', newMode);
     });
 
+    // --- SMART SEARCH FUNCTIONALITY ---
+    var searchTimeout;
+    var $searchInput = $('.ofast-search-bar input');
+    var $searchContainer = $('.ofast-search-bar');
+
+    // Create Results Dropdown
+    var $searchResults = $('<div class="ofast-search-results"></div>');
+    $searchContainer.append($searchResults);
+
+    $searchInput.on('input', function () {
+        var query = $(this).val().trim();
+
+        clearTimeout(searchTimeout);
+
+        if (query.length < 2) {
+            $searchResults.hide().empty();
+            return;
+        }
+
+        searchTimeout = setTimeout(function () {
+            $searchResults.show().html('<div class="ofast-search-loading">Searching...</div>');
+
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'ofast_global_search',
+                    query: query,
+                    nonce: ofast_dashboard.nonce
+                },
+                success: function (response) {
+                    if (response.success && response.data.length > 0) {
+                        renderSearchResults(response.data);
+                    } else {
+                        $searchResults.html('<div class="ofast-search-empty">No results found</div>');
+                    }
+                }
+            });
+        }, 300); // 300ms debounce
+    });
+
+    // Render Results
+    function renderSearchResults(data) {
+        var html = '';
+        var currentType = '';
+
+        data.forEach(function (item) {
+            // Add Section Header if type changes
+            if (item.type !== currentType) {
+                var headerLabel = item.type === 'post' ? 'Content' : (item.type.charAt(0).toUpperCase() + item.type.slice(1) + 's');
+                html += '<div class="ofast-result-header">' + headerLabel + '</div>';
+                currentType = item.type;
+            }
+
+            var iconClass = 'dashicons-admin-post';
+            if (item.type === 'user') iconClass = 'dashicons-admin-users';
+            if (item.type === 'plugin') iconClass = 'dashicons-admin-plugins';
+            if (item.subtype === 'page') iconClass = 'dashicons-admin-page';
+            if (item.subtype === 'product') iconClass = 'dashicons-cart';
+
+            html += '<a href="' + item.url + '" class="ofast-search-item">';
+            if (item.avatar) {
+                html += '<img src="' + item.avatar + '" class="ofast-result-avatar">';
+            } else {
+                html += '<span class="dashicons ' + iconClass + '"></span>';
+            }
+            html += '<div class="ofast-result-content">';
+            html += '<span class="ofast-result-title">' + item.title + '</span>';
+            if (item.label) {
+                html += '<span class="ofast-result-meta">' + item.label + '</span>';
+            }
+            html += '</div>';
+            html += '</a>';
+        });
+
+        $searchResults.html(html);
+    }
+
+    // Close on click outside
+    $(document).on('click', function (e) {
+        if (!$(e.target).closest('.ofast-search-bar').length) {
+            $searchResults.hide();
+        }
+    });
+
+    // Enter key callback (optional: go to first result)
+    $searchInput.on('keypress', function (e) {
+        if (e.which === 13) {
+            var $firstLink = $searchResults.find('a').first();
+            if ($firstLink.length) {
+                window.location.href = $firstLink.attr('href');
+            }
+        }
+    });
+
 });

@@ -17,10 +17,7 @@ class Ofast_X_Admin_Footer
      */
     public function init()
     {
-        // Only load if module is enabled
-        $enabled = get_option('ofastx_modules_enabled', array());
-        if (empty($enabled['admin-footer'])) {
-        }
+
 
         $settings = get_option('ofast_admin_footer_settings', array());
 

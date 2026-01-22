@@ -68,6 +68,9 @@ class Ofast_X_Custom_Dashboard
         add_action('admin_action_ofast_switch_dashboard', array($this, 'handle_switch_dashboard'));
 
         // Hooks are in constructor
+        
+        // Register AJAX Search Handler
+        add_action('wp_ajax_ofast_global_search', array($this, 'ajax_global_search'));
     }
 
     /**
@@ -121,6 +124,7 @@ class Ofast_X_Custom_Dashboard
         // Pass data to JS
         wp_localize_script('ofast-custom-dashboard', 'ofast_dashboard', array(
             'nonce' => wp_create_nonce('ofast_dashboard_nonce'),
+            'admin_url' => admin_url(), // Base admin URL for search redirect
             'analytics' => $this->get_analytics_trends(),
             'forms' => $this->get_top_forms()
         ));
@@ -184,12 +188,15 @@ class Ofast_X_Custom_Dashboard
                 <div class="ofast-welcome">
                     <h1><?php echo esc_html($greeting); ?>, <?php echo esc_html($user->display_name); ?></h1>
                     <p><?php esc_html_e('Dashboard Analytics & Overview', 'ofast-x'); ?></p>
+                    <p style="margin-top: 5px; font-size: 13px; opacity: 0.8; color: #64748b;">
+                        <?php echo date_i18n(get_option('date_format') . ' ' . get_option('time_format')); ?>
+                    </p>
                 </div>
                 
                 <div class="ofast-header-actions">
                     <div class="ofast-search-bar">
                         <span class="dashicons dashicons-search"></span>
-                        <input type="text" placeholder="<?php esc_attr_e('Search...', 'ofast-x'); ?>" disabled>
+                        <input type="text" placeholder="<?php esc_attr_e('Search...', 'ofast-x'); ?>">
                     </div>
                     <div class="ofast-profile-pill">
                         <?php echo get_avatar($user->ID, 32); ?>
@@ -550,11 +557,95 @@ class Ofast_X_Custom_Dashboard
             return;
         }
         ?>
-        <div style="position: fixed; top: 80px; right: 20px; z-index: 9999;">
-            <a href="<?php echo esc_url(admin_url('admin.php?action=ofast_switch_dashboard&mode=modern&_wpnonce=' . wp_create_nonce('ofast_switch_dashboard'))); ?>" class="button button-secondary" style="border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding: 5px 15px; font-size: 12px; border: 1px solid #ccc;">
-                Switch to Modern View
-            </a>
         </div>
         <?php
+    }
+
+    /**
+     * AJAX Global Search Handler
+     */
+    public function ajax_global_search()
+    {
+        check_ajax_referer('ofast_dashboard_nonce', 'nonce');
+    
+        $query = sanitize_text_field($_POST['query']);
+        $results = array();
+    
+        if (empty($query)) {
+            wp_send_json_success(array());
+        }
+    
+        // 1. Search Posts, Pages, Products (if any)
+        $post_args = array(
+            's' => $query,
+            'post_type' => 'any',
+            'post_status' => 'publish',
+            'posts_per_page' => 5,
+            'ignore_sticky_posts' => true
+        );
+        $posts_query = new WP_Query($post_args);
+    
+        if ($posts_query->have_posts()) {
+            foreach ($posts_query->posts as $post) {
+                $post_type_obj = get_post_type_object($post->post_type);
+                $label = $post_type_obj ? $post_type_obj->labels->singular_name : ucfirst($post->post_type);
+                
+                $results[] = array(
+                    'type' => 'post', // Generic type for icon mapping
+                    'subtype' => $post->post_type,
+                    'label' => $label,
+                    'title' => get_the_title($post),
+                    'url' => get_edit_post_link($post->ID),
+                    'date' => get_the_date('', $post)
+                );
+            }
+        }
+    
+        // 2. Search Users
+        if (current_user_can('list_users')) {
+            $user_args = array(
+                'search' => '*' . $query . '*',
+                'search_columns' => array('user_login', 'user_nicename', 'user_email', 'display_name'),
+                'number' => 3
+            );
+            $user_query = new WP_User_Query($user_args);
+            $users = $user_query->get_results();
+    
+            if (!empty($users)) {
+                foreach ($users as $user) {
+                    $results[] = array(
+                        'type' => 'user',
+                        'label' => 'User',
+                        'title' => $user->display_name . ' (' . $user->user_email . ')',
+                        'url' => get_edit_user_link($user->ID),
+                        'avatar' => get_avatar_url($user->ID, array('size' => 24))
+                    );
+                }
+            }
+        }
+
+        // 3. Search Plugins (Installed)
+        if (current_user_can('activate_plugins')) {
+             if (!function_exists('get_plugins')) {
+                require_once ABSPATH . 'wp-admin/includes/plugin.php';
+            }
+            $all_plugins = get_plugins();
+            $plugin_matches = 0;
+            foreach ($all_plugins as $plugin_path => $plugin_data) {
+                if ($plugin_matches >= 3) break;
+                
+                if (stripos($plugin_data['Name'], $query) !== false || stripos($plugin_data['Description'], $query) !== false) {
+                     $results[] = array(
+                        'type' => 'plugin',
+                        'label' => 'Plugin',
+                        'title' => $plugin_data['Name'],
+                        'url' => admin_url('plugins.php?s=' . urlencode($plugin_data['Name']) . '&plugin_status=all'),
+                     );
+                     $plugin_matches++;
+                }
+            }
+        }
+    
+        wp_send_json_success($results);
     }
 }

@@ -443,6 +443,14 @@ class Ofast_X_Admin_Tweaks
             'enable_admin_design' => isset($_POST['ofast_enable_admin_design']) ? 1 : 0,
             'enable_content_duplicator' => isset($_POST['ofast_enable_content_duplicator']) ? 1 : 0,
         );
+        
+        // Save Interface Mode
+        if (isset($_POST['ofast_admin_interface_mode'])) {
+            $mode = sanitize_key($_POST['ofast_admin_interface_mode']);
+            if (in_array($mode, array('classic', 'modern'))) {
+                update_option('ofast_admin_interface_mode', $mode);
+            }
+        }
 
         update_option('ofast_admin_tweaks', $settings);
 

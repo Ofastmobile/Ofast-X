@@ -250,11 +250,10 @@ class Ofast_X_Menu_Editor
                         <thead>
                             <tr>
                                 <th style="width: 40px; text-align: center;"></th>
-                                <th style="width: 25%;">Menu Name</th>
-                                <th style="width: 25%;">Custom Name</th>
+                                <th style="width: 30%;">Menu Name</th>
+                                <th style="width: 30%;">Custom Name</th>
                                 <th style="width: 130px;">Icon</th>
                                 <th style="width: 70px; text-align: center;">Hidden</th>
-                                <th>Slug</th>
                             </tr>
                         </thead>
                                 <tbody id="menu-items-list">
@@ -412,9 +411,6 @@ class Ofast_X_Menu_Editor
                                                         <?php checked($is_hidden); ?>>
                                                     <span class="ofast-slider"></span>
                                                 </label>
-                                            </td>
-                                            <td>
-                                                <code style="font-size: 11px; color: #666;"><?php echo esc_html($slug); ?></code>
                                             </td>
                                         </tr>
                                     <?php

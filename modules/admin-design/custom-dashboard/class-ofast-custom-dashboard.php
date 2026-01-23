@@ -36,7 +36,20 @@ class Ofast_X_Custom_Dashboard
      */
     public function __construct()
     {
-        // Get user preference
+        // Empty - all initialization happens in init() after enabled check
+    }
+
+    /**
+     * Initialize the module
+     */
+    public function init() {
+        // Check global toggle from Admin Footer settings FIRST
+        $footer_settings = get_option('ofast_admin_footer_settings', array());
+        if (empty($footer_settings['enable_custom_dashboard'])) {
+            return;
+        }
+
+        // Get user preference (modern vs classic)
         $this->mode = get_user_meta(get_current_user_id(), 'ofast_dashboard_mode', true) ?: 'modern';
 
         // Enqueue Assets (Only in Modern Mode)
@@ -52,23 +65,10 @@ class Ofast_X_Custom_Dashboard
         
         // Add body class for styling
         add_filter('admin_body_class', array($this, 'add_body_class'));
-    }
-
-    /**
-     * Initialize the module
-     */
-    public function init() {
-        // Check global toggle from Admin Footer settings
-        $footer_settings = get_option('ofast_admin_footer_settings', array());
-        if (empty($footer_settings['enable_custom_dashboard'])) {
-            return;
-        }
 
         // Handle Dashboard Switch Action
         add_action('admin_action_ofast_switch_dashboard', array($this, 'handle_switch_dashboard'));
 
-        // Hooks are in constructor
-        
         // Register AJAX Search Handler
         add_action('wp_ajax_ofast_global_search', array($this, 'ajax_global_search'));
     }
@@ -186,9 +186,15 @@ class Ofast_X_Custom_Dashboard
             <!-- Header -->
             <div class="ofast-dashboard-header">
                 <div class="ofast-welcome">
-                    <h1><?php echo esc_html($greeting); ?>, <?php echo esc_html($user->display_name); ?></h1>
+                    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                        <h1><?php echo esc_html($greeting); ?>, <?php echo esc_html($user->display_name); ?> <span class="ofast-wave">👋</span></h1>
+                        <a href="<?php echo esc_url(admin_url('admin.php?action=ofast_switch_dashboard&mode=classic&_wpnonce=' . wp_create_nonce('ofast_switch_dashboard'))); ?>" class="ofast-switch-btn" title="<?php esc_attr_e('Switch to Classic Dashboard', 'ofast-x'); ?>">
+                            <span class="dashicons dashicons-dashboard"></span>
+                            <?php esc_html_e('Classic', 'ofast-x'); ?>
+                        </a>
+                    </div>
                     <p><?php esc_html_e('Dashboard Analytics & Overview', 'ofast-x'); ?></p>
-                    <p style="margin-top: 5px; font-size: 13px; opacity: 0.8; color: #64748b;">
+                    <p id="ofast-live-clock" style="margin-top: 5px; font-size: 13px; opacity: 0.8; color: #64748b;">
                         <?php echo date_i18n(get_option('date_format') . ' ' . get_option('time_format')); ?>
                     </p>
                 </div>
@@ -232,7 +238,7 @@ class Ofast_X_Custom_Dashboard
                                     <span class="ofast-item-right"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
                                 </a>
 
-                                <a href="<?php echo esc_url(admin_url('users.php?page=ofast-user-roles')); ?>" class="ofast-menu-item">
+                                <a href="<?php echo esc_url(admin_url('users.php?page=ofast-role-capabilities&role=' . esc_attr($user_roles[0]))); ?>" class="ofast-menu-item">
                                     <div class="ofast-item-left">
                                         <span class="dashicons dashicons-info-outline"></span>
                                         <span><?php esc_html_e('Role Info', 'ofast-x'); ?></span>
@@ -377,12 +383,6 @@ class Ofast_X_Custom_Dashboard
             <!-- Ofast Widgets Area (Populated by JS) -->
             <div id="ofast-modern-widgets-placeholder" class="ofast-dashboard-grid sortable-grid">
                 <!-- Selected legacy widgets will be moved here -->
-            </div>
-            
-            <div class="ofast-legacy-toggle">
-                <a href="<?php echo esc_url(admin_url('admin.php?action=ofast_switch_dashboard&mode=classic&_wpnonce=' . wp_create_nonce('ofast_switch_dashboard'))); ?>" class="button button-secondary">
-                    <?php esc_html_e('Switch to Classic Dashboard', 'ofast-x'); ?>
-                </a>
             </div>
         </div>
         <?php
@@ -602,7 +602,40 @@ class Ofast_X_Custom_Dashboard
             return;
         }
         ?>
-        </div>
+        <style>
+            .ofast-classic-switch-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                padding: 6px 12px;
+                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+                color: #fff !important;
+                text-decoration: none;
+                border-radius: 20px;
+                font-size: 12px;
+                font-weight: 500;
+                margin-left: 10px;
+                vertical-align: middle;
+                transition: all 0.2s;
+            }
+            .ofast-classic-switch-btn:hover {
+                background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+                color: #fff !important;
+                transform: translateY(-1px);
+            }
+            .ofast-classic-switch-btn .dashicons {
+                font-size: 14px;
+                width: 14px;
+                height: 14px;
+            }
+        </style>
+        <script>
+        jQuery(document).ready(function($) {
+            var switchBtn = '<a href="<?php echo esc_url(admin_url('admin.php?action=ofast_switch_dashboard&mode=modern&_wpnonce=' . wp_create_nonce('ofast_switch_dashboard'))); ?>" class="ofast-classic-switch-btn"><span class="dashicons dashicons-chart-area"></span> Modern</a>';
+            // Insert after "Dashboard" heading
+            $('.wrap > h1').first().append(switchBtn);
+        });
+        </script>
         <?php
     }
 

@@ -191,6 +191,13 @@ class Ofast_X_Login_Redesign
             update_option('ofast_login_tc_centered', false);
             update_option('ofast_login_tc_bg_color', '#f0f0f1');
 
+            // Modern Dark
+            update_option('ofast_login_md_card_color', '#0f172a');
+            update_option('ofast_login_md_card_opacity', '60');
+            update_option('ofast_login_md_overlay_color', '#000000');
+            update_option('ofast_login_md_overlay_opacity', '0');
+            update_option('ofast_login_md_use_ofast_colors', false);
+
             Ofast_X_Toast::add('Settings reset to defaults!', 'success');
             wp_redirect(add_query_arg('ofast_status', 'reset', wp_get_referer()));
             exit;
@@ -1366,6 +1373,7 @@ class Ofast_X_Login_Redesign
                             <?php echo Ofast_X_Button::render_primary('Save Settings', ['name' => 'ofast_login_redesign_save', 'class' => 'ofast-btn-sm']); ?>
                             <?php echo Ofast_X_Button::render_danger('Reset to Defaults', [
                                 'name' => 'ofast_login_redesign_reset',
+                                'type' => 'submit',
                                 'class' => 'ofast-btn-sm',
                                 'onclick' => "return confirm('Are you sure you want to reset all settings to defaults?');"
                             ]); ?>

@@ -60,9 +60,10 @@ body.ofast-clean-dashboard .wrap>h1 {
     gap: 10px;
 }
 
-.ofast-welcome h1 .wave {
+.ofast-wave {
     animation: wave 2.5s infinite;
     display: inline-block;
+    transform-origin: 70% 70%;
 }
 
 .ofast-welcome p {
@@ -70,6 +71,34 @@ body.ofast-clean-dashboard .wrap>h1 {
     font-size: 13px;
     color: var(--ofast-text-muted);
     letter-spacing: 0.5px;
+}
+
+/* Switch button inline with greeting */
+.ofast-switch-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--ofast-text-muted) !important;
+    text-decoration: none;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s;
+}
+
+.ofast-switch-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff !important;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.ofast-switch-btn .dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
 }
 
 .ofast-header-actions {
@@ -497,6 +526,8 @@ body.ofast-dark-theme .ofast-profile-dropdown {
     grid-template-columns: 2fr 1fr;
     gap: 25px;
     margin-bottom: 30px;
+    align-items: start;
+    /* Prevents stretching */
 }
 
 /* Chart Card */
@@ -702,13 +733,16 @@ body.ofast-dark-theme .ofast-profile-dropdown {
     transform: translateY(-2px);
 }
 
-/* Sortable Area / Widgets */
+/* Sortable Area / Widgets - true masonry with CSS columns */
 #ofast-modern-widgets-placeholder {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
+    column-count: 2;
+    column-gap: 20px;
     margin-top: 10px;
+}
+
+#ofast-modern-widgets-placeholder>* {
+    break-inside: avoid;
+    margin-bottom: 20px;
 }
 
 #ofast-modern-widgets-placeholder .postbox {

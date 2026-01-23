@@ -23,6 +23,10 @@ class Ofast_X_Settings
 
         // Add Chat Us menu at very end (priority 9999)
         add_action('admin_menu', array($this, 'add_chat_menu'), 9999);
+        
+        // Reorder Ofast X submenus alphabetically (after all menus added)
+        add_action('admin_menu', array($this, 'reorder_ofast_submenus'), 99999);
+        
         // Reorder admin menu
         add_filter('custom_menu_order', '__return_true');
         add_filter('menu_order', array($this, 'reorder_admin_menu'), 999);
@@ -173,6 +177,65 @@ class Ofast_X_Settings
             }
         </style>
     <?php
+    }
+
+    /**
+     * Reorder Ofast X submenus alphabetically
+     * Settings stays at top, Chat Us stays at bottom
+     */
+    public function reorder_ofast_submenus()
+    {
+        global $submenu;
+        
+        if (!isset($submenu['ofast-dashboard']) || !is_array($submenu['ofast-dashboard'])) {
+            return;
+        }
+        
+        $ofast_submenu = $submenu['ofast-dashboard'];
+        
+        // Extract special items
+        $settings_item = null;
+        $chat_item = null;
+        $other_items = array();
+        
+        foreach ($ofast_submenu as $key => $item) {
+            $menu_title = $item[0] ?? '';
+            $menu_slug = $item[2] ?? '';
+            
+            // Settings is first submenu (same slug as parent)
+            if ($menu_slug === 'ofast-dashboard') {
+                $settings_item = $item;
+            }
+            // Chat Us has WhatsApp URL
+            elseif (strpos($menu_slug, 'wa.me') !== false) {
+                $chat_item = $item;
+            }
+            else {
+                $other_items[] = $item;
+            }
+        }
+        
+        // Sort other items alphabetically by menu title
+        usort($other_items, function($a, $b) {
+            return strcasecmp($a[0], $b[0]);
+        });
+        
+        // Rebuild submenu: Settings first, sorted items, Chat Us last
+        $new_submenu = array();
+        
+        if ($settings_item) {
+            $new_submenu[] = $settings_item;
+        }
+        
+        foreach ($other_items as $item) {
+            $new_submenu[] = $item;
+        }
+        
+        if ($chat_item) {
+            $new_submenu[] = $chat_item;
+        }
+        
+        $submenu['ofast-dashboard'] = $new_submenu;
     }
 
     /**

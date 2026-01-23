@@ -27,9 +27,9 @@ class Ofast_X_Content_Ordering
 
     private function __construct()
     {
-        // Check if enabled
-        $enabled = get_option('ofastx_modules_enabled', array());
-        if (empty($enabled['content-ordering'])) {
+        // Check if enabled via Admin Tweaks toggle
+        $admin_tweaks = get_option('ofast_admin_tweaks', array());
+        if (empty($admin_tweaks['enable_content_ordering'])) {
             return;
         }
 
@@ -38,14 +38,14 @@ class Ofast_X_Content_Ordering
         $this->enabled_post_types = $this->post_types;
 
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
+        add_action('admin_menu', array($this, 'add_admin_menus'), 100);
         add_action('wp_ajax_ofast_update_post_order', array($this, 'update_post_order'));
+        add_action('wp_ajax_ofast_save_post_order', array($this, 'ajax_save_order'));
         
-        foreach ($this->post_types as $post_type) {
-            add_action("manage_{$post_type}_posts_custom_column", array($this, 'render_sort_column'), 10, 2);
-            add_filter("manage_{$post_type}_posts_columns", array($this, 'add_sort_column'));
-            add_filter("manage_edit-{$post_type}_sortable_columns", array($this, 'make_column_sortable'));
-            add_action("pre_get_posts", array($this, 'admin_order_query'));
-        }  // Modify frontend query to use menu_order
+        // Modify admin query to use menu_order (only add once, not in loop)
+        add_action('pre_get_posts', array($this, 'admin_order_query'));
+        
+        // Modify frontend query to use menu_order
         add_action('pre_get_posts', array($this, 'frontend_order_query'));
     }
 

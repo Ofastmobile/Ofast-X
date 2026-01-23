@@ -93,10 +93,7 @@ class Ofast_X_Core
             $this->load_admin_url();
         }
 
-        // Admin Footer is now handled by White Label (whos-admin)
-        // if ($this->is_module_enabled('admin-footer')) {
-        //     $this->load_admin_footer();
-        // }
+
 
         if ($this->is_module_enabled('duplicate-content')) {
             $this->load_duplicate_content();
@@ -298,24 +295,7 @@ class Ofast_X_Core
         $this->modules['admin-url'] = $admin_url;
     }
 
-    /**
-     * Load Admin Footer Module
-     */
-    private function load_admin_footer()
-    {
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-footer/class-ofast-admin-footer.php';
 
-        $admin_footer = new Ofast_X_Admin_Footer();
-        $admin_footer->init();
-
-        $this->modules['admin-footer'] = $admin_footer;
-
-        // Custom Dashboard
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-design/custom-dashboard/class-ofast-custom-dashboard.php';
-        $custom_dashboard = new Ofast_X_Custom_Dashboard();
-        $custom_dashboard->init();
-        $this->modules['custom-dashboard'] = $custom_dashboard;
-    }
 
     /**
      * Load Content Duplicator Module

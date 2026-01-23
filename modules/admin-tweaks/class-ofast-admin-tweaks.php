@@ -30,9 +30,8 @@ class Ofast_X_Admin_Tweaks
             add_action('manage_posts_custom_column', array($this, 'render_id_column'), 10, 2);
             add_filter('manage_pages_columns', array($this, 'add_id_column'));
             add_action('manage_pages_custom_column', array($this, 'render_id_column'), 10, 2);
-            // WooCommerce Products Support
-            add_filter('manage_product_posts_columns', array($this, 'add_id_column'));
-            add_action('manage_product_posts_custom_column', array($this, 'render_id_column'), 10, 2);
+            // Note: Products are covered by manage_posts_columns/manage_posts_custom_column
+            // No need for separate product hooks as they cause duplicate rendering
             
             add_action('admin_head', array($this, 'add_id_column_css'));
         }

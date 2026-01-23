@@ -349,4 +349,25 @@ jQuery(document).ready(function ($) {
         e.stopPropagation();
     });
 
+    // --- LIVE CLOCK UPDATE ---
+    function updateLiveClock() {
+        var $clock = $('#ofast-live-clock');
+        if ($clock.length === 0) return;
+
+        var now = new Date();
+        var options = {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        };
+        $clock.text(now.toLocaleDateString('en-US', options));
+    }
+
+    // Update every second
+    setInterval(updateLiveClock, 1000);
+
 });

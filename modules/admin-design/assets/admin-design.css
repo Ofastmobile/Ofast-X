@@ -4,13 +4,11 @@ body.wp-admin {
     font-family: "Segoe UI", sans-serif;
 }
 
-/* Dashboard widgets (cards) */
-#dashboard-widgets-wrap {
-    display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
-    padding: 20px;
-}
+/* 
+ * NOTE: Dashboard widget layout intentionally NOT overridden here.
+ * WordPress's native column/masonry layout is preserved.
+ * The custom dashboard module (when enabled) provides its own layout.
+ */
 
 /* Each widget box */
 .postbox {

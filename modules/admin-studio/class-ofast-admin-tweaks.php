@@ -488,8 +488,9 @@ class Ofast_X_Admin_Tweaks
 
         // Save Admin Design CSS if enabled
         if (!empty($settings['enable_admin_design']) && isset($_POST['ofast_admin_design_css'])) {
-            // Allow CSS but sanitize carefully
-            $custom_css = wp_strip_all_tags($_POST['ofast_admin_design_css']);
+            // wp_unslash removes WP's automatic slashes, preventing backslash accumulation
+            $custom_css = wp_unslash($_POST['ofast_admin_design_css']);
+            $custom_css = wp_strip_all_tags($custom_css);
             update_option('ofast_admin_design_css', $custom_css);
         }
 

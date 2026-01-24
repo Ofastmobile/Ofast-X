@@ -1,0 +1,10 @@
+Warning: translations_api(): An unexpected error occurred. Something may be wrong with WordPress.org or this server&#8217;s configuration. If you continue to have problems, please try the <a href="https://wordpress.org/support/forums/">support forums</a>. (WordPress could not establish a secure connection to WordPress.org. Please contact your server administrator.) in C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-includes\functions.php on line 6131
+Call Stack
+#	Time	Memory	Function	Location
+1	1.2519	371376	{main}( )	...\profile.php:0
+2	1.2522	379848	require_once( 'C:\Users\bodma\Local Sites\ofast-x-dev\app\public\wp-admin\user-edit.php )	...\profile.php:18
+3	2.4934	14939880	wp_dropdown_languages( $args = ['name' => 'locale', 'id' => 'locale', 'selected' => 'site-default', 'languages' => [], 'show_available_translations' => TRUE, 'show_option_site_default' => TRUE] )	...\user-edit.php:399
+4	2.4934	14940576	wp_get_available_translations( )	...\l10n.php:1707
+5	2.5851	14931384	translations_api( $type = 'core', $args = ['version' => '6.9'] )	...\translation-install.php:175
+6	2.7191	14951840	wp_trigger_error( $function_name = 'translations_api', $message = 'An unexpected error occurred. Something may be wrong with WordPress.org or this server&#8217;s configuration. If you continue to have problems, please try the <a href="https://wordpress.org/support/forums/">support forums</a>. (WordPress could not establish a secure connection to WordPress.org. Please contact your server administrator.)', $error_level = 512 )	...\translation-install.php:76
+7	2.7195	14952224	trigger_error( $message = 'translations_api(): An unexpected error occurred. Something may be wrong with WordPress.org or this server&#8217;s configuration. If you continue to have problems, please try the <a href="https://wordpress.org/support/forums/">support forums</a>. (WordPress could not establish a secure connection to WordPress.org. Please contact your server administrator.)', $error_level = 512 )	...\functions.php:6131

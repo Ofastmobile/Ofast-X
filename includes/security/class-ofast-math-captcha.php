@@ -15,10 +15,6 @@ class Ofast_X_Math_Captcha
 {
     private static $instance = null;
     
-    // Session key for storing the correct answer
-    const SESSION_KEY = 'ofast_math_captcha_answer';
-    const NONCE_KEY = 'ofast_math_captcha_nonce';
-    
     /**
      * Get singleton instance
      */
@@ -32,24 +28,11 @@ class Ofast_X_Math_Captcha
     
     /**
      * Initialize Math CAPTCHA
+     * Note: Uses WordPress transients for storage (no PHP sessions)
      */
     public function init()
     {
-        // Start session if not already started (needed for storing answer)
-        add_action('init', array($this, 'maybe_start_session'), 1);
-        
-        // Also start session on login page (fires before authenticate filter)
-        add_action('login_init', array($this, 'maybe_start_session'), 1);
-    }
-    
-    /**
-     * Start session if needed
-     */
-    public function maybe_start_session()
-    {
-        if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
-            session_start();
-        }
+        // No initialization needed - transients handle storage
     }
     
     /**
@@ -149,13 +132,7 @@ class Ofast_X_Math_Captcha
         $salt = wp_salt('auth');
         $hash = wp_hash($answer . $salt . time());
         
-        // Store in session
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            $_SESSION[self::SESSION_KEY] = $answer;
-            $_SESSION[self::NONCE_KEY] = $hash;
-        }
-        
-        // Also store in transient as fallback (for environments without sessions)
+        // Store answer in transient (WordPress-compliant, no sessions)
         set_transient('ofast_math_' . $hash, $answer, 3600); // 1 hour expiry
         
         return array(
@@ -220,15 +197,8 @@ class Ofast_X_Math_Captcha
         $answer = intval($answer);
         $correct_answer = null;
         
-        // Try session first
-        if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION[self::SESSION_KEY])) {
-            if (isset($_SESSION[self::NONCE_KEY]) && $_SESSION[self::NONCE_KEY] === $hash) {
-                $correct_answer = intval($_SESSION[self::SESSION_KEY]);
-            }
-        }
-        
-        // Fallback to transient
-        if ($correct_answer === null && !empty($hash)) {
+        // Get stored answer from transient
+        if (!empty($hash)) {
             $stored = get_transient('ofast_math_' . $hash);
             if ($stored !== false) {
                 $correct_answer = intval($stored);
@@ -247,12 +217,6 @@ class Ofast_X_Math_Captcha
         
         // Verify answer
         if ($answer === $correct_answer) {
-            // Clear session data
-            if (session_status() === PHP_SESSION_ACTIVE) {
-                unset($_SESSION[self::SESSION_KEY]);
-                unset($_SESSION[self::NONCE_KEY]);
-            }
-            
             return array(
                 'success' => true,
                 'error' => null

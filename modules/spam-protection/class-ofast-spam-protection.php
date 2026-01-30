@@ -327,6 +327,21 @@ class Ofast_X_Spam_Protection
                 Ofast_X_Math_Captcha::save_settings($_POST);
             }
 
+            // Save Turnstile keys
+            if (!empty($_POST['turnstile_site_key'])) {
+                update_option('ofast_turnstile_site_key', sanitize_text_field($_POST['turnstile_site_key']));
+            }
+            if (!empty($_POST['turnstile_secret_key']) && strpos($_POST['turnstile_secret_key'], '••') === false) {
+                $secret = $_POST['turnstile_secret_key'];
+                if (class_exists('Ofast_X_Security_Hardening')) {
+                    $secret = Ofast_X_Security_Hardening::encrypt_option($secret);
+                } else {
+                    $secret = sanitize_text_field($secret);
+                }
+                update_option('ofast_turnstile_secret_key', $secret);
+            }
+
+            // Save reCAPTCHA keys
             if (!empty($_POST['recaptcha_site_key'])) {
                 update_option('ofast_recaptcha_site_key', sanitize_text_field($_POST['recaptcha_site_key']));
             }

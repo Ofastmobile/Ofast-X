@@ -38,8 +38,8 @@ class Ofast_X_Settings
     public function add_settings_menu()
     {
         add_menu_page(
-            'Ofast X',
-            'Ofast X',
+            'Ofast Toolkit',
+            'Ofast Toolkit',
             'manage_options',
             'ofast-dashboard',
             array($this, 'render_settings_page'),
@@ -286,7 +286,7 @@ class Ofast_X_Settings
                         <span class="dashicons dashicons-admin-generic"></span>
                     </div>
                     <div class="ofast-header-text">
-                        <h1>Ofast X Settings</h1>
+                        <h1>Ofast Toolkit Settings</h1>
                         <p>Manage your plugin modules and view system status.</p>
                     </div>
                 </div>

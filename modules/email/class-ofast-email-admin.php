@@ -651,7 +651,7 @@ class Ofast_X_Email_Admin
         // Handle send test email
         if (isset($_POST['ofast_send_test_template']) && wp_verify_nonce($_POST['_wpnonce'], 'ofast_template_save')) {
             $admin_email = get_option('admin_email');
-            $test_content = '<p>This is a <strong>test email</strong> from your Ofast X Email Template.</p>
+            $test_content = '<p>This is a <strong>test email</strong> from ' . esc_html(get_bloginfo('name')) . '.</p>
                 <p>If you can see this email with your logo, colors, and branding - your email template is working correctly!</p>
                 <p>You can now send beautiful emails to your users.</p>';
             
@@ -663,7 +663,7 @@ class Ofast_X_Email_Admin
                 'From: ' . get_option('ofast_email_from_name', get_bloginfo('name')) . ' <' . get_option('ofast_email_reply_to', $admin_email) . '>'
             );
             
-            $sent = wp_mail($admin_email, 'Test Email - Ofast X Template', $html, $headers);
+            $sent = wp_mail($admin_email, sprintf(__('[%s] Test Email - Template Preview', 'ofast-x'), get_bloginfo('name')), $html, $headers);
             
             if ($sent) {
                 echo Ofast_X_Toast::render('Test email sent to ' . esc_html($admin_email), 'success');
@@ -2303,7 +2303,7 @@ class Ofast_X_Email_Admin
         // Handle send test email
         if (isset($_POST['ofast_send_test_template']) && wp_verify_nonce($_POST['_wpnonce'], 'ofast_template_save')) {
             $admin_email = get_option('admin_email');
-            $test_content = '<p>This is a <strong>test email</strong> from your Ofast X Email Template.</p>
+            $test_content = '<p>This is a <strong>test email</strong> from ' . esc_html(get_bloginfo('name')) . '.</p>
                 <p>If you can see this email with your logo, colors, and branding - your email template is working correctly!</p>
                 <p>You can now send beautiful emails to your users.</p>';
             
@@ -2315,7 +2315,7 @@ class Ofast_X_Email_Admin
                 'From: ' . get_option('ofast_email_from_name', get_bloginfo('name')) . ' <' . get_option('ofast_email_reply_to', $admin_email) . '>'
             );
             
-            $sent = wp_mail($admin_email, 'Test Email - Ofast X Template', $html, $headers);
+            $sent = wp_mail($admin_email, sprintf(__('[%s] Test Email - Template Preview', 'ofast-x'), get_bloginfo('name')), $html, $headers);
             
             if ($sent) {
                 echo Ofast_X_Toast::render('Test email sent to ' . esc_html($admin_email), 'success');

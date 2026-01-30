@@ -251,7 +251,7 @@ class Ofast_X_SMTP
                 $headers[] = 'From: ' . $from_name . ' <' . $from_email . '>';
             }
 
-            $subject = 'Ofast X PHP Mail Test - ' . date('Y-m-d H:i:s');
+            $subject = sprintf('[%s] PHP Mail Test - ', get_bloginfo('name')) . date('Y-m-d H:i:s');
             $body = $this->get_test_email_body();
 
             $result = wp_mail($admin_email, $subject, $body, $headers);
@@ -323,9 +323,9 @@ class Ofast_X_SMTP
             $mail->setFrom($from_email, $from_name);
             $mail->addAddress(get_option('admin_email'));
             $mail->isHTML(true);
-            $mail->Subject = 'Ofast X SMTP Test - ' . date('Y-m-d H:i:s');
+            $mail->Subject = sprintf('[%s] SMTP Test - ', get_bloginfo('name')) . date('Y-m-d H:i:s');
             $mail->Body = $this->get_test_email_body();
-            $mail->AltBody = 'This is a test email from Ofast X SMTP module.';
+            $mail->AltBody = sprintf(__('This is a test email from %s.', 'ofast-x'), get_bloginfo('name'));
 
             $mail->send();
 

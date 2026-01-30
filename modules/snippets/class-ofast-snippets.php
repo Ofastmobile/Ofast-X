@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 /**
  * Ofast X - Code Snippets Module
@@ -27,7 +27,11 @@ class Ofast_X_Snippets
     }
 
     /**
-     * Initialize module
+     * Initialize module.
+     *
+     * Sets up hooks for admin pages, AJAX handlers, and snippet execution.
+     *
+     * @return void
      */
     public function init()
     {
@@ -36,6 +40,9 @@ class Ofast_X_Snippets
 
         // Auto-migrate: Add missing columns for trash system
         $this->maybe_add_trash_columns();
+
+        // Auto-migrate: Create rate limits table if missing
+        $this->maybe_create_rate_limits_table();
 
         // Add dashboard widget
         add_action('wp_dashboard_setup', array($this, 'add_dashboard_widget'));
@@ -79,7 +86,10 @@ class Ofast_X_Snippets
     }
 
     /**
-     * Enqueue CodeMirror for the snippet editor
+     * Enqueue CodeMirror and admin scripts for the snippet editor.
+     *
+     * @param string $hook The current admin page hook suffix.
+     * @return void
      */
     public function enqueue_codemirror($hook)
     {
@@ -126,10 +136,42 @@ class Ofast_X_Snippets
 
         // Pass settings to our script
         wp_localize_script('code-editor', 'ofastCodeMirrorSettings', $settings);
+
+        // Enqueue our admin JS file
+        wp_enqueue_script(
+            'ofast-snippets-admin',
+            plugin_dir_url(__FILE__) . 'js/ofast-snippets-admin.js',
+            array('jquery', 'wp-codemirror'),
+            filemtime(plugin_dir_path(__FILE__) . 'js/ofast-snippets-admin.js'),
+            true
+        );
+
+        // Pass nonces and data to the JS file
+        wp_localize_script('ofast-snippets-admin', 'ofastSnippets', array(
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonces' => array(
+                'toggle' => wp_create_nonce('ofast_snippet_toggle'),
+                'delete' => wp_create_nonce('ofast_snippet_delete'),
+                'restore' => wp_create_nonce('ofast_snippet_restore'),
+                'runNow' => wp_create_nonce('ofast_run_snippet_now'),
+                'rename' => wp_create_nonce('ofast_snippet_rename'),
+                'export' => wp_create_nonce('ofast_export_snippets'),
+                'import' => wp_create_nonce('ofast_import_snippets'),
+                'bulk' => wp_create_nonce('ofast_bulk_action'),
+                'importPlugin' => wp_create_nonce('ofast_import_plugin'),
+                'preview' => wp_create_nonce('ofast_preview_snippets'),
+                'selectiveImport' => wp_create_nonce('ofast_selective_import'),
+                'useTemplate' => wp_create_nonce('ofast_use_template'),
+                'getRevisions' => wp_create_nonce('ofast_get_revisions'),
+                'restoreRevision' => wp_create_nonce('ofast_restore_revision'),
+            )
+        ));
     }
 
     /**
-     * Add dashboard widget
+     * Add dashboard widget for quick snippet management.
+     *
+     * @return void
      */
     public function add_dashboard_widget()
     {
@@ -203,46 +245,20 @@ class Ofast_X_Snippets
         echo '</div>';
         echo '<p style="text-align: center; margin-top: 15px;"><a href="' . admin_url('admin.php?page=ofast-snippets') . '" class="button">Manage All Snippets</a></p>';
 
-        // Add inline JavaScript
-?>
-        <script>
-            jQuery(document).ready(function($) {
-                $(document).on('click', '.ofast-snippet-toggle', function(e) {
-                    e.preventDefault();
-                    var $btn = $(this);
-                    var id = $btn.data('id');
-                    var active = $btn.data('active');
-                    var hasError = $btn.data('has-error');
+        // Enqueue dashboard widget JS
+        wp_enqueue_script(
+            'ofast-snippets-dashboard',
+            plugin_dir_url(__FILE__) . 'js/ofast-snippets-dashboard.js',
+            array('jquery'),
+            filemtime(plugin_dir_path(__FILE__) . 'js/ofast-snippets-dashboard.js'),
+            true
+        );
 
-                    // Prevent activation if has errors
-                    if (active == 0 && hasError == 1) {
-                        alert('Cannot activate this snippet: it contains syntax errors.\n\nPlease fix the errors first from the Code Snippets management page.');
-                        return;
-                    }
-
-                    $btn.prop('disabled', true);
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_toggle_snippet',
-                        nonce: '<?php echo wp_create_nonce('ofast_snippet_toggle'); ?>',
-                        id: id,
-                        active: active
-                    }, function(response) {
-                        if (response.success) {
-                            var newActive = response.data.active;
-                            $btn.data('active', newActive);
-                            $btn.html(newActive ? 'ON' : 'OFF');
-                            $btn.toggleClass('button-primary', newActive);
-                        } else {
-                            alert('Error: ' + response.data);
-                        }
-                    }).always(function() {
-                        $btn.prop('disabled', false);
-                    });
-                });
-            });
-        </script>
-    <?php
+        wp_localize_script('ofast-snippets-dashboard', 'ofastSnippetsDashboard', array(
+            'nonces' => array(
+                'toggle' => wp_create_nonce('ofast_snippet_toggle'),
+            )
+        ));
     }
 
     /**
@@ -284,7 +300,7 @@ class Ofast_X_Snippets
 
             // Validate PHP syntax only for PHP snippets
             $validation = true;
-            if ($language === 'php') {
+            if ('php' === $language) {
                 $validation = $this->validate_php_code($code);
             }
 
@@ -320,7 +336,7 @@ class Ofast_X_Snippets
                 ), array('id' => $id));
 
                 // Debug logging for live server issues
-                if ($result === false) {
+                if (false === $result) {
                     error_log('Ofast Snippet Update Error: ' . $wpdb->last_error);
                     echo Ofast_X_Toast::render('Database Error: ' . esc_html($wpdb->last_error), 'error');
                     return;
@@ -329,7 +345,7 @@ class Ofast_X_Snippets
                 // Audit log
                 $this->log_snippet_action('UPDATED', $id, $name, "Language: {$language}, Scope: {$scope}, Active: " . ($active ? 'Yes' : 'No'));
 
-                if ($validation === true) {
+                if (true === $validation) {
                     echo Ofast_X_Toast::render('Snippet updated and ' . ($active ? 'activated' : 'saved') . '!', 'success');
                 } else {
                     echo Ofast_X_Toast::render('Snippet saved (inactive for safety)', 'info');
@@ -370,7 +386,7 @@ class Ofast_X_Snippets
                         ));
 
                         // Debug logging for live server issues
-                        if ($result === false) {
+                        if (false === $result) {
                             error_log('Ofast Snippet Save Error: ' . $wpdb->last_error);
                             echo Ofast_X_Toast::render('Database Error: ' . esc_html($wpdb->last_error), 'error');
                             return;
@@ -381,7 +397,7 @@ class Ofast_X_Snippets
                         // Audit log
                         $this->log_snippet_action('CREATED', $new_id, $name, "Language: {$language}, Scope: {$scope}, Active: " . ($active ? 'Yes' : 'No'));
 
-                        if ($validation === true) {
+                        if (true === $validation) {
                             echo Ofast_X_Toast::render('Snippet added and ' . ($active ? 'activated' : 'saved') . '!', 'success');
                         } else {
                             echo Ofast_X_Toast::render('Snippet saved (inactive for safety)', 'info');
@@ -1326,1003 +1342,27 @@ class Ofast_X_Snippets
             </div>
         </div>
 
-
-        <script>
-            jQuery(document).ready(function($) {
-                // Initialize CodeMirror on the code textarea
-                var cmEditor = null;
-                var $codeTextarea = $('#snippet_code');
-
-                if ($codeTextarea.length && typeof wp !== 'undefined' && wp.codeEditor) {
-                    // Get language-specific settings
-                    var language = $('#snippet_language').val() || 'php';
-                    var mimeTypes = {
-                        'php': 'application/x-httpd-php',
-                        'javascript': 'text/javascript',
-                        'css': 'text/css',
-                        'html': 'text/html'
-                    };
-
-                    // Initialize CodeMirror
-                    cmEditor = wp.codeEditor.initialize($codeTextarea, {
-                        codemirror: {
-                            mode: mimeTypes[language] || 'application/x-httpd-php',
-                            lineNumbers: true,
-                            lineWrapping: true,
-                            indentUnit: 4,
-                            tabSize: 4,
-                            indentWithTabs: false,
-                            autoCloseBrackets: true,
-                            matchBrackets: true,
-                            autoCloseTags: true,
-                            extraKeys: {
-                                'Ctrl-/': 'toggleComment',
-                                'Cmd-/': 'toggleComment',
-                                'Tab': function(cm) {
-                                    cm.replaceSelection('    ', 'end');
-                                }
-                            }
-                        }
-                    });
-
-                    // Switch CodeMirror mode when language changes
-                    $('#snippet_language').on('change', function() {
-                        var newLang = $(this).val();
-                        var newMode = mimeTypes[newLang] || 'application/x-httpd-php';
-                        if (cmEditor && cmEditor.codemirror) {
-                            cmEditor.codemirror.setOption('mode', newMode);
-                        }
-                    });
-
-                    // Make sure CodeMirror content syncs back to textarea before form submit
-                    $('.ofast-snippet-form').on('submit', function() {
-                        if (cmEditor && cmEditor.codemirror) {
-                            cmEditor.codemirror.save();
-                            // Extra safety: also set the value directly
-                            $codeTextarea.val(cmEditor.codemirror.getValue());
-                        }
-                    });
-
-                    // Also sync on any CodeMirror change (backup for form submit)
-                    if (cmEditor && cmEditor.codemirror) {
-                        cmEditor.codemirror.on('change', function() {
-                            cmEditor.codemirror.save();
-                        });
-                    }
-                }
-
-                // Language filter
-                $('#ofast-language-filter').on('change', function() {
-                    var selected = $(this).val();
-                    $('.snippet-row').each(function() {
-                        var lang = $(this).data('language') || 'php';
-                        if (selected === 'all' || lang === selected) {
-                            $(this).show();
-                        } else {
-                            $(this).hide();
-                        }
-                    });
-                });
-
-                // Sync desktop action checkboxes with mobile (actual form fields)
-                $('#snippet_run_once_desktop').on('change', function() {
-                    $('input[name="snippet_run_once"]').prop('checked', $(this).prop('checked'));
-                });
-                $('input[name="snippet_run_once"]').on('change', function() {
-                    $('#snippet_run_once_desktop').prop('checked', $(this).prop('checked'));
-                });
-
-                $('#snippet_active_desktop').on('change', function() {
-                    $('input[name="snippet_active"]').prop('checked', $(this).prop('checked'));
-                });
-                $('input[name="snippet_active"]').on('change', function() {
-                    $('#snippet_active_desktop').prop('checked', $(this).prop('checked'));
-                });
-
-                // Toggle snippet
-                $(document).on('click', '.ofast-snippet-toggle', function(e) {
-                    e.preventDefault();
-                    var $btn = $(this);
-                    var id = $btn.data('id');
-                    var active = $btn.data('active');
-
-                    $btn.prop('disabled', true);
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_toggle_snippet',
-                        nonce: '<?php echo wp_create_nonce('ofast_snippet_toggle'); ?>',
-                        id: id,
-                        active: active
-                    }, function(response) {
-                        if (response.success) {
-                            var newActive = response.data.active;
-                            $btn.data('active', newActive);
-                            $btn.html(newActive ? 'Deactivate' : 'Activate');
-                            $btn.toggleClass('button-primary', newActive);
-                        }
-                    }).always(function() {
-                        $btn.prop('disabled', false);
-                    });
-                });
-
-                // Delete snippet
-                $(document).on('click', '.ofast-snippet-delete', function(e) {
-                    e.preventDefault();
-                    var $btn = $(this);
-                    var id = $btn.data('id');
-                    var active = $btn.data('active');
-                    var name = $btn.data('name');
-
-                    // Stronger warning for active snippets
-                    var message = active == 1 ?
-                        'WARNING: "' + name + '" is ACTIVE and currently running!\n\nDeleting it will stop it from running.\n\nAre you sure you want to delete this active snippet?' :
-                        'Are you sure you want to delete "' + name + '"?';
-
-                    if (!confirm(message)) {
-                        return;
-                    }
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_delete_snippet',
-                        nonce: '<?php echo wp_create_nonce('ofast_snippet_delete'); ?>',
-                        id: id
-                    }, function(response) {
-                        if (response.success) {
-                            $btn.closest('tr').fadeOut(function() {
-                                $(this).remove();
-                            });
-                            // Refresh page to show updated trash
-                            setTimeout(function() { location.reload(); }, 500);
-                        }
-                    });
-                });
-
-                // Open trash modal
-                $('#ofast-open-trash-modal').on('click', function() {
-                    $('#ofast-trash-modal').css('display', 'flex');
-                });
-
-                // Close trash modal
-                $('#ofast-close-trash-modal, #ofast-close-trash-modal-btn').on('click', function() {
-                    $('#ofast-trash-modal').hide();
-                });
-
-                // Close modal on backdrop click
-                $('#ofast-trash-modal').on('click', function(e) {
-                    if (e.target === this) {
-                        $(this).hide();
-                    }
-                });
-
-                // Restore snippet from trash
-                $(document).on('click', '.restore-snippet', function(e) {
-                    e.preventDefault();
-                    var $btn = $(this);
-                    var id = $btn.data('id');
-                    $btn.prop('disabled', true).text('Restoring...');
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_restore_snippet',
-                        nonce: '<?php echo wp_create_nonce('ofast_snippet_restore'); ?>',
-                        id: id
-                    }, function(response) {
-                        if (response.success) {
-                            location.reload();
-                        } else {
-                            alert(response.data || 'Error restoring snippet');
-                            $btn.prop('disabled', false).text('Restore');
-                        }
-                    });
-                });
-
-                // Delete forever from trash
-                $(document).on('click', '.delete-forever', function(e) {
-                    e.preventDefault();
-                    if (!confirm('Are you sure you want to PERMANENTLY delete this snippet? This cannot be undone.')) {
-                        return;
-                    }
-                    var $btn = $(this);
-                    var id = $btn.data('id');
-                    $btn.prop('disabled', true).text('Deleting...');
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_delete_snippet',
-                        nonce: '<?php echo wp_create_nonce('ofast_snippet_delete'); ?>',
-                        id: id,
-                        permanent: 'true'
-                    }, function(response) {
-                        if (response.success) {
-                            location.reload();
-                        }
-                    });
-                });
-
-                // Run Now - On-demand snippet execution
-                $(document).on('click', '.ofast-run-now', function(e) {
-                    e.preventDefault();
-                    var $link = $(this);
-                    var id = $link.data('id');
-                    var name = $link.data('name');
-                    
-                    if (!confirm('Run snippet "' + name + '" now?\n\nThis will execute the PHP code immediately.')) {
-                        return;
-                    }
-                    
-                    var originalText = $link.text();
-                    $link.text('Running...').css('pointer-events', 'none');
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_run_snippet_now',
-                        nonce: '<?php echo wp_create_nonce('ofast_run_snippet_now'); ?>',
-                        id: id
-                    }, function(response) {
-                        if (response.success) {
-                            $link.text('✓ Done').css('color', '#46b450');
-                            setTimeout(function() {
-                                $link.text(originalText).css({'pointer-events': 'auto', 'color': '#2271b1'});
-                            }, 2000);
-                        } else {
-                            alert('Error: ' + (response.data || 'Unknown error'));
-                            $link.text(originalText).css('pointer-events', 'auto');
-                        }
-                    }).fail(function() {
-                        alert('Request failed. Check console for details.');
-                        $link.text(originalText).css('pointer-events', 'auto');
-                    });
-                });
-
-                // Empty all trash
-                $('#empty-all-trash').on('click', function(e) {
-                    e.preventDefault();
-                    var count = $('.trash-row').length;
-                    if (!confirm('Are you sure you want to PERMANENTLY delete all ' + count + ' items in trash? This cannot be undone.')) {
-                        return;
-                    }
-                    var $btn = $(this);
-                    $btn.prop('disabled', true).text('Deleting all...');
-                    
-                    // Delete each item sequentially
-                    var ids = [];
-                    $('.trash-row').each(function() {
-                        ids.push($(this).data('id'));
-                    });
-                    
-                    var deleteNext = function(index) {
-                        if (index >= ids.length) {
-                            location.reload();
-                            return;
-                        }
-                        $.post(ajaxurl, {
-                            action: 'ofast_delete_snippet',
-                            nonce: '<?php echo wp_create_nonce('ofast_snippet_delete'); ?>',
-                            id: ids[index],
-                            permanent: 'true'
-                        }, function() {
-                            deleteNext(index + 1);
-                        });
-                    };
-                    deleteNext(0);
-                });
-
-                // Inline title editing
-                $(document).on('click', '.snippet-name-display', function() {
-                    var $display = $(this);
-                    var $input = $display.siblings('.snippet-name-edit');
-                    $display.hide();
-                    $input.show().focus().select();
-                });
-
-                $(document).on('blur', '.snippet-name-edit', function() {
-                    var $input = $(this);
-                    var $display = $input.siblings('.snippet-name-display');
-                    var id = $input.data('id');
-                    var newName = $input.val().trim();
-
-                    if (newName === '') {
-                        $input.hide();
-                        $display.show();
-                        return;
-                    }
-
-                    // Save via AJAX
-                    $.post(ajaxurl, {
-                        action: 'ofast_rename_snippet',
-                        nonce: '<?php echo wp_create_nonce('ofast_snippet_rename'); ?>',
-                        id: id,
-                        name: newName
-                    }, function(response) {
-                        if (response.success) {
-                            $display.find('strong').text(newName);
-                            $input.val(newName);
-                        }
-                        $input.hide();
-                        $display.show();
-                    });
-                });
-
-                $(document).on('keypress', '.snippet-name-edit', function(e) {
-                    if (e.which === 13) { // Enter key
-                        $(this).blur();
-                    }
-                });
-
-                // Language selector - toggle help text AND injection location visibility
-                $('#snippet_language').on('change', function() {
-                    var lang = $(this).val();
-
-                    // Toggle help text
-                    $('.php-help, .js-help, .css-help, .html-help').hide();
-                    $('.' + lang.replace('javascript', 'js') + '-help').show();
-
-                    // Show/hide injection location row (only relevant for JS/CSS/HTML, not PHP)
-                    if (lang === 'php') {
-                        $('.snippet-location-row').hide();
-                    } else {
-                        $('.snippet-location-row').show();
-
-                        // Auto-select best default injection location based on language
-                        // Only change if not editing an existing snippet with a set location
-                        var $location = $('#snippet_location');
-                        if (!$location.data('user-set')) {
-                            if (lang === 'css') {
-                                $location.val('header'); // CSS best in header to prevent FOUC
-                            } else {
-                                $location.val('footer'); // JS/HTML best in footer
-                            }
-                        }
-                    }
-                }).trigger('change');
-
-                // Mark location as user-set when manually changed
-                $('#snippet_location').on('change', function() {
-                    $(this).data('user-set', true);
-                });
-
-                // Page Targeting - show/hide target value field
-                $('#snippet_target_type').on('change', function() {
-                    var type = $(this).val();
-                    var $valueRow = $('.snippet-target-value-row');
-                    var $input = $('#snippet_target_value');
-
-                    // Hide all help texts
-                    $('.post-type-help, .page-ids-help, .url-contains-help').hide();
-
-                    if (type === 'all' || type === 'homepage') {
-                        $valueRow.hide();
-                        $input.val('');
-                    } else {
-                        $valueRow.show();
-
-                        // Show appropriate help and placeholder
-                        if (type === 'post_type') {
-                            $('.post-type-help').show();
-                            $input.attr('placeholder', 'e.g., product, post, page');
-                        } else if (type === 'page_ids') {
-                            $('.page-ids-help').show();
-                            $input.attr('placeholder', 'e.g., 1, 5, 23, 100');
-                        } else if (type === 'url_contains') {
-                            $('.url-contains-help').show();
-                            $input.attr('placeholder', 'e.g., /shop/, checkout, product');
-                        }
-                    }
-                }).trigger('change');
-
-                // Export snippets
-                $('#ofast-export-snippets').on('click', function() {
-                    var $btn = $(this);
-                    var exportType = $('#ofast-export-type').val();
-                    $btn.prop('disabled', true).text('Exporting...');
-
-                    // Collect selected snippet IDs (from checkboxes if any are checked)
-                    var selectedIds = [];
-                    $('.snippet-checkbox:checked').each(function() {
-                        selectedIds.push($(this).val());
-                    });
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_export_snippets',
-                        nonce: '<?php echo wp_create_nonce('ofast_export_snippets'); ?>',
-                        ids: selectedIds
-                    }, function(response) {
-                        if (response.success) {
-                            var content, filename, mimeType;
-                            var date = new Date().toISOString().split('T')[0];
-
-                            if (exportType === 'code') {
-                                // Export as readable code file
-                                var codeOutput = [];
-                                codeOutput.push('/*');
-                                codeOutput.push(' * Ofast X Code Snippets Export');
-                                codeOutput.push(' * Exported: ' + date);
-                                codeOutput.push(' * Site: ' + response.data.site_url);
-                                codeOutput.push(' * Total Snippets: ' + response.data.snippets.length);
-                                codeOutput.push(' */\n');
-
-                                response.data.snippets.forEach(function(snippet, index) {
-                                    codeOutput.push('/* ========================================');
-                                    codeOutput.push(' * Snippet #' + (index + 1) + ': ' + snippet.name);
-                                    codeOutput.push(' * Language: ' + (snippet.language || 'php').toUpperCase());
-                                    codeOutput.push(' * Scope: ' + (snippet.scope || 'global'));
-                                    codeOutput.push(' * Status: ' + (snippet.active == 1 ? 'Active' : 'Inactive'));
-                                    if (snippet.description) {
-                                        codeOutput.push(' * Description: ' + snippet.description);
-                                    }
-                                    codeOutput.push(' * ======================================== */\n');
-                                    codeOutput.push(snippet.code);
-                                    codeOutput.push('\n\n');
-                                });
-
-                                content = codeOutput.join('\n');
-                                filename = 'ofast-snippets-code-' + date + '.txt';
-                                mimeType = 'text/plain';
-                            } else {
-                                // Export as JSON
-                                content = JSON.stringify(response.data, null, 2);
-                                filename = 'ofast-snippets-' + date + '.json';
-                                mimeType = 'application/json';
-                            }
-
-                            var blob = new Blob([content], {
-                                type: mimeType
-                            });
-                            var url = URL.createObjectURL(blob);
-                            var a = document.createElement('a');
-                            a.href = url;
-                            a.download = filename;
-                            a.click();
-                            URL.revokeObjectURL(url);
-                        } else {
-                            alert('Export failed: ' + response.data);
-                        }
-                        $btn.prop('disabled', false).html('Export');
-                    });
-                });
-
-                // Import snippets - trigger file input
-                $('#ofast-import-snippets-btn').on('click', function() {
-                    $('#ofast-import-file').click();
-                });
-
-                // Handle file selection for import
-                $('#ofast-import-file').on('change', function() {
-                    var file = this.files[0];
-                    if (!file) return;
-
-                    if (!file.name.endsWith('.json')) {
-                        alert('Please select a valid JSON file');
-                        return;
-                    }
-
-                    var reader = new FileReader();
-                    reader.onload = function(e) {
-                        try {
-                            var data = JSON.parse(e.target.result);
-
-                            if (!confirm('Import ' + (data.snippets ? data.snippets.length : 0) + ' snippet(s)?\n\nNote: All imported snippets will be set to INACTIVE for safety.')) {
-                                return;
-                            }
-
-                            $.post(ajaxurl, {
-                                action: 'ofast_import_snippets',
-                                nonce: '<?php echo wp_create_nonce('ofast_import_snippets'); ?>',
-                                import_data: JSON.stringify(data)
-                            }, function(response) {
-                                if (response.success) {
-                                    alert(response.data.message);
-                                    location.reload();
-                                } else {
-                                    alert('Import failed: ' + response.data);
-                                }
-                            });
-                        } catch (err) {
-                            alert('Invalid JSON file: ' + err.message);
-                        }
-                    };
-                    reader.readAsText(file);
-
-                    // Reset file input
-                    $(this).val('');
-                });
-
-                // Search filter
-                $('#snippet-search').on('keyup', function() {
-                    filterSnippets();
-                });
-
-                // Category filter
-                $('#category-filter').on('change', function() {
-                    filterSnippets();
-                });
-
-                // Combined filter function
-                function filterSnippets() {
-                    var query = $('#snippet-search').val();
-                    query = query ? query.toLowerCase() : '';
-
-                    var categoryFilter = $('#category-filter');
-                    var category = categoryFilter.length ? categoryFilter.val() : '';
-
-                    $('.snippet-row').each(function() {
-                        var $row = $(this);
-                        var name = String($row.attr('data-name') || '').toLowerCase();
-                        var desc = String($row.attr('data-description') || '').toLowerCase();
-                        var cat = String($row.attr('data-category') || '');
-                        var code = String($row.attr('data-code') || '').toLowerCase();
-                        var tags = String($row.attr('data-tags') || '').toLowerCase();
-
-                        var matchesText = (query === '' || name.indexOf(query) > -1 || desc.indexOf(query) > -1 || code.indexOf(query) > -1 || tags.indexOf(query) > -1);
-                        var matchesCategory = (category === '' || category === undefined || cat === category);
-
-                        if (matchesText && matchesCategory) {
-                            $row.show();
-                        } else {
-                            $row.hide();
-                        }
-                    });
-                }
-
-                // Select all checkbox
-                $('#select-all-snippets').on('change', function() {
-                    var checked = $(this).is(':checked');
-                    $('.snippet-checkbox:visible').prop('checked', checked);
-                });
-
-                // Bulk actions
-                $('#apply-bulk-action').on('click', function() {
-                    var action = $('#bulk-action-select').val();
-                    if (!action) {
-                        alert('Please select a bulk action');
-                        return;
-                    }
-
-                    var ids = [];
-                    $('.snippet-checkbox:checked').each(function() {
-                        ids.push($(this).val());
-                    });
-
-                    if (ids.length === 0) {
-                        alert('Please select at least one snippet');
-                        return;
-                    }
-
-                    var confirmMsg = 'Are you sure you want to ' + action + ' ' + ids.length + ' snippet(s)?';
-                    if (action === 'delete') {
-                        confirmMsg = '⚠️ WARNING: This will permanently delete ' + ids.length + ' snippet(s). Continue?';
-                    }
-
-                    if (!confirm(confirmMsg)) {
-                        return;
-                    }
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_bulk_action_snippets',
-                        nonce: '<?php echo wp_create_nonce('ofast_bulk_action'); ?>',
-                        bulk_action: action,
-                        ids: ids
-                    }, function(response) {
-                        if (response.success) {
-                            location.reload();
-                        } else {
-                            alert('Error: ' + response.data);
-                        }
-                    });
-                });
-
-                // Import from other plugin
-                $(document).on('click', '.ofast-import-from-plugin', function() {
-                    var $btn = $(this);
-                    var plugin = $btn.data('plugin');
-
-                    if (!confirm('Import all snippets from ' + plugin + '?\n\nAll snippets will be imported as INACTIVE. You can review and activate them manually.')) {
-                        return;
-                    }
-
-                    $btn.prop('disabled', true).text('Importing...');
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_import_from_plugin',
-                        nonce: '<?php echo wp_create_nonce('ofast_import_plugin'); ?>',
-                        plugin: plugin
-                    }, function(response) {
-                        if (response.success) {
-                            alert(response.data.message);
-                            location.reload();
-                        } else {
-                            alert('Import failed: ' + response.data);
-                            $btn.prop('disabled', false).text('Import All');
-                        }
-                    });
-                });
-
-                // Preview & Import from other plugin
-                $(document).on('click', '.ofast-preview-plugin-snippets', function() {
-                    var $btn = $(this);
-                    var plugin = $btn.data('plugin');
-                    var pluginName = $btn.data('plugin-name');
-
-                    $btn.prop('disabled', true).text('Loading...');
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_preview_plugin_snippets',
-                        nonce: '<?php echo wp_create_nonce('ofast_preview_snippets'); ?>',
-                        plugin: plugin
-                    }, function(response) {
-                        $btn.prop('disabled', false).text('Preview & Import');
-
-                        if (!response.success) {
-                            alert('Error: ' + response.data);
-                            return;
-                        }
-
-                        var snippets = response.data.snippets;
-                        var validCount = snippets.filter(s => s.status !== 'duplicate' && s.is_safe !== false).length;
-                        var unsafeCount = snippets.filter(s => s.is_safe === false).length;
-
-                        // Build modal HTML
-                        var modalHtml = `
-                            <div id="ofast-preview-import-modal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:100000; overflow-y:auto; padding:20px;">
-                                <div style="max-width:900px; margin:30px auto; background:#fff; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-                                    <div style="padding:20px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border-radius:12px 12px 0 0;">
-                                        <div>
-                                            <h2 style="margin:0; color:#1e293b;">Import from ${pluginName}</h2>
-                                            <p style="margin:5px 0 0; color:#64748b; font-size:13px;">${snippets.length} snippets found, <strong style="color:#10b981;">${validCount} safe to import</strong>${unsafeCount > 0 ? ', <span style="color:#ef4444;">' + unsafeCount + ' unsafe</span>' : ''}</p>
-                                        </div>
-                                        <button type="button" class="close-preview-modal" style="background:none; border:none; font-size:28px; cursor:pointer; color:#64748b; line-height:1;">&times;</button>
-                                    </div>
-                                    
-                                    <div style="padding:15px 20px; background:#f1f5f9; border-bottom:1px solid #e5e7eb; display:flex; gap:15px; flex-wrap:wrap; font-size:12px; align-items:center;">
-                                        <span><span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:3px; font-size:10px; font-weight:600;">SAFE</span> Syntax OK</span>
-                                        <span><span style="background:#fee2e2; color:#991b1b; padding:2px 6px; border-radius:3px; font-size:10px; font-weight:600;">UNSAFE</span> Has errors</span>
-                                        <span><span style="color:#10b981; font-size:14px;">●</span> Active</span>
-                                        <span><span style="color:#6b7280; font-size:14px;">●</span> Inactive</span>
-                                        <span><span style="color:#ef4444; font-size:14px;">●</span> Duplicate</span>
-                                        <label style="margin-left:auto;"><input type="checkbox" id="preview-select-all" ${validCount === 0 ? 'disabled' : ''}> Select All Safe</label>
-                                    </div>
-                                    
-                                    <div style="max-height:400px; overflow-y:auto; padding:10px 20px;">
-                                        ${snippets.map((s, i) => `
-                                            <div class="preview-snippet-item" style="display:flex; gap:12px; padding:12px; border:1px solid ${s.status === 'duplicate' ? '#fecaca' : (s.is_safe === false ? '#fed7aa' : '#e5e7eb')}; border-radius:8px; margin-bottom:10px; background:${s.status === 'duplicate' ? '#fef2f2' : (s.is_safe === false ? '#fffbeb' : '#fff')}; ${s.status === 'duplicate' ? 'opacity:0.7;' : ''}">
-                                                <input type="checkbox" class="preview-snippet-checkbox" name="import_snippets[]" value="${s.id}" ${s.status === 'duplicate' || s.is_safe === false ? 'disabled' : ''} style="margin-top:4px;">
-                                                <div style="flex:1; min-width:0;">
-                                                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
-                                                        <span style="color:${s.status === 'active' ? '#10b981' : (s.status === 'duplicate' ? '#ef4444' : '#6b7280')}; font-size:16px;">●</span>
-                                                        <strong style="color:#1e293b;">${s.name}</strong>
-                                                        ${s.status === 'duplicate' ? '<span style="background:#fecaca; color:#991b1b; padding:2px 6px; border-radius:3px; font-size:10px;">DUPLICATE</span>' : ''}
-                                                        ${s.language !== 'php' ? '<span style="background:#e0e7ff; color:#3730a3; padding:2px 6px; border-radius:3px; font-size:10px;">' + s.language.toUpperCase() + '</span>' : ''}
-                                                        <span style="margin-left:auto;">${s.is_safe !== false ? '<span style="background:#d1fae5; color:#065f46; padding:2px 8px; border-radius:3px; font-size:10px; font-weight:600;">SAFE</span>' : '<span style="background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:3px; font-size:10px; font-weight:600;">UNSAFE</span>'}</span>
-                                                    </div>
-                                                    ${s.description ? '<p style="margin:0 0 8px; color:#64748b; font-size:12px;">' + s.description + '</p>' : ''}
-                                                    ${s.status === 'duplicate' ? '<p style="margin:0; color:#ef4444; font-size:11px;">Already exists in Ofast X (ID: ' + s.existing_id + ')</p>' : ''}
-                                                    ${s.is_safe === false ? '<p style="margin:0 0 8px; color:#ea580c; font-size:11px; background:#fffbeb; padding:4px 8px; border-radius:4px;"><strong>Syntax Error:</strong> ' + (s.error_message || 'Invalid PHP code') + '</p>' : ''}
-                                                    <details style="margin-top:8px;">
-                                                        <summary style="cursor:pointer; color:#3b82f6; font-size:12px;">Preview Code</summary>
-                                                        <pre style="background:#1e1e1e; color:#d4d4d4; padding:10px; border-radius:4px; font-size:11px; overflow-x:auto; margin-top:8px; max-height:150px; white-space:pre-wrap;">${s.code_preview}</pre>
-                                                    </details>
-                                                </div>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                    
-                                    <div style="padding:20px; border-top:1px solid #e5e7eb; display:flex; gap:10px; justify-content:flex-end; background:#f8fafc; border-radius:0 0 12px 12px;">
-                                        <button type="button" class="button close-preview-modal">Cancel</button>
-                                        <button type="button" class="button button-primary import-selected-snippets" data-plugin="${plugin}" ${validCount === 0 ? 'disabled' : ''}>
-                                            Import Selected (<span class="selected-count">0</span>)
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-
-                        $('body').append(modalHtml);
-
-                        var $modal = $('#ofast-preview-import-modal');
-
-                        // Update count when checkboxes change
-                        function updateSelectedCount() {
-                            var count = $modal.find('.preview-snippet-checkbox:checked').length;
-                            $modal.find('.selected-count').text(count);
-                            $modal.find('.import-selected-snippets').prop('disabled', count === 0);
-                        }
-
-                        $modal.on('change', '.preview-snippet-checkbox', updateSelectedCount);
-
-                        // Select all
-                        $modal.on('change', '#preview-select-all', function() {
-                            var checked = $(this).is(':checked');
-                            $modal.find('.preview-snippet-checkbox:not(:disabled)').prop('checked', checked);
-                            updateSelectedCount();
-                        });
-
-                        // Close modal
-                        $modal.on('click', '.close-preview-modal', function() {
-                            $modal.remove();
-                        });
-
-                        $modal.on('click', function(e) {
-                            if (e.target === this) {
-                                $modal.remove();
-                            }
-                        });
-
-                        // Import selected
-                        $modal.on('click', '.import-selected-snippets', function() {
-                            var $importBtn = $(this);
-                            var selectedIds = [];
-                            $modal.find('.preview-snippet-checkbox:checked').each(function() {
-                                selectedIds.push($(this).val());
-                            });
-
-                            if (selectedIds.length === 0) {
-                                alert('Please select at least one snippet to import');
-                                return;
-                            }
-
-                            $importBtn.prop('disabled', true).text('Importing...');
-
-                            $.post(ajaxurl, {
-                                action: 'ofast_selective_import_snippets',
-                                nonce: '<?php echo wp_create_nonce('ofast_selective_import'); ?>',
-                                plugin: $importBtn.data('plugin'),
-                                ids: selectedIds
-                            }, function(resp) {
-                                if (resp.success) {
-                                    alert(resp.data.message);
-                                    location.reload();
-                                } else {
-                                    alert('Import failed: ' + resp.data);
-                                    $importBtn.prop('disabled', false).html('Import Selected (<span class="selected-count">' + selectedIds.length + '</span>)');
-                                }
-                            });
-                        });
-                    });
-                });
-
-                // Toggle Library visibility
-                $('#toggle-library').on('click', function() {
-                    var $lib = $('#snippet-library');
-                    var $btn = $(this);
-                    if ($lib.is(':visible')) {
-                        $lib.slideUp();
-                        $btn.text('Show Templates');
-                    } else {
-                        $lib.slideDown();
-                        $btn.text('Hide Templates');
-                    }
-                });
-
-                // Toggle Import from Other Plugins visibility
-                $('#toggle-import-plugins').on('click', function() {
-                    var $content = $('#import-plugins-content');
-                    var $btn = $(this);
-                    if ($content.is(':visible')) {
-                        $content.slideUp();
-                        $btn.text('Show Plugins');
-                    } else {
-                        $content.slideDown();
-                        $btn.text('Hide Plugins');
-                    }
-                });
-
-                // Library category filter
-                $('.library-cat-filter').on('click', function() {
-                    var cat = $(this).data('cat');
-                    $('.library-cat-filter').removeClass('button-primary active');
-                    $(this).addClass('button-primary active');
-
-                    if (cat === 'all') {
-                        $('.library-template').show();
-                    } else {
-                        $('.library-template').each(function() {
-                            if ($(this).data('category') === cat) {
-                                $(this).show();
-                            } else {
-                                $(this).hide();
-                            }
-                        });
-                    }
-                });
-
-                // Use Library Template
-                $(document).on('click', '.use-library-template', function() {
-                    var $btn = $(this);
-                    var index = $btn.data('index');
-
-                    useTemplate($btn, index, false);
-                });
-
-                // Function to use template (handles duplicates)
-                function useTemplate($btn, index, forceCopy) {
-                    $btn.prop('disabled', true).text('Adding...');
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_use_library_template',
-                        nonce: '<?php echo wp_create_nonce('ofast_use_template'); ?>',
-                        index: index,
-                        force_copy: forceCopy ? 1 : 0
-                    }, function(response) {
-                        if (response.success) {
-                            // Check if duplicate found
-                            if (response.data.duplicate) {
-                                // Show custom modal with options
-                                showDuplicateModal(response.data, $btn, index);
-                            } else {
-                                // Normal success
-                                alert(response.data.message);
-                                location.reload();
-                            }
-                        } else {
-                            alert('Failed: ' + response.data);
-                            $btn.prop('disabled', false).text('Use Template');
-                        }
-                    });
-                }
-
-                // Custom modal for duplicate template choice
-                function showDuplicateModal(data, $btn, index) {
-                    // Remove existing modal if any
-                    $('#ofast-duplicate-modal').remove();
-
-                    var modalHtml = `
-                        <div id="ofast-duplicate-modal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:100000; display:flex; align-items:center; justify-content:center;">
-                            <div style="background:#fff; border-radius:12px; padding:0; max-width:450px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-                                <div style="padding:20px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-                                    <h3 style="margin:0; color:#1d2327;">Template Already Exists</h3>
-                                    <button type="button" class="close-duplicate-modal" style="background:none; border:none; font-size:24px; cursor:pointer; color:#999;">&times;</button>
-                                </div>
-                                <div style="padding:25px;">
-                                    <p style="margin:0 0 20px; color:#50575e;">"<strong>${data.existing_name}</strong>" already exists in your snippets.</p>
-                                    <p style="margin:0 0 25px; color:#666;">What would you like to do?</p>
-                                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                                        <button type="button" class="button button-primary edit-existing-btn" style="flex:1; min-width:120px;">Edit Existing</button>
-                                        <button type="button" class="button create-copy-btn" style="flex:1; min-width:120px;">Create Copy</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-
-                    $('body').append(modalHtml);
-
-                    var $modal = $('#ofast-duplicate-modal');
-
-                    // Close modal on X click or outside click
-                    $modal.on('click', '.close-duplicate-modal', function() {
-                        $modal.remove();
-                        $btn.prop('disabled', false).text('Use Template');
-                    });
-
-                    $modal.on('click', function(e) {
-                        if (e.target === this) {
-                            $modal.remove();
-                            $btn.prop('disabled', false).text('Use Template');
-                        }
-                    });
-
-                    // Edit existing
-                    $modal.on('click', '.edit-existing-btn', function() {
-                        window.location.href = '?page=ofast-snippets&edit=' + data.existing_id;
-                    });
-
-                    // Create copy
-                    $modal.on('click', '.create-copy-btn', function() {
-                        $modal.remove();
-                        useTemplate($btn, index, true);
-                    });
-                }
-
-                // View History Button
-                $('#view-history-btn').on('click', function() {
-                    var snippetId = $(this).data('snippet-id');
-
-                    // Show loading modal
-                    if (!$('#revision-modal').length) {
-                        $('body').append(`
-                            <div id="revision-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:100000; overflow-y:auto; padding:20px;">
-                                <div style="max-width:800px; margin:50px auto; background:#fff; border-radius:8px; box-shadow:0 10px 50px rgba(0,0,0,0.3);">
-                                    <div style="padding:20px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;">
-                                        <h2 style="margin:0;">Revision History</h2>
-                                        <button type="button" id="close-revision-modal" class="button">&times; Close</button>
-                                    </div>
-                                    <div id="revision-content" style="padding:20px;">Loading...</div>
-                                </div>
-                            </div>
-                        `);
-
-                        $(document).on('click', '#close-revision-modal', function() {
-                            $('#revision-modal').fadeOut();
-                        });
-                    }
-
-                    $('#revision-modal').fadeIn();
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_get_revisions',
-                        nonce: '<?php echo wp_create_nonce('ofast_get_revisions'); ?>',
-                        snippet_id: snippetId
-                    }, function(response) {
-                        if (response.success) {
-                            var revisions = response.data.revisions;
-                            var html = '';
-
-                            if (revisions.length === 0) {
-                                html = '<p style="text-align:center; color:#666; padding:40px;">No revisions yet. Revisions are created when you edit and save code.</p>';
-                            } else {
-                                html = '<p style="color:#666; margin-bottom:15px;">Click "Preview" to view code, "Restore" to revert to that version.</p>';
-                                html += '<table class="widefat striped">';
-                                html += '<thead><tr><th>Date</th><th>Changed By</th><th style="width:200px;">Actions</th></tr></thead>';
-                                html += '<tbody>';
-
-                                revisions.forEach(function(rev) {
-                                    html += '<tr>';
-                                    html += '<td>' + rev.changed_at + '</td>';
-                                    html += '<td>' + (rev.user_name || 'Unknown') + '</td>';
-                                    html += '<td>';
-                                    html += '<button type="button" class="button button-small preview-revision" data-code="' + encodeURIComponent(rev.code) + '">Preview</button> ';
-                                    html += '<button type="button" class="button button-small restore-revision" data-id="' + rev.id + '">Restore</button>';
-                                    html += '</td>';
-                                    html += '</tr>';
-                                });
-
-                                html += '</tbody></table>';
-                            }
-
-                            $('#revision-content').html(html);
-                        } else {
-                            $('#revision-content').html('<p style="color:red;">Error loading revisions</p>');
-                        }
-                    });
-                });
-
-                // Preview revision
-                $(document).on('click', '.preview-revision', function() {
-                    var code = decodeURIComponent($(this).data('code'));
-                    alert('=== REVISION CODE ===\n\n' + code.substring(0, 2000) + (code.length > 2000 ? '\n\n... (truncated)' : ''));
-                });
-
-                // Restore revision
-                $(document).on('click', '.restore-revision', function() {
-                    if (!confirm('Restore this revision? Current code will be saved as a new revision and snippet will be set to INACTIVE for safety.')) {
-                        return;
-                    }
-
-                    var $btn = $(this);
-                    var revisionId = $btn.data('id');
-
-                    $btn.prop('disabled', true).text('Restoring...');
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_restore_revision',
-                        nonce: '<?php echo wp_create_nonce('ofast_restore_revision'); ?>',
-                        revision_id: revisionId
-                    }, function(response) {
-                        if (response.success) {
-                            alert(response.data.message);
-                            location.reload();
-                        } else {
-                            alert('Failed: ' + response.data);
-                            $btn.prop('disabled', false).text('Restore');
-                        }
-                    });
-                });
-            });
-        </script>
 <?php
     }
 
     /**
-     * AJAX: Toggle snippet
+     * AJAX: Toggle snippet active state.
+     *
+     * Validates PHP syntax and function conflicts before activation.
+     * Requires 'ofast_snippet_toggle' nonce and manage_options capability.
+     *
+     * @return void Sends JSON response.
      */
     public function ajax_toggle_snippet()
     {
         check_ajax_referer('ofast_snippet_toggle', 'nonce');
-
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
+            wp_send_json_error(__('Unauthorized', 'ofast-x'));
         }
 
         // Rate limiting
         if (!$this->check_rate_limit('toggle')) {
-            wp_send_json_error('Too many requests. Please wait a moment.');
+            wp_send_json_error(__('Too many requests. Please wait a moment.', 'ofast-x'));
         }
 
         $id = intval($_POST['id']);
@@ -2341,14 +1381,14 @@ class Ofast_X_Snippets
                 // Check syntax first
                 $validation = $this->validate_php_code($snippet->code);
                 if ($validation !== true) {
-                    wp_send_json_error('Cannot activate: ' . $validation);
+                    wp_send_json_error(sprintf(__('Cannot activate: %s', 'ofast-x'), $validation));
                     return;
                 }
 
                 // Check for function name conflicts
                 $conflict_check = $this->check_function_conflicts($snippet->code);
                 if ($conflict_check !== true) {
-                    wp_send_json_error('Cannot activate: ' . $conflict_check);
+                    wp_send_json_error(sprintf(__('Cannot activate: %s', 'ofast-x'), $conflict_check));
                     return;
                 }
             }
@@ -2375,19 +1415,24 @@ class Ofast_X_Snippets
     }
 
     /**
-     * AJAX: Delete snippet (soft delete - moves to trash)
+     * AJAX: Delete snippet (soft delete - moves to trash).
+     *
+     * Supports both soft delete (trash) and permanent delete.
+     * Requires 'ofast_snippet_delete' nonce and manage_options capability.
+     *
+     * @return void Sends JSON response.
      */
     public function ajax_delete_snippet()
     {
         check_ajax_referer('ofast_snippet_delete', 'nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
+            wp_send_json_error(__('Unauthorized', 'ofast-x'));
         }
 
         // Rate limiting
         if (!$this->check_rate_limit('delete')) {
-            wp_send_json_error('Too many requests. Please wait a moment.');
+            wp_send_json_error(__('Too many requests. Please wait a moment.', 'ofast-x'));
         }
 
         $id = intval($_POST['id']);
@@ -2402,7 +1447,7 @@ class Ofast_X_Snippets
         ));
 
         if (!$snippet) {
-            wp_send_json_error('Snippet not found');
+            wp_send_json_error(__('Snippet not found', 'ofast-x'));
         }
 
         if ($permanent && isset($snippet->status) && $snippet->status === 'trash') {
@@ -2433,12 +1478,12 @@ class Ofast_X_Snippets
         check_ajax_referer('ofast_snippet_restore', 'nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
+            wp_send_json_error(__('Unauthorized', 'ofast-x'));
         }
 
         // Rate limiting
         if (!$this->check_rate_limit('restore')) {
-            wp_send_json_error('Too many requests. Please wait a moment.');
+            wp_send_json_error(__('Too many requests. Please wait a moment.', 'ofast-x'));
         }
 
         $id = intval($_POST['id']);
@@ -2451,7 +1496,7 @@ class Ofast_X_Snippets
         ));
 
         if (!$snippet) {
-            wp_send_json_error('Snippet not found in trash');
+            wp_send_json_error(__('Snippet not found in trash', 'ofast-x'));
         }
 
         $wpdb->update($table, array(
@@ -2473,12 +1518,12 @@ class Ofast_X_Snippets
         check_ajax_referer('ofast_run_snippet_now', 'nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
+            wp_send_json_error(__('Unauthorized', 'ofast-x'));
         }
 
         // Rate limiting
         if (!$this->check_rate_limit('run_now')) {
-            wp_send_json_error('Too many requests. Please wait a moment.');
+            wp_send_json_error(__('Too many requests. Please wait a moment.', 'ofast-x'));
         }
 
         $id = intval($_POST['id']);
@@ -2491,18 +1536,18 @@ class Ofast_X_Snippets
         ));
 
         if (!$snippet) {
-            wp_send_json_error('Snippet not found');
+            wp_send_json_error(__('Snippet not found', 'ofast-x'));
         }
 
         // Only allow PHP snippets
         if (($snippet->language ?? 'php') !== 'php') {
-            wp_send_json_error('Only PHP snippets can be run manually');
+            wp_send_json_error(__('Only PHP snippets can be run manually', 'ofast-x'));
         }
 
         // Validate the code first
         $validation = $this->validate_php_code($snippet->code);
         if ($validation !== true) {
-            wp_send_json_error('Validation failed: ' . $validation);
+            wp_send_json_error(sprintf(__('Validation failed: %s', 'ofast-x'), $validation));
         }
 
         // Capture output
@@ -2523,7 +1568,7 @@ class Ofast_X_Snippets
         } catch (Throwable $e) {
             ob_end_clean();
             $this->log_snippet_action('RUN_NOW_FAILED', $id, $snippet->name, $e->getMessage());
-            wp_send_json_error('Execution error: ' . $e->getMessage());
+            wp_send_json_error(sprintf(__('Execution error: %s', 'ofast-x'), $e->getMessage()));
         }
     }
 
@@ -2535,19 +1580,19 @@ class Ofast_X_Snippets
         check_ajax_referer('ofast_snippet_rename', 'nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
+            wp_send_json_error(__('Unauthorized', 'ofast-x'));
         }
 
         // Rate limiting
         if (!$this->check_rate_limit('rename')) {
-            wp_send_json_error('Too many requests. Please wait a moment.');
+            wp_send_json_error(__('Too many requests. Please wait a moment.', 'ofast-x'));
         }
 
         $id = intval($_POST['id']);
         $name = sanitize_text_field($_POST['name']);
 
         if (empty($name)) {
-            wp_send_json_error('Name cannot be empty');
+            wp_send_json_error(__('Name cannot be empty', 'ofast-x'));
             return;
         }
 
@@ -2576,7 +1621,7 @@ class Ofast_X_Snippets
         check_ajax_referer('ofast_export_snippets', 'nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
+            wp_send_json_error(__('Unauthorized', 'ofast-x'));
         }
 
         global $wpdb;
@@ -2622,12 +1667,12 @@ class Ofast_X_Snippets
         check_ajax_referer('ofast_import_snippets', 'nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
+            wp_send_json_error(__('Unauthorized', 'ofast-x'));
         }
 
         // Rate limiting
         if (!$this->check_rate_limit('import')) {
-            wp_send_json_error('Too many requests. Please wait a moment.');
+            wp_send_json_error(__('Too many requests. Please wait a moment.', 'ofast-x'));
         }
 
         $import_data = isset($_POST['import_data']) ? wp_unslash($_POST['import_data']) : '';
@@ -2635,13 +1680,13 @@ class Ofast_X_Snippets
         // SECURITY: Limit import size to prevent DoS
         $max_import_size = 5 * 1024 * 1024; // 5MB
         if (strlen($import_data) > $max_import_size) {
-            wp_send_json_error('Import file too large (maximum 5MB)');
+            wp_send_json_error(__('Import file too large (maximum 5MB)', 'ofast-x'));
         }
         
         $data = json_decode($import_data, true);
 
         if (!$data || !isset($data['snippets']) || !is_array($data['snippets'])) {
-            wp_send_json_error('Invalid import file format');
+            wp_send_json_error(__('Invalid import file format', 'ofast-x'));
         }
 
         global $wpdb;
@@ -2659,7 +1704,7 @@ class Ofast_X_Snippets
 
             // Validate PHP code if language is PHP
             $language = isset($snippet['language']) ? $snippet['language'] : 'php';
-            if ($language === 'php' && !empty($snippet['code'])) {
+            if ('php' === $language && !empty($snippet['code'])) {
                 $validation = $this->validate_php_code($snippet['code']);
                 if ($validation !== true) {
                     $errors[] = $snippet['name'] . ': ' . $validation;
@@ -2722,12 +1767,12 @@ class Ofast_X_Snippets
         check_ajax_referer('ofast_use_template', 'nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
+            wp_send_json_error(__('Unauthorized', 'ofast-x'));
         }
 
         // Rate limiting
         if (!$this->check_rate_limit('use_template')) {
-            wp_send_json_error('Too many requests. Please wait a moment.');
+            wp_send_json_error(__('Too many requests. Please wait a moment.', 'ofast-x'));
         }
 
         $index = isset($_POST['index']) ? intval($_POST['index']) : -1;
@@ -2736,7 +1781,7 @@ class Ofast_X_Snippets
         // Load library
         $library_file = plugin_dir_path(__FILE__) . 'library/snippets.json';
         if (!file_exists($library_file)) {
-            wp_send_json_error('Library file not found');
+            wp_send_json_error(__('Library file not found', 'ofast-x'));
         }
 
         // Use WP_Filesystem if available, fallback to direct read
@@ -2748,7 +1793,7 @@ class Ofast_X_Snippets
         $content = $wp_filesystem ? $wp_filesystem->get_contents($library_file) : @file_get_contents($library_file);
         $library = $content ? json_decode($content, true) : null;
         if (!$library || !isset($library['snippets'][$index])) {
-            wp_send_json_error('Template not found');
+            wp_send_json_error(__('Template not found', 'ofast-x'));
         }
 
         $template = $library['snippets'][$index];
@@ -2799,8 +1844,8 @@ class Ofast_X_Snippets
             'created_at' => current_time('mysql')
         ));
 
-        if ($result === false) {
-            wp_send_json_error('Failed to add template: ' . $wpdb->last_error);
+        if (false === $result) {
+            wp_send_json_error(sprintf(__('Failed to add template: %s', 'ofast-x'), $wpdb->last_error));
         }
 
         // Log
@@ -2823,19 +1868,19 @@ class Ofast_X_Snippets
         check_ajax_referer('ofast_bulk_action', 'nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
+            wp_send_json_error(__('Unauthorized', 'ofast-x'));
         }
 
         // Rate limiting
         if (!$this->check_rate_limit('bulk_action')) {
-            wp_send_json_error('Too many requests. Please wait a moment.');
+            wp_send_json_error(__('Too many requests. Please wait a moment.', 'ofast-x'));
         }
 
         $action = isset($_POST['bulk_action']) ? sanitize_text_field($_POST['bulk_action']) : '';
         $ids = isset($_POST['ids']) ? array_map('intval', $_POST['ids']) : array();
 
         if (empty($action) || empty($ids)) {
-            wp_send_json_error('Invalid request');
+            wp_send_json_error(__('Invalid request', 'ofast-x'));
         }
 
         global $wpdb;
@@ -2913,17 +1958,17 @@ class Ofast_X_Snippets
         check_ajax_referer('ofast_import_plugin', 'nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
+            wp_send_json_error(__('Unauthorized', 'ofast-x'));
         }
 
         // Rate limiting
         if (!$this->check_rate_limit('import_plugin')) {
-            wp_send_json_error('Too many requests. Please wait a moment.');
+            wp_send_json_error(__('Too many requests. Please wait a moment.', 'ofast-x'));
         }
 
         $plugin = isset($_POST['plugin']) ? sanitize_text_field($_POST['plugin']) : '';
         if (empty($plugin)) {
-            wp_send_json_error('Invalid plugin');
+            wp_send_json_error(__('Invalid plugin', 'ofast-x'));
         }
 
         global $wpdb;
@@ -2932,7 +1977,7 @@ class Ofast_X_Snippets
         $skipped = 0;
         $errors = array();
 
-        if ($plugin === 'code-snippets') {
+        if ('code-snippets' === $plugin) {
             // Import from Code Snippets plugin
             $source_table = $wpdb->prefix . 'snippets';
             $snippets = $wpdb->get_results("SELECT * FROM $source_table");
@@ -2984,7 +2029,7 @@ class Ofast_X_Snippets
                 ));
                 $imported++;
             }
-        } elseif ($plugin === 'wpcode') {
+        } elseif ('wpcode' === $plugin) {
             // Import from WPCode plugin
             $posts = $wpdb->get_results(
                 "SELECT p.*, pm.meta_value as code_type 
@@ -3004,16 +2049,16 @@ class Ofast_X_Snippets
                 // Determine language
                 $language = 'php';
                 $code_type = isset($post->code_type) ? $post->code_type : get_post_meta($post->ID, '_wpcode_code_type', true);
-                if ($code_type === 'js' || $code_type === 'javascript') {
+                if ('js' === $code_type || 'javascript' === $code_type) {
                     $language = 'javascript';
-                } elseif ($code_type === 'css') {
+                } elseif ('css' === $code_type) {
                     $language = 'css';
-                } elseif ($code_type === 'html' || $code_type === 'text') {
+                } elseif ('html' === $code_type || 'text' === $code_type) {
                     $language = 'html';
                 }
 
                 // Validate PHP code only
-                if ($language === 'php' && !empty($code)) {
+                if ('php' === $language && !empty($code)) {
                     $validation = $this->validate_php_code($code);
                     if ($validation !== true) {
                         $errors[] = $post->post_title . ': ' . $validation;
@@ -3049,7 +2094,7 @@ class Ofast_X_Snippets
                 $imported++;
             }
         } else {
-            wp_send_json_error('Unknown plugin: ' . $plugin);
+            wp_send_json_error(sprintf(__('Unknown plugin: %s', 'ofast-x'), $plugin));
         }
 
         // Audit log
@@ -3058,12 +2103,24 @@ class Ofast_X_Snippets
         // Clear cache when snippets are imported from plugin
         $this->clear_snippets_cache();
 
-        $message = "Imported {$imported} snippet(s) from {$plugin}";
+        $message = sprintf(__('Imported %d snippet(s) from %s', 'ofast-x'), $imported, $plugin);
         if ($skipped > 0) {
-            $message .= ", skipped {$skipped} (security/syntax issues)";
+            $message .= sprintf(__(', skipped %d (security/syntax issues)', 'ofast-x'), $skipped);
         }
 
-        wp_send_json_success(array('message' => $message, 'imported' => $imported, 'skipped' => $skipped, 'errors' => array_slice($errors, 0, 5)));
+        // Add warning about potential code duplication
+        $warning = sprintf(
+            __('⚠️ IMPORTANT: Imported snippets are inactive by default. Before activating, please deactivate or delete the corresponding snippets in %s to avoid running duplicate code. If both plugins run the same snippet, functions may conflict or code may execute twice.', 'ofast-x'),
+            $plugin
+        );
+
+        wp_send_json_success(array(
+            'message' => $message,
+            'warning' => $warning,
+            'imported' => $imported,
+            'skipped' => $skipped,
+            'errors' => array_slice($errors, 0, 5)
+        ));
     }
 
     /**
@@ -3074,24 +2131,24 @@ class Ofast_X_Snippets
         check_ajax_referer('ofast_preview_snippets', 'nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
+            wp_send_json_error(__('Unauthorized', 'ofast-x'));
         }
 
         // Rate limiting
         if (!$this->check_rate_limit('preview_snippets')) {
-            wp_send_json_error('Too many requests. Please wait a moment.');
+            wp_send_json_error(__('Too many requests. Please wait a moment.', 'ofast-x'));
         }
 
         $plugin = isset($_POST['plugin']) ? sanitize_text_field($_POST['plugin']) : '';
         if (empty($plugin)) {
-            wp_send_json_error('Invalid plugin');
+            wp_send_json_error(__('Invalid plugin', 'ofast-x'));
         }
 
         global $wpdb;
         $our_table = $wpdb->prefix . 'ofast_snippets';
         $snippets = array();
 
-        if ($plugin === 'code-snippets') {
+        if ('code-snippets' === $plugin) {
             $source_table = $wpdb->prefix . 'snippets';
             $source_snippets = $wpdb->get_results("SELECT * FROM $source_table");
 
@@ -3132,7 +2189,7 @@ class Ofast_X_Snippets
                     'code_preview' => esc_html(mb_substr($s->code, 0, 500) . (strlen($s->code) > 500 ? '...' : ''))
                 );
             }
-        } elseif ($plugin === 'wpcode') {
+        } elseif ('wpcode' === $plugin) {
             $posts = $wpdb->get_results(
                 "SELECT p.*, pm.meta_value as code_type, pm2.meta_value as is_active
                  FROM {$wpdb->posts} p 
@@ -3150,11 +2207,11 @@ class Ofast_X_Snippets
 
                 $language = 'php';
                 $code_type = isset($post->code_type) ? $post->code_type : get_post_meta($post->ID, '_wpcode_code_type', true);
-                if ($code_type === 'js' || $code_type === 'javascript') {
+                if ('js' === $code_type || 'javascript' === $code_type) {
                     $language = 'javascript';
-                } elseif ($code_type === 'css') {
+                } elseif ('css' === $code_type) {
                     $language = 'css';
-                } elseif ($code_type === 'html' || $code_type === 'text') {
+                } elseif ('html' === $code_type || 'text' === $code_type) {
                     $language = 'html';
                 }
 
@@ -3175,7 +2232,7 @@ class Ofast_X_Snippets
                 // Validate PHP syntax for safety check (only for PHP snippets)
                 $is_safe = true;
                 $error_message = null;
-                if ($language === 'php' && !empty($code)) {
+                if ('php' === $language && !empty($code)) {
                     $validation = $this->validate_php_code($code);
                     if ($validation !== true) {
                         $is_safe = false;
@@ -3196,7 +2253,7 @@ class Ofast_X_Snippets
                 );
             }
         } else {
-            wp_send_json_error('Unknown plugin: ' . $plugin);
+            wp_send_json_error(sprintf(__('Unknown plugin: %s', 'ofast-x'), $plugin));
         }
 
         wp_send_json_success(array('snippets' => $snippets));
@@ -3210,19 +2267,19 @@ class Ofast_X_Snippets
         check_ajax_referer('ofast_selective_import', 'nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
+            wp_send_json_error(__('Unauthorized', 'ofast-x'));
         }
 
         // Rate limiting
         if (!$this->check_rate_limit('import_plugin')) {
-            wp_send_json_error('Too many requests. Please wait a moment.');
+            wp_send_json_error(__('Too many requests. Please wait a moment.', 'ofast-x'));
         }
 
         $plugin = isset($_POST['plugin']) ? sanitize_text_field($_POST['plugin']) : '';
         $ids = isset($_POST['ids']) ? array_map('intval', $_POST['ids']) : array();
 
         if (empty($plugin) || empty($ids)) {
-            wp_send_json_error('Invalid request');
+            wp_send_json_error(__('Invalid request', 'ofast-x'));
         }
 
         global $wpdb;
@@ -3231,7 +2288,7 @@ class Ofast_X_Snippets
         $skipped = 0;
         $errors = array();
 
-        if ($plugin === 'code-snippets') {
+        if ('code-snippets' === $plugin) {
             $source_table = $wpdb->prefix . 'snippets';
             $placeholders = implode(',', array_fill(0, count($ids), '%d'));
             $snippets = $wpdb->get_results($wpdb->prepare(
@@ -3286,7 +2343,7 @@ class Ofast_X_Snippets
                 ));
                 $imported++;
             }
-        } elseif ($plugin === 'wpcode') {
+        } elseif ('wpcode' === $plugin) {
             $placeholders = implode(',', array_fill(0, count($ids), '%d'));
             $posts = $wpdb->get_results($wpdb->prepare(
                 "SELECT p.*, pm.meta_value as code_type 
@@ -3305,16 +2362,16 @@ class Ofast_X_Snippets
 
                 $language = 'php';
                 $code_type = isset($post->code_type) ? $post->code_type : get_post_meta($post->ID, '_wpcode_code_type', true);
-                if ($code_type === 'js' || $code_type === 'javascript') {
+                if ('js' === $code_type || 'javascript' === $code_type) {
                     $language = 'javascript';
-                } elseif ($code_type === 'css') {
+                } elseif ('css' === $code_type) {
                     $language = 'css';
-                } elseif ($code_type === 'html' || $code_type === 'text') {
+                } elseif ('html' === $code_type || 'text' === $code_type) {
                     $language = 'html';
                 }
 
                 // Validate PHP code only
-                if ($language === 'php' && !empty($code)) {
+                if ('php' === $language && !empty($code)) {
                     $validation = $this->validate_php_code($code);
                     if ($validation !== true) {
                         $errors[] = $post->post_title . ': ' . $validation;
@@ -3350,7 +2407,7 @@ class Ofast_X_Snippets
                 $imported++;
             }
         } else {
-            wp_send_json_error('Unknown plugin: ' . $plugin);
+            wp_send_json_error(sprintf(__('Unknown plugin: %s', 'ofast-x'), $plugin));
         }
 
         // Audit log
@@ -3359,12 +2416,23 @@ class Ofast_X_Snippets
         // Clear cache
         $this->clear_snippets_cache();
 
-        $message = "Imported {$imported} snippet(s) from {$plugin}";
+        $message = sprintf(__('Imported %d snippet(s) from %s', 'ofast-x'), $imported, $plugin);
         if ($skipped > 0) {
-            $message .= ", skipped {$skipped} (duplicates/errors)";
+            $message .= sprintf(__(', skipped %d (duplicates/errors)', 'ofast-x'), $skipped);
         }
 
-        wp_send_json_success(array('message' => $message, 'imported' => $imported, 'skipped' => $skipped));
+        // Add warning about potential code duplication
+        $warning = sprintf(
+            __('⚠️ IMPORTANT: Imported snippets are inactive by default. Before activating, please deactivate or delete the corresponding snippets in %s to avoid running duplicate code. If both plugins run the same snippet, functions may conflict or code may execute twice.', 'ofast-x'),
+            $plugin
+        );
+
+        wp_send_json_success(array(
+            'message' => $message,
+            'warning' => $warning,
+            'imported' => $imported,
+            'skipped' => $skipped
+        ));
     }
 
     /**
@@ -3399,7 +2467,7 @@ class Ofast_X_Snippets
         // PERFORMANCE: Get active snippets from cache (1 hour TTL)
         $snippets = get_transient('ofast_active_snippets_cache');
 
-        if ($snippets === false) {
+        if (false === $snippets) {
             global $wpdb;
             $table = $wpdb->prefix . 'ofast_snippets';
             // Get all active snippets with all relevant fields, ordered by priority (exclude trashed)
@@ -3492,30 +2560,30 @@ class Ofast_X_Snippets
     private function should_run_on_page($target_type, $target_value)
     {
         // All pages - always run
-        if ($target_type === 'all' || empty($target_type)) {
+        if ('all' === $target_type || empty($target_type)) {
             return true;
         }
 
         // Homepage only
-        if ($target_type === 'homepage') {
+        if ('homepage' === $target_type) {
             return is_front_page() || is_home();
         }
 
         // Specific post type
-        if ($target_type === 'post_type') {
+        if ('post_type' === $target_type) {
             $post_types = array_map('trim', explode(',', $target_value));
             return is_singular($post_types);
         }
 
         // Specific page/post IDs
-        if ($target_type === 'page_ids') {
+        if ('page_ids' === $target_type) {
             $ids = array_map('intval', array_map('trim', explode(',', $target_value)));
             $current_id = get_queried_object_id();
             return in_array($current_id, $ids);
         }
 
         // URL contains
-        if ($target_type === 'url_contains') {
+        if ('url_contains' === $target_type) {
             $current_url = $_SERVER['REQUEST_URI'];
             $patterns = array_map('trim', explode(',', $target_value));
             foreach ($patterns as $pattern) {
@@ -3699,7 +2767,7 @@ class Ofast_X_Snippets
         check_ajax_referer('ofast_get_revisions', 'nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
+            wp_send_json_error(__('Unauthorized', 'ofast-x'));
         }
 
         $snippet_id = intval($_POST['snippet_id']);
@@ -3716,7 +2784,7 @@ class Ofast_X_Snippets
         check_ajax_referer('ofast_restore_revision', 'nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
+            wp_send_json_error(__('Unauthorized', 'ofast-x'));
         }
 
         $revision_id = intval($_POST['revision_id']);
@@ -3732,7 +2800,7 @@ class Ofast_X_Snippets
         ));
 
         if (!$revision) {
-            wp_send_json_error('Revision not found');
+            wp_send_json_error(__('Revision not found', 'ofast-x'));
         }
 
         // Save current code as a new revision before restoring
@@ -4067,7 +3135,7 @@ class Ofast_X_Snippets
         $tokens = @token_get_all($test_code);
         error_reporting($old_error_reporting);
 
-        if ($tokens === false) {
+        if (false === $tokens) {
             return 'Invalid PHP syntax detected';
         }
 
@@ -4078,12 +3146,12 @@ class Ofast_X_Snippets
 
         foreach ($tokens as $token) {
             if (is_string($token)) {
-                if ($token === '(') $open_paren++;
-                if ($token === ')') $open_paren--;
-                if ($token === '[') $open_bracket++;
-                if ($token === ']') $open_bracket--;
-                if ($token === '{') $open_brace++;
-                if ($token === '}') $open_brace--;
+                if ('(' === $token) $open_paren++;
+                if (')' === $token) $open_paren--;
+                if ('[' === $token) $open_bracket++;
+                if (']' === $token) $open_bracket--;
+                if ('{' === $token) $open_brace++;
+                if ('}' === $token) $open_brace--;
             }
         }
 
@@ -4102,7 +3170,7 @@ class Ofast_X_Snippets
         $has_semicolon = false;
 
         foreach ($last_tokens as $token) {
-            if ($token === ';') {
+            if (';' === $token) {
                 $has_semicolon = true;
             }
         }
@@ -4272,26 +3340,61 @@ class Ofast_X_Snippets
     }
 
     /**
-     * SECURITY: Rate limiting check
+     * SECURITY: Rate limiting check using database
      * Returns true if action is allowed, false if rate limited
+     * More robust than transients (survives cache clears)
      */
     private function check_rate_limit($action = 'snippet_action')
     {
+        global $wpdb;
         $user_id = get_current_user_id();
-        $transient_key = "ofast_rate_{$action}_{$user_id}";
-        $attempts = get_transient($transient_key);
+        $table = $wpdb->prefix . 'ofast_rate_limits';
+        $window_seconds = 60; // 60 second window
+        $max_attempts = 30;   // Max 30 actions per minute
 
-        if ($attempts === false) {
-            // First attempt
-            set_transient($transient_key, 1, 60); // 60 second window
+        // Get current rate limit record
+        $record = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table WHERE user_id = %d AND action_type = %s",
+            $user_id,
+            $action
+        ));
+
+        $now = current_time('mysql');
+
+        if (!$record) {
+            // First attempt - create record
+            $wpdb->insert($table, array(
+                'user_id' => $user_id,
+                'action_type' => $action,
+                'attempts' => 1,
+                'window_start' => $now
+            ));
             return true;
         }
 
-        if ($attempts >= 30) { // Max 30 actions per minute
-            return false;
+        // Check if window has expired
+        $window_start = strtotime($record->window_start);
+        $window_end = $window_start + $window_seconds;
+
+        if (time() > $window_end) {
+            // Window expired, reset
+            $wpdb->update($table, 
+                array('attempts' => 1, 'window_start' => $now),
+                array('id' => $record->id)
+            );
+            return true;
         }
 
-        set_transient($transient_key, $attempts + 1, 60);
+        // Within window - check attempts
+        if ($record->attempts >= $max_attempts) {
+            return false; // Rate limited
+        }
+
+        // Increment attempts
+        $wpdb->update($table,
+            array('attempts' => $record->attempts + 1),
+            array('id' => $record->id)
+        );
         return true;
     }
 
@@ -4363,5 +3466,46 @@ class Ofast_X_Snippets
 
         // Mark as migrated
         update_option('ofast_snippets_trash_columns_added', true);
+    }
+
+    /**
+     * Create rate limits table if it doesn't exist (auto-migration)
+     * Only runs once, tracks via option
+     */
+    private function maybe_create_rate_limits_table()
+    {
+        // Only run if not already migrated
+        if (get_option('ofast_snippets_rate_limits_table_added')) {
+            return;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_rate_limits';
+
+        // Check if table already exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table}'");
+        if ($table_exists) {
+            update_option('ofast_snippets_rate_limits_table_added', true);
+            return;
+        }
+
+        // Create the table
+        $charset_collate = $wpdb->get_charset_collate();
+        $sql = "CREATE TABLE {$table} (
+            id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_id BIGINT(20) UNSIGNED NOT NULL,
+            action_type VARCHAR(50) NOT NULL,
+            attempts INT(11) DEFAULT 1,
+            window_start DATETIME NOT NULL,
+            PRIMARY KEY (id),
+            UNIQUE KEY idx_user_action (user_id, action_type),
+            KEY idx_window_start (window_start)
+        ) {$charset_collate};";
+
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+
+        update_option('ofast_snippets_rate_limits_table_added', true);
+        error_log("Ofast X Snippets: Created 'ofast_rate_limits' table");
     }
 }

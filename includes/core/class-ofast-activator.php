@@ -174,7 +174,21 @@ class Ofast_X_Activator
         ) {$charset_collate};";
         dbDelta($sql_submissions);
 
-        // 6. Redirects Table
+        // 6. Rate Limits Table (for more robust rate limiting than transients)
+        $table_rate_limits = $wpdb->prefix . 'ofast_rate_limits';
+        $sql_rate_limits = "CREATE TABLE IF NOT EXISTS {$table_rate_limits} (
+            id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_id BIGINT(20) UNSIGNED NOT NULL,
+            action_type VARCHAR(50) NOT NULL,
+            attempts INT(11) DEFAULT 1,
+            window_start DATETIME NOT NULL,
+            PRIMARY KEY (id),
+            UNIQUE KEY idx_user_action (user_id, action_type),
+            KEY idx_window_start (window_start)
+        ) {$charset_collate};";
+        dbDelta($sql_rate_limits);
+
+        // 7. Redirects Table
         $table_redirects = $wpdb->prefix . 'ofast_redirects';
         $sql_redirects = "CREATE TABLE IF NOT EXISTS {$table_redirects} (
             id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,

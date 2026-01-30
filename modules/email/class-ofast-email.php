@@ -82,7 +82,7 @@ class Ofast_X_Email
     public function cleanup_old_logs()
     {
         global $wpdb;
-        $retention_days = get_option('ofastx_email_retention_days', 90);
+        $retention_days = get_option('ofast_email_retention_days', 90);
         $wpdb->query($wpdb->prepare(
             "DELETE FROM {$wpdb->prefix}ofast_email_logs WHERE sent_at < DATE_SUB(NOW(), INTERVAL %d DAY)",
             $retention_days

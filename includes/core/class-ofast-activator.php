@@ -299,7 +299,7 @@ class Ofast_X_Activator
                 'woocommerce' => false,       // Coming soon
                 'learndash' => false          // Coming soon
             ),
-            'ofastx_email_retention_days' => 90
+            'ofast_email_retention_days' => 90
         );
 
         foreach ($default_options as $key => $value) {

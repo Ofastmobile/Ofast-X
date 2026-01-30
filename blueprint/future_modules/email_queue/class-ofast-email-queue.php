@@ -260,9 +260,10 @@ class Ofast_X_Email_Queue {
             return 0;
         }
         
-        // Get throttle settings
-        $emails_per_hour = get_option('ofast_email_emails_per_cron', 30);
-        $delay_seconds = 3600 / $emails_per_hour;
+        // Get throttle settings from Templates page
+        $emails_per_batch = get_option('ofast_email_batch_size', 5);
+        // Cron runs every 5 minutes, so calculate safe rate
+        // With 5 emails per batch and 5 min interval = 60 emails/hour
         
         // Get next batch that's ready to send
         $table = $wpdb->prefix . 'ofast_email_queue';
@@ -296,47 +297,49 @@ class Ofast_X_Email_Queue {
             return 0;
         }
         
-        // Send 1 email (throttled)
-        $user_id = $remaining_ids[0];
-        $user = get_userdata($user_id);
+        // Send up to $emails_per_batch emails in this cron run
+        $to_send = array_slice($remaining_ids, 0, $emails_per_batch);
+        $sent_count = 0;
         
-        if (!$user) {
-            // User deleted - skip
-            $this->increment_sent_count($batch->id, false);
-            $this->release_lock();
-            return 0;
-        }
-        
-        // Replace placeholders
-        $final_body = $this->replace_placeholders($batch->body, $user);
-        
-        // Get email template
         require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-template.php';
-        $html = Ofast_X_Email_Template::get_template($final_body);
-        
-        // Send email
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
             'From: ' . get_option('ofast_email_from_name', get_bloginfo('name')) . ' <' . get_option('ofast_email_reply_to', get_option('admin_email')) . '>'
         );
         
-        $sent = wp_mail($user->user_email, $batch->subject, $html, $headers);
+        foreach ($to_send as $user_id) {
+            $user = get_userdata($user_id);
+            
+            if (!$user) {
+                // User deleted - skip but count
+                $this->increment_sent_count($batch->id, false);
+                continue;
+            }
+            
+            // Replace placeholders
+            $final_body = $this->replace_placeholders($batch->body, $user);
+            $html = Ofast_X_Email_Template::get_template($final_body);
+            
+            // Send email
+            $sent = wp_mail($user->user_email, $batch->subject, $html, $headers);
+            
+            // Update batch progress
+            $this->increment_sent_count($batch->id, $sent);
+            
+            if ($sent) {
+                $sent_count++;
+            }
+        }
         
-        // Update batch progress
-        $this->increment_sent_count($batch->id, $sent);
-        
-        // Set next allowed send time (throttle)
-        $next_send = date('Y-m-d H:i:s', time() + $delay_seconds);
+        // Update last processed time
         $wpdb->update(
             $wpdb->prefix . 'ofast_email_queue',
-            array('next_allowed_send' => $next_send),
-            array('id' => $batch->id),
-            array('%s'),
-            array('%d')
+            array('last_processed' => current_time('mysql')),
+            array('id' => $batch->id)
         );
         
         // Check if batch complete
-        if (($batch->sent_count + 1) >= $batch->total_users) {
+        if (($batch->sent_count + count($to_send)) >= $batch->total_users) {
             $wpdb->update(
                 $wpdb->prefix . 'ofast_email_queue',
                 array('status' => 'completed', 'last_processed' => current_time('mysql')),
@@ -349,7 +352,7 @@ class Ofast_X_Email_Queue {
         
         $this->release_lock();
         
-        return $sent ? 1 : 0;
+        return $sent_count;
     }
     
     /**

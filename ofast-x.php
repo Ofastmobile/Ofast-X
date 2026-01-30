@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Plugin Name: Ofast-X
+ * Plugin Name: Ofast Toolkit
  * Plugin URI: https://ofastshop.com/ofast-x
  * Description: All-in-One WordPress plugin with Email System, SMTP Configuration, Dashboard Customization, Newsletter, WhatsApp, Contact Forms, Code Snippets, Redirects, and more.
  * Version: 1.0.0

@@ -66,13 +66,13 @@ class Ofast_X_Settings
             return;
         }
 
-        // Security checks
-        if (!wp_verify_nonce($_POST['_wpnonce'], 'ofast_settings_save')) {
-            wp_die('Security check failed');
+        // Security checks - capability first (fail fast)
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have sufficient permissions', 'ofast-x'));
         }
 
-        if (!current_user_can('manage_options')) {
-            wp_die('You do not have sufficient permissions');
+        if (!wp_verify_nonce($_POST['_wpnonce'], 'ofast_settings_save')) {
+            wp_die(esc_html__('Security check failed', 'ofast-x'));
         }
 
         // Get submitted module states
@@ -106,13 +106,13 @@ class Ofast_X_Settings
             return;
         }
 
-        // Security checks
-        if (!wp_verify_nonce($_POST['_wpnonce'], 'ofast_settings_save')) {
-            wp_die('Security check failed');
+        // Security checks - capability first (fail fast)
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have sufficient permissions', 'ofast-x'));
         }
 
-        if (!current_user_can('manage_options')) {
-            wp_die('You do not have sufficient permissions');
+        if (!wp_verify_nonce($_POST['_wpnonce'], 'ofast_settings_save')) {
+            wp_die(esc_html__('Security check failed', 'ofast-x'));
         }
 
         // Reset module enabled states to defaults
@@ -270,7 +270,7 @@ class Ofast_X_Settings
     public function render_settings_page()
     {
         if (!current_user_can('manage_options')) {
-            wp_die('You do not have sufficient permissions');
+            wp_die(esc_html__('You do not have sufficient permissions', 'ofast-x'));
         }
 
         $modules = $this->get_available_modules();

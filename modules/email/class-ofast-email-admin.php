@@ -325,9 +325,7 @@ class Ofast_X_Email_Admin
                 <a href="#" class="ofast-tab <?php echo $active_tab === 'drafts' ? 'active' : ''; ?>" data-tab="drafts">
                     <span class="dashicons dashicons-edit"></span> Drafts
                 </a>
-                <a href="#" class="ofast-tab <?php echo $active_tab === 'queue' ? 'active' : ''; ?>" data-tab="queue">
-                    <span class="dashicons dashicons-list-view"></span> Queue
-                </a>
+<!-- Queue tab archived for future release -->
                 <a href="#" class="ofast-tab <?php echo $active_tab === 'history' ? 'active' : ''; ?>" data-tab="history">
                     <span class="dashicons dashicons-clock"></span> History
                 </a>
@@ -346,10 +344,7 @@ class Ofast_X_Email_Admin
                 <?php $this->render_tab_drafts(); ?>
             </div>
 
-            <!-- Queue Tab -->
-            <div id="tab-queue" class="ofast-tab-content<?php echo $active_tab === 'queue' ? ' active' : ''; ?>">
-                <?php $this->render_tab_queue(); ?>
-            </div>
+<!-- Queue Tab - Archived for future release -->
 
             <!-- History Tab -->
             <div id="tab-history" class="ofast-tab-content<?php echo $active_tab === 'history' ? ' active' : ''; ?>">
@@ -557,16 +552,7 @@ class Ofast_X_Email_Admin
         <?php
     }
 
-    /**
-     * Render queue tab
-     */
-    private function render_tab_queue()
-    {
-        // Queue page is in a separate class
-        require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-queue-admin.php';
-        $queue_admin = new Ofast_X_Email_Queue_Admin();
-        $queue_admin->render_content_only();
-    }
+    // Queue tab - archived to blueprint/future_modules/email_queue/
 
     /**
      * Render history tab (content only, no wrapper)
@@ -922,8 +908,10 @@ class Ofast_X_Email_Admin
                         }
                         ?>
                     </div>
+
+                    <!-- Bulk Email Settings - Coming Soon -->
+                    <!-- Queue system archived to: blueprint/future_modules/email_queue/ -->
                     
-                    <!-- Buttons -->
                     <div style="margin-top: 30px; display: flex; gap: 12px; flex-wrap: wrap;">
                     <button type="submit" name="ofast_save_template" class="button button-primary button-large ofast-template-btn" style="flex: 1;"><span class="dashicons dashicons-saved"></span> Save Changes</button>
                     <button type="submit" name="ofast_send_test_template" class="button button-secondary button-large ofast-template-btn" style="flex: 1;"><span class="dashicons dashicons-email"></span> Send Test</button>
@@ -1253,48 +1241,35 @@ class Ofast_X_Email_Admin
                         $result_message = Ofast_X_Toast::render('Recipient list limited to ' . $max_recipients . ' users.', 'warning', true);
                     }
 
-                    // FIX #4 & #5: Use configurable batch size for immediate sends
-                    $batch_size = isset($_POST['batch_size']) ? intval($_POST['batch_size']) : 40;
-                    $batch_size = max(10, min(50, $batch_size)); // Clamp between 10-50
-
-                    if (count($total_ids) <= $batch_size) {
-                        // Small batch: Send immediately
-                        $sent = 0;
-                        $headers = $this->get_email_headers();
-                        $sample_body = '';
-                        foreach (get_users(['include' => $total_ids]) as $user) {
-                            $message = $this->replace_placeholders($body, $user);
-                            $full_body = $this->get_email_template($message);
-                            if (empty($sample_body)) {
-                                $sample_body = $full_body;
-                            }
-                            if (wp_mail($user->user_email, $subject, $full_body, $headers)) {
-                                $sent++;
-                            }
+                    // Send all emails immediately
+                    // Note: For 100+ recipients, consider using third-party SMTP (SendGrid, Mailgun) 
+                    // which have their own queues built into their servers
+                    $sent = 0;
+                    $headers = $this->get_email_headers();
+                    $sample_body = '';
+                    $total_count = count($total_ids);
+                    
+                    foreach (get_users(['include' => $total_ids]) as $user) {
+                        $message = $this->replace_placeholders($body, $user);
+                        $full_body = $this->get_email_template($message);
+                        if (empty($sample_body)) {
+                            $sample_body = $full_body;
                         }
+                        if (wp_mail($user->user_email, $subject, $full_body, $headers)) {
+                            $sent++;
+                        }
+                    }
 
-                        $this->log_email($subject, $sent, 'Immediate send', $sample_body);
-                        $result_message = Ofast_X_Toast::render('Sent immediately to ' . $sent . ' user(s)', 'success', true);
+                    $this->log_email($subject, $sent, 'Immediate send', $sample_body);
+                    
+                    if ($total_count >= 50 && $sent == $total_count) {
+                        $result_message = Ofast_X_Toast::render(
+                            'Sent to all ' . $sent . ' users. For better reliability with large sends, consider using SMTP API (SendGrid, Mailgun, etc.)',
+                            'success',
+                            true
+                        );
                     } else {
-                        // Large batch: Add to queue system for background processing
-                        require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-email-queue.php';
-                        $queue = Ofast_X_Email_Queue::get_instance();
-                        
-                        $batch_id = $queue->add_batch($subject, $body, $total_ids, time());
-                        
-                        if ($batch_id) {
-                            $total_count = count($total_ids);
-                            $emails_per_hour = get_option('ofast_email_emails_per_cron', 30);
-                            $estimated_hours = ceil($total_count / $emails_per_hour);
-                            
-                            $result_message = Ofast_X_Toast::render(
-                                "Batch queued! {$total_count} emails will be sent at {$emails_per_hour}/hour (~{$estimated_hours}h completion time). <a href='" . admin_url('admin.php?page=ofast-emailer&tab=queue') . "'>View Queue</a>",
-                                'success',
-                                true
-                            );
-                        } else {
-                            $result_message = Ofast_X_Toast::render('Failed to queue emails. Please try again.', 'error', true);
-                        }
+                        $result_message = Ofast_X_Toast::render('Sent successfully to ' . $sent . ' user(s)', 'success', true);
                     }
                 }
             } // End rate limit else block
@@ -1709,20 +1684,7 @@ class Ofast_X_Email_Admin
                                     <strong style="font-size: 13px;">Schedule Time (optional)</strong>
                                     <input type="datetime-local" name="schedule_time" style="margin-top: 5px;">
                                 </label>
-                                <p class="description">Leave blank to send immediately. Large batches will auto-schedule.</p>
-                            </div>
-                            
-                            <div class="ofast-form-group" style="margin-bottom: 0;">
-                                <label>
-                                    <strong style="font-size: 13px;">Emails Per Hour</strong>
-                                    <select name="batch_size" style="margin-top: 5px;">
-                                        <option value="20">20 per hour (safest)</option>
-                                        <option value="30">30 per hour</option>
-                                        <option value="40" selected>40 per hour (recommended)</option>
-                                        <option value="50">50 per hour (max)</option>
-                                    </select>
-                                </label>
-                                <p class="description">Higher values may trigger spam limits on shared hosting.</p>
+                                <p class="description">Leave blank to send immediately.</p>
                             </div>
                         </div>
 
@@ -1734,7 +1696,7 @@ class Ofast_X_Email_Admin
                             </label>
                             
                             <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
-                                <button type="submit" name="send_email" class="button button-primary" style="width: 100%;">Send / Schedule</button>
+                                <button type="submit" name="send_email" class="button button-primary" style="width: 100%;">Send Email</button>
                                 <button type="submit" name="save_draft" class="button button-secondary" style="width: 100%;">Save as Draft</button>
                                 <button type="button" id="preview-email-btn" class="button button-secondary" style="width: 100%;">Preview Email</button>
                             </div>
@@ -2664,39 +2626,6 @@ class Ofast_X_Email_Admin
                             ?>
                         </div>
 
-                        <!-- Email Cron Settings (Like Tutor LMS) -->
-                        <div style="margin-bottom: 20px; padding: 15px; background: #f0f6fc; border-radius: 8px; border: 1px solid #c3d9ed;">
-                            <h3 style="margin: 0 0 15px 0; font-size: 14px; color: #1d4ed8;">Email Cron Settings</h3>
-
-                            <?php
-                            $cron_enabled = get_option('ofast_email_cron_enabled', 0);
-                            $cron_frequency = get_option('ofast_email_cron_frequency', 200);
-                            $emails_per_cron = get_option('ofast_email_emails_per_cron', 10);
-                            ?>
-
-                            <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer;">
-                                <input type="checkbox" name="cron_enabled" value="1" <?php checked($cron_enabled, 1); ?> style="width: 18px; height: 18px;">
-                                <span>
-                                    <strong>WP Cron for Bulk Mailing</strong><br>
-                                    <span style="font-size: 12px; color: #666;">Enable WordPress native scheduler for email sending</span>
-                                </span>
-                            </label>
-
-                            <div style="display: grid; gap: 15px;">
-                                <div>
-                                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">WP Email Cron Frequency (seconds)</label>
-                                    <input type="number" name="cron_frequency" value="<?php echo esc_attr($cron_frequency); ?>" min="60" max="3600" style="width: 100px;">
-                                    <span style="font-size: 12px; color: #666;">Time between cron runs (default: 200)</span>
-                                </div>
-
-                                <div>
-                                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Emails Per Cron Execution</label>
-                                    <input type="number" name="emails_per_cron" value="<?php echo esc_attr($emails_per_cron); ?>" min="1" max="100" style="width: 100px;">
-                                    <span style="font-size: 12px; color: #666;">Number of emails to send per cron run (default: 10)</span>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Buttons -->
                         <style>
                             @media screen and (max-width: 480px) {
@@ -2924,10 +2853,13 @@ class Ofast_X_Email_Admin
         update_option('ofast_email_logo_width', absint($_POST['logo_width'] ?? 120));
         update_option('ofast_email_logo_height', absint($_POST['logo_height'] ?? 0));
 
-        // Email Cron Settings
-        update_option('ofast_email_cron_enabled', isset($_POST['cron_enabled']) ? 1 : 0);
-        update_option('ofast_email_cron_frequency', max(60, min(3600, absint($_POST['cron_frequency'] ?? 200))));
-        update_option('ofast_email_emails_per_cron', max(1, min(100, absint($_POST['emails_per_cron'] ?? 10))));
+        // Email Cron Settings - LEGACY (kept for backwards compat)
+        update_option('ofast_email_cron_enabled', isset($_POST['queue_enabled']) ? 1 : 0);
+        
+        // Queue System Settings (NEW)
+        update_option('ofast_email_queue_enabled', isset($_POST['queue_enabled']) ? true : false);
+        update_option('ofast_email_rate_per_hour', max(10, min(500, absint($_POST['emails_per_hour'] ?? 30))));
+        update_option('ofast_email_batch_size', max(1, min(50, absint($_POST['emails_per_batch'] ?? 5))));
     }
 
     /**

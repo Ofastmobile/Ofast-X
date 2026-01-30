@@ -62,7 +62,7 @@ class Ofast_X_Setup_Wizard {
         }
 
         if (!wp_verify_nonce($_POST['_wpnonce'], 'ofast_wizard_nonce')) {
-            wp_die('Security check failed');
+            wp_die(esc_html__('Security check failed', 'ofast-x'));
         }
 
         $action = sanitize_text_field($_POST['ofast_wizard_action']);

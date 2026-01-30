@@ -187,23 +187,8 @@ class Ofast_X_Core
 
             $this->modules['email'] = $email_controller;
             
-            // Load Queue System
-            $queue_file = OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-email-queue.php';
-            if (file_exists($queue_file)) {
-                require_once $queue_file;
-                $queue = Ofast_X_Email_Queue::get_instance();
-                $queue->init();
-            }
-            
-            // Load Queue Admin (only in admin)
-            if (is_admin()) {
-                $queue_admin_file = OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-queue-admin.php';
-                if (file_exists($queue_admin_file)) {
-                    require_once $queue_admin_file;
-                    $queue_admin = new Ofast_X_Email_Queue_Admin();
-                    $queue_admin->init();
-                }
-            }
+            // Queue System - ARCHIVED for future release
+            // See: blueprint/future_modules/email_queue/
         }
     }
 
@@ -420,21 +405,32 @@ class Ofast_X_Core
     /**
      * Enqueue admin styles
      */
-    public function enqueue_admin_styles()
+    public function enqueue_admin_styles($hook)
     {
+        // Only load on plugin pages for performance
+        if (strpos($hook, 'ofast') === false && strpos($hook, 'toplevel_page_ofast') === false) {
+            return;
+        }
+
+        $css_file = OFAST_X_PLUGIN_DIR . 'admin/css/ofast-admin.css';
+        $version = (defined('WP_DEBUG') && WP_DEBUG) ? filemtime($css_file) : OFAST_X_VERSION;
+        
         wp_enqueue_style(
             'ofast-x-admin',
             OFAST_X_PLUGIN_URL . 'admin/css/ofast-admin.css',
             array(),
-            OFAST_X_VERSION
+            $version
         );
 
         // Responsive CSS for mobile-friendly admin pages
+        $responsive_file = OFAST_X_PLUGIN_DIR . 'admin/css/ofast-admin-responsive.css';
+        $responsive_version = (defined('WP_DEBUG') && WP_DEBUG) ? filemtime($responsive_file) : OFAST_X_VERSION;
+        
         wp_enqueue_style(
             'ofast-x-admin-responsive',
             OFAST_X_PLUGIN_URL . 'admin/css/ofast-admin-responsive.css',
             array('ofast-x-admin'),
-            OFAST_X_VERSION
+            $responsive_version
         );
     }
 

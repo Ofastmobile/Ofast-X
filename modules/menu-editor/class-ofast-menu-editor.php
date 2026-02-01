@@ -20,8 +20,8 @@ class Ofast_X_Menu_Editor
     public function init()
     {
         // Only load if module is enabled
-        $admin_tweaks = get_option('ofast_admin_tweaks', array());
-        if (empty($admin_tweaks['enable_menu_editor'])) {
+        $enabled = get_option('ofastx_modules_enabled', array());
+        if (empty($enabled['menu-editor'])) {
             return;
         }
 
@@ -239,229 +239,208 @@ class Ofast_X_Menu_Editor
             <form method="post" action="">
                 <?php wp_nonce_field('ofast_menu_editor_save', '_wpnonce'); ?>
 
-                <div class="ofast-editor-layout">
-                    
-                    <!-- Left Column: Table -->
-                    <div class="ofast-editor-main">
                 <!-- Scrollable Table Container -->
                 <div class="ofast-table-card">
-                    <div style="overflow-x: auto;">
-                        <table class="ofast-modern-table" style="width: 100%;" id="menu-editor-table">
+                    <div style="overflow-x: auto; max-width: 100%;">
+                        <table class="ofast-modern-table" style="table-layout: fixed; min-width: 900px;" id="menu-editor-table">
                         <thead>
                             <tr>
-                                <th style="width: 40px; text-align: center;"></th>
-                                <th style="width: 25%;">Menu Name</th>
-                                <th style="width: 25%;">Custom Name</th>
-                                <th style="width: 130px;">Icon</th>
-                                <th style="width: 70px; text-align: center;">Hidden</th>
+                                <th style="width: 30px;"></th>
+                                <th style="width: 180px;">Menu Name</th>
+                                <th style="width: 150px;">Custom Name</th>
+                                <th style="width: 150px;">Icon</th>
+                                <th style="width: 60px;">Hidden</th>
                                 <th>Slug</th>
                             </tr>
                         </thead>
-                                <tbody id="menu-items-list">
-                                    <?php
-                                    $order_index = 10;
-                                    $common_icons = array(
-                                        '' => '— Default —',
-                                        'dashicons-admin-home' => 'Home',
-                                        // ... (rest of icons array structure remains same, simplified for brevity in replacement if possible, but keeping logic)
-                                        'dashicons-admin-post' => 'Post',
-                                        'dashicons-admin-media' => 'Media',
-                                        'dashicons-admin-page' => 'Page',
-                                        'dashicons-admin-comments' => 'Comments',
-                                        'dashicons-admin-appearance' => 'Appearance',
-                                        'dashicons-admin-plugins' => 'Plugins',
-                                        'dashicons-admin-users' => 'Users',
-                                        'dashicons-admin-tools' => 'Tools',
-                                        'dashicons-admin-settings' => 'Settings',
-                                        'dashicons-admin-network' => 'Network',
-                                        'dashicons-admin-generic' => 'Generic',
-                                        'dashicons-dashboard' => 'Dashboard',
-                                        'dashicons-chart-bar' => 'Chart Bar',
-                                        'dashicons-chart-pie' => 'Chart Pie',
-                                        'dashicons-chart-line' => 'Chart Line',
-                                        'dashicons-chart-area' => 'Chart Area',
-                                        'dashicons-analytics' => 'Analytics',
-                                        'dashicons-email' => 'Email',
-                                        'dashicons-email-alt' => 'Email Alt',
-                                        'dashicons-email-alt2' => 'Email Alt2',
-                                        'dashicons-products' => 'Products',
-                                        'dashicons-cart' => 'Cart',
-                                        'dashicons-store' => 'Store',
-                                        'dashicons-money-alt' => 'Money',
-                                        'dashicons-calendar' => 'Calendar',
-                                        'dashicons-calendar-alt' => 'Calendar Alt',
-                                        'dashicons-star-filled' => 'Star',
-                                        'dashicons-star-half' => 'Star Half',
-                                        'dashicons-heart' => 'Heart',
-                                        'dashicons-shield' => 'Shield',
-                                        'dashicons-shield-alt' => 'Shield Alt',
-                                        'dashicons-lock' => 'Lock',
-                                        'dashicons-unlock' => 'Unlock',
-                                        'dashicons-visibility' => 'Eye',
-                                        'dashicons-hidden' => 'Hidden',
-                                        'dashicons-bell' => 'Bell',
-                                        'dashicons-flag' => 'Flag',
-                                        'dashicons-awards' => 'Awards',
-                                        'dashicons-thumbs-up' => 'Thumbs Up',
-                                        'dashicons-thumbs-down' => 'Thumbs Down',
-                                        'dashicons-welcome-write-blog' => 'Write',
-                                        'dashicons-welcome-add-page' => 'Add Page',
-                                        'dashicons-welcome-view-site' => 'View Site',
-                                        'dashicons-welcome-widgets-menus' => 'Widgets',
-                                        'dashicons-welcome-learn-more' => 'Learn',
-                                        'dashicons-hammer' => 'Hammer',
-                                        'dashicons-arrow-right-alt' => 'Arrow Right',
-                                        'dashicons-arrow-left-alt' => 'Arrow Left',
-                                        'dashicons-arrow-up-alt' => 'Arrow Up',
-                                        'dashicons-arrow-down-alt' => 'Arrow Down',
-                                        'dashicons-search' => 'Search',
-                                        'dashicons-filter' => 'Filter',
-                                        'dashicons-sort' => 'Sort',
-                                        'dashicons-list-view' => 'List View',
-                                        'dashicons-grid-view' => 'Grid View',
-                                        'dashicons-exerpt-view' => 'Excerpt View',
-                                        'dashicons-info' => 'Info',
-                                        'dashicons-warning' => 'Warning',
-                                        'dashicons-yes' => 'Yes/Check',
-                                        'dashicons-no' => 'No/X',
-                                        'dashicons-plus' => 'Plus',
-                                        'dashicons-minus' => 'Minus',
-                                        'dashicons-paperclip' => 'Paperclip',
-                                        'dashicons-camera' => 'Camera',
-                                        'dashicons-video-alt' => 'Video',
-                                        'dashicons-microphone' => 'Microphone',
-                                        'dashicons-format-audio' => 'Audio',
-                                        'dashicons-format-image' => 'Image',
-                                        'dashicons-format-gallery' => 'Gallery',
-                                        'dashicons-format-video' => 'Video',
-                                        'dashicons-database' => 'Database',
-                                        'dashicons-cloud' => 'Cloud',
-                                        'dashicons-cloud-upload' => 'Upload',
-                                        'dashicons-cloud-saved' => 'Saved',
-                                        'dashicons-download' => 'Download',
-                                        'dashicons-upload' => 'Upload',
-                                        'dashicons-backup' => 'Backup',
-                                        'dashicons-book' => 'Book',
-                                        'dashicons-book-alt' => 'Book Alt',
-                                        'dashicons-businessman' => 'Businessman',
-                                        'dashicons-buddicons-buddypress-logo' => 'BuddyPress',
-                                    );
-                                    foreach ($sorted_menu as $menu_data):
-                                        $item = $menu_data['item'];
-                                        $slug = $item[2];
-                                        $name = wp_strip_all_tags($item[0]);
-                                        $settings = $menu_data['settings'];
-                                        $custom_name = $settings['rename'] ?? '';
-                                        $custom_icon = $settings['icon'] ?? '';
-                                        $current_icon = $item[6] ?? 'dashicons-admin-generic';
-                                        $is_hidden = !empty($settings['hidden']);
-                                        $current_order = $menu_data['order'];
-                                    ?>
-                                        <tr class="menu-item-row <?php echo $is_hidden ? 'row-hidden' : ''; ?>" data-slug="<?php echo esc_attr($slug); ?>">
-                                            <td class="drag-handle" style="cursor: move; text-align: center; color: #999; font-size: 16px;">
-                                                <span class="dashicons dashicons-menu"></span>
-                                            </td>
-                                            <td>
-                                                <span class="dashicons <?php echo esc_attr($custom_icon ?: $current_icon); ?>" style="margin-right: 5px; color: #666;"></span>
-                                                <strong><?php echo esc_html($name); ?></strong>
-                                                <?php if ($is_hidden): ?>
-                                                    <span style="color: #999; font-size: 11px;"> (hidden)</span>
-                                                <?php endif; ?>
-                                                <!-- Hidden order input -->
-                                                <input type="hidden"
-                                                    name="menu_items[<?php echo esc_attr($slug); ?>][order]"
-                                                    value="<?php echo esc_attr($current_order); ?>"
-                                                    class="order-input">
-                                            </td>
-                                            <td>
-                                                <input type="text"
-                                                    name="menu_items[<?php echo esc_attr($slug); ?>][rename]"
-                                                    value="<?php echo esc_attr($custom_name); ?>"
-                                                    placeholder="Keep original"
-                                                    class="regular-text"
-                                                    style="width: 100%;">
-                                            </td>
-                                            <td class="icon-cell">
-                                                <div class="icon-picker-wrapper">
-                                                    <input type="hidden" name="menu_items[<?php echo esc_attr($slug); ?>][icon]" class="icon-value" value="<?php echo esc_attr($custom_icon); ?>">
-                                                    <button type="button" class="button icon-picker-btn" title="Click to change icon">
-                                                        <span class="dashicons <?php echo esc_attr($custom_icon ?: $current_icon); ?>"></span>
-                                                        <span class="icon-label"><?php echo $custom_icon ? 'Custom' : 'Default'; ?></span>
-                                                    </button>
-                                                    <div class="icon-picker-dropdown" style="display: none;">
-                                                        <div class="icon-picker-search">
-                                                            <input type="text" placeholder="Search icons..." class="icon-search-input">
-                                                        </div>
-                                                        <div class="icon-grid">
-                                                            <span class="icon-option" data-icon="" title="Default"><span class="dashicons dashicons-admin-generic"></span></span>
-                                                            <?php foreach ($common_icons as $icon_class => $icon_label): if ($icon_class): ?>
-                                                                    <span class="icon-option" data-icon="<?php echo esc_attr($icon_class); ?>" title="<?php echo esc_attr($icon_label); ?>">
-                                                                        <span class="dashicons <?php echo esc_attr($icon_class); ?>"></span>
-                                                                    </span>
-                                                            <?php endif;
-                                                            endforeach; ?>
-                                                        </div>
-                                                    </div>
+                        <tbody id="menu-items-list">
+                            <?php
+                            $order_index = 10;
+                            $common_icons = array(
+                                '' => '— Default —',
+                                'dashicons-admin-home' => 'Home',
+                                'dashicons-admin-post' => 'Post',
+                                'dashicons-admin-media' => 'Media',
+                                'dashicons-admin-page' => 'Page',
+                                'dashicons-admin-comments' => 'Comments',
+                                'dashicons-admin-appearance' => 'Appearance',
+                                'dashicons-admin-plugins' => 'Plugins',
+                                'dashicons-admin-users' => 'Users',
+                                'dashicons-admin-tools' => 'Tools',
+                                'dashicons-admin-settings' => 'Settings',
+                                'dashicons-admin-network' => 'Network',
+                                'dashicons-admin-generic' => 'Generic',
+                                'dashicons-dashboard' => 'Dashboard',
+                                'dashicons-chart-bar' => 'Chart Bar',
+                                'dashicons-chart-pie' => 'Chart Pie',
+                                'dashicons-chart-line' => 'Chart Line',
+                                'dashicons-chart-area' => 'Chart Area',
+                                'dashicons-analytics' => 'Analytics',
+                                'dashicons-email' => 'Email',
+                                'dashicons-email-alt' => 'Email Alt',
+                                'dashicons-email-alt2' => 'Email Alt2',
+                                'dashicons-products' => 'Products',
+                                'dashicons-cart' => 'Cart',
+                                'dashicons-store' => 'Store',
+                                'dashicons-money-alt' => 'Money',
+                                'dashicons-calendar' => 'Calendar',
+                                'dashicons-calendar-alt' => 'Calendar Alt',
+                                'dashicons-star-filled' => 'Star',
+                                'dashicons-star-half' => 'Star Half',
+                                'dashicons-heart' => 'Heart',
+                                'dashicons-shield' => 'Shield',
+                                'dashicons-shield-alt' => 'Shield Alt',
+                                'dashicons-lock' => 'Lock',
+                                'dashicons-unlock' => 'Unlock',
+                                'dashicons-visibility' => 'Eye',
+                                'dashicons-hidden' => 'Hidden',
+                                'dashicons-bell' => 'Bell',
+                                'dashicons-flag' => 'Flag',
+                                'dashicons-awards' => 'Awards',
+                                'dashicons-thumbs-up' => 'Thumbs Up',
+                                'dashicons-thumbs-down' => 'Thumbs Down',
+                                'dashicons-welcome-write-blog' => 'Write',
+                                'dashicons-welcome-add-page' => 'Add Page',
+                                'dashicons-welcome-view-site' => 'View Site',
+                                'dashicons-welcome-widgets-menus' => 'Widgets',
+                                'dashicons-welcome-learn-more' => 'Learn',
+                                'dashicons-hammer' => 'Hammer',
+                                'dashicons-arrow-right-alt' => 'Arrow Right',
+                                'dashicons-arrow-left-alt' => 'Arrow Left',
+                                'dashicons-arrow-up-alt' => 'Arrow Up',
+                                'dashicons-arrow-down-alt' => 'Arrow Down',
+                                'dashicons-search' => 'Search',
+                                'dashicons-filter' => 'Filter',
+                                'dashicons-sort' => 'Sort',
+                                'dashicons-list-view' => 'List View',
+                                'dashicons-grid-view' => 'Grid View',
+                                'dashicons-exerpt-view' => 'Excerpt View',
+                                'dashicons-info' => 'Info',
+                                'dashicons-warning' => 'Warning',
+                                'dashicons-yes' => 'Yes/Check',
+                                'dashicons-no' => 'No/X',
+                                'dashicons-plus' => 'Plus',
+                                'dashicons-minus' => 'Minus',
+                                'dashicons-paperclip' => 'Paperclip',
+                                'dashicons-camera' => 'Camera',
+                                'dashicons-video-alt' => 'Video',
+                                'dashicons-microphone' => 'Microphone',
+                                'dashicons-format-audio' => 'Audio',
+                                'dashicons-format-image' => 'Image',
+                                'dashicons-format-gallery' => 'Gallery',
+                                'dashicons-format-video' => 'Video',
+                                'dashicons-database' => 'Database',
+                                'dashicons-cloud' => 'Cloud',
+                                'dashicons-cloud-upload' => 'Upload',
+                                'dashicons-cloud-saved' => 'Saved',
+                                'dashicons-download' => 'Download',
+                                'dashicons-upload' => 'Upload',
+                                'dashicons-backup' => 'Backup',
+                                'dashicons-book' => 'Book',
+                                'dashicons-book-alt' => 'Book Alt',
+                                'dashicons-businessman' => 'Businessman',
+                                'dashicons-buddicons-buddypress-logo' => 'BuddyPress',
+                            );
+                            foreach ($sorted_menu as $menu_data):
+                                $item = $menu_data['item'];
+                                $slug = $item[2];
+                                $name = wp_strip_all_tags($item[0]);
+                                $settings = $menu_data['settings'];
+                                $custom_name = $settings['rename'] ?? '';
+                                $custom_icon = $settings['icon'] ?? '';
+                                $current_icon = $item[6] ?? 'dashicons-admin-generic';
+                                $is_hidden = !empty($settings['hidden']);
+                                $current_order = $menu_data['order'];
+                            ?>
+                                <tr class="menu-item-row <?php echo $is_hidden ? 'row-hidden' : ''; ?>" data-slug="<?php echo esc_attr($slug); ?>">
+                                    <td class="drag-handle" style="cursor: move; text-align: center; color: #999; font-size: 16px;">
+                                        <span class="dashicons dashicons-menu"></span>
+                                    </td>
+                                    <td>
+                                        <span class="dashicons <?php echo esc_attr($custom_icon ?: $current_icon); ?>" style="margin-right: 5px; color: #666;"></span>
+                                        <strong><?php echo esc_html($name); ?></strong>
+                                        <?php if ($is_hidden): ?>
+                                            <span style="color: #999; font-size: 11px;"> (hidden)</span>
+                                        <?php endif; ?>
+                                        <!-- Hidden order input -->
+                                        <input type="hidden"
+                                            name="menu_items[<?php echo esc_attr($slug); ?>][order]"
+                                            value="<?php echo esc_attr($current_order); ?>"
+                                            class="order-input">
+                                    </td>
+                                    <td>
+                                        <input type="text"
+                                            name="menu_items[<?php echo esc_attr($slug); ?>][rename]"
+                                            value="<?php echo esc_attr($custom_name); ?>"
+                                            placeholder="Keep original"
+                                            class="regular-text"
+                                            style="width: 100%;">
+                                    </td>
+                                    <td class="icon-cell">
+                                        <div class="icon-picker-wrapper">
+                                            <input type="hidden" name="menu_items[<?php echo esc_attr($slug); ?>][icon]" class="icon-value" value="<?php echo esc_attr($custom_icon); ?>">
+                                            <button type="button" class="button icon-picker-btn" title="Click to change icon">
+                                                <span class="dashicons <?php echo esc_attr($custom_icon ?: $current_icon); ?>"></span>
+                                                <span class="icon-label"><?php echo $custom_icon ? 'Custom' : 'Default'; ?></span>
+                                            </button>
+                                            <div class="icon-picker-dropdown" style="display: none;">
+                                                <div class="icon-picker-search">
+                                                    <input type="text" placeholder="Search icons..." class="icon-search-input">
                                                 </div>
-                                            </td>
-                                            <td style="text-align: center;">
-                                                <label class="ofast-toggle">
-                                                    <input type="checkbox"
-                                                        name="menu_items[<?php echo esc_attr($slug); ?>][hidden]"
-                                                        value="1"
-                                                        <?php checked($is_hidden); ?>>
-                                                    <span class="ofast-slider"></span>
-                                                </label>
-                                            </td>
-                                            <td>
-                                                <code style="font-size: 11px; color: #666;"><?php echo esc_html($slug); ?></code>
-                                            </td>
-                                        </tr>
-                                    <?php
-                                        $order_index += 10;
-                                    endforeach;
-                                    ?>
-                                </tbody>
-                            </table>
-                            </div>
-                        </div>
+                                                <div class="icon-grid">
+                                                    <span class="icon-option" data-icon="" title="Default"><span class="dashicons dashicons-admin-generic"></span></span>
+                                                    <?php foreach ($common_icons as $icon_class => $icon_label): if ($icon_class): ?>
+                                                            <span class="icon-option" data-icon="<?php echo esc_attr($icon_class); ?>" title="<?php echo esc_attr($icon_label); ?>">
+                                                                <span class="dashicons <?php echo esc_attr($icon_class); ?>"></span>
+                                                            </span>
+                                                    <?php endif;
+                                                    endforeach; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <label class="ofast-toggle">
+                                            <input type="checkbox"
+                                                name="menu_items[<?php echo esc_attr($slug); ?>][hidden]"
+                                                value="1"
+                                                <?php checked($is_hidden); ?>>
+                                            <span class="ofast-slider"></span>
+                                        </label>
+                                    </td>
+                                    <td>
+                                        <code style="font-size: 11px; color: #666;"><?php echo esc_html($slug); ?></code>
+                                    </td>
+                                </tr>
+                            <?php
+                                $order_index += 10;
+                            endforeach;
+                            ?>
+                        </tbody>
+                    </table>
                     </div>
+                </div>
 
-                    <!-- Right Column: Sidebar -->
-                    <div class="ofast-editor-sidebar">
-                        <div class="ofast-sidebar-inner" style="position: sticky; top: 100px;">
-                            
-                            <!-- Save Actions -->
-                            <div class="ofast-card" style="margin-bottom: 20px;">
-                                <div class="ofast-card-body" style="padding: 20px;">
-                                    <h3 style="margin: 0 0 15px 0;">Actions</h3>
-                                    <button type="submit" name="ofast_save_menu_editor" class="button button-primary button-large" style="width: 100%; justify-content: center; margin-bottom: 10px;">
-                                        Save Changes
-                                    </button>
-                                    <button type="submit" name="ofast_reset_menu" class="button button-large ofast-reset-btn" style="width: 100%; justify-content: center;" onclick="return confirm('Reset all menu customizations to default? This will unhide all menus.');">
-                                        Reset to Default
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Tips -->
-                            <div class="ofast-card ofast-tips-card">
-                                <div class="ofast-card-body" style="padding: 20px;">
-                                    <h3 style="margin-top: 0;">Tips</h3>
-                                    <ul style="margin-bottom: 0; padding-left: 20px; font-size: 13px; color: #64748b;">
-                                        <li style="margin-bottom: 8px;"><strong>Drag & Drop:</strong> Use the <span class="dashicons dashicons-menu"></span> handle to reorder.</li>
-                                        <li style="margin-bottom: 8px;"><strong>Custom Name:</strong> Leave empty to keep original.</li>
-                                        <li style="margin-bottom: 8px;"><strong>Hidden:</strong> Check to hide from menu.</li>
-                                        <li><strong>Important:</strong> Save after reordering!</li>
-                                    </ul>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-
+                <div class="ofast-action-bar" style="display: flex; gap: 12px; align-items: center; margin-top: 25px;">
+                    <button type="submit" name="ofast_reset_menu" class="button button-large ofast-reset-btn" onclick="return confirm('Reset all menu customizations to default? This will unhide all menus.');">
+                        Reset to Default
+                    </button>
+                    <button type="submit" name="ofast_save_menu_editor" class="button button-primary button-large">
+                        Save Menu Changes
+                    </button>
                 </div>
             </form>
+
+            <!-- Help Box -->
+            <div class="ofast-tips-card" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-top: 30px; max-width: 800px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                <h3 style="margin-top: 0;">Tips</h3>
+                <ul style="margin-bottom: 0;">
+                    <li><strong>Drag & Drop:</strong> Use the <span class="dashicons dashicons-menu" style="font-size: 16px; vertical-align: middle;"></span> handle to drag rows and reorder.</li>
+                    <li><strong>Custom Name:</strong> Leave empty to keep the original name.</li>
+                    <li><strong>Hidden:</strong> Check to hide the menu. Uncheck and save to show it again.</li>
+                    <li><strong>Important:</strong> Click <strong>Save Menu Changes</strong> after reordering!</li>
+                </ul>
+            </div>
         </div>
 
         <style>
@@ -507,27 +486,6 @@ class Ofast_X_Menu_Editor
                 font-size: 14px !important;
             }
 
-            /* LAYOUT: 2 Columns */
-            .ofast-editor-layout {
-                display: flex;
-                gap: 30px;
-                align-items: flex-start;
-            }
-            .ofast-editor-main {
-                flex-grow: 1;
-                min-width: 0; /* Prevent table overflow */
-            }
-            .ofast-editor-sidebar {
-                width: 280px;
-                flex-shrink: 0;
-            }
-            .ofast-card {
-                background: #fff;
-                border: 1px solid #e2e8f0;
-                border-radius: 12px;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            }
-
             #menu-items-list tr.ui-sortable-helper {
                 background: #fff;
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -554,6 +512,7 @@ class Ofast_X_Menu_Editor
                 border-radius: 12px;
                 box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
                 overflow: hidden;
+                margin-top: 20px;
             }
 
             .ofast-modern-table {
@@ -731,28 +690,15 @@ class Ofast_X_Menu_Editor
             }
             
             /* Reset button styling */
-            .ofast-reset-btn {
+            .ofast-action-bar .button:not(.button-primary) {
                 background: #fff !important;
                 border: 2px solid #fecaca !important;
                 color: #ef4444 !important;
                 transition: all 0.2s ease !important;
             }
-            .ofast-reset-btn:hover {
+            .ofast-action-bar .button:not(.button-primary):hover {
                 background: #fef2f2 !important;
                 border-color: #ef4444 !important;
-            }
-
-            /* Responsive */
-            @media screen and (max-width: 960px) {
-                .ofast-editor-layout {
-                    flex-direction: column;
-                }
-                .ofast-editor-sidebar {
-                    width: 100%;
-                }
-                .ofast-sidebar-inner {
-                    position: static !important;
-                }
             }
         </style>
 

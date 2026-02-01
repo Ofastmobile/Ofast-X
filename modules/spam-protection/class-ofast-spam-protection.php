@@ -119,16 +119,7 @@ class Ofast_X_Spam_Protection
             return $commentdata;
         }
 
-        // Get token based on provider (Math CAPTCHA reads its own POST fields)
-        $provider = $this->get_active_provider();
-        $token = '';
-        if ($provider !== 'math_captcha') {
-            $token = isset($_POST['cf-turnstile-response']) ? sanitize_text_field($_POST['cf-turnstile-response']) : '';
-            if (empty($token)) {
-                $token = isset($_POST['g-recaptcha-response']) ? sanitize_text_field($_POST['g-recaptcha-response']) : '';
-            }
-        }
-        
+        $token = isset($_POST['cf-turnstile-response']) ? sanitize_text_field($_POST['cf-turnstile-response']) : '';
         $result = $this->verify($token);
 
         if (!$result['success']) {
@@ -173,16 +164,7 @@ class Ofast_X_Spam_Protection
      */
     public function validate_cf7($result, $tags)
     {
-        // Get token based on provider (Math CAPTCHA reads its own POST fields)
-        $provider = $this->get_active_provider();
-        $token = '';
-        if ($provider !== 'math_captcha') {
-            $token = isset($_POST['cf-turnstile-response']) ? sanitize_text_field($_POST['cf-turnstile-response']) : '';
-            if (empty($token)) {
-                $token = isset($_POST['g-recaptcha-response']) ? sanitize_text_field($_POST['g-recaptcha-response']) : '';
-            }
-        }
-        
+        $token = isset($_POST['cf-turnstile-response']) ? sanitize_text_field($_POST['cf-turnstile-response']) : '';
         $verify = $this->verify($token);
 
         if (!$verify['success']) {
@@ -237,41 +219,23 @@ class Ofast_X_Spam_Protection
             return $user;
         }
 
-        $provider = $this->get_active_provider();
-
-        // STRICT: Token/answer is REQUIRED for login when protection is enabled
-        // Check provider-specific field names
-        if ($provider === 'math_captcha') {
-            // Math CAPTCHA uses ofast_math_answer field
-            if (!isset($_POST['ofast_math_answer']) || $_POST['ofast_math_answer'] === '') {
-                return new WP_Error(
-                    'spam_protection_failed',
-                    '<strong>Security verification required.</strong> Please solve the math problem.'
-                );
-            }
-        } else {
-            // Turnstile/reCAPTCHA use cf-turnstile-response or g-recaptcha-response
-            $token = isset($_POST['cf-turnstile-response']) ? sanitize_text_field($_POST['cf-turnstile-response']) : '';
-            if (empty($token)) {
-                $token = isset($_POST['g-recaptcha-response']) ? sanitize_text_field($_POST['g-recaptcha-response']) : '';
-            }
-            
-            // If no token at all, block immediately (prevents bypass by removing field)
-            if (empty($token)) {
-                return new WP_Error(
-                    'spam_protection_failed',
-                    '<strong>Security verification required.</strong> Please complete the spam protection challenge.'
-                );
-            }
+        // STRICT: Token is REQUIRED for login when protection is enabled
+        $token = isset($_POST['cf-turnstile-response']) ? sanitize_text_field($_POST['cf-turnstile-response']) : '';
+        
+        // If no token at all, block immediately (prevents bypass by removing field)
+        if (empty($token)) {
+            return new WP_Error(
+                'spam_protection_failed',
+                '<strong>Security verification required.</strong> Please complete the spam protection challenge.'
+            );
         }
 
-        // Call the unified verify method (handles all providers)
-        $result = $this->verify(isset($token) ? $token : '');
+        $result = $this->verify($token);
 
         if (!$result['success']) {
             // Log failed verification attempts
             if (function_exists('error_log')) {
-                error_log('Ofast Spam Protection: Login verification failed from IP ' . $this->get_client_ip() . ' - ' . ($result['error'] ?? 'Unknown error'));
+                error_log('Ofast Spam Protection: Login verification failed from IP ' . $this->get_client_ip());
             }
             
             return new WP_Error(
@@ -327,21 +291,6 @@ class Ofast_X_Spam_Protection
                 Ofast_X_Math_Captcha::save_settings($_POST);
             }
 
-            // Save Turnstile keys
-            if (!empty($_POST['turnstile_site_key'])) {
-                update_option('ofast_turnstile_site_key', sanitize_text_field($_POST['turnstile_site_key']));
-            }
-            if (!empty($_POST['turnstile_secret_key']) && strpos($_POST['turnstile_secret_key'], '••') === false) {
-                $secret = $_POST['turnstile_secret_key'];
-                if (class_exists('Ofast_X_Security_Hardening')) {
-                    $secret = Ofast_X_Security_Hardening::encrypt_option($secret);
-                } else {
-                    $secret = sanitize_text_field($secret);
-                }
-                update_option('ofast_turnstile_secret_key', $secret);
-            }
-
-            // Save reCAPTCHA keys
             if (!empty($_POST['recaptcha_site_key'])) {
                 update_option('ofast_recaptcha_site_key', sanitize_text_field($_POST['recaptcha_site_key']));
             }

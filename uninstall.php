@@ -58,7 +58,7 @@ $options = array(
     'ofastx_license_status',
     'ofastx_license_key',
     'ofastx_modules_enabled',
-    'ofast_email_retention_days',
+    'ofastx_email_retention_days',
     'ofast_x_do_activation_redirect',
     'ofast_delete_data_on_uninstall',
 

@@ -93,7 +93,9 @@ class Ofast_X_Core
             $this->load_admin_url();
         }
 
-
+        if ($this->is_module_enabled('admin-footer')) {
+            $this->load_admin_footer();
+        }
 
         if ($this->is_module_enabled('duplicate-content')) {
             $this->load_duplicate_content();
@@ -187,8 +189,23 @@ class Ofast_X_Core
 
             $this->modules['email'] = $email_controller;
             
-            // Queue System - ARCHIVED for future release
-            // See: blueprint/future_modules/email_queue/
+            // Load Queue System
+            $queue_file = OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-email-queue.php';
+            if (file_exists($queue_file)) {
+                require_once $queue_file;
+                $queue = Ofast_X_Email_Queue::get_instance();
+                $queue->init();
+            }
+            
+            // Load Queue Admin (only in admin)
+            if (is_admin()) {
+                $queue_admin_file = OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-queue-admin.php';
+                if (file_exists($queue_admin_file)) {
+                    require_once $queue_admin_file;
+                    $queue_admin = new Ofast_X_Email_Queue_Admin();
+                    $queue_admin->init();
+                }
+            }
         }
     }
 
@@ -223,23 +240,12 @@ class Ofast_X_Core
      */
     private function load_whos_admin()
     {
-        // 1. Load White Label (Who's Admin)
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-whos-admin.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/whos-admin/class-ofast-whos-admin.php';
+
         $whos_admin = new Ofast_X_Whos_Admin();
         $whos_admin->init();
+
         $this->modules['whos-admin'] = $whos_admin;
-
-        // 2. Load Admin Footer (handles Dark Mode toggle)
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-footer/class-ofast-admin-footer.php';
-        $admin_footer = new Ofast_X_Admin_Footer();
-        $admin_footer->init();
-        $this->modules['admin-footer'] = $admin_footer;
-
-        // 3. Load Custom Dashboard
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-design/custom-dashboard/class-ofast-custom-dashboard.php';
-        $custom_dashboard = new Ofast_X_Custom_Dashboard();
-        $custom_dashboard->init();
-        $this->modules['custom-dashboard'] = $custom_dashboard;
     }
 
     /**
@@ -259,7 +265,7 @@ class Ofast_X_Core
      */
     private function load_user_roles()
     {
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-user-roles.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/user-roles/class-ofast-user-roles.php';
 
         $user_roles = new Ofast_X_User_Roles();
         $user_roles->init();
@@ -272,7 +278,7 @@ class Ofast_X_Core
      */
     private function load_admin_url()
     {
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-admin-url.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-url/class-ofast-admin-url.php';
 
         $admin_url = new Ofast_X_Admin_Url();
         $admin_url->init();
@@ -280,14 +286,31 @@ class Ofast_X_Core
         $this->modules['admin-url'] = $admin_url;
     }
 
+    /**
+     * Load Admin Footer Module
+     */
+    private function load_admin_footer()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-footer/class-ofast-admin-footer.php';
 
+        $admin_footer = new Ofast_X_Admin_Footer();
+        $admin_footer->init();
+
+        $this->modules['admin-footer'] = $admin_footer;
+
+        // Custom Dashboard
+        require_once OFAST_X_PLUGIN_DIR . 'modules/custom-dashboard/class-ofast-custom-dashboard.php';
+        $custom_dashboard = new Ofast_X_Custom_Dashboard();
+        $custom_dashboard->init();
+        $this->modules['custom-dashboard'] = $custom_dashboard;
+    }
 
     /**
      * Load Content Duplicator Module
      */
     private function load_duplicate_content()
     {
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-duplicate-content.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/duplicate-content/class-ofast-duplicate-content.php';
 
         $duplicate = new Ofast_X_Duplicate_Content();
         $duplicate->init();
@@ -300,7 +323,7 @@ class Ofast_X_Core
      */
     private function load_menu_editor()
     {
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-menu-editor.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/menu-editor/class-ofast-menu-editor.php';
 
         $menu_editor = new Ofast_X_Menu_Editor();
         $menu_editor->init();
@@ -405,32 +428,21 @@ class Ofast_X_Core
     /**
      * Enqueue admin styles
      */
-    public function enqueue_admin_styles($hook)
+    public function enqueue_admin_styles()
     {
-        // Only load on plugin pages for performance
-        if (strpos($hook, 'ofast') === false && strpos($hook, 'toplevel_page_ofast') === false) {
-            return;
-        }
-
-        $css_file = OFAST_X_PLUGIN_DIR . 'admin/css/ofast-admin.css';
-        $version = (defined('WP_DEBUG') && WP_DEBUG) ? filemtime($css_file) : OFAST_X_VERSION;
-        
         wp_enqueue_style(
             'ofast-x-admin',
             OFAST_X_PLUGIN_URL . 'admin/css/ofast-admin.css',
             array(),
-            $version
+            OFAST_X_VERSION
         );
 
         // Responsive CSS for mobile-friendly admin pages
-        $responsive_file = OFAST_X_PLUGIN_DIR . 'admin/css/ofast-admin-responsive.css';
-        $responsive_version = (defined('WP_DEBUG') && WP_DEBUG) ? filemtime($responsive_file) : OFAST_X_VERSION;
-        
         wp_enqueue_style(
             'ofast-x-admin-responsive',
             OFAST_X_PLUGIN_URL . 'admin/css/ofast-admin-responsive.css',
             array('ofast-x-admin'),
-            $responsive_version
+            OFAST_X_VERSION
         );
     }
 
@@ -461,7 +473,7 @@ class Ofast_X_Core
      */
     private function load_admin_tweaks()
     {
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-admin-tweaks.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-tweaks/class-ofast-admin-tweaks.php';
         $admin_tweaks = new Ofast_X_Admin_Tweaks();
         $admin_tweaks->init();
         $this->modules['admin-tweaks'] = $admin_tweaks;

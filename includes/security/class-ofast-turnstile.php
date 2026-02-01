@@ -232,11 +232,34 @@ class Ofast_X_Turnstile
     {
         // SECURITY: Verify user has admin capability
         if (!current_user_can('manage_options')) {
-            wp_die(__('You do not have sufficient permissions to access this page.', 'ofast-x'));
+            wp_die(__('You do not have sufficient permissions to access this page.'));
         }
 
-        // NOTE: Save logic is handled by parent form (spam-protection page)
-        // with proper nonce verification. This method only renders the form.
+        // Handle form submission - this is now handled by parent form in spam-protection page
+        // We just save turnstile keys when they come in
+        if (isset($_POST['turnstile_site_key']) && isset($_POST['turnstile_secret_key'])) {
+            // Only save if values are not placeholders
+            $site_key = sanitize_text_field($_POST['turnstile_site_key']);
+            $secret_key = $_POST['turnstile_secret_key'];
+            
+            if (!empty($site_key)) {
+                update_option('ofast_turnstile_site_key', $site_key);
+            }
+            
+            // Only update secret if it's not the placeholder dots
+            if (!empty($secret_key) && strpos($secret_key, '••') === false) {
+                if (class_exists('Ofast_X_Security_Hardening')) {
+                    $encrypted = Ofast_X_Security_Hardening::encrypt_option($secret_key);
+                    update_option('ofast_turnstile_secret_key', $encrypted);
+                } else {
+                    update_option('ofast_turnstile_secret_key', sanitize_text_field($secret_key));
+                }
+            }
+            
+            // Reload keys
+            $this->site_key = get_option('ofast_turnstile_site_key', '');
+            $this->secret_key = $this->get_decrypted_secret();
+        }
 
         $has_keys = $this->is_configured();
 ?>

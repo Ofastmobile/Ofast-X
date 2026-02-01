@@ -1,0 +1,260 @@
+/**
+ * Ofast X - Redirects Manager Styles
+ */
+
+/* Header Styles */
+.ofast-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: #fff;
+    padding: 25px 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    margin-bottom: 30px;
+    margin-top: 20px;
+}
+
+.ofast-header-icon {
+    width: 56px;
+    height: 56px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ofast-header-icon .dashicons {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+    color: #6366f1;
+}
+
+.ofast-header-content h1 {
+    margin: 0 0 5px 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e293b;
+    display: block;
+    padding: 0;
+}
+
+.ofast-header-content p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+/* Card Styles */
+.ofast-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+/* Button Override */
+.ofast-redirects-page .button.button-primary {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+    border-color: #6366f1 !important;
+    text-shadow: none !important;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+    transition: all 0.2s !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    height: auto !important;
+    font-size: 14px !important;
+    border-radius: 6px !important;
+}
+
+.ofast-redirects-page .button.button-primary:hover {
+    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
+}
+
+.ofast-redirects-page .button.button-primary:active {
+    transform: translateY(0);
+}
+
+/* Column Layout */
+.ofast-redirects-columns {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    margin: 20px 0;
+}
+
+.ofast-column-left {
+    flex: 2;
+    min-width: 300px;
+}
+
+.ofast-column-right {
+    flex: 1;
+    min-width: 280px;
+}
+
+@media screen and (max-width: 960px) {
+    .ofast-redirects-columns {
+        flex-direction: column;
+    }
+
+    .ofast-column-left,
+    .ofast-column-right {
+        width: 100%;
+    }
+}
+
+/* Table Action Buttons - Edit/Delete */
+.ofast-redirect-delete {
+    background: transparent !important;
+    border: none !important;
+    color: #ef4444 !important;
+    box-shadow: none !important;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ofast-redirect-delete:hover {
+    color: #dc2626 !important;
+    text-decoration: underline;
+}
+
+/* Edit button styling */
+.wp-list-table .button.button-small:not(.button-primary):not(.ofast-redirect-toggle):not(.ofast-redirect-delete) {
+    background: transparent !important;
+    border: none !important;
+    color: #6366f1 !important;
+    box-shadow: none !important;
+    padding: 4px 8px !important;
+}
+
+.wp-list-table .button.button-small:not(.button-primary):not(.ofast-redirect-toggle):not(.ofast-redirect-delete):hover {
+    color: #4f46e5 !important;
+    text-decoration: underline;
+}
+
+/* ON/OFF Toggle Button */
+.ofast-redirect-toggle {
+    border: 1px solid #d1d5db !important;
+    background: #f9fafb !important;
+    color: #6b7280 !important;
+    transition: all 0.2s ease;
+}
+
+.ofast-redirect-toggle:hover {
+    border-color: #9ca3af !important;
+    background: #f3f4f6 !important;
+}
+
+.ofast-redirect-toggle.button-primary {
+    border-color: #6366f1 !important;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+    color: #fff !important;
+}
+
+.ofast-redirect-toggle.button-primary:hover {
+    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+    border-color: #4f46e5 !important;
+}
+
+/* Export button */
+#export-redirects {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+    color: #fff !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    transition: all 0.3s ease !important;
+}
+
+#export-redirects:hover {
+    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
+}
+
+/* Form Styles */
+.ofast-redirect-form .form-table th {
+    width: 120px;
+    padding: 12px 10px 12px 0;
+    font-weight: 500;
+}
+
+.ofast-redirect-form .form-table td {
+    padding: 10px 0;
+}
+
+.ofast-redirect-form input[type="text"],
+.ofast-redirect-form select {
+    max-width: 400px;
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+.ofast-redirect-form .description {
+    color: #666;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+@media screen and (max-width: 782px) {
+
+    .ofast-redirect-form .form-table th,
+    .ofast-redirect-form .form-table td {
+        display: block;
+        width: 100%;
+    }
+}
+
+/* Regex badge */
+.ofast-redirect-regex-badge {
+    background: #fef3cd;
+    color: #856404;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    margin-left: 5px;
+}
+
+/* Type badge */
+.ofast-redirect-type-badge {
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+.ofast-redirect-type-badge.type-301 {
+    background: #d4edda;
+    color: #155724;
+}
+
+.ofast-redirect-type-badge.type-302,
+.ofast-redirect-type-badge.type-307 {
+    background: #fff3cd;
+    color: #856404;
+}
+
+/* Empty state */
+.ofast-redirects-empty {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+    margin-top: 20px;
+}
+
+.ofast-redirects-empty p {
+    color: #666;
+    margin: 0;
+}

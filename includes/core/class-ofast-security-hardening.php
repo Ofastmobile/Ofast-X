@@ -239,10 +239,10 @@ class Ofast_X_Security_Hardening
                 <?php endif; ?>
             </p>
             <p>
-                <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin.php?page=ofast-dashboard&action=regenerate_hashes'), 'ofast_regenerate_hashes')); ?>" class="button">
+                <a href="<?php echo admin_url('admin.php?page=ofast-dashboard&action=regenerate_hashes'); ?>" class="button">
                     I made these changes - Update hashes
                 </a>
-                <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin.php?page=ofast-dashboard&action=view_integrity'), 'ofast_view_integrity')); ?>" class="button">
+                <a href="<?php echo admin_url('admin.php?page=ofast-dashboard&action=view_integrity'); ?>" class="button">
                     View Details
                 </a>
             </p>
@@ -276,7 +276,7 @@ class Ofast_X_Security_Hardening
 
             return new WP_Error(
                 'ofast_emergency_rate_limit',
-                '<strong>' . esc_html__('Security:', 'ofast-x') . '</strong> ' . esc_html__('Too many emergency key attempts. Please wait 1 hour.', 'ofast-x')
+                '<strong>Security:</strong> Too many emergency key attempts. Please wait 1 hour.'
             );
         }
 

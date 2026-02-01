@@ -98,12 +98,6 @@ class Ofast_X_Login_Redesign
             'tc_form_border_width' => get_option('ofast_login_tc_form_border_width', '0'),
             'tc_centered' => get_option('ofast_login_tc_centered', false),
             'tc_bg_color' => get_option('ofast_login_tc_bg_color', '#f0f0f1'),
-            // Modern Dark specific
-            'md_card_color' => get_option('ofast_login_md_card_color', '#0f172a'),
-            'md_card_opacity' => get_option('ofast_login_md_card_opacity', '60'),
-            'md_overlay_color' => get_option('ofast_login_md_overlay_color', '#000000'),
-            'md_overlay_opacity' => get_option('ofast_login_md_overlay_opacity', '0'),
-            'md_use_ofast_colors' => get_option('ofast_login_md_use_ofast_colors', false),
         );
     }
 
@@ -191,13 +185,6 @@ class Ofast_X_Login_Redesign
             update_option('ofast_login_tc_centered', false);
             update_option('ofast_login_tc_bg_color', '#f0f0f1');
 
-            // Modern Dark
-            update_option('ofast_login_md_card_color', '#0f172a');
-            update_option('ofast_login_md_card_opacity', '60');
-            update_option('ofast_login_md_overlay_color', '#000000');
-            update_option('ofast_login_md_overlay_opacity', '0');
-            update_option('ofast_login_md_use_ofast_colors', false);
-
             Ofast_X_Toast::add('Settings reset to defaults!', 'success');
             wp_redirect(add_query_arg('ofast_status', 'reset', wp_get_referer()));
             exit;
@@ -253,13 +240,6 @@ class Ofast_X_Login_Redesign
         update_option('ofast_login_tc_centered', isset($_POST['tc_centered']));
         update_option('ofast_login_tc_bg_color', sanitize_hex_color($_POST['tc_bg_color'] ?? '#f0f0f1'));
 
-        // Modern Dark settings
-        update_option('ofast_login_md_card_color', sanitize_hex_color($_POST['md_card_color'] ?? '#0f172a'));
-        update_option('ofast_login_md_card_opacity', absint($_POST['md_card_opacity'] ?? 60));
-        update_option('ofast_login_md_overlay_color', sanitize_hex_color($_POST['md_overlay_color'] ?? '#000000'));
-        update_option('ofast_login_md_overlay_opacity', absint($_POST['md_overlay_opacity'] ?? 0));
-        update_option('ofast_login_md_use_ofast_colors', isset($_POST['md_use_ofast_colors']));
-
         Ofast_X_Toast::add('Settings saved!', 'success');
         wp_redirect(add_query_arg('ofast_status', 'saved', wp_get_referer()));
         exit;
@@ -282,9 +262,6 @@ class Ofast_X_Login_Redesign
         if ($template === 'two-column') {
             // Two-column template CSS
             $css .= $this->get_two_column_css($s);
-        } elseif ($template === 'modern-dark') {
-            // Modern Dark template CSS
-            $css .= $this->get_modern_dark_css($s);
         } else {
             // Simple template CSS
             $css .= $this->get_simple_css($s);
@@ -448,171 +425,6 @@ class Ofast_X_Login_Redesign
         $css .= '}';
 
         return $css;
-    }
-
-
-    /**
-     * Get Modern Dark template CSS
-     */
-    private function get_modern_dark_css($s)
-    {
-        $css = '';
-        
-        // Get custom settings
-        $cardColor = !empty($s['md_card_color']) ? $s['md_card_color'] : '#0f172a';
-        $cardOpacity = isset($s['md_card_opacity']) ? intval($s['md_card_opacity']) / 100 : 0.6;
-        $overlayColor = !empty($s['md_overlay_color']) ? $s['md_overlay_color'] : '#000000';
-        $overlayOpacity = isset($s['md_overlay_opacity']) ? intval($s['md_overlay_opacity']) / 100 : 0;
-        
-        // Convert hex to rgba
-        $cardRgb = $this->hex_to_rgb($cardColor);
-        $overlayRgb = $this->hex_to_rgb($overlayColor);
-        
-        // Background - Dark by default or user image
-        $bgImage = !empty($s['bg_image']) ? $s['bg_image'] : '';
-        
-        $css .= 'body.login {';
-        $css .= 'background-color: ' . esc_attr($cardColor) . ';'; // Use card color as fallback
-        if (!empty($bgImage)) {
-            $css .= 'background-image: url(' . esc_url($bgImage) . ');';
-            $css .= 'background-size: cover; background-position: center; background-repeat: no-repeat;';
-        }
-        $css .= 'display: flex; align-items: center; justify-content: center; min-height: 100vh;';
-        $css .= 'position: relative;';
-        $css .= '}';
-        
-        // Background overlay (if opacity > 0)
-        if ($overlayOpacity > 0 && !empty($bgImage)) {
-            $css .= 'body.login::before {';
-            $css .= 'content: "";';
-            $css .= 'position: fixed; top: 0; left: 0; right: 0; bottom: 0;';
-            $css .= 'background: rgba(' . $overlayRgb . ', ' . $overlayOpacity . ');';
-            $css .= 'z-index: 0;';
-            $css .= '}';
-        }
-
-        // Glassmorphism Card for Form
-        $css .= '#login {';
-        $css .= 'position: relative;';
-        $css .= 'z-index: 1;';
-        $css .= 'padding: 0 !important;';
-        $css .= 'width: 100%; max-width: 400px;';
-        $css .= 'border-radius: 16px;';
-        $css .= '}';
-
-        $css .= '#loginform, #registerform, #lostpasswordform {';
-        $css .= 'background: rgba(' . $cardRgb . ', ' . $cardOpacity . ') !important;';
-        $css .= 'backdrop-filter: blur(12px);';
-        $css .= '-webkit-backdrop-filter: blur(12px);';
-        $css .= 'border: 1px solid rgba(255, 255, 255, 0.1);';
-        $css .= 'border-radius: 16px;';
-        $css .= 'box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);';
-        $css .= 'padding: 40px 30px;';
-        $css .= 'margin-top: 20px;';
-        $css .= '}';
-
-        // Logo
-        $css .= '#login h1 {';
-        $css .= 'margin-top: 30px;'; // Push logo down a bit
-        $css .= '}';
-        $css .= '#login h1 a {';
-        if (!empty($s['logo_url'])) {
-            $css .= 'background-image: url(' . esc_url($s['logo_url']) . ') !important;';
-        }
-        $css .= 'background-size: contain !important;';
-        $css .= 'background-repeat: no-repeat !important;';
-        $css .= 'background-position: center !important;';
-        $css .= 'width: ' . esc_attr($s['logo_width']) . 'px !important;';
-        $css .= 'height: ' . esc_attr($s['logo_height']) . 'px !important;';
-        $css .= 'margin-bottom: 10px;';
-        $css .= '}';
-
-        // Labels & Text
-        $css .= 'body.login label { color: #cbd5e1; font-size: 13px; font-weight: 500; }';
-        $css .= '.login #login_error, .login .message, .login .success {';
-        $css .= 'background: rgba(255,255,255,0.05); border-left-color: #3b82f6; color: #e2e8f0; margin-bottom: 20px; border-radius: 4px;';
-        $css .= '}';
-
-        // Inputs
-        $css .= '.login form .input, .login input[type=text] {';
-        $css .= 'background: rgba(0, 0, 0, 0.2) !important;';
-        $css .= 'border: 1px solid rgba(255, 255, 255, 0.1) !important;';
-        $css .= 'color: #fff !important;';
-        $css .= 'border-radius: 8px;';
-        $css .= 'padding: 8px 15px;';
-        $css .= 'font-size: 15px;';
-        $css .= 'margin-top: 6px;';
-        $css .= 'box-shadow: none !important;';
-        $css .= '}';
-
-        $css .= '.login form .input:focus {';
-        $css .= 'border-color: #3b82f6 !important;';
-        $css .= 'box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;';
-        $css .= '}';
-
-        // Button - conditionally use Ofast colors or cyan/blue
-        $useOfastColors = !empty($s['md_use_ofast_colors']);
-        $btnGradient = $useOfastColors 
-            ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' // Ofast purple
-            : 'linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)'; // Cyan to Blue
-        $btnHoverShadow = $useOfastColors
-            ? 'rgba(99, 102, 241, 0.4)'  // Purple glow
-            : 'rgba(59, 130, 246, 0.4)'; // Blue glow
-        
-        $css .= '.wp-core-ui .button-primary {';
-        $css .= 'width: 100% !important;';
-        $css .= 'float: none !important;';
-        $css .= 'background: ' . $btnGradient . ' !important;';
-        $css .= 'border: none !important;';
-        $css .= 'color: #fff !important;';
-        $css .= 'text-shadow: none !important;';
-        $css .= 'border-radius: 8px !important;';
-        $css .= 'padding: 6px 0 !important;';
-        $css .= 'font-size: 15px !important;';
-        $css .= 'font-weight: 600 !important;';
-        $css .= 'height: 44px !important;';
-        $css .= 'margin-top: 20px !important;';
-        $css .= 'transition: all 0.2s;';
-        $css .= '}';
-
-        $css .= '.wp-core-ui .button-primary:hover {';
-        $css .= 'transform: translateY(-1px);';
-        $css .= 'box-shadow: 0 4px 12px ' . $btnHoverShadow . ';';
-        $css .= '}';
-
-        // Links (Lost Password / Back to blog)
-        $css .= '.login #nav, .login #backtoblog { padding: 0 !important; text-align: center; }';
-        $css .= '.login #nav a, .login #backtoblog a {';
-        $css .= 'color: #94a3b8 !important; transition: color 0.2s; font-size: 13px;';
-        $css .= '}';
-        $css .= '.login #nav a:hover, .login #backtoblog a:hover {';
-        $css .= 'color: #fff !important;';
-        $css .= '}';
-        
-        // Hide "Remember Me" checkbox styling fix
-        $css .= '.login .forgetmenot { float: none; margin-bottom: 20px; display: block; }';
-        
-        // Separator line "OR" style (Aiggem from mockup) - purely CSS
-        $css .= '#loginform::after {';
-        $css .= 'content: ""; display: block; height: 1px; background: rgba(255,255,255,0.1); margin: 30px 0 10px;';
-        $css .= '}';
-
-        return $css;
-    }
-
-    /**
-     * Convert hex color to RGB values
-     */
-    private function hex_to_rgb($hex)
-    {
-        $hex = ltrim($hex, '#');
-        if (strlen($hex) === 3) {
-            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
-        }
-        $r = hexdec(substr($hex, 0, 2));
-        $g = hexdec(substr($hex, 2, 2));
-        $b = hexdec(substr($hex, 4, 2));
-        return "$r, $g, $b";
     }
 
 
@@ -974,21 +786,6 @@ class Ofast_X_Login_Redesign
                             <strong>Two-Column</strong>
                             <p>Modern split-screen with side panel</p>
                         </label>
-
-                        <!-- Modern Dark Template -->
-                        <label class="ofast-template-card <?php echo $current_template === 'modern-dark' ? 'active' : ''; ?>">
-                            <input type="radio" name="template" value="modern-dark" <?php checked($current_template, 'modern-dark'); ?> style="display:none;">
-                            <div class="preview-box" style="background: #0f172a; border: 1px solid #334155; position: relative; display: flex; align-items: center; justify-content: center;">
-                                <div style="width: 60px; height: 80px; background: rgba(30, 41, 59, 0.8); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                                    <div style="width: 20px; height: 2px; background: #3b82f6; margin-bottom: 4px; border-radius: 2px;"></div>
-                                    <div style="width: 40px; height: 4px; background: rgba(255,255,255,0.1); margin-bottom: 2px; border-radius: 2px;"></div>
-                                    <div style="width: 40px; height: 4px; background: rgba(255,255,255,0.1); margin-bottom: 6px; border-radius: 2px;"></div>
-                                    <div style="width: 30px; height: 6px; background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%); border-radius: 2px;"></div>
-                                </div>
-                            </div>
-                            <strong>Modern Dark</strong>
-                            <p>Glassmorphism on dark background</p>
-                        </label>
                     </div>
                 </div>
 
@@ -1049,7 +846,7 @@ class Ofast_X_Login_Redesign
                                 }
 
                                 .ofast-toggle input:checked+.ofast-toggle-slider {
-                                    background-color: #6366f1;
+                                    background-color: #2271b1;
                                 }
 
                                 .ofast-toggle input:checked+.ofast-toggle-slider:before {
@@ -1176,59 +973,8 @@ class Ofast_X_Login_Redesign
                             </table>
                         </div>
 
-                        <!-- Modern Dark Specific Settings -->
-                        <div id="modern-dark-settings" class="postbox" style="padding:20px;margin-top:15px;<?php echo $current_template !== 'modern-dark' ? 'display:none;' : ''; ?>">
-                            <h3 style="margin-top:0;">Modern Dark Design</h3>
-                            <table class="form-table" style="margin:0;">
-                                <tr>
-                                    <th>Card Color</th>
-                                    <td><input type="text" name="md_card_color" id="md_card_color" value="<?php echo esc_attr($s['md_card_color']); ?>" class="color-picker"></td>
-                                </tr>
-                                <tr>
-                                    <th>Card Opacity</th>
-                                    <td>
-                                        <input type="range" name="md_card_opacity" id="md_card_opacity" min="0" max="100" value="<?php echo esc_attr($s['md_card_opacity']); ?>">
-                                        <span id="md_card_opacity_val"><?php echo esc_html($s['md_card_opacity']); ?>%</span>
-                                        <p class="description">0% = fully transparent, 100% = solid color</p>
-                                    </td>
-                                </tr>
-                            </table>
-                            
-                            <hr style="margin: 20px 0;">
-                            <h4 style="margin-top:0;">Background Image Overlay</h4>
-                            <table class="form-table" style="margin:0;">
-                                <tr>
-                                    <th>Overlay Color</th>
-                                    <td><input type="text" name="md_overlay_color" id="md_overlay_color" value="<?php echo esc_attr($s['md_overlay_color']); ?>" class="color-picker"></td>
-                                </tr>
-                                <tr>
-                                    <th>Overlay Opacity</th>
-                                    <td>
-                                        <input type="range" name="md_overlay_opacity" id="md_overlay_opacity" min="0" max="100" value="<?php echo esc_attr($s['md_overlay_opacity']); ?>">
-                                        <span id="md_overlay_opacity_val"><?php echo esc_html($s['md_overlay_opacity']); ?>%</span>
-                                        <p class="description">Darken or tint your background image</p>
-                                    </td>
-                                </tr>
-                            </table>
-                            
-                            <hr style="margin: 20px 0;">
-                            <h4 style="margin-top:0;">Button Style</h4>
-                            <table class="form-table" style="margin:0;">
-                                <tr>
-                                    <th>Use Ofast Colors</th>
-                                    <td>
-                                        <label class="ofast-toggle">
-                                            <input type="checkbox" name="md_use_ofast_colors" id="md_use_ofast_colors" value="1" <?php checked($s['md_use_ofast_colors']); ?>>
-                                            <span class="ofast-toggle-slider"></span>
-                                        </label>
-                                        <p class="description">Applies the signature Ofast purple gradient to the login button</p>
-                                    </td>
-                                </tr>
-                            </table>
-                        </div>
-
-                        <!-- Simple & Modern Dark Template Background -->
-                        <div id="simple-bg-settings" class="postbox" style="padding:20px;margin-top:15px;<?php echo ($current_template !== 'simple' && $current_template !== 'modern-dark') ? 'display:none;' : ''; ?>">
+                        <!-- Simple Template Background (only show for simple) -->
+                        <div id="simple-bg-settings" class="postbox" style="padding:20px;margin-top:15px;<?php echo $current_template !== 'simple' ? 'display:none;' : ''; ?>">
                             <h3 style="margin-top:0;">Background</h3>
                             <table class="form-table" style="margin:0;">
                                 <tr>
@@ -1363,21 +1109,10 @@ class Ofast_X_Login_Redesign
                             </table>
                         </div>
 
-                        <?php echo Ofast_X_Button::get_styles(); ?>
-                        <style>
-                            .ofast-btn-sm { 
-                                padding: 15px 25px !important; 
-                            }
-                        </style>
-                        <p style="margin-top:20px; display: flex; gap: 10px; align-items: center;">
-                            <?php echo Ofast_X_Button::render_primary('Save Settings', ['name' => 'ofast_login_redesign_save', 'class' => 'ofast-btn-sm']); ?>
-                            <?php echo Ofast_X_Button::render_danger('Reset to Defaults', [
-                                'name' => 'ofast_login_redesign_reset',
-                                'type' => 'submit',
-                                'class' => 'ofast-btn-sm',
-                                'onclick' => "return confirm('Are you sure you want to reset all settings to defaults?');"
-                            ]); ?>
-                            <a href="<?php echo wp_login_url(); ?>" target="_blank" class="ofast-btn-secondary ofast-btn ofast-btn-sm" style="text-decoration:none;">View Login Page</a>
+                        <p style="margin-top:20px;">
+                            <button type="submit" name="ofast_login_redesign_save" class="button button-primary button-large">Save Settings</button>
+                            <button type="submit" name="ofast_login_redesign_reset" class="button button-secondary button-large" onclick="return confirm('Are you sure you want to reset all settings to defaults?');">Reset to Defaults</button>
+                            <a href="<?php echo wp_login_url(); ?>" target="_blank" class="button">View Login Page</a>
                         </p>
                     </div>
 
@@ -1407,21 +1142,12 @@ class Ofast_X_Login_Redesign
                 // Template switching
                 $('input[name="template"]').on('change', function() {
                     var template = $(this).val();
-                    
-                    // Two-column specific settings
                     if (template === 'two-column') {
                         $('#two-column-settings').show();
                         $('#simple-bg-settings').hide();
-                        $('#modern-dark-settings').hide();
-                    } else if (template === 'modern-dark') {
-                        $('#two-column-settings').hide();
-                        $('#simple-bg-settings').show();
-                        $('#modern-dark-settings').show();
                     } else {
                         $('#two-column-settings').hide();
-                        // Show background for 'simple' and 'modern-dark'
                         $('#simple-bg-settings').show();
-                        $('#modern-dark-settings').hide();
                     }
                     
                     // Update card active states
@@ -1432,8 +1158,8 @@ class Ofast_X_Login_Redesign
                 });
 
                 // Sliders
-                $('#form_radius, #input_radius, #tc_overlay_opacity, #tc_form_border_width, #input_border_width, #btn_border_width, #md_card_opacity, #md_overlay_opacity').on('input', function() {
-                    var suffix = (this.id === 'tc_overlay_opacity' || this.id === 'md_card_opacity' || this.id === 'md_overlay_opacity') ? '%' : 'px';
+                $('#form_radius, #input_radius, #tc_overlay_opacity, #tc_form_border_width, #input_border_width, #btn_border_width').on('input', function() {
+                    var suffix = this.id === 'tc_overlay_opacity' ? '%' : 'px';
                     $('#' + this.id + '_val').text($(this).val() + suffix);
                     updatePreview();
                 });
@@ -1580,73 +1306,6 @@ class Ofast_X_Login_Redesign
                             // Full-screen mode
                             return '<div style="display:flex;height:350px;">' + content + '</div>';
                         }
-
-                    } else if (template === 'modern-dark') {
-                        // Modern Dark preview
-                        var bgImage = $('#bg_image').val();
-                        var scale = 0.6;
-                        
-                        // Get card color and opacity from settings
-                        var cardColor = $('.wp-color-picker[name="md_card_color"]').val() || '#0f172a';
-                        var cardOpacity = ($('#md_card_opacity').val() || 60) / 100;
-                        var overlayColor = $('.wp-color-picker[name="md_overlay_color"]').val() || '#000000';
-                        var overlayOpacity = ($('#md_overlay_opacity').val() || 0) / 100;
-                        
-                        // Convert hex to RGB for CSS rgba()
-                        function hexToRgb(hex) {
-                            hex = hex.replace('#', '');
-                            if (hex.length === 3) {
-                                hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
-                            }
-                            var r = parseInt(hex.substring(0, 2), 16);
-                            var g = parseInt(hex.substring(2, 4), 16);
-                            var b = parseInt(hex.substring(4, 6), 16);
-                            return r + ', ' + g + ', ' + b;
-                        }
-                        
-                        var cardRgb = hexToRgb(cardColor);
-                        var overlayRgb = hexToRgb(overlayColor);
-                        
-                        // Build background style
-                        var bgStyle = 'background-color:' + cardColor + ';';
-                        if (bgImage) {
-                            bgStyle += 'background-image:url(' + bgImage + ');background-size:cover;background-position:center;';
-                        }
-                        
-                        // Overlay div if opacity > 0
-                        var overlayDiv = '';
-                        if (overlayOpacity > 0 && bgImage) {
-                            overlayDiv = '<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(' + overlayRgb + ', ' + overlayOpacity + ');"></div>';
-                        }
-
-                        // Dark theme input style
-                        var darkInputStyle = 'width:100%;padding:' + (8 * scale) + 'px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:8px;font-size:' + (12 * scale) + 'px;box-sizing:border-box;color:#fff;';
-                        // Gradient button style
-                        var darkBtnStyle = 'width:100%;padding:' + (10 * scale) + 'px;background:linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);color:#fff;border:none;border-radius:8px;font-size:' + (12 * scale) + 'px;cursor:pointer;font-weight:600;';
-
-                        return '<div style="' + bgStyle + 'padding:30px;min-height:350px;display:flex;align-items:center;justify-content:center;position:relative;">' +
-                            overlayDiv +
-                            '<div style="text-align:center;position:relative;z-index:1;">' +
-                            '<img src="' + logoUrl + '" style="width:' + (logoW * scale) + 'px;height:' + (logoH * scale) + 'px;object-fit:contain;margin-bottom:15px;">' +
-                            '<div style="background:rgba(' + cardRgb + ', ' + cardOpacity + ');backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:' + (25 * scale) + 'px ' + (30 * scale) + 'px;border-radius:16px;border:1px solid rgba(255,255,255,0.1);box-shadow:0 25px 50px rgba(0,0,0,0.5);width:' + (280 * scale) + 'px;">' +
-                            '<div style="margin-bottom:' + (12 * scale) + 'px;">' +
-                            '<label style="display:block;text-align:left;margin-bottom:5px;font-size:' + (11 * scale) + 'px;color:#cbd5e1;">Username</label>' +
-                            '<input type="text" style="' + darkInputStyle + '" value="admin">' +
-                            '</div>' +
-                            '<div style="margin-bottom:' + (15 * scale) + 'px;">' +
-                            '<label style="display:block;text-align:left;margin-bottom:5px;font-size:' + (11 * scale) + 'px;color:#cbd5e1;">Password</label>' +
-                            '<input type="password" style="' + darkInputStyle + '" value="password">' +
-                            '</div>' +
-                            '<button style="' + darkBtnStyle + '">Log In</button>' +
-                            '<div style="margin-top:15px;height:1px;background:rgba(255,255,255,0.1);"></div>' +
-                            '</div>' +
-                            '<div style="margin-top:12px;font-size:10px;">' +
-                            '<a href="#" style="color:#94a3b8;text-decoration:none;">Forgot Password?</a>' +
-                            '<span style="color:#475569;margin:0 8px;">|</span>' +
-                            '<a href="#" style="color:#94a3b8;text-decoration:none;">Register</a>' +
-                            '</div>' +
-                            '</div>' +
-                            '</div>';
 
                     } else {
                         // Simple preview

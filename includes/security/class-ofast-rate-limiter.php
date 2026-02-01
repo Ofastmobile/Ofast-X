@@ -119,13 +119,6 @@ class Ofast_X_Rate_Limiter
     {
         global $wpdb;
 
-        // Sanitize user_id to prevent SQL injection
-        $user_id = absint($user_id);
-        
-        if (!$user_id) {
-            return; // Invalid user ID
-        }
-
         $pattern = 'ofast_x_rate_' . $user_id . '_%';
         $wpdb->query($wpdb->prepare(
             "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",

@@ -125,8 +125,6 @@ class Ofast_X_Activator
             run_once TINYINT(1) DEFAULT 0,
             executed_at DATETIME DEFAULT NULL,
             priority INT(11) DEFAULT 10,
-            status VARCHAR(20) DEFAULT 'active',
-            trashed_at DATETIME DEFAULT NULL,
             created_at DATETIME,
             updated_at DATETIME,
             created_by BIGINT(20),
@@ -174,21 +172,7 @@ class Ofast_X_Activator
         ) {$charset_collate};";
         dbDelta($sql_submissions);
 
-        // 6. Rate Limits Table (for more robust rate limiting than transients)
-        $table_rate_limits = $wpdb->prefix . 'ofast_rate_limits';
-        $sql_rate_limits = "CREATE TABLE IF NOT EXISTS {$table_rate_limits} (
-            id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-            user_id BIGINT(20) UNSIGNED NOT NULL,
-            action_type VARCHAR(50) NOT NULL,
-            attempts INT(11) DEFAULT 1,
-            window_start DATETIME NOT NULL,
-            PRIMARY KEY (id),
-            UNIQUE KEY idx_user_action (user_id, action_type),
-            KEY idx_window_start (window_start)
-        ) {$charset_collate};";
-        dbDelta($sql_rate_limits);
-
-        // 7. Redirects Table
+        // 6. Redirects Table
         $table_redirects = $wpdb->prefix . 'ofast_redirects';
         $sql_redirects = "CREATE TABLE IF NOT EXISTS {$table_redirects} (
             id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -299,7 +283,7 @@ class Ofast_X_Activator
                 'woocommerce' => false,       // Coming soon
                 'learndash' => false          // Coming soon
             ),
-            'ofast_email_retention_days' => 90
+            'ofastx_email_retention_days' => 90
         );
 
         foreach ($default_options as $key => $value) {
@@ -380,8 +364,6 @@ class Ofast_X_Activator
             'run_once' => "ALTER TABLE {$table_snippets} ADD COLUMN run_once TINYINT(1) DEFAULT 0 AFTER target_value",
             'executed_at' => "ALTER TABLE {$table_snippets} ADD COLUMN executed_at DATETIME DEFAULT NULL AFTER run_once",
             'priority' => "ALTER TABLE {$table_snippets} ADD COLUMN priority INT(11) DEFAULT 10 AFTER executed_at",
-            'status' => "ALTER TABLE {$table_snippets} ADD COLUMN status VARCHAR(20) DEFAULT 'active' AFTER priority",
-            'trashed_at' => "ALTER TABLE {$table_snippets} ADD COLUMN trashed_at DATETIME DEFAULT NULL AFTER status",
             'category' => "ALTER TABLE {$table_snippets} ADD COLUMN category VARCHAR(100) DEFAULT '' AFTER active",
             'tags' => "ALTER TABLE {$table_snippets} ADD COLUMN tags TEXT AFTER category",
             'updated_at' => "ALTER TABLE {$table_snippets} ADD COLUMN updated_at DATETIME AFTER created_at",

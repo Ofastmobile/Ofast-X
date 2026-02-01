@@ -15,7 +15,6 @@ class Ofast_X_Content_Ordering
     private static $instance = null;
     private $enabled_post_types = array();
     private $module_enabled = false;
-    public $post_types = array(); // Fix deprecated property
 
     public static function get_instance()
     {
@@ -27,88 +26,29 @@ class Ofast_X_Content_Ordering
 
     private function __construct()
     {
-        // Check if enabled via Admin Tweaks toggle
+        // Only load if enabled in Admin Tweaks settings
         $admin_tweaks = get_option('ofast_admin_tweaks', array());
         if (empty($admin_tweaks['enable_content_ordering'])) {
             return;
         }
 
-        // Post types to sort
-        $this->post_types = apply_filters('ofast_content_ordering_post_types', array('post', 'page', 'product'));
-        $this->enabled_post_types = $this->post_types;
+        $this->module_enabled = true;
+        $this->enabled_post_types = get_option('ofast_ordering_post_types', array('post', 'page'));
 
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
+        // Add ordering support to enabled post types
+        add_action('admin_init', array($this, 'add_ordering_support'));
+
+        // Add admin menus
         add_action('admin_menu', array($this, 'add_admin_menus'), 100);
-        add_action('wp_ajax_ofast_update_post_order', array($this, 'update_post_order'));
+
+        // AJAX handler for saving order
         add_action('wp_ajax_ofast_save_post_order', array($this, 'ajax_save_order'));
-        
-        // Modify admin query to use menu_order (only add once, not in loop)
+
+        // Modify admin query to use menu_order
         add_action('pre_get_posts', array($this, 'admin_order_query'));
-        
+
         // Modify frontend query to use menu_order
         add_action('pre_get_posts', array($this, 'frontend_order_query'));
-    }
-
-    /**
-     * Enqueue scripts for reordering
-     */
-    public function enqueue_scripts($hook)
-    {
-        // Only enqueue on our reorder pages
-        if (strpos($hook, 'ofast-reorder') === false) {
-            return;
-        }
-
-        wp_enqueue_script('jquery-ui-sortable');
-        
-        // Add JS for AJAX updating
-        wp_add_inline_script('jquery-ui-sortable', "
-            jQuery(document).ready(function($) {
-                var container = $('#ofast-sortable-items');
-                if (!container.length) return;
-                
-                container.sortable({
-                    handle: '.ofast-drag-handle',
-                    placeholder: 'ofast-sortable-placeholder',
-                    update: function(event, ui) {
-                        var postType = container.data('post-type');
-                        var items = [];
-                        
-                        container.find('.ofast-sortable-item').each(function(index) {
-                            items.push($(this).data('id'));
-                            $(this).find('.ofast-item-order').text(index + 1);
-                        });
-                        
-                        $('#ofast-order-status').hide().removeClass('success error');
-                        
-                        $.ajax({
-                            url: ajaxurl,
-                            type: 'POST',
-                            data: {
-                                action: 'ofast_update_post_order',
-                                post_type: postType,
-                                order: items,
-                                nonce: '" . wp_create_nonce('ofast_reorder_nonce') . "'
-                            },
-                            success: function(response) {
-                                if (response.success) {
-                                    $('#ofast-order-status')
-                                        .addClass('success')
-                                        .html('Order updated successfully!')
-                                        .fadeIn()
-                                        .delay(2000).fadeOut();
-                                } else {
-                                    $('#ofast-order-status')
-                                        .addClass('error')
-                                        .html('Error: ' . (response.data || 'Unknown error'))
-                                        .fadeIn();
-                                }
-                            }
-                        });
-                    }
-                });
-            });
-        ");
     }
 
     /**

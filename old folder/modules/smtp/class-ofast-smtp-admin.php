@@ -27,8 +27,9 @@ class Ofast_X_SMTP_Admin
      */
     public function admin_head_styles()
     {
-        $screen = get_current_screen();
-        if (!$screen || $screen->id !== 'ofast-x_page_ofast-smtp') {
+        // Match by page slug instead of exact screen ID for compatibility
+        // across different admin parent menu slugs.
+        if (!isset($_GET['page']) || sanitize_key($_GET['page']) !== 'ofast-smtp') {
             return;
         }
         ?>
@@ -93,6 +94,42 @@ class Ofast_X_SMTP_Admin
             }
             .ofast-tab-content { display: none; }
             .ofast-tab-content.active { display: block; }
+
+            /* Layout helpers used by dashboard cards/chart */
+            .ofast-grid-3 {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 15px;
+            }
+            .ofast-grid-4 {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 15px;
+            }
+            .ofast-flex-layout {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 15px;
+                align-items: stretch;
+            }
+            .ofast-main {
+                min-width: 0;
+            }
+            @media (max-width: 1200px) {
+                .ofast-grid-4 {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+                .ofast-flex-layout {
+                    grid-template-columns: 1fr;
+                }
+            }
+            @media (max-width: 782px) {
+                .ofast-grid-3,
+                .ofast-grid-4,
+                .ofast-flex-layout {
+                    grid-template-columns: 1fr;
+                }
+            }
         </style>
         <?php
     }
@@ -205,6 +242,7 @@ class Ofast_X_SMTP_Admin
     {
         global $wpdb;
         $table_name = $wpdb->prefix . 'ofast_smtp_log';
+        $this->create_log_table();
 
         $enabled = get_option('ofast_smtp_enabled', false);
         $mailer_type = get_option('ofast_smtp_mailer_type', 'default');
@@ -243,6 +281,15 @@ class Ofast_X_SMTP_Admin
             }
 
             $recent_emails = $wpdb->get_results("SELECT * FROM {$table_name} ORDER BY sent_at DESC LIMIT 5");
+        }
+
+        if (empty($weekly_data)) {
+            for ($i = 6; $i >= 0; $i--) {
+                $weekly_data[] = array(
+                    'day' => gmdate('D', strtotime("-{$i} days")),
+                    'count' => 0
+                );
+            }
         }
 
         $weekly_counts = array_column($weekly_data, 'count');
@@ -309,7 +356,7 @@ class Ofast_X_SMTP_Admin
                 <div style="flex: 1;"></div>
                 <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;">
                     <?php foreach ($weekly_data as $day): ?>
-                        <?php 
+                        <?php
                         // Max height 80px for bars
                         $bar_height = $max_weekly > 0 ? round(($day['count'] / $max_weekly) * 80) : 0;
                         $bar_height = max(5, $bar_height);
@@ -687,6 +734,79 @@ class Ofast_X_SMTP_Admin
                 <button type="submit" name="ofast_smtp_save" class="button button-primary button-large">Save SMTP Settings</button>
             </p>
         </form>
+
+        <!-- Provider Setup Guides -->
+        <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-top: 30px;">
+            <h3 style="margin-top: 0;">Quick Setup Guides</h3>
+
+            <details style="margin-bottom: 15px;">
+                <summary style="cursor: pointer; font-weight: bold; color: #6366f1;">Zoho Mail Setup</summary>
+                <div style="padding: 15px; background: #f9fafb; margin-top: 10px; border-radius: 5px;">
+                    <ol>
+                        <li>Log in to Zoho Mail</li>
+                        <li>Go to Settings &rarr; Security &rarr; App Passwords</li>
+                        <li>Generate a new App Password</li>
+                        <li>Use: Host: smtp.zoho.com, Port: 587, TLS</li>
+                        <li>Username: your Zoho email, Password: App Password</li>
+                    </ol>
+                </div>
+            </details>
+
+            <details style="margin-bottom: 15px;">
+                <summary style="cursor: pointer; font-weight: bold; color: #6366f1;">SendGrid Setup</summary>
+                <div style="padding: 15px; background: #f9fafb; margin-top: 10px; border-radius: 5px;">
+                    <ol>
+                        <li>Log in to SendGrid</li>
+                        <li>Go to Settings &rarr; API Keys</li>
+                        <li>Create API Key with Mail Send permission</li>
+                        <li>Use: Host: smtp.sendgrid.net, Port: 587, TLS</li>
+                        <li>Username: <code>apikey</code> (literally), Password: Your API Key</li>
+                    </ol>
+                </div>
+            </details>
+
+            <details style="margin-bottom: 15px;">
+                <summary style="cursor: pointer; font-weight: bold; color: #6366f1;">Gmail Setup</summary>
+                <div style="padding: 15px; background: #f9fafb; margin-top: 10px; border-radius: 5px;">
+                    <ol>
+                        <li>Enable 2-Factor Authentication on your Google account</li>
+                        <li>Go to Google Account &rarr; Security &rarr; App Passwords</li>
+                        <li>Generate App Password for "Mail"</li>
+                        <li>Use: Host: smtp.gmail.com, Port: 587, TLS</li>
+                        <li>Username: your Gmail, Password: App Password (16 chars)</li>
+                    </ol>
+                    <p style="color: #dc2626;"><strong>Note:</strong> Gmail has 500 emails/day limit for free accounts.</p>
+                </div>
+            </details>
+
+            <details style="margin-bottom: 15px;">
+                <summary style="cursor: pointer; font-weight: bold; color: #6366f1;">Brevo (Sendinblue) Setup</summary>
+                <div style="padding: 15px; background: #f9fafb; margin-top: 10px; border-radius: 5px;">
+                    <ol>
+                        <li>Log in to Brevo (formerly Sendinblue)</li>
+                        <li>Go to Settings &rarr; SMTP &amp; API</li>
+                        <li>Copy your SMTP Key</li>
+                        <li>Use: Host: smtp-relay.brevo.com, Port: 587, TLS</li>
+                        <li>Username: your Brevo email, Password: SMTP Key</li>
+                    </ol>
+                    <p style="color: #059669;"><strong>Free tier:</strong> 300 emails/day, great for small sites!</p>
+                </div>
+            </details>
+
+            <details style="margin-bottom: 15px;">
+                <summary style="cursor: pointer; font-weight: bold; color: #6366f1;">Amazon SES Setup</summary>
+                <div style="padding: 15px; background: #f9fafb; margin-top: 10px; border-radius: 5px;">
+                    <ol>
+                        <li>Log in to AWS Console &rarr; SES</li>
+                        <li>Verify your domain or email address</li>
+                        <li>Go to SMTP Settings &rarr; Create SMTP Credentials</li>
+                        <li>Use: Host: email-smtp.[region].amazonaws.com, Port: 587, TLS</li>
+                        <li>Username/Password: Generated SMTP credentials (NOT IAM keys)</li>
+                    </ol>
+                    <p style="color: #f59e0b;"><strong>Note:</strong> New accounts start in sandbox mode (verify recipients first).</p>
+                </div>
+            </details>
+        </div>
 
         <script>
             jQuery(document).ready(function($) {

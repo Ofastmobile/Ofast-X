@@ -38,6 +38,9 @@ class Ofast_X_Snippets
         add_action('wp_ajax_ofast_use_library_template', array($this, 'ajax_use_library_template'));
         add_action('wp_ajax_ofast_get_revisions', array($this, 'ajax_get_revisions'));
         add_action('wp_ajax_ofast_restore_revision', array($this, 'ajax_restore_revision'));
+        add_action('wp_ajax_ofast_restore_snippet', array($this, 'ajax_restore_snippet'));
+        add_action('wp_ajax_ofast_run_snippet_now', array($this, 'ajax_run_snippet_now'));
+        add_action('wp_ajax_ofast_duplicate_snippet', array($this, 'ajax_duplicate_snippet'));
 
         // Execute active snippets
         add_action('init', array($this, 'execute_snippets'), 999);
@@ -243,6 +246,12 @@ class Ofast_X_Snippets
 
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_snippets';
+        $trash_supported = $this->ensure_snippets_trash_schema();
+        $priority_supported = $this->ensure_snippets_priority_schema();
+        $is_trash_view = isset($_GET['view']) && sanitize_key($_GET['view']) === 'trash';
+        if (!$trash_supported) {
+            $is_trash_view = false;
+        }
 
         // Handle add/edit with validation
         if (isset($_POST['ofast_save_snippet'])) {
@@ -255,6 +264,8 @@ class Ofast_X_Snippets
             $scope = isset($_POST['snippet_scope']) ? sanitize_text_field($_POST['snippet_scope']) : 'global';
             $location = isset($_POST['snippet_location']) ? sanitize_text_field($_POST['snippet_location']) : 'footer';
             $run_once = isset($_POST['snippet_run_once']) ? 1 : 0;
+            $snippet_priority = isset($_POST['snippet_priority']) ? intval($_POST['snippet_priority']) : 10;
+            $snippet_priority = max(1, min(9999, $snippet_priority));
             $target_type = isset($_POST['snippet_target_type']) ? sanitize_text_field($_POST['snippet_target_type']) : 'all';
             $target_value = isset($_POST['snippet_target_value']) ? sanitize_text_field($_POST['snippet_target_value']) : '';
             $category = isset($_POST['snippet_category']) ? sanitize_text_field($_POST['snippet_category']) : '';
@@ -265,6 +276,10 @@ class Ofast_X_Snippets
             $tags_json = !empty($tags_array) ? json_encode(array_values($tags_array)) : '';
 
             $code = wp_unslash($_POST['snippet_code']);
+            if ($language === 'php') {
+                // Accept pasted snippets with PHP wrappers and store normalized code.
+                $code = $this->normalize_php_code($code);
+            }
             $active = isset($_POST['snippet_active']) ? 1 : 0;
 
             // Validate PHP syntax only for PHP snippets
@@ -280,6 +295,25 @@ class Ofast_X_Snippets
                 echo Ofast_X_Toast::render($warning_msg, 'warning');
             }
 
+            // Prevent activating snippets that conflict with already active snippets.
+            if ($language === 'php' && $active === 1) {
+                $function_conflict = $this->check_function_conflicts($code);
+                if ($function_conflict !== true) {
+                    $active = 0;
+                    echo Ofast_X_Toast::render('Snippet saved as inactive: ' . esc_html($function_conflict), 'warning');
+                } else {
+                    $activation_conflicts = $this->get_active_duplicate_conflicts($id, $name, $code);
+                    if (!empty($activation_conflicts)) {
+                        $active = 0;
+                        $conflict_preview = implode(' | ', array_slice($activation_conflicts, 0, 2));
+                        if (count($activation_conflicts) > 2) {
+                            $conflict_preview .= ' | +' . (count($activation_conflicts) - 2) . ' more';
+                        }
+                        echo Ofast_X_Toast::render('Duplicate protection: snippet saved as inactive. Resolve active conflicts first. ' . esc_html($conflict_preview), 'warning');
+                    }
+                }
+            }
+
             if ($id > 0) {
                 // Get old code to save as revision (only if code changed)
                 $old_snippet = $wpdb->get_row($wpdb->prepare("SELECT code FROM $table WHERE id = %d", $id));
@@ -288,7 +322,7 @@ class Ofast_X_Snippets
                 }
 
                 // Update
-                $result = $wpdb->update($table, array(
+                $update_data = array(
                     'name' => $name,
                     'description' => $description,
                     'language' => $language,
@@ -301,7 +335,12 @@ class Ofast_X_Snippets
                     'tags' => $tags_json,
                     'code' => $code,
                     'active' => $active
-                ), array('id' => $id));
+                );
+                if ($priority_supported) {
+                    $update_data['priority'] = $snippet_priority;
+                }
+
+                $result = $wpdb->update($table, $update_data, array('id' => $id));
 
                 // Debug logging for live server issues
                 if ($result === false) {
@@ -320,23 +359,37 @@ class Ofast_X_Snippets
                 }
             } else {
                 // DUPLICATE CHECK: Prevent saving snippets with same name
-                $existing_name = $wpdb->get_row($wpdb->prepare("SELECT id, name FROM $table WHERE name = %s", $name));
+                if ($trash_supported) {
+                    $existing_name = $wpdb->get_row($wpdb->prepare(
+                        "SELECT id, name FROM $table WHERE name = %s AND (status IS NULL OR status != 'trash')",
+                        $name
+                    ));
+                } else {
+                    $existing_name = $wpdb->get_row($wpdb->prepare("SELECT id, name FROM $table WHERE name = %s", $name));
+                }
                 if ($existing_name) {
                     echo Ofast_X_Toast::render('Duplicate Name: A snippet named "' . esc_html($name) . '" already exists. Please use a different name or edit the existing snippet.', 'error');
                     // Don't redirect, let form stay with data so user can fix
                 } else {
                     // DUPLICATE CODE CHECK: Prevent saving snippets with same code
                     $code_hash = md5(trim($code));
-                    $existing_code = $wpdb->get_row($wpdb->prepare(
-                        "SELECT id, name FROM $table WHERE MD5(TRIM(code)) = %s",
-                        $code_hash
-                    ));
+                    if ($trash_supported) {
+                        $existing_code = $wpdb->get_row($wpdb->prepare(
+                            "SELECT id, name FROM $table WHERE MD5(TRIM(code)) = %s AND (status IS NULL OR status != 'trash')",
+                            $code_hash
+                        ));
+                    } else {
+                        $existing_code = $wpdb->get_row($wpdb->prepare(
+                            "SELECT id, name FROM $table WHERE MD5(TRIM(code)) = %s",
+                            $code_hash
+                        ));
+                    }
                     if ($existing_code) {
                         echo Ofast_X_Toast::render('Duplicate Code: This exact code already exists in snippet "' . esc_html($existing_code->name) . '" (ID: ' . $existing_code->id . '). Edit the existing snippet instead.', 'error');
                         // Don't save, let user decide
                     } else {
                         // Insert
-                        $result = $wpdb->insert($table, array(
+                        $insert_data = array(
                             'name' => $name,
                             'description' => $description,
                             'language' => $language,
@@ -350,7 +403,12 @@ class Ofast_X_Snippets
                             'code' => $code,
                             'active' => $active,
                             'created_at' => current_time('mysql')
-                        ));
+                        );
+                        if ($priority_supported) {
+                            $insert_data['priority'] = $snippet_priority;
+                        }
+
+                        $result = $wpdb->insert($table, $insert_data);
 
                         // Debug logging for live server issues
                         if ($result === false) {
@@ -374,8 +432,21 @@ class Ofast_X_Snippets
             }
         }
 
-        // Get all snippets
-        $snippets = $wpdb->get_results("SELECT * FROM $table ORDER BY id DESC");
+        // Get snippets (active list or trash list)
+        $active_order_by = $priority_supported ? 'priority ASC, id DESC' : 'id DESC';
+        $trash_order_by = $priority_supported ? 'priority ASC, trashed_at DESC, id DESC' : 'trashed_at DESC, id DESC';
+        if ($trash_supported && $is_trash_view) {
+            $snippets = $wpdb->get_results("SELECT * FROM $table WHERE status = 'trash' ORDER BY {$trash_order_by}");
+        } elseif ($trash_supported) {
+            $snippets = $wpdb->get_results("SELECT * FROM $table WHERE status IS NULL OR status != 'trash' ORDER BY {$active_order_by}");
+        } else {
+            $snippets = $wpdb->get_results("SELECT * FROM $table ORDER BY {$active_order_by}");
+        }
+
+        $trash_count = 0;
+        if ($trash_supported) {
+            $trash_count = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table WHERE status = 'trash'");
+        }
 
         // Editing mode
         $editing = isset($_GET['edit']) ? intval($_GET['edit']) : 0;
@@ -402,9 +473,18 @@ class Ofast_X_Snippets
                     Import
                 </button>
                 <input type="file" id="ofast-import-file" accept=".json" style="display: none;">
-                <span style="color: #666; font-size: 12px; margin-left: auto;">
-                    Total: <?php echo count($snippets); ?> snippet(s)
-                </span>
+                <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                    <span style="color: #666; font-size: 12px;">
+                        <?php echo $is_trash_view ? 'Trash: ' : 'Total: '; ?><?php echo count($snippets); ?> snippet(s)
+                    </span>
+                    <?php if ($trash_supported): ?>
+                        <?php if ($is_trash_view): ?>
+                            <a href="<?php echo admin_url('admin.php?page=ofast-snippets'); ?>" class="button">Back to Snippets</a>
+                        <?php else: ?>
+                            <a href="<?php echo admin_url('admin.php?page=ofast-snippets&view=trash'); ?>" class="button">Trash (<?php echo intval($trash_count); ?>)</a>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <?php
@@ -638,6 +718,15 @@ class Ofast_X_Snippets
                                         <p class="description">Choose where this snippet should execute.</p>
                                     </td>
                                 </tr>
+                                <tr>
+                                    <th><label for="snippet_priority">Priority</label></th>
+                                    <td>
+                                        <?php $snippet_priority_value = ($edit_snippet && isset($edit_snippet->priority)) ? intval($edit_snippet->priority) : 10; ?>
+                                        <input type="number" name="snippet_priority" id="snippet_priority" class="small-text" min="1" max="9999" step="1"
+                                            value="<?php echo esc_attr($snippet_priority_value); ?>">
+                                        <p class="description">Lower number runs first and appears first in the list.</p>
+                                    </td>
+                                </tr>
                                 <tr class="snippet-location-row">
                                     <th><label for="snippet_location">Injection Location</label></th>
                                     <td>
@@ -706,7 +795,7 @@ class Ofast_X_Snippets
                             <textarea name="snippet_code" id="snippet_code" rows="15" class="large-text code" required
                                 placeholder="Enter your code here..."><?php echo $edit_snippet ? esc_textarea($edit_snippet->code) : ''; ?></textarea>
                             <p class="description" id="snippet_code_help">
-                                <span class="php-help">Enter PHP code without &lt;?php ?&gt; tags. Be careful - bad code can break your site!</span>
+                                <span class="php-help">Enter PHP code. You can paste it with or without &lt;?php ?&gt; tags.</span>
                                 <span class="js-help" style="display:none;">Enter JavaScript code. Will be wrapped in &lt;script&gt; tags automatically.</span>
                                 <span class="css-help" style="display:none;">Enter CSS code. Will be wrapped in &lt;style&gt; tags automatically.</span>
                                 <span class="html-help" style="display:none;">Enter HTML code. Will be output directly on the page.</span>
@@ -781,6 +870,7 @@ class Ofast_X_Snippets
                 }
 
                 .ofast-snippet-form input[type="text"],
+                .ofast-snippet-form input[type="number"],
                 .ofast-snippet-form select {
                     max-width: 400px;
                     width: 100%;
@@ -792,6 +882,7 @@ class Ofast_X_Snippets
                 }
 
                 .ofast-snippet-form input[type="text"]:focus,
+                .ofast-snippet-form input[type="number"]:focus,
                 .ofast-snippet-form select:focus {
                     border-color: #6366f1;
                     box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.1);
@@ -1037,25 +1128,40 @@ class Ofast_X_Snippets
                 }
             </style>
 
-            <h2>Saved Snippets (<?php echo count($snippets); ?>)</h2>
+            <h2><?php echo $is_trash_view ? 'Trash' : 'Saved Snippets'; ?> (<?php echo count($snippets); ?>)</h2>
 
             <?php if (empty($snippets)): ?>
-                <p style="color: #999;">No snippets yet. Add your first one above!</p>
+                <?php if ($is_trash_view): ?>
+                    <p style="color: #999;">Trash is empty.</p>
+                <?php else: ?>
+                    <p style="color: #999;">No snippets yet. Add your first one above!</p>
+                <?php endif; ?>
             <?php else: ?>
                 <!-- Search and Bulk Actions Bar -->
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <select id="bulk-action-select" class="regular-text" style="width: auto;">
                             <option value="">Bulk Actions</option>
-                            <option value="activate">Activate</option>
-                            <option value="deactivate">Deactivate</option>
-                            <option value="delete">Delete</option>
+                            <?php if ($is_trash_view): ?>
+                                <option value="restore">Restore</option>
+                                <option value="delete_permanently">Delete Permanently</option>
+                            <?php else: ?>
+                                <option value="activate">Activate</option>
+                                <option value="deactivate">Deactivate</option>
+                                <option value="delete">Move to Trash</option>
+                            <?php endif; ?>
                         </select>
                         <button type="button" class="button" id="apply-bulk-action">Apply</button>
 
                         <!-- Category Filter -->
                         <?php
-                        $all_categories = $wpdb->get_col("SELECT DISTINCT category FROM {$wpdb->prefix}ofast_snippets WHERE category != '' ORDER BY category");
+                        $category_where = "WHERE category != ''";
+                        if ($trash_supported) {
+                            $category_where = $is_trash_view
+                                ? "WHERE status = 'trash' AND category != ''"
+                                : "WHERE (status IS NULL OR status != 'trash') AND category != ''";
+                        }
+                        $all_categories = $wpdb->get_col("SELECT DISTINCT category FROM {$wpdb->prefix}ofast_snippets {$category_where} ORDER BY category");
                         if (!empty($all_categories)):
                         ?>
                             <select id="category-filter" style="width: auto;">
@@ -1073,7 +1179,7 @@ class Ofast_X_Snippets
 
                 <!-- Scrollable Table Container -->
                 <div style="overflow-x: auto; max-width: 100%;">
-                    <table class="wp-list-table widefat fixed striped" id="snippets-table" style="min-width: 1000px;">
+                    <table class="wp-list-table widefat fixed striped" id="snippets-table" style="min-width: 1080px;">
                         <thead>
                             <tr>
                                 <th style="width: 30px;"><input type="checkbox" id="select-all-snippets"></th>
@@ -1084,6 +1190,7 @@ class Ofast_X_Snippets
                                 <th style="width: 75px;">Language</th>
                                 <th style="width: 85px;">Scope</th>
                                 <th style="width: 65px;">Inject</th>
+                                <th style="width: 65px;">Priority</th>
                                 <th style="width: 70px;">Status</th>
                                 <th style="width: 80px;">Created</th>
                             </tr>
@@ -1104,6 +1211,7 @@ class Ofast_X_Snippets
                                 $loc_labels = array('header' => 'Header', 'body' => 'Body', 'footer' => 'Footer');
                                 $loc = isset($snippet->location) && !empty($snippet->location) ? $snippet->location : 'footer';
                                 $loc_display = isset($loc_labels[$loc]) ? $loc_labels[$loc] : 'Footer';
+                                $priority_value = isset($snippet->priority) ? intval($snippet->priority) : 10;
 
                                 // Status and run once - button shows ACTION to take
                                 $status_text = $snippet->active ? 'Deactivate' : 'Activate';
@@ -1114,7 +1222,7 @@ class Ofast_X_Snippets
 
                                 // Check for potential duplicates (only for PHP and inactive snippets)
                                 $duplicate_warning = array('has_duplicate' => false, 'reasons' => array());
-                                if (!$snippet->active && ($snippet->language === 'php' || empty($snippet->language))) {
+                                if (!$is_trash_view && ($snippet->language === 'php' || empty($snippet->language))) {
                                     $duplicate_warning = $this->get_potential_duplicates($snippet->id, $snippet->name, $snippet->code);
                                 }
                             ?>
@@ -1135,8 +1243,15 @@ class Ofast_X_Snippets
                                         </span>
                                         <input type="text" class="snippet-name-edit" data-id="<?php echo $snippet->id; ?>" value="<?php echo esc_attr($snippet->name); ?>" style="display:none; width: 100%;">
                                         <div class="row-actions" style="margin-top: 3px; font-size: 12px;">
-                                            <a href="?page=ofast-snippets&edit=<?php echo $snippet->id; ?>">Edit</a> |
-                                            <a href="#" class="ofast-snippet-delete" data-id="<?php echo $snippet->id; ?>" data-active="<?php echo $snippet->active; ?>" data-name="<?php echo esc_attr($snippet->name); ?>" style="color: #b32d2e;">Delete</a>
+                                            <?php if ($is_trash_view): ?>
+                                                <a href="#" class="ofast-snippet-restore" data-id="<?php echo $snippet->id; ?>">Restore</a> |
+                                                <a href="#" class="ofast-snippet-permanently-delete" data-id="<?php echo $snippet->id; ?>" data-name="<?php echo esc_attr($snippet->name); ?>" style="color: #b32d2e;">Delete Permanently</a>
+                                            <?php else: ?>
+                                                <a href="?page=ofast-snippets&edit=<?php echo $snippet->id; ?>">Edit</a> |
+                                                <a href="#" class="ofast-snippet-run-now" data-id="<?php echo $snippet->id; ?>" data-name="<?php echo esc_attr($snippet->name); ?>" data-language="<?php echo esc_attr($lang); ?>" style="color: #0f766e;">Run Now</a> |
+                                                <a href="#" class="ofast-snippet-duplicate" data-id="<?php echo $snippet->id; ?>" data-name="<?php echo esc_attr($snippet->name); ?>">Duplicate</a> |
+                                                <a href="#" class="ofast-snippet-delete" data-id="<?php echo $snippet->id; ?>" data-active="<?php echo $snippet->active; ?>" data-name="<?php echo esc_attr($snippet->name); ?>" style="color: #b32d2e;">Delete</a>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                     <td>
@@ -1170,12 +1285,19 @@ class Ofast_X_Snippets
                                     <td><span style="background: #f0f0f0; padding: 2px 8px; border-radius: 3px; font-size: 11px;"><?php echo $lang_display; ?></span></td>
                                     <td><span style="font-size: 12px;"><?php echo $scope_display; ?></span></td>
                                     <td><span style="font-size: 12px;"><?php echo $loc_display . $run_once_text; ?></span></td>
+                                    <td><span style="font-size: 12px; font-weight: 600;"><?php echo $priority_value; ?></span></td>
                                     <td>
-                                        <button class="button button-small ofast-snippet-toggle <?php echo $snippet->active ? 'button-primary' : ''; ?>"
-                                            data-id="<?php echo $snippet->id; ?>" data-active="<?php echo $snippet->active; ?>"
-                                            style="min-width: 60px; font-size: 11px;">
-                                            <?php echo $status_text; ?>
-                                        </button>
+                                        <?php if ($is_trash_view): ?>
+                                            <span style="background: #fef2f2; color: #b91c1c; padding: 2px 8px; border-radius: 3px; font-size: 11px;">Trashed</span>
+                                        <?php else: ?>
+                                            <button class="button button-small ofast-snippet-toggle <?php echo $snippet->active ? 'button-primary' : ''; ?>"
+                                                data-id="<?php echo $snippet->id; ?>" data-active="<?php echo $snippet->active; ?>"
+                                                data-has-duplicate="<?php echo $duplicate_warning['has_duplicate'] ? '1' : '0'; ?>"
+                                                data-duplicate-reasons="<?php echo esc_attr(implode(' | ', $duplicate_warning['reasons'])); ?>"
+                                                style="min-width: 60px; font-size: 11px;">
+                                                <?php echo $status_text; ?>
+                                            </button>
+                                        <?php endif; ?>
                                     </td>
                                     <td style="font-size: 11px;"><?php echo date('M j, Y', strtotime($snippet->created_at)); ?></td>
                                 </tr>
@@ -1191,6 +1313,7 @@ class Ofast_X_Snippets
                 // Initialize CodeMirror on the code textarea
                 var cmEditor = null;
                 var $codeTextarea = $('#snippet_code');
+                var isTrashView = <?php echo $is_trash_view ? 'true' : 'false'; ?>;
 
                 if ($codeTextarea.length && typeof wp !== 'undefined' && wp.codeEditor) {
                     // Get language-specific settings
@@ -1271,6 +1394,14 @@ class Ofast_X_Snippets
                     var $btn = $(this);
                     var id = $btn.data('id');
                     var active = $btn.data('active');
+                    var hasDuplicate = Number($btn.data('has-duplicate')) === 1;
+                    var duplicateReasons = String($btn.data('duplicate-reasons') || '');
+
+                    // Fast client-side guard to stop accidental activation when duplicate warnings exist.
+                    if (active == 0 && hasDuplicate) {
+                        alert('Cannot activate this snippet until duplicate issues are resolved.\n\n' + (duplicateReasons || 'Potential duplicate conflict detected.'));
+                        return;
+                    }
 
                     $btn.prop('disabled', true);
 
@@ -1285,6 +1416,8 @@ class Ofast_X_Snippets
                             $btn.data('active', newActive);
                             $btn.html(newActive ? 'Deactivate' : 'Activate');
                             $btn.toggleClass('button-primary', newActive);
+                        } else {
+                            alert('Error: ' + (response.data || 'Unable to toggle snippet.'));
                         }
                     }).always(function() {
                         $btn.prop('disabled', false);
@@ -1301,8 +1434,8 @@ class Ofast_X_Snippets
 
                     // Stronger warning for active snippets
                     var message = active == 1 ?
-                        'WARNING: "' + name + '" is ACTIVE and currently running!\n\nDeleting it will stop it from running.\n\nAre you sure you want to delete this active snippet?' :
-                        'Are you sure you want to delete "' + name + '"?';
+                        'WARNING: "' + name + '" is ACTIVE and currently running!\n\nIt will be moved to Trash and stopped immediately.\n\nMove this active snippet to Trash?' :
+                        'Move "' + name + '" to Trash?';
 
                     if (!confirm(message)) {
                         return;
@@ -1311,18 +1444,183 @@ class Ofast_X_Snippets
                     $.post(ajaxurl, {
                         action: 'ofast_delete_snippet',
                         nonce: '<?php echo wp_create_nonce('ofast_snippet_delete'); ?>',
-                        id: id
+                        id: id,
+                        permanent: 'false'
                     }, function(response) {
                         if (response.success) {
                             $btn.closest('tr').fadeOut(function() {
                                 $(this).remove();
                             });
+                            setTimeout(function() {
+                                location.reload();
+                            }, 200);
+                        } else {
+                            alert('Error: ' + (response.data || 'Failed to move snippet to trash.'));
                         }
+                    }).fail(function() {
+                        alert('Request failed. Please try again.');
+                    });
+                });
+
+                // Restore snippet from trash
+                $(document).on('click', '.ofast-snippet-restore', function(e) {
+                    e.preventDefault();
+                    var $btn = $(this);
+                    var id = $btn.data('id');
+
+                    $btn.css({
+                        'pointer-events': 'none',
+                        'opacity': '0.6'
+                    });
+
+                    $.post(ajaxurl, {
+                        action: 'ofast_restore_snippet',
+                        nonce: '<?php echo wp_create_nonce('ofast_snippet_restore'); ?>',
+                        id: id
+                    }, function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert('Error: ' + (response.data || 'Failed to restore snippet.'));
+                        }
+                    }).fail(function() {
+                        alert('Request failed. Please try again.');
+                    }).always(function() {
+                        $btn.css({
+                            'pointer-events': '',
+                            'opacity': ''
+                        });
+                    });
+                });
+
+                // Permanently delete snippet from trash
+                $(document).on('click', '.ofast-snippet-permanently-delete', function(e) {
+                    e.preventDefault();
+                    var $btn = $(this);
+                    var id = $btn.data('id');
+                    var name = $btn.data('name');
+
+                    if (!confirm('Permanently delete "' + name + '"? This cannot be undone.')) {
+                        return;
+                    }
+
+                    $btn.css({
+                        'pointer-events': 'none',
+                        'opacity': '0.6'
+                    });
+
+                    $.post(ajaxurl, {
+                        action: 'ofast_delete_snippet',
+                        nonce: '<?php echo wp_create_nonce('ofast_snippet_delete'); ?>',
+                        id: id,
+                        permanent: 'true'
+                    }, function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert('Error: ' + (response.data || 'Failed to delete snippet.'));
+                        }
+                    }).fail(function() {
+                        alert('Request failed. Please try again.');
+                    }).always(function() {
+                        $btn.css({
+                            'pointer-events': '',
+                            'opacity': ''
+                        });
+                    });
+                });
+
+                // Run snippet immediately (PHP only)
+                $(document).on('click', '.ofast-snippet-run-now', function(e) {
+                    e.preventDefault();
+                    var $btn = $(this);
+                    var id = $btn.data('id');
+                    var name = $btn.data('name');
+                    var language = ($btn.data('language') || 'php').toString().toLowerCase();
+
+                    if (language !== 'php') {
+                        alert('Run Now is only available for PHP snippets.');
+                        return;
+                    }
+
+                    if (!confirm('Run snippet "' + name + '" now?\n\nThis executes the PHP code immediately.')) {
+                        return;
+                    }
+
+                    $btn.css({
+                        'pointer-events': 'none',
+                        'opacity': '0.6'
+                    });
+
+                    $.post(ajaxurl, {
+                        action: 'ofast_run_snippet_now',
+                        nonce: '<?php echo wp_create_nonce('ofast_snippet_run_now'); ?>',
+                        id: id
+                    }, function(response) {
+                        if (response.success) {
+                            var msg = response.data && response.data.message ? response.data.message : 'Snippet executed successfully.';
+                            if (response.data && response.data.output) {
+                                msg += '\n\nOutput:\n' + response.data.output;
+                            }
+                            alert(msg);
+                        } else {
+                            alert('Error: ' + (response.data || 'Failed to run snippet.'));
+                        }
+                    }).fail(function() {
+                        alert('Request failed. Please try again.');
+                    }).always(function() {
+                        $btn.css({
+                            'pointer-events': '',
+                            'opacity': ''
+                        });
+                    });
+                });
+
+                // Duplicate snippet
+                $(document).on('click', '.ofast-snippet-duplicate', function(e) {
+                    e.preventDefault();
+                    var $btn = $(this);
+                    var id = $btn.data('id');
+                    var name = $btn.data('name');
+
+                    if (!confirm('Duplicate snippet "' + name + '"?')) {
+                        return;
+                    }
+
+                    $btn.css({
+                        'pointer-events': 'none',
+                        'opacity': '0.6'
+                    });
+
+                    $.post(ajaxurl, {
+                        action: 'ofast_duplicate_snippet',
+                        nonce: '<?php echo wp_create_nonce('ofast_snippet_duplicate'); ?>',
+                        id: id
+                    }, function(response) {
+                        if (response.success) {
+                            if (response.data && response.data.edit_url) {
+                                window.location.href = response.data.edit_url;
+                                return;
+                            }
+                            location.reload();
+                        } else {
+                            alert('Error: ' + (response.data || 'Failed to duplicate snippet.'));
+                        }
+                    }).fail(function() {
+                        alert('Request failed. Please try again.');
+                    }).always(function() {
+                        $btn.css({
+                            'pointer-events': '',
+                            'opacity': ''
+                        });
                     });
                 });
 
                 // Inline title editing
                 $(document).on('click', '.snippet-name-display', function() {
+                    if (isTrashView) {
+                        return;
+                    }
                     var $display = $(this);
                     var $input = $display.siblings('.snippet-name-edit');
                     $display.hide();
@@ -1607,6 +1905,14 @@ class Ofast_X_Snippets
                         confirmMsg = '⚠️ WARNING: This will permanently delete ' + ids.length + ' snippet(s). Continue?';
                     }
 
+                    if (action === 'delete') {
+                        confirmMsg = 'Move ' + ids.length + ' snippet(s) to Trash?';
+                    } else if (action === 'restore') {
+                        confirmMsg = 'Restore ' + ids.length + ' snippet(s) from Trash? Restored snippets stay inactive for safety.';
+                    } else if (action === 'delete_permanently') {
+                        confirmMsg = 'WARNING: Permanently delete ' + ids.length + ' snippet(s)? This cannot be undone.';
+                    }
+
                     if (!confirm(confirmMsg)) {
                         return;
                     }
@@ -1618,6 +1924,28 @@ class Ofast_X_Snippets
                         ids: ids
                     }, function(response) {
                         if (response.success) {
+                            if (response.data && response.data.blocked && Number(response.data.blocked) > 0) {
+                                var blockedDetails = Array.isArray(response.data.blocked_details) ? response.data.blocked_details : [];
+                                if (blockedDetails.length > 0) {
+                                    var maxLines = 8;
+                                    var lines = blockedDetails.slice(0, maxLines).map(function(item) {
+                                        var name = item && item.name ? String(item.name) : ('Snippet #' + (item && item.id ? item.id : '?'));
+                                        var reason = item && item.reason ? String(item.reason) : 'Blocked by validation checks';
+                                        return '- ' + name + ': ' + reason;
+                                    });
+
+                                    if (blockedDetails.length > maxLines) {
+                                        lines.push('... and ' + (blockedDetails.length - maxLines) + ' more.');
+                                    }
+
+                                    alert(
+                                        response.data.blocked + ' snippet(s) were not activated.\n\n' +
+                                        lines.join('\n')
+                                    );
+                                } else {
+                                    alert(response.data.blocked + ' snippet(s) were not activated due to validation or duplicate conflicts.');
+                                }
+                            }
                             location.reload();
                         } else {
                             alert('Error: ' + response.data);
@@ -2050,22 +2378,40 @@ class Ofast_X_Snippets
         $table = $wpdb->prefix . 'ofast_snippets';
 
         // Get snippet info for logging
-        $snippet = $wpdb->get_row($wpdb->prepare("SELECT name, code, language FROM $table WHERE id = %d", $id));
+        $snippet = $wpdb->get_row($wpdb->prepare("SELECT id, name, code, language FROM $table WHERE id = %d", $id));
+
+        if (!$snippet) {
+            wp_send_json_error('Snippet not found');
+            return;
+        }
 
         // If turning ON, validate first (only for PHP snippets)
         if ($new_active == 1 && $snippet) {
             if ($snippet->language === 'php' || empty($snippet->language)) {
+                $candidate_code = $this->normalize_php_code($snippet->code);
+
                 // Check syntax first
-                $validation = $this->validate_php_code($snippet->code);
+                $validation = $this->validate_php_code($candidate_code);
                 if ($validation !== true) {
                     wp_send_json_error('Cannot activate: ' . $validation);
                     return;
                 }
 
                 // Check for function name conflicts
-                $conflict_check = $this->check_function_conflicts($snippet->code);
+                $conflict_check = $this->check_function_conflicts($candidate_code);
                 if ($conflict_check !== true) {
                     wp_send_json_error('Cannot activate: ' . $conflict_check);
+                    return;
+                }
+
+                // Check duplicate conflicts against already active snippets.
+                $activation_conflicts = $this->get_active_duplicate_conflicts($snippet->id, $snippet->name, $candidate_code);
+                if (!empty($activation_conflicts)) {
+                    $conflict_preview = implode(' | ', array_slice($activation_conflicts, 0, 2));
+                    if (count($activation_conflicts) > 2) {
+                        $conflict_preview .= ' | +' . (count($activation_conflicts) - 2) . ' more';
+                    }
+                    wp_send_json_error('Cannot activate: duplicate conflict with active snippet(s). ' . $conflict_preview);
                     return;
                 }
             }
@@ -2108,22 +2454,262 @@ class Ofast_X_Snippets
         }
 
         $id = intval($_POST['id']);
+        $permanent = isset($_POST['permanent']) ? sanitize_text_field(wp_unslash($_POST['permanent'])) : '';
+        $is_permanent = in_array(strtolower($permanent), array('1', 'true', 'yes'), true);
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+        $trash_supported = $this->ensure_snippets_trash_schema();
+
+        // Get snippet for logging
+        $snippet = $wpdb->get_row($wpdb->prepare("SELECT id, name FROM $table WHERE id = %d", $id));
+        if (!$snippet) {
+            wp_send_json_error('Snippet not found');
+        }
+
+        // Permanent delete always removes row
+        if ($is_permanent) {
+            $wpdb->delete($table, array('id' => $id));
+            $this->log_snippet_action('DELETED_PERMANENTLY', $id, $snippet->name, '');
+            $this->clear_snippets_cache();
+            wp_send_json_success(array('message' => 'Snippet permanently deleted.', 'permanent' => true));
+        }
+
+        // Soft delete to trash when supported
+        if ($trash_supported) {
+            $wpdb->update(
+                $table,
+                array(
+                    'status' => 'trash',
+                    'trashed_at' => current_time('mysql'),
+                    'active' => 0
+                ),
+                array('id' => $id)
+            );
+            $this->log_snippet_action('TRASHED', $id, $snippet->name, '');
+            $this->clear_snippets_cache();
+            wp_send_json_success(array('message' => 'Snippet moved to trash.', 'trashed' => true));
+        }
+
+        // Fallback hard delete if trash columns are unavailable
+        $wpdb->delete($table, array('id' => $id));
+        $this->log_snippet_action('DELETED', $id, $snippet->name, 'Trash schema unavailable');
+        $this->clear_snippets_cache();
+        wp_send_json_success(array('message' => 'Snippet deleted.'));
+    }
+
+    /**
+     * AJAX: Restore snippet from trash
+     */
+    public function ajax_restore_snippet()
+    {
+        check_ajax_referer('ofast_snippet_restore', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        if (!$this->check_rate_limit('restore')) {
+            wp_send_json_error('Too many requests. Please wait a moment.');
+        }
+
+        $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        if ($id <= 0) {
+            wp_send_json_error('Invalid snippet ID');
+        }
 
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_snippets';
 
-        // Get name for logging before delete
-        $snippet = $wpdb->get_row($wpdb->prepare("SELECT name FROM $table WHERE id = %d", $id));
+        if (!$this->ensure_snippets_trash_schema()) {
+            wp_send_json_error('Trash schema unavailable');
+        }
 
-        $wpdb->delete($table, array('id' => $id));
+        $snippet = $wpdb->get_row($wpdb->prepare("SELECT id, name FROM $table WHERE id = %d", $id));
+        if (!$snippet) {
+            wp_send_json_error('Snippet not found');
+        }
 
-        // Audit log
-        $this->log_snippet_action('DELETED', $id, $snippet ? $snippet->name : 'Unknown', '');
+        $wpdb->update(
+            $table,
+            array(
+                'status' => 'active',
+                'trashed_at' => null,
+                'active' => 0 // Restored snippets are inactive for safety
+            ),
+            array('id' => $id)
+        );
 
-        // Clear cache when snippet is deleted
+        $this->log_snippet_action('RESTORED', $id, $snippet->name, 'Restored from trash (inactive)');
         $this->clear_snippets_cache();
 
-        wp_send_json_success();
+        wp_send_json_success(array('message' => 'Snippet restored.'));
+    }
+
+    /**
+     * AJAX: Run snippet immediately (PHP snippets only)
+     */
+    public function ajax_run_snippet_now()
+    {
+        check_ajax_referer('ofast_snippet_run_now', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        if (!$this->check_rate_limit('run_now')) {
+            wp_send_json_error('Too many requests. Please wait a moment.');
+        }
+
+        $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        if ($id <= 0) {
+            wp_send_json_error('Invalid snippet ID');
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+        $trash_supported = $this->ensure_snippets_trash_schema();
+
+        if ($trash_supported) {
+            $snippet = $wpdb->get_row($wpdb->prepare(
+                "SELECT id, name, code, language, status FROM $table WHERE id = %d",
+                $id
+            ));
+        } else {
+            $snippet = $wpdb->get_row($wpdb->prepare(
+                "SELECT id, name, code, language FROM $table WHERE id = %d",
+                $id
+            ));
+        }
+
+        if (!$snippet) {
+            wp_send_json_error('Snippet not found');
+        }
+
+        if ($trash_supported && isset($snippet->status) && $snippet->status === 'trash') {
+            wp_send_json_error('Cannot run a trashed snippet. Restore it first.');
+        }
+
+        if (!empty($snippet->language) && $snippet->language !== 'php') {
+            wp_send_json_error('Run Now is only available for PHP snippets');
+        }
+
+        $runtime_code = $this->normalize_php_code($snippet->code);
+        $validation = $this->validate_php_code($runtime_code);
+        if ($validation !== true) {
+            wp_send_json_error('Cannot run: ' . $validation);
+        }
+
+        $output = '';
+        set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+            throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+        });
+
+        try {
+            ob_start();
+            eval($runtime_code);
+            $output = trim((string) ob_get_clean());
+        } catch (Throwable $e) {
+            if (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            restore_error_handler();
+            $this->log_snippet_action('RUN_NOW_FAILED', $snippet->id, $snippet->name, $e->getMessage());
+            wp_send_json_error($e->getMessage());
+        }
+
+        restore_error_handler();
+
+        $details = 'Executed manually from snippets table';
+        if ($output !== '') {
+            $details .= ' | Output length: ' . strlen($output);
+        }
+        $this->log_snippet_action('RUN_NOW', $snippet->id, $snippet->name, $details);
+
+        wp_send_json_success(array(
+            'message' => 'Snippet executed successfully.',
+            'output' => $output
+        ));
+    }
+
+    /**
+     * AJAX: Duplicate snippet
+     */
+    public function ajax_duplicate_snippet()
+    {
+        check_ajax_referer('ofast_snippet_duplicate', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        if (!$this->check_rate_limit('duplicate')) {
+            wp_send_json_error('Too many requests. Please wait a moment.');
+        }
+
+        $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        if ($id <= 0) {
+            wp_send_json_error('Invalid snippet ID');
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+        $priority_supported = $this->ensure_snippets_priority_schema();
+
+        $snippet = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
+        if (!$snippet) {
+            wp_send_json_error('Snippet not found');
+        }
+
+        $base_name = trim((string) $snippet->name);
+        $copy_num = 1;
+        $new_name = $base_name . ' (Copy)';
+
+        while ((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table WHERE name = %s", $new_name)) > 0) {
+            $copy_num++;
+            $new_name = $base_name . ' (Copy ' . $copy_num . ')';
+        }
+
+        $duplicated_code = isset($snippet->code) ? (string) $snippet->code : '';
+        if (empty($snippet->language) || $snippet->language === 'php') {
+            $duplicated_code = $this->normalize_php_code($duplicated_code);
+        }
+
+        $insert_data = array(
+            'name' => $new_name,
+            'description' => isset($snippet->description) ? $snippet->description : '',
+            'code' => $duplicated_code,
+            'language' => !empty($snippet->language) ? $snippet->language : 'php',
+            'scope' => !empty($snippet->scope) ? $snippet->scope : 'global',
+            'location' => !empty($snippet->location) ? $snippet->location : 'footer',
+            'target_type' => !empty($snippet->target_type) ? $snippet->target_type : 'all',
+            'target_value' => isset($snippet->target_value) ? $snippet->target_value : '',
+            'run_once' => isset($snippet->run_once) ? intval($snippet->run_once) : 0,
+            'active' => 0,
+            'category' => isset($snippet->category) ? $snippet->category : '',
+            'tags' => isset($snippet->tags) ? $snippet->tags : '',
+            'executed_at' => null,
+            'created_at' => current_time('mysql')
+        );
+        if ($priority_supported) {
+            $insert_data['priority'] = isset($snippet->priority) ? max(1, intval($snippet->priority)) : 10;
+        }
+
+        $result = $wpdb->insert($table, $insert_data);
+
+        if ($result === false) {
+            wp_send_json_error('Failed to duplicate snippet: ' . $wpdb->last_error);
+        }
+
+        $new_id = (int) $wpdb->insert_id;
+        $this->log_snippet_action('DUPLICATED', $new_id, $new_name, 'From snippet ID: ' . $id);
+        $this->clear_snippets_cache();
+
+        wp_send_json_success(array(
+            'id' => $new_id,
+            'name' => $new_name,
+            'edit_url' => admin_url('admin.php?page=ofast-snippets&edit=' . $new_id)
+        ));
     }
 
     /**
@@ -2180,6 +2766,11 @@ class Ofast_X_Snippets
 
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_snippets';
+        $priority_supported = $this->ensure_snippets_priority_schema();
+        $export_fields = $priority_supported
+            ? 'name, description, code, language, scope, location, target_type, target_value, run_once, priority, active'
+            : 'name, description, code, language, scope, location, target_type, target_value, run_once, active';
+        $export_order = $priority_supported ? 'priority ASC, id ASC' : 'id ASC';
 
         // Check if specific IDs were passed (selected snippets)
         $selected_ids = isset($_POST['ids']) ? array_map('intval', (array)$_POST['ids']) : array();
@@ -2189,13 +2780,13 @@ class Ofast_X_Snippets
             // Export only selected snippets
             $placeholders = implode(',', array_fill(0, count($selected_ids), '%d'));
             $snippets = $wpdb->get_results($wpdb->prepare(
-                "SELECT name, description, code, language, scope, location, target_type, target_value, run_once, active FROM $table WHERE id IN ($placeholders) ORDER BY id",
+                "SELECT {$export_fields} FROM $table WHERE id IN ($placeholders) ORDER BY {$export_order}",
                 $selected_ids
             ));
             $export_label = count($selected_ids) . ' Selected Snippets';
         } else {
             // Export all snippets
-            $snippets = $wpdb->get_results("SELECT name, description, code, language, scope, location, target_type, target_value, run_once, active FROM $table ORDER BY id");
+            $snippets = $wpdb->get_results("SELECT {$export_fields} FROM $table ORDER BY {$export_order}");
             $export_label = 'All Snippets';
         }
 
@@ -2238,6 +2829,7 @@ class Ofast_X_Snippets
 
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_snippets';
+        $priority_supported = $this->ensure_snippets_priority_schema();
         $imported = 0;
         $skipped = 0;
         $errors = array();
@@ -2251,8 +2843,14 @@ class Ofast_X_Snippets
 
             // Validate PHP code if language is PHP
             $language = isset($snippet['language']) ? $snippet['language'] : 'php';
-            if ($language === 'php' && !empty($snippet['code'])) {
-                $validation = $this->validate_php_code($snippet['code']);
+            $snippet_code = isset($snippet['code']) ? (string) $snippet['code'] : '';
+            if ($language === 'php') {
+                $snippet_code = $this->normalize_php_code($snippet_code);
+            }
+            $priority = isset($snippet['priority']) ? intval($snippet['priority']) : 10;
+            $priority = max(1, min(9999, $priority));
+            if ($language === 'php' && $snippet_code !== '') {
+                $validation = $this->validate_php_code($snippet_code);
                 if ($validation !== true) {
                     $errors[] = $snippet['name'] . ': ' . $validation;
                     $skipped++;
@@ -2261,7 +2859,7 @@ class Ofast_X_Snippets
             }
 
             // DUPLICATE CODE CHECK: Skip if exact code already exists
-            $code_hash = md5(trim($snippet['code']));
+            $code_hash = md5(trim($snippet_code));
             $existing_code = $wpdb->get_var($wpdb->prepare(
                 "SELECT id FROM $table WHERE MD5(TRIM(code)) = %s",
                 $code_hash
@@ -2272,10 +2870,10 @@ class Ofast_X_Snippets
             }
 
             // Insert snippet (always as INACTIVE for safety)
-            $wpdb->insert($table, array(
+            $insert_data = array(
                 'name' => sanitize_text_field($snippet['name']) . ' (imported)',
                 'description' => isset($snippet['description']) ? sanitize_textarea_field($snippet['description']) : '',
-                'code' => $snippet['code'], // Keep code as-is (validated above)
+                'code' => $snippet_code,
                 'language' => in_array($language, array('php', 'javascript', 'css', 'html')) ? $language : 'php',
                 'scope' => isset($snippet['scope']) ? sanitize_text_field($snippet['scope']) : 'global',
                 'location' => isset($snippet['location']) ? sanitize_text_field($snippet['location']) : 'footer',
@@ -2284,7 +2882,12 @@ class Ofast_X_Snippets
                 'run_once' => isset($snippet['run_once']) ? intval($snippet['run_once']) : 0,
                 'active' => 0, // ALWAYS inactive on import
                 'created_at' => current_time('mysql')
-            ));
+            );
+            if ($priority_supported) {
+                $insert_data['priority'] = $priority;
+            }
+
+            $wpdb->insert($table, $insert_data);
 
             $imported++;
         }
@@ -2367,10 +2970,15 @@ class Ofast_X_Snippets
         }
 
         // Insert as inactive
+        $template_code = isset($template['code']) ? (string) $template['code'] : '';
+        if (isset($template['language']) && $template['language'] === 'php') {
+            $template_code = $this->normalize_php_code($template_code);
+        }
+
         $result = $wpdb->insert($table, array(
             'name' => $snippet_name,
             'description' => $template['description'],
-            'code' => $template['code'],
+            'code' => $template_code,
             'language' => $template['language'],
             'scope' => $template['scope'],
             'category' => $template['category'],
@@ -2420,19 +3028,91 @@ class Ofast_X_Snippets
 
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_snippets';
+        $trash_supported = $this->ensure_snippets_trash_schema();
         $count = 0;
+        $blocked = 0;
+        $blocked_details = array();
 
         foreach ($ids as $id) {
             switch ($action) {
                 case 'activate':
-                    $wpdb->update($table, array('active' => 1), array('id' => $id));
+                    $snippet = $wpdb->get_row($wpdb->prepare("SELECT id, name, code, language FROM $table WHERE id = %d", $id));
+                    if (!$snippet) {
+                        $blocked++;
+                        $blocked_details[] = array(
+                            'id' => $id,
+                            'name' => 'Snippet #' . $id,
+                            'reason' => 'Snippet not found'
+                        );
+                        break;
+                    }
+
+                    if ($snippet->language === 'php' || empty($snippet->language)) {
+                        $candidate_code = $this->normalize_php_code($snippet->code);
+                        $validation = $this->validate_php_code($candidate_code);
+                        if ($validation !== true) {
+                            $blocked++;
+                            $blocked_details[] = array(
+                                'id' => (int) $snippet->id,
+                                'name' => (string) $snippet->name,
+                                'reason' => (string) $validation
+                            );
+                            break;
+                        }
+
+                        $conflict_check = $this->check_function_conflicts($candidate_code);
+                        if ($conflict_check !== true) {
+                            $blocked++;
+                            $blocked_details[] = array(
+                                'id' => (int) $snippet->id,
+                                'name' => (string) $snippet->name,
+                                'reason' => (string) $conflict_check
+                            );
+                            break;
+                        }
+
+                        $activation_conflicts = $this->get_active_duplicate_conflicts($snippet->id, $snippet->name, $candidate_code);
+                        if (!empty($activation_conflicts)) {
+                            $blocked++;
+                            $blocked_details[] = array(
+                                'id' => (int) $snippet->id,
+                                'name' => (string) $snippet->name,
+                                'reason' => 'Duplicate conflict: ' . implode(' | ', array_slice($activation_conflicts, 0, 3))
+                            );
+                            break;
+                        }
+                    }
+
+                    if ($trash_supported) {
+                        $wpdb->update($table, array('active' => 1, 'status' => 'active', 'trashed_at' => null), array('id' => $id));
+                    } else {
+                        $wpdb->update($table, array('active' => 1), array('id' => $id));
+                    }
                     $count++;
                     break;
                 case 'deactivate':
-                    $wpdb->update($table, array('active' => 0), array('id' => $id));
+                    if ($trash_supported) {
+                        $wpdb->update($table, array('active' => 0, 'status' => 'active', 'trashed_at' => null), array('id' => $id));
+                    } else {
+                        $wpdb->update($table, array('active' => 0), array('id' => $id));
+                    }
                     $count++;
                     break;
                 case 'delete':
+                    if ($trash_supported) {
+                        $wpdb->update($table, array('active' => 0, 'status' => 'trash', 'trashed_at' => current_time('mysql')), array('id' => $id));
+                    } else {
+                        $wpdb->delete($table, array('id' => $id));
+                    }
+                    $count++;
+                    break;
+                case 'restore':
+                    if ($trash_supported) {
+                        $wpdb->update($table, array('active' => 0, 'status' => 'active', 'trashed_at' => null), array('id' => $id));
+                        $count++;
+                    }
+                    break;
+                case 'delete_permanently':
                     $wpdb->delete($table, array('id' => $id));
                     $count++;
                     break;
@@ -2445,7 +3125,11 @@ class Ofast_X_Snippets
         // Clear cache when bulk action is performed
         $this->clear_snippets_cache();
 
-        wp_send_json_success(array('count' => $count));
+        wp_send_json_success(array(
+            'count' => $count,
+            'blocked' => $blocked,
+            'blocked_details' => $blocked_details
+        ));
     }
 
     /**
@@ -2518,9 +3202,11 @@ class Ofast_X_Snippets
             $snippets = $wpdb->get_results("SELECT * FROM $source_table");
 
             foreach ($snippets as $snippet) {
+                $snippet_code = isset($snippet->code) ? $this->normalize_php_code((string) $snippet->code) : '';
+
                 // Validate PHP code
-                if (!empty($snippet->code)) {
-                    $validation = $this->validate_php_code($snippet->code);
+                if ($snippet_code !== '') {
+                    $validation = $this->validate_php_code($snippet_code);
                     if ($validation !== true) {
                         $errors[] = $snippet->name . ': ' . $validation;
                         $skipped++;
@@ -2539,7 +3225,7 @@ class Ofast_X_Snippets
                 }
 
                 // DUPLICATE CODE CHECK: Skip if exact code already exists
-                $code_hash = md5(trim($snippet->code));
+                $code_hash = md5(trim($snippet_code));
                 $existing_code = $wpdb->get_var($wpdb->prepare(
                     "SELECT id FROM $table WHERE MD5(TRIM(code)) = %s",
                     $code_hash
@@ -2552,7 +3238,7 @@ class Ofast_X_Snippets
                 $wpdb->insert($table, array(
                     'name' => sanitize_text_field($snippet->name) . ' (from Code Snippets)',
                     'description' => isset($snippet->desc) ? sanitize_textarea_field($snippet->desc) : '',
-                    'code' => $snippet->code,
+                    'code' => $snippet_code,
                     'language' => 'php',
                     'scope' => $scope,
                     'location' => 'footer',
@@ -2590,6 +3276,10 @@ class Ofast_X_Snippets
                     $language = 'css';
                 } elseif ($code_type === 'html' || $code_type === 'text') {
                     $language = 'html';
+                }
+
+                if ($language === 'php') {
+                    $code = $this->normalize_php_code($code);
                 }
 
                 // Validate PHP code only
@@ -2671,7 +3361,8 @@ class Ofast_X_Snippets
             $source_snippets = $wpdb->get_results("SELECT * FROM $source_table");
 
             foreach ($source_snippets as $s) {
-                $code_hash = md5(trim($s->code));
+                $normalized_preview_code = isset($s->code) ? $this->normalize_php_code((string) $s->code) : '';
+                $code_hash = md5(trim($normalized_preview_code));
                 $existing_id = $wpdb->get_var($wpdb->prepare(
                     "SELECT id FROM $our_table WHERE MD5(TRIM(code)) = %s",
                     $code_hash
@@ -2687,8 +3378,8 @@ class Ofast_X_Snippets
                 // Validate PHP syntax for safety check
                 $is_safe = true;
                 $error_message = null;
-                if (!empty($s->code)) {
-                    $validation = $this->validate_php_code($s->code);
+                if ($normalized_preview_code !== '') {
+                    $validation = $this->validate_php_code($normalized_preview_code);
                     if ($validation !== true) {
                         $is_safe = false;
                         $error_message = $validation;
@@ -2704,7 +3395,7 @@ class Ofast_X_Snippets
                     'existing_id' => $existing_id ? intval($existing_id) : null,
                     'is_safe' => $is_safe,
                     'error_message' => $error_message,
-                    'code_preview' => htmlspecialchars(mb_substr($s->code, 0, 500) . (strlen($s->code) > 500 ? '...' : ''))
+                    'code_preview' => htmlspecialchars(mb_substr($normalized_preview_code, 0, 500) . (strlen($normalized_preview_code) > 500 ? '...' : ''))
                 );
             }
         } elseif ($plugin === 'wpcode') {
@@ -2731,6 +3422,10 @@ class Ofast_X_Snippets
                     $language = 'css';
                 } elseif ($code_type === 'html' || $code_type === 'text') {
                     $language = 'html';
+                }
+
+                if ($language === 'php') {
+                    $code = $this->normalize_php_code($code);
                 }
 
                 $code_hash = md5(trim($code));
@@ -2815,9 +3510,11 @@ class Ofast_X_Snippets
             ));
 
             foreach ($snippets as $snippet) {
+                $snippet_code = isset($snippet->code) ? $this->normalize_php_code((string) $snippet->code) : '';
+
                 // Validate PHP code
-                if (!empty($snippet->code)) {
-                    $validation = $this->validate_php_code($snippet->code);
+                if ($snippet_code !== '') {
+                    $validation = $this->validate_php_code($snippet_code);
                     if ($validation !== true) {
                         $errors[] = $snippet->name . ': ' . $validation;
                         $skipped++;
@@ -2836,7 +3533,7 @@ class Ofast_X_Snippets
                 }
 
                 // Duplicate check
-                $code_hash = md5(trim($snippet->code));
+                $code_hash = md5(trim($snippet_code));
                 $existing_code = $wpdb->get_var($wpdb->prepare(
                     "SELECT id FROM $table WHERE MD5(TRIM(code)) = %s",
                     $code_hash
@@ -2849,7 +3546,7 @@ class Ofast_X_Snippets
                 $wpdb->insert($table, array(
                     'name' => sanitize_text_field($snippet->name) . ' (from Code Snippets)',
                     'description' => isset($snippet->desc) ? sanitize_textarea_field($snippet->desc) : '',
-                    'code' => $snippet->code,
+                    'code' => $snippet_code,
                     'language' => 'php',
                     'scope' => $scope,
                     'location' => 'footer',
@@ -2886,6 +3583,10 @@ class Ofast_X_Snippets
                     $language = 'css';
                 } elseif ($code_type === 'html' || $code_type === 'text') {
                     $language = 'html';
+                }
+
+                if ($language === 'php') {
+                    $code = $this->normalize_php_code($code);
                 }
 
                 // Validate PHP code only
@@ -2954,8 +3655,10 @@ class Ofast_X_Snippets
         if ($snippets === false) {
             global $wpdb;
             $table = $wpdb->prefix . 'ofast_snippets';
+            $priority_supported = $this->ensure_snippets_priority_schema();
+            $execution_order = $priority_supported ? 'priority ASC, id ASC' : 'id ASC';
             // Get all active snippets with all relevant fields
-            $snippets = $wpdb->get_results("SELECT id, code, language, scope, location, target_type, target_value, run_once, executed_at FROM $table WHERE active = 1");
+            $snippets = $wpdb->get_results("SELECT id, code, language, scope, location, target_type, target_value, run_once, executed_at FROM $table WHERE active = 1 ORDER BY {$execution_order}");
 
             // Cache for 1 hour (3600 seconds)
             set_transient('ofast_active_snippets_cache', $snippets, 3600);
@@ -3018,6 +3721,86 @@ class Ofast_X_Snippets
     private function clear_snippets_cache()
     {
         delete_transient('ofast_active_snippets_cache');
+    }
+
+    /**
+     * Ensure priority column exists for snippets table.
+     * Returns true when priority schema is available.
+     */
+    private function ensure_snippets_priority_schema()
+    {
+        static $checked = false;
+        static $supported = false;
+
+        if ($checked) {
+            return $supported;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+        $table_exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table));
+
+        if (!$table_exists) {
+            $checked = true;
+            $supported = false;
+            return false;
+        }
+
+        $columns = $wpdb->get_col("SHOW COLUMNS FROM {$table}", 0);
+        if (!in_array('priority', $columns, true)) {
+            $wpdb->query("ALTER TABLE {$table} ADD COLUMN priority INT(11) DEFAULT 10 AFTER executed_at");
+            $columns = $wpdb->get_col("SHOW COLUMNS FROM {$table}", 0);
+        }
+
+        $supported = in_array('priority', $columns, true);
+        $checked = true;
+
+        return $supported;
+    }
+
+    /**
+     * Ensure trash columns exist for snippets table.
+     * Returns true when trash schema is available.
+     */
+    private function ensure_snippets_trash_schema()
+    {
+        static $checked = false;
+        static $supported = false;
+
+        if ($checked) {
+            return $supported;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+        $table_exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table));
+
+        if (!$table_exists) {
+            $checked = true;
+            $supported = false;
+            return false;
+        }
+
+        $columns = $wpdb->get_col("SHOW COLUMNS FROM {$table}", 0);
+
+        if (!in_array('status', $columns, true)) {
+            $wpdb->query("ALTER TABLE {$table} ADD COLUMN status VARCHAR(20) DEFAULT 'active'");
+            $columns[] = 'status';
+        }
+
+        if (!in_array('trashed_at', $columns, true)) {
+            $wpdb->query("ALTER TABLE {$table} ADD COLUMN trashed_at DATETIME DEFAULT NULL");
+            $columns[] = 'trashed_at';
+        }
+
+        if (in_array('status', $columns, true)) {
+            $wpdb->query("UPDATE {$table} SET status = 'active' WHERE status IS NULL OR status = ''");
+        }
+
+        $supported = in_array('status', $columns, true) && in_array('trashed_at', $columns, true);
+        $checked = true;
+
+        return $supported;
     }
 
     /**
@@ -3102,6 +3885,8 @@ class Ofast_X_Snippets
      */
     private function check_function_conflicts($code)
     {
+        $code = $this->normalize_php_code($code);
+
         // Extract function names from the code
         $function_names = array();
 
@@ -3135,11 +3920,68 @@ class Ofast_X_Snippets
      */
     private function extract_function_names($code)
     {
+        $code = $this->normalize_php_code($code);
         $function_names = array();
         if (preg_match_all('/function\s+([a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*)\s*\(/i', $code, $matches)) {
             $function_names = $matches[1];
         }
         return $function_names;
+    }
+
+    /**
+     * Get duplicate/conflict reasons against already active snippets.
+     * Used to prevent activating snippets that could trigger fatal conflicts.
+     */
+    private function get_active_duplicate_conflicts($snippet_id, $snippet_name, $snippet_code)
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+        $conflicts = array();
+
+        $current_name = strtolower(trim((string) $snippet_name));
+        $current_code = trim($this->normalize_php_code($snippet_code));
+        $current_functions = $this->extract_function_names($current_code);
+        $current_hash = $current_code !== '' ? md5($current_code) : '';
+
+        if ($this->ensure_snippets_trash_schema()) {
+            $active_snippets = $wpdb->get_results($wpdb->prepare(
+                "SELECT id, name, code FROM $table WHERE id != %d AND active = 1 AND (status IS NULL OR status != 'trash')",
+                $snippet_id
+            ));
+        } else {
+            $active_snippets = $wpdb->get_results($wpdb->prepare(
+                "SELECT id, name, code FROM $table WHERE id != %d AND active = 1",
+                $snippet_id
+            ));
+        }
+
+        if (empty($active_snippets)) {
+            return array();
+        }
+
+        foreach ($active_snippets as $other) {
+            $other_name = strtolower(trim((string) $other->name));
+            $other_code = trim($this->normalize_php_code($other->code));
+            $other_hash = $other_code !== '' ? md5($other_code) : '';
+
+            if ($current_name !== '' && $current_name === $other_name) {
+                $conflicts[] = "Same name as active snippet #{$other->id}";
+            }
+
+            if ($current_hash !== '' && $other_hash !== '' && $current_hash === $other_hash) {
+                $conflicts[] = "Exact same code as active snippet #{$other->id}";
+            }
+
+            if (!empty($current_functions)) {
+                $other_functions = $this->extract_function_names($other_code);
+                $overlap = array_intersect($current_functions, $other_functions);
+                if (!empty($overlap)) {
+                    $conflicts[] = "Shares function(s) " . implode(', ', array_unique($overlap)) . " with active snippet #{$other->id}";
+                }
+            }
+        }
+
+        return array_values(array_unique($conflicts));
     }
 
     /**
@@ -3157,10 +3999,17 @@ class Ofast_X_Snippets
         );
 
         // Get all other snippets
-        $other_snippets = $wpdb->get_results($wpdb->prepare(
-            "SELECT id, name, code, active FROM $table WHERE id != %d",
-            $snippet_id
-        ));
+        if ($this->ensure_snippets_trash_schema()) {
+            $other_snippets = $wpdb->get_results($wpdb->prepare(
+                "SELECT id, name, code, active FROM $table WHERE id != %d AND (status IS NULL OR status != 'trash')",
+                $snippet_id
+            ));
+        } else {
+            $other_snippets = $wpdb->get_results($wpdb->prepare(
+                "SELECT id, name, code, active FROM $table WHERE id != %d",
+                $snippet_id
+            ));
+        }
 
         if (empty($other_snippets)) {
             return $result;
@@ -3172,6 +4021,24 @@ class Ofast_X_Snippets
                 $result['has_duplicate'] = true;
                 $status = $other->active ? 'ACTIVE' : 'inactive';
                 $result['reasons'][] = "Same name as snippet #{$other->id} ({$status})";
+            }
+        }
+
+        // Check for exact same normalized code
+        $normalized_snippet_code = trim($this->normalize_php_code($snippet_code));
+        if ($normalized_snippet_code !== '') {
+            $snippet_code_hash = md5($normalized_snippet_code);
+            foreach ($other_snippets as $other) {
+                $other_normalized_code = trim($this->normalize_php_code($other->code));
+                if ($other_normalized_code === '') {
+                    continue;
+                }
+                $other_code_hash = md5($other_normalized_code);
+                if ($snippet_code_hash === $other_code_hash) {
+                    $result['has_duplicate'] = true;
+                    $status = $other->active ? 'ACTIVE' : 'inactive';
+                    $result['reasons'][] = "Exact same code as snippet #{$other->id} ({$status})";
+                }
             }
         }
 
@@ -3317,6 +4184,11 @@ class Ofast_X_Snippets
      */
     private function execute_php_snippet($code, $snippet_id = 0, $run_once = false)
     {
+        $code = $this->normalize_php_code($code);
+        if ($code === '') {
+            return;
+        }
+
         // Set custom error handler to catch runtime errors
         set_error_handler(function ($errno, $errstr, $errfile, $errline) {
             throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
@@ -3404,22 +4276,40 @@ class Ofast_X_Snippets
     }
 
     /**
+     * Normalize PHP snippets so pasted wrappers do not break execution.
+     */
+    private function normalize_php_code($code)
+    {
+        $code = (string) $code;
+        $code = preg_replace('/^\xEF\xBB\xBF/', '', $code); // Remove UTF-8 BOM.
+        $code = trim($code);
+
+        if ($code === '') {
+            return '';
+        }
+
+        // Convert short echo syntax wrapper to plain PHP expression.
+        $code = preg_replace('/^\s*<\?=\s*/i', 'echo ', $code);
+
+        // Strip a single outer PHP wrapper if present.
+        $code = preg_replace('/^\s*<\?(?:php)?\s*/i', '', $code);
+        $code = preg_replace('/\s*\?>\s*$/', '', $code);
+
+        return trim($code);
+    }
+
+    /**
      * Validate PHP code syntax
      * Returns true if valid, error message if invalid
      */
     private function validate_php_code($code)
     {
         // Check for common syntax errors
-        $code = trim($code);
+        $code = $this->normalize_php_code($code);
 
         // Allow empty code (for saving templates/drafts)
         if (empty($code)) {
             return true;
-        }
-
-        // Check for opening PHP tags (not allowed)
-        if (strpos($code, '<?php') !== false || strpos($code, '<?') !== false) {
-            return 'Do not include <?php tags in your code';
         }
 
         // SECURITY: Check for dangerous functions

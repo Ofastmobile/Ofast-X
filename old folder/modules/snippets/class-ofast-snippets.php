@@ -55,7 +55,7 @@ class Ofast_X_Snippets
     public function enqueue_codemirror($hook)
     {
         // Only on our snippets page
-        if ($hook !== 'ofast-x_page_ofast-snippets') {
+        if (strpos((string) $hook, 'ofast-snippets') === false) {
             return;
         }
 
@@ -81,8 +81,9 @@ class Ofast_X_Snippets
             ),
         ));
 
-        // If CodeMirror is disabled, bail
+        // If CodeMirror is disabled in user profile settings, show fallback notice and bail.
         if (false === $settings) {
+            add_action('admin_notices', array($this, 'show_codemirror_disabled_notice'));
             return;
         }
 
@@ -97,6 +98,21 @@ class Ofast_X_Snippets
 
         // Pass settings to our script
         wp_localize_script('code-editor', 'ofastCodeMirrorSettings', $settings);
+    }
+
+    /**
+     * Show notice when WordPress code editor is disabled for current user.
+     */
+    public function show_codemirror_disabled_notice()
+    {
+        if (!isset($_GET['page']) || sanitize_key($_GET['page']) !== 'ofast-snippets') {
+            return;
+        }
+?>
+        <div class="notice notice-info is-dismissible">
+            <p><?php esc_html_e('Code editor is disabled for your user profile. You can enable syntax highlighting in your profile to use CodeMirror here.', 'ofast-x'); ?></p>
+        </div>
+<?php
     }
 
     /**

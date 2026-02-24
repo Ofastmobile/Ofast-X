@@ -278,7 +278,7 @@ class Ofast_X_Settings
         $saved = isset($_GET['settings_saved']);
 
 ?>
-        <div class="wrap ofast-settings-wrap">
+        <div class="wrap ofast-settings-wrap all-categories-view">
             <!-- Modern Header - Unified Style -->
             <div class="ofast-page-header">
                 <div class="ofast-header-content">
@@ -425,7 +425,9 @@ class Ofast_X_Settings
                     $cat = $data['category'] ?? 'utility';
                     $grouped_modules[$cat][$slug] = $data;
                 }
-                
+                ?>
+                <div class="ofast-all-modules-container">
+                <?php
                 foreach ($categories as $cat_key => $cat_info):
                     if (empty($grouped_modules[$cat_key])) continue;
                 ?>
@@ -470,6 +472,7 @@ class Ofast_X_Settings
                     </div>
                 </div>
                 <?php endforeach; ?>
+                </div>
 
                 <!-- Data Management Section -->
                 <div class="ofast-data-management" style="margin-top: 40px; padding: 25px; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;">
@@ -667,6 +670,25 @@ class Ofast_X_Settings
             .ofast-category-section.hidden { display: none; }
             .ofast-category-title { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e0e0e0; font-size: 18px; }
             .ofast-category-title .dashicons { font-size: 22px; width: 22px; height: 22px; color: #6366f1; }
+
+            /* Desktop: hide category titles when "All" tab is active */
+            @media (min-width: 769px) {
+                .ofast-settings-wrap.all-categories-view .ofast-category-title { display: none; }
+                .ofast-settings-wrap.all-categories-view .ofast-all-modules-container {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 20px;
+                }
+                .ofast-settings-wrap.all-categories-view .ofast-category-section {
+                    display: contents;
+                }
+                .ofast-settings-wrap.all-categories-view .ofast-modules-grid {
+                    display: contents;
+                }
+                .ofast-settings-wrap.all-categories-view .ofast-category-section.hidden {
+                    display: none;
+                }
+            }
             
             /* Modules Grid */
             .ofast-modules-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
@@ -756,11 +778,14 @@ class Ofast_X_Settings
                     $('.ofast-tab').removeClass('active');
                     $(this).addClass('active');
                     var category = $(this).data('category');
+                    var $wrap = $('.ofast-settings-wrap');
                     if (category === 'all') {
                         $('.ofast-category-section').removeClass('hidden');
+                        $wrap.addClass('all-categories-view');
                     } else {
                         $('.ofast-category-section').addClass('hidden');
                         $('.ofast-category-section[data-category="' + category + '"]').removeClass('hidden');
+                        $wrap.removeClass('all-categories-view');
                     }
                 });
 

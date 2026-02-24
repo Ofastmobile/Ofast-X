@@ -461,8 +461,16 @@ class Ofast_X_Snippets
 
     ?>
         <div class="wrap">
-            <h1>Code Snippets Manager</h1>
-            <p>Add PHP code snippets that run on your WordPress site. Use with caution!</p>
+            <!-- Ofast Header -->
+            <div class="ofast-header">
+                <div class="ofast-header-icon">
+                    <span class="dashicons dashicons-editor-code"></span>
+                </div>
+                <div class="ofast-header-content">
+                    <h1>Code Snippets Manager</h1>
+                    <p>Add PHP code snippets that run on your WordPress site. Use with caution!</p>
+                </div>
+            </div>
 
             <!-- Action Buttons Bar -->
             <div style="background: #f0f6fc; border: 1px solid #c3d9ed; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
@@ -855,6 +863,50 @@ class Ofast_X_Snippets
             </div>
 
             <style>
+                /* Ofast Header */
+                .ofast-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 20px;
+                    background: #fff;
+                    padding: 25px 30px;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                    margin-bottom: 30px;
+                    margin-top: 20px;
+                }
+                .ofast-header-icon {
+                    width: 56px;
+                    height: 56px;
+                    background: #fff;
+                    border: 1px solid #e2e8f0;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                    border-radius: 16px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                }
+                .ofast-header-icon .dashicons {
+                    font-size: 28px;
+                    width: 28px;
+                    height: 28px;
+                    color: #6366f1;
+                }
+                .ofast-header-content h1 {
+                    margin: 0 0 5px 0;
+                    font-size: 24px;
+                    font-weight: 700;
+                    color: #1e293b;
+                    display: block;
+                    padding: 0;
+                }
+                .ofast-header-content p {
+                    margin: 0;
+                    color: #64748b;
+                    font-size: 14px;
+                }
+
                 /* Minimal Form Layout */
                 .ofast-snippet-form {
                     max-width: 900px;

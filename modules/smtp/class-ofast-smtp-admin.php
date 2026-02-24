@@ -41,15 +41,13 @@ class Ofast_X_SMTP_Admin
                 gap: 8px;
                 margin-bottom: 25px;
                 padding: 10px 12px;
-                background: rgba(241, 245, 249, 0.85);
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
+                background: #fff;
                 border-radius: 12px;
-                border: 1px solid rgba(255, 255, 255, 0.5);
+                border: 1px solid rgba(226, 232, 240, 0.6);
                 position: sticky;
                 top: 47px;
                 z-index: 100;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
             }
             @media (max-width: 782px) {
                 .ofast-tabs-nav {
@@ -82,7 +80,7 @@ class Ofast_X_SMTP_Admin
                 box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             }
             .ofast-tab.active {
-                background: linear-gradient(135deg, #6366f1 0%, #764ba2 100%);
+                background: #6366f1;
                 color: #fff;
                 box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
             }
@@ -94,6 +92,50 @@ class Ofast_X_SMTP_Admin
             }
             .ofast-tab-content { display: none; }
             .ofast-tab-content.active { display: block; }
+
+            /* Ofast Header */
+            .ofast-header {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                background: #fff;
+                padding: 25px 30px;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                margin-bottom: 30px;
+                margin-top: 20px;
+            }
+            .ofast-header-icon {
+                width: 56px;
+                height: 56px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                border-radius: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+            .ofast-header-icon .dashicons {
+                font-size: 28px;
+                width: 28px;
+                height: 28px;
+                color: #6366f1;
+            }
+            .ofast-header-content h1 {
+                margin: 0 0 5px 0;
+                font-size: 24px;
+                font-weight: 700;
+                color: #1e293b;
+                display: block;
+                padding: 0;
+            }
+            .ofast-header-content p {
+                margin: 0;
+                color: #64748b;
+                font-size: 14px;
+            }
 
             /* Layout helpers used by dashboard cards/chart */
             .ofast-grid-3 {
@@ -164,8 +206,16 @@ class Ofast_X_SMTP_Admin
         $default_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'dashboard';
         ?>
         <div class="wrap">
-            <h1>SMTP</h1>
-            
+            <!-- Ofast Header -->
+            <div class="ofast-header">
+                <div class="ofast-header-icon">
+                    <span class="dashicons dashicons-email"></span>
+                </div>
+                <div class="ofast-header-content">
+                    <h1>SMTP</h1>
+                    <p>Configure email delivery and monitor your SMTP performance.</p>
+                </div>
+            </div>
             <!-- Modern Tabs Navigation (sticky on scroll) -->
             <nav class="ofast-tabs-nav" id="smtp-tabs-nav">
                 <a href="#" class="ofast-tab <?php echo $default_tab === 'dashboard' ? 'active' : ''; ?>" data-tab="dashboard">

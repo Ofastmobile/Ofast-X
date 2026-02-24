@@ -137,6 +137,29 @@ class Ofast_X_SMTP_Admin
                 font-size: 14px;
             }
 
+            /* Button Override */
+            .button.button-primary,
+            .wrap .button.button-primary {
+                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+                border-color: #6366f1 !important;
+                text-shadow: none !important;
+                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+                transition: all 0.3s ease !important;
+                padding-top: 10px !important;
+                padding-bottom: 10px !important;
+                height: auto !important;
+            }
+            .button.button-primary:hover,
+            .wrap .button.button-primary:hover {
+                background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
+            }
+            .button.button-primary:active,
+            .wrap .button.button-primary:active {
+                transform: translateY(0);
+            }
+
             /* Layout helpers used by dashboard cards/chart */
             .ofast-grid-3 {
                 display: grid;
@@ -454,8 +477,8 @@ class Ofast_X_SMTP_Admin
         <div style="background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb;">
             <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #374151;">Quick Actions</h3>
             <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <a href="<?php echo admin_url('admin.php?page=ofast-smtp&tab=settings'); ?>" class="button button-primary button-large">Configure SMTP</a>
-                <a href="<?php echo admin_url('admin.php?page=ofast-smtp&tab=log'); ?>" class="button button-secondary button-large">View All Logs</a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-smtp&tab=settings'); ?>" class="button button-large" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: #fff; border-color: #6366f1; text-shadow: none; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);">Configure SMTP</a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-emailer'); ?>" class="button button-large" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: #fff; border-color: #6366f1; text-shadow: none; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);">Compose Email</a>
             </div>
         </div>
         <?php
@@ -599,7 +622,7 @@ class Ofast_X_SMTP_Admin
         ?>
             <div class="tablenav bottom">
                 <div class="tablenav-pages">
-                    <?php echo paginate_links(array('base' => add_query_arg('paged', '%#%'), 'format' => '', 'prev_text' => '&laquo;', 'next_text' => '&raquo;', 'total' => $total_pages, 'current' => $current_page)); ?>
+                    <?php echo paginate_links(array('base' => add_query_arg(array('paged' => '%#%', 'tab' => 'log')), 'format' => '', 'prev_text' => '&laquo;', 'next_text' => '&raquo;', 'total' => $total_pages, 'current' => $current_page)); ?>
                 </div>
             </div>
         <?php endif; ?>

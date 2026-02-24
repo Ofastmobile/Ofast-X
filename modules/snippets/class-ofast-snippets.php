@@ -276,6 +276,13 @@ class Ofast_X_Snippets
             $tags_json = !empty($tags_array) ? json_encode(array_values($tags_array)) : '';
 
             $code = wp_unslash($_POST['snippet_code']);
+
+            // Payload size limit: 1MB max — hard stop
+            if (strlen($code) > 1048576) {
+                echo Ofast_X_Toast::render(__('Snippet code exceeds the maximum size of 1MB. Save aborted.', 'ofast-x'), 'error');
+                return;
+            }
+
             if ($language === 'php') {
                 // Accept pasted snippets with PHP wrappers and store normalized code.
                 $code = $this->normalize_php_code($code);
@@ -2003,6 +2010,14 @@ class Ofast_X_Snippets
                         var validCount = snippets.filter(s => s.status !== 'duplicate' && s.is_safe !== false).length;
                         var unsafeCount = snippets.filter(s => s.is_safe === false).length;
 
+                        // XSS-safe HTML escaping for user-controlled import data
+                        function escHtml(str) {
+                            if (!str) return '';
+                            var div = document.createElement('div');
+                            div.appendChild(document.createTextNode(String(str)));
+                            return div.innerHTML;
+                        }
+
                         // Build modal HTML
                         var modalHtml = `
                             <div id="ofast-preview-import-modal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:100000; overflow-y:auto; padding:20px;">
@@ -2031,17 +2046,17 @@ class Ofast_X_Snippets
                                                 <div style="flex:1; min-width:0;">
                                                     <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
                                                         <span style="color:${s.status === 'active' ? '#10b981' : (s.status === 'duplicate' ? '#ef4444' : '#6b7280')}; font-size:16px;">●</span>
-                                                        <strong style="color:#1e293b;">${s.name}</strong>
+                                                        <strong style="color:#1e293b;">${escHtml(s.name)}</strong>
                                                         ${s.status === 'duplicate' ? '<span style="background:#fecaca; color:#991b1b; padding:2px 6px; border-radius:3px; font-size:10px;">DUPLICATE</span>' : ''}
-                                                        ${s.language !== 'php' ? '<span style="background:#e0e7ff; color:#3730a3; padding:2px 6px; border-radius:3px; font-size:10px;">' + s.language.toUpperCase() + '</span>' : ''}
+                                                        ${s.language !== 'php' ? '<span style="background:#e0e7ff; color:#3730a3; padding:2px 6px; border-radius:3px; font-size:10px;">' + escHtml(s.language).toUpperCase() + '</span>' : ''}
                                                         <span style="margin-left:auto;">${s.is_safe !== false ? '<span style="background:#d1fae5; color:#065f46; padding:2px 8px; border-radius:3px; font-size:10px; font-weight:600;">SAFE</span>' : '<span style="background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:3px; font-size:10px; font-weight:600;">UNSAFE</span>'}</span>
                                                     </div>
-                                                    ${s.description ? '<p style="margin:0 0 8px; color:#64748b; font-size:12px;">' + s.description + '</p>' : ''}
-                                                    ${s.status === 'duplicate' ? '<p style="margin:0; color:#ef4444; font-size:11px;">Already exists in Ofast X (ID: ' + s.existing_id + ')</p>' : ''}
-                                                    ${s.is_safe === false ? '<p style="margin:0 0 8px; color:#ea580c; font-size:11px; background:#fffbeb; padding:4px 8px; border-radius:4px;"><strong>Syntax Error:</strong> ' + (s.error_message || 'Invalid PHP code') + '</p>' : ''}
+                                                    ${s.description ? '<p style="margin:0 0 8px; color:#64748b; font-size:12px;">' + escHtml(s.description) + '</p>' : ''}
+                                                    ${s.status === 'duplicate' ? '<p style="margin:0; color:#ef4444; font-size:11px;">Already exists in Ofast X (ID: ' + escHtml(s.existing_id) + ')</p>' : ''}
+                                                    ${s.is_safe === false ? '<p style="margin:0 0 8px; color:#ea580c; font-size:11px; background:#fffbeb; padding:4px 8px; border-radius:4px;"><strong>Syntax Error:</strong> ' + escHtml(s.error_message || 'Invalid PHP code') + '</p>' : ''}
                                                     <details style="margin-top:8px;">
                                                         <summary style="cursor:pointer; color:#3b82f6; font-size:12px;">Preview Code</summary>
-                                                        <pre style="background:#1e1e1e; color:#d4d4d4; padding:10px; border-radius:4px; font-size:11px; overflow-x:auto; margin-top:8px; max-height:150px; white-space:pre-wrap;">${s.code_preview}</pre>
+                                                        <pre style="background:#1e1e1e; color:#d4d4d4; padding:10px; border-radius:4px; font-size:11px; overflow-x:auto; margin-top:8px; max-height:150px; white-space:pre-wrap;">${escHtml(s.code_preview)}</pre>
                                                     </details>
                                                 </div>
                                             </div>
@@ -2215,7 +2230,7 @@ class Ofast_X_Snippets
                                     <button type="button" class="close-duplicate-modal" style="background:none; border:none; font-size:24px; cursor:pointer; color:#999;">&times;</button>
                                 </div>
                                 <div style="padding:25px;">
-                                    <p style="margin:0 0 20px; color:#50575e;">"<strong>${data.existing_name}</strong>" already exists in your snippets.</p>
+                                    <p style="margin:0 0 20px; color:#50575e;">"<strong>${escHtml(data.existing_name)}</strong>" already exists in your snippets.</p>
                                     <p style="margin:0 0 25px; color:#666;">What would you like to do?</p>
                                     <div style="display:flex; gap:10px; flex-wrap:wrap;">
                                         <button type="button" class="button button-primary edit-existing-btn" style="flex:1; min-width:120px;">Edit Existing</button>
@@ -2601,24 +2616,25 @@ class Ofast_X_Snippets
         }
 
         $output = '';
-        set_error_handler(function ($errno, $errstr, $errfile, $errline) {
-            throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
-        });
+        $snippet_file = $this->write_snippet_file($runtime_code, $snippet->id);
+        if (!$snippet_file) {
+            wp_send_json_error('Could not create snippet file for execution.');
+        }
 
         try {
             ob_start();
-            eval($runtime_code);
+            include $snippet_file;
             $output = trim((string) ob_get_clean());
         } catch (Throwable $e) {
             if (ob_get_level() > 0) {
                 ob_end_clean();
             }
-            restore_error_handler();
+            @unlink($snippet_file);
             $this->log_snippet_action('RUN_NOW_FAILED', $snippet->id, $snippet->name, $e->getMessage());
             wp_send_json_error($e->getMessage());
         }
 
-        restore_error_handler();
+        @unlink($snippet_file);
 
         $details = 'Executed manually from snippets table';
         if ($output !== '') {
@@ -2768,8 +2784,8 @@ class Ofast_X_Snippets
         $table = $wpdb->prefix . 'ofast_snippets';
         $priority_supported = $this->ensure_snippets_priority_schema();
         $export_fields = $priority_supported
-            ? 'name, description, code, language, scope, location, target_type, target_value, run_once, priority, active'
-            : 'name, description, code, language, scope, location, target_type, target_value, run_once, active';
+            ? 'name, description, code, language, scope, location, target_type, target_value, run_once, priority, category, tags, active'
+            : 'name, description, code, language, scope, location, target_type, target_value, run_once, category, tags, active';
         $export_order = $priority_supported ? 'priority ASC, id ASC' : 'id ASC';
 
         // Check if specific IDs were passed (selected snippets)
@@ -2821,10 +2837,21 @@ class Ofast_X_Snippets
         }
 
         $import_data = isset($_POST['import_data']) ? wp_unslash($_POST['import_data']) : '';
+
+        // Raw payload size limit: 5MB max to prevent memory exhaustion
+        if (strlen($import_data) > 5242880) {
+            wp_send_json_error('Import data too large. Maximum 5MB allowed.');
+        }
+
         $data = json_decode($import_data, true);
 
         if (!$data || !isset($data['snippets']) || !is_array($data['snippets'])) {
             wp_send_json_error('Invalid import file format');
+        }
+
+        // Import batch limit: max 100 snippets per import
+        if (count($data['snippets']) > 100) {
+            wp_send_json_error('Import limited to 100 snippets at a time. Split your file into smaller batches.');
         }
 
         global $wpdb;
@@ -2880,6 +2907,8 @@ class Ofast_X_Snippets
                 'target_type' => isset($snippet['target_type']) ? sanitize_text_field($snippet['target_type']) : 'all',
                 'target_value' => isset($snippet['target_value']) ? sanitize_text_field($snippet['target_value']) : '',
                 'run_once' => isset($snippet['run_once']) ? intval($snippet['run_once']) : 0,
+                'category' => isset($snippet['category']) ? sanitize_text_field($snippet['category']) : '',
+                'tags' => isset($snippet['tags']) ? sanitize_text_field($snippet['tags']) : '',
                 'active' => 0, // ALWAYS inactive on import
                 'created_at' => current_time('mysql')
             );
@@ -3877,6 +3906,9 @@ class Ofast_X_Snippets
             'executed_at' => current_time('mysql'),
             'active' => 0
         ), array('id' => $snippet_id));
+
+        // Clear cache so deactivated snippet is not re-executed from stale cache
+        $this->clear_snippets_cache();
     }
 
     /**
@@ -4171,6 +4203,9 @@ class Ofast_X_Snippets
             array('id' => $revision->snippet_id)
         );
 
+        // Clear cache so updated snippet code takes effect immediately
+        $this->clear_snippets_cache();
+
         $this->log_snippet_action('RESTORED_REVISION', $revision->snippet_id, '', "From revision #{$revision_id}");
 
         wp_send_json_success(array(
@@ -4180,7 +4215,8 @@ class Ofast_X_Snippets
     }
 
     /**
-     * Execute PHP snippet with enhanced error handling
+     * Execute PHP snippet with enhanced error handling.
+     * Uses file-based include instead of eval() for WordPress.org compliance.
      */
     private function execute_php_snippet($code, $snippet_id = 0, $run_once = false)
     {
@@ -4189,14 +4225,14 @@ class Ofast_X_Snippets
             return;
         }
 
-        // Set custom error handler to catch runtime errors
-        set_error_handler(function ($errno, $errstr, $errfile, $errline) {
-            throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
-        });
+        $snippet_file = $this->write_snippet_file($code, $snippet_id);
+        if (!$snippet_file) {
+            error_log('Ofast Snippet Error (ID: ' . $snippet_id . '): Could not create snippet file.');
+            return;
+        }
 
         try {
-            // Execute the snippet
-            eval($code);
+            include $snippet_file;
 
             // Mark as executed if successful
             $this->mark_snippet_executed($snippet_id, $run_once);
@@ -4208,10 +4244,36 @@ class Ofast_X_Snippets
             if ($snippet_id > 0) {
                 $this->auto_deactivate_snippet($snippet_id, $e->getMessage());
             }
-        } finally {
-            // Always restore the error handler
-            restore_error_handler();
         }
+    }
+
+    /**
+     * Write snippet code to a temporary PHP file for safe execution via include.
+     * Files are stored outside the web root (system temp dir) so they cannot
+     * be accessed directly via URL on any server (Apache, Nginx, LiteSpeed).
+     *
+     * @param string $code       The PHP code to write.
+     * @param int    $snippet_id The snippet ID (used for filename).
+     * @return string|false The file path on success, false on failure.
+     */
+    private function write_snippet_file($code, $snippet_id = 0)
+    {
+        $dir = get_temp_dir() . 'ofast-snippets';
+        if (!is_dir($dir)) {
+            wp_mkdir_p($dir);
+        }
+
+        // Randomized filename prevents guessing even if directory were accessible
+        $hash = wp_hash($code . $snippet_id . wp_salt());
+        $filename = 'snippet-' . ($snippet_id > 0 ? intval($snippet_id) : 'tmp') . '-' . substr($hash, 0, 12) . '.php';
+        $file = $dir . '/' . $filename;
+
+        $written = @file_put_contents($file, "<?php\n" . $code);
+        if ($written === false) {
+            return false;
+        }
+
+        return $file;
     }
 
     /**
@@ -4578,6 +4640,9 @@ class Ofast_X_Snippets
             array('active' => 0),
             array('id' => $snippet_id)
         );
+
+        // Clear cache so deactivated snippet is not re-executed from stale cache
+        $this->clear_snippets_cache();
 
         // Log the auto-deactivation
         $this->log_snippet_action(

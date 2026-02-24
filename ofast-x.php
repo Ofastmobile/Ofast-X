@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Plugin Name: Ofast-X
+ * Plugin Name: Ofast Toolkit
  * Plugin URI: https://ofastshop.com/ofast-x
  * Description: All-in-One WordPress plugin with Email System, SMTP Configuration, Dashboard Customization, Newsletter, WhatsApp, Contact Forms, Code Snippets, Redirects, and more.
  * Version: 1.0.0
@@ -96,7 +96,7 @@ function ofast_x_init_plugin()
     require_once OFAST_X_PLUGIN_DIR . 'modules/login-redesign/class-ofast-login-redesign.php';
 
     // Load Content Ordering module
-    require_once OFAST_X_PLUGIN_DIR . 'modules/content-ordering/class-ofast-content-ordering.php';
+    require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-content-ordering.php';
 
     // Load Setup Wizard
     require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-setup-wizard.php';

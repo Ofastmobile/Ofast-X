@@ -23,6 +23,9 @@ class Ofast_X_Redirects
         // Admin menu
         add_action('admin_menu', array($this, 'add_admin_menu'));
 
+        // Enqueue scripts and styles
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
+
         // Handle form submissions
         add_action('admin_init', array($this, 'handle_form_submissions'));
 
@@ -37,14 +40,56 @@ class Ofast_X_Redirects
     }
 
     /**
+     * Enqueue scripts and styles for redirects page
+     *
+     * @param string $hook The current admin page hook.
+     */
+    public function enqueue_scripts($hook)
+    {
+        if (strpos($hook, 'ofast-redirects') === false) {
+            return;
+        }
+
+        wp_enqueue_style(
+            'ofast-redirects',
+            OFAST_X_PLUGIN_URL . 'assets/css/redirects.css',
+            array(),
+            OFAST_X_VERSION
+        );
+
+        wp_enqueue_script(
+            'ofast-redirects',
+            OFAST_X_PLUGIN_URL . 'assets/js/redirects.js',
+            array('jquery'),
+            OFAST_X_VERSION,
+            true
+        );
+
+        wp_localize_script('ofast-redirects', 'ofastRedirects', array(
+            'toggleNonce' => wp_create_nonce('ofast_redirect_toggle'),
+            'deleteNonce' => wp_create_nonce('ofast_redirect_delete'),
+            'importNonce' => wp_create_nonce('ofast_import_redirects'),
+            'exportNonce' => wp_create_nonce('ofast_export_redirects'),
+            'i18n' => array(
+                'on' => __('ON', 'ofast-x'),
+                'off' => __('OFF', 'ofast-x'),
+                'confirmDelete' => __('Are you sure you want to delete this redirect?', 'ofast-x'),
+                'importing' => __('Importing...', 'ofast-x'),
+                'exporting' => __('Exporting...', 'ofast-x'),
+                'importFailed' => __('Import failed: ', 'ofast-x'),
+            )
+        ));
+    }
+
+    /**
      * Add admin menu
      */
     public function add_admin_menu()
     {
         add_submenu_page(
             'ofast-dashboard',
-            'Redirects Manager',
-            'Redirects',
+            __('Redirects Manager', 'ofast-x'),
+            __('Redirects', 'ofast-x'),
             'manage_options',
             'ofast-redirects',
             array($this, 'render_page')
@@ -88,12 +133,12 @@ class Ofast_X_Redirects
 
         // Validate
         if (empty($source_url)) {
-            add_settings_error('ofast_redirects', 'error', 'Source URL is required.', 'error');
+            add_settings_error('ofast_redirects', 'error', __('Source URL is required.', 'ofast-x'), 'error');
             return;
         }
 
         if (empty($target_url)) {
-            add_settings_error('ofast_redirects', 'error', 'Target URL is required.', 'error');
+            add_settings_error('ofast_redirects', 'error', __('Target URL is required.', 'ofast-x'), 'error');
             return;
         }
 
@@ -113,7 +158,7 @@ class Ofast_X_Redirects
         $source_path = parse_url($source_url, PHP_URL_PATH);
         $target_path = parse_url($target_url, PHP_URL_PATH);
         if ($source_path === $target_path) {
-            add_settings_error('ofast_redirects', 'error', 'Source and target cannot be the same (redirect loop).', 'error');
+            add_settings_error('ofast_redirects', 'error', __('Source and target cannot be the same (redirect loop).', 'ofast-x'), 'error');
             return;
         }
 
@@ -132,7 +177,7 @@ class Ofast_X_Redirects
                 'active' => $active
             ), array('id' => $id));
 
-            add_settings_error('ofast_redirects', 'success', 'Redirect updated successfully.', 'success');
+            add_settings_error('ofast_redirects', 'success', __('Redirect updated successfully.', 'ofast-x'), 'success');
         } else {
             // Insert
             $wpdb->insert($table, array(
@@ -146,7 +191,7 @@ class Ofast_X_Redirects
                 'created_by' => get_current_user_id()
             ));
 
-            add_settings_error('ofast_redirects', 'success', 'Redirect added successfully.', 'success');
+            add_settings_error('ofast_redirects', 'success', __('Redirect added successfully.', 'ofast-x'), 'success');
         }
 
         // Clear cache when redirects are modified
@@ -545,15 +590,15 @@ class Ofast_X_Redirects
 
         settings_errors('ofast_redirects');
 ?>
-        <div class="wrap">
+        <div class="wrap ofast-redirects-page">
             <!-- Header -->
             <div class="ofast-header">
                 <div class="ofast-header-icon">
                     <span class="dashicons dashicons-randomize"></span>
                 </div>
                 <div class="ofast-header-content">
-                    <h1>Redirects Manager</h1>
-                    <p>Manage URL redirects with 301, 302, or 307 status codes. Activate/deactivate as needed.</p>
+                    <h1><?php esc_html_e('Redirects Manager', 'ofast-x'); ?></h1>
+                    <p><?php esc_html_e('Manage URL redirects with 301, 302, or 307 status codes. Activate/deactivate as needed.', 'ofast-x'); ?></p>
                 </div>
             </div>
 
@@ -562,7 +607,7 @@ class Ofast_X_Redirects
                 <!-- Left Column: Add/Edit -->
                 <div class="ofast-column-left">
                     <div class="ofast-card">
-                        <h2 style="margin-top: 0; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee;"><?php echo $editing ? 'Edit Redirect' : 'Add New Redirect'; ?></h2>
+                        <h2 style="margin-top: 0; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee;"><?php echo $editing ? esc_html__('Edit Redirect', 'ofast-x') : esc_html__('Add New Redirect', 'ofast-x'); ?></h2>
                         <form method="post" class="ofast-redirect-form">
                             <?php wp_nonce_field('ofast_redirect_save', '_wpnonce'); ?>
 
@@ -572,43 +617,43 @@ class Ofast_X_Redirects
 
                             <table class="form-table" style="margin-top: 0;">
                                 <tr>
-                                    <th><label for="source_url">Source URL</label></th>
+                                    <th><label for="source_url"><?php esc_html_e('Source URL', 'ofast-x'); ?></label></th>
                                     <td>
                                         <input type="text" name="source_url" id="source_url" class="regular-text"
                                             value="<?php echo $edit_redirect ? esc_attr($edit_redirect->source_url) : ''; ?>"
                                             placeholder="/old-page" required>
-                                        <p class="description">The URL path to redirect from (e.g., /old-page)</p>
+                                        <p class="description"><?php esc_html_e('The URL path to redirect from (e.g., /old-page)', 'ofast-x'); ?></p>
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th><label for="target_url">Target URL</label></th>
+                                    <th><label for="target_url"><?php esc_html_e('Target URL', 'ofast-x'); ?></label></th>
                                     <td>
                                         <input type="text" name="target_url" id="target_url" class="regular-text"
                                             value="<?php echo $edit_redirect ? esc_attr($edit_redirect->target_url) : ''; ?>"
-                                            placeholder="<?php echo home_url('/new-page'); ?>" required>
-                                        <p class="description">The URL to redirect to (full URL or relative path)</p>
+                                            placeholder="<?php echo esc_attr(home_url('/new-page')); ?>" required>
+                                        <p class="description"><?php esc_html_e('The URL to redirect to (full URL or relative path)', 'ofast-x'); ?></p>
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th><label for="redirect_type">Redirect Type</label></th>
+                                    <th><label for="redirect_type"><?php esc_html_e('Redirect Type', 'ofast-x'); ?></label></th>
                                     <td>
                                         <select name="redirect_type" id="redirect_type">
-                                            <option value="301" <?php selected($edit_redirect ? $edit_redirect->type : '', '301'); ?>>301 - Permanent</option>
-                                            <option value="302" <?php selected($edit_redirect ? $edit_redirect->type : '', '302'); ?>>302 - Temporary</option>
-                                            <option value="307" <?php selected($edit_redirect ? $edit_redirect->type : '', '307'); ?>>307 - Temporary (Preserve Method)</option>
+                                            <option value="301" <?php selected($edit_redirect ? $edit_redirect->type : '', '301'); ?>><?php esc_html_e('301 - Permanent', 'ofast-x'); ?></option>
+                                            <option value="302" <?php selected($edit_redirect ? $edit_redirect->type : '', '302'); ?>><?php esc_html_e('302 - Temporary', 'ofast-x'); ?></option>
+                                            <option value="307" <?php selected($edit_redirect ? $edit_redirect->type : '', '307'); ?>><?php esc_html_e('307 - Temporary (Preserve Method)', 'ofast-x'); ?></option>
                                         </select>
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th>Options</th>
+                                    <th><?php esc_html_e('Options', 'ofast-x'); ?></th>
                                     <td>
                                         <label style="display: block; margin-bottom: 10px;">
                                             <input type="checkbox" name="is_regex" value="1" <?php checked($edit_redirect ? $edit_redirect->is_regex : false); ?>>
-                                            Use Regular Expression
+                                            <?php esc_html_e('Use Regular Expression', 'ofast-x'); ?>
                                         </label>
                                         <label style="display: block;">
                                             <input type="checkbox" name="active" value="1" <?php checked($edit_redirect ? $edit_redirect->active : false); ?>>
-                                            Activate immediately
+                                            <?php esc_html_e('Activate immediately', 'ofast-x'); ?>
                                         </label>
                                     </td>
                                 </tr>
@@ -616,10 +661,10 @@ class Ofast_X_Redirects
 
                             <p class="submit" style="margin-bottom: 0; padding-bottom: 0;">
                                 <button type="submit" name="ofast_save_redirect" class="button button-primary button-large">
-                                    <?php echo $editing ? 'Update Redirect' : 'Add Redirect'; ?>
+                                    <?php echo $editing ? esc_html__('Update Redirect', 'ofast-x') : esc_html__('Add Redirect', 'ofast-x'); ?>
                                 </button>
                                 <?php if ($editing): ?>
-                                    <a href="?page=ofast-redirects" class="button button-large">Cancel</a>
+                                    <a href="?page=ofast-redirects" class="button button-large"><?php esc_html_e('Cancel', 'ofast-x'); ?></a>
                                 <?php endif; ?>
                             </p>
                         </form>
@@ -631,12 +676,15 @@ class Ofast_X_Redirects
                     <!-- Import Section -->
                     <?php if (!empty($import_sources)): ?>
                         <div class="ofast-card" style="margin-bottom: 20px;">
-                            <h3 style="margin-top: 0;">Import from Plugins</h3>
-                            <p class="description">Imported redirects will be set to INACTIVE.</p>
+                            <h3 style="margin-top: 0;"><?php esc_html_e('Import from Plugins', 'ofast-x'); ?></h3>
+                            <p class="description"><?php esc_html_e('Imported redirects will be set to INACTIVE.', 'ofast-x'); ?></p>
                             <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
                                 <?php foreach ($import_sources as $key => $source): ?>
                                     <button type="button" class="button import-from-plugin" data-plugin="<?php echo esc_attr($key); ?>">
-                                        Import from <?php echo esc_html($source['name']); ?> (<?php echo $source['count']; ?>)
+                                        <?php
+                                        /* translators: %1$s: plugin name, %2$d: number of redirects */
+                                        printf(esc_html__('Import from %1$s (%2$d)', 'ofast-x'), esc_html($source['name']), intval($source['count']));
+                                        ?>
                                     </button>
                                 <?php endforeach; ?>
                             </div>
@@ -645,192 +693,29 @@ class Ofast_X_Redirects
 
                     <!-- Import from JSON -->
                     <div class="ofast-card">
-                        <h3 style="margin-top: 0; margin-bottom: 15px;">Import/Export</h3>
+                        <h3 style="margin-top: 0; margin-bottom: 15px;"><?php esc_html_e('Import/Export', 'ofast-x'); ?></h3>
                         
                         <div style="margin-bottom: 20px;">
-                            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Import from JSON</label>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600;"><?php esc_html_e('Import from JSON', 'ofast-x'); ?></label>
                             <div style="display: flex; gap: 10px;">
                                 <input type="file" id="import-json-file" accept=".json" style="flex: 1;">
                             </div>
                         </div>
                         
                         <div style="border-top: 1px solid #eee; padding-top: 20px;">
-                            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Export Redirects</label>
-                            <button type="button" id="export-redirects" class="button">Export All to JSON</button>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600;"><?php esc_html_e('Export Redirects', 'ofast-x'); ?></label>
+                            <button type="button" id="export-redirects" class="button"><?php esc_html_e('Export All to JSON', 'ofast-x'); ?></button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <style>
-                /* Header Styles */
-                .ofast-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 20px;
-                    background: #fff;
-                    padding: 25px 30px;
-                    border-radius: 12px;
-                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-                    margin-bottom: 30px;
-                    margin-top: 20px;
-                }
-                .ofast-header-icon {
-                    width: 56px;
-                    height: 56px;
-                    background: #fff;
-                    border: 1px solid #e2e8f0;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-                    border-radius: 16px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-                .ofast-header-icon .dashicons {
-                    font-size: 28px;
-                    width: 28px;
-                    height: 28px;
-                    color: #6366f1;
-                }
-                .ofast-header-content h1 {
-                    margin: 0 0 5px 0;
-                    font-size: 24px;
-                    font-weight: 700;
-                    color: #1e293b;
-                    display: block;
-                    padding: 0;
-                }
-                .ofast-header-content p {
-                    margin: 0;
-                    color: #64748b;
-                    font-size: 14px;
-                }
-
-                /* Card Styles */
-                .ofast-card {
-                    background: #fff;
-                    border-radius: 16px;
-                    padding: 30px;
-                    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-                    border: 1px solid rgba(226, 232, 240, 0.6);
-                }
-
-                /* Button Override */
-                .button.button-primary {
-                    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
-                    border-color: #6366f1 !important;
-                    text-shadow: none !important;
-                    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
-                    transition: all 0.2s !important;
-                    padding-top: 10px !important;
-                    padding-bottom: 10px !important;
-                    height: auto !important;
-                    font-size: 14px !important;
-                    border-radius: 6px !important;
-                }
-                .button.button-primary:hover {
-                    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
-                    transform: translateY(-2px);
-                    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
-                }
-                .button.button-primary:active {
-                    transform: translateY(0);
-                }
-
-                .ofast-redirects-columns {
-                    display: flex;
-                    gap: 20px;
-                    align-items: flex-start;
-                    margin: 20px 0;
-                }
-                .ofast-column-left {
-                    flex: 2;
-                    min-width: 300px;
-                }
-                .ofast-column-right {
-                    flex: 1;
-                    min-width: 280px;
-                }
-                @media screen and (max-width: 960px) {
-                    .ofast-redirects-columns {
-                        flex-direction: column;
-                    }
-                    .ofast-column-left, .ofast-column-right {
-                        width: 100%;
-                    }
-                }
-
-                /* Table Action Buttons - Edit/Delete */
-                .ofast-redirect-delete {
-                    background: transparent !important;
-                    border: none !important;
-                    color: #ef4444 !important;
-                    box-shadow: none !important;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                }
-                .ofast-redirect-delete:hover {
-                    color: #dc2626 !important;
-                    text-decoration: underline;
-                }
-                
-                /* Edit button styling */
-                .wp-list-table .button.button-small:not(.button-primary):not(.ofast-redirect-toggle):not(.ofast-redirect-delete) {
-                    background: transparent !important;
-                    border: none !important;
-                    color: #6366f1 !important;
-                    box-shadow: none !important;
-                    padding: 4px 8px !important;
-                }
-                .wp-list-table .button.button-small:not(.button-primary):not(.ofast-redirect-toggle):not(.ofast-redirect-delete):hover {
-                    color: #4f46e5 !important;
-                    text-decoration: underline;
-                }
-                
-                /* ON/OFF Toggle Button */
-                .ofast-redirect-toggle {
-                    border: 1px solid #d1d5db !important;
-                    background: #f9fafb !important;
-                    color: #6b7280 !important;
-                    transition: all 0.2s ease;
-                }
-                .ofast-redirect-toggle:hover {
-                    border-color: #9ca3af !important;
-                    background: #f3f4f6 !important;
-                }
-                .ofast-redirect-toggle.button-primary {
-                    border-color: #6366f1 !important;
-                    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
-                    color: #fff !important;
-                }
-                .ofast-redirect-toggle.button-primary:hover {
-                    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
-                    border-color: #4f46e5 !important;
-                }
-                
-                /* Export button */
-                #export-redirects {
-                    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
-                    color: #fff !important;
-                    border: none !important;
-                    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
-                    padding: 8px 16px !important;
-                    border-radius: 6px !important;
-                    transition: all 0.3s ease !important;
-                }
-                #export-redirects:hover {
-                    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
-                    transform: translateY(-2px);
-                    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
-                }
-            </style>
-
             <!-- Redirects List -->
             <?php if (!empty($redirects)): ?>
                 <div class="ofast-card" style="margin-top: 20px;">
                     <h3 style="margin-top: 0;">
-                        All Redirects
-                        <span style="font-weight: normal; color: #666; font-size: 14px;">(<?php echo count($redirects); ?> total)</span>
+                        <?php esc_html_e('All Redirects', 'ofast-x'); ?>
+                        <span style="font-weight: normal; color: #666; font-size: 14px;">(<?php echo esc_html(count($redirects)); ?> <?php esc_html_e('total', 'ofast-x'); ?>)</span>
                     </h3>
 
                     <!-- Scrollable Table Container -->
@@ -839,18 +724,18 @@ class Ofast_X_Redirects
                             <thead>
                                 <tr>
                                     <th style="width: 30px;"><input type="checkbox" id="select-all-redirects"></th>
-                                    <th>Source URL</th>
-                                    <th>Target URL</th>
-                                    <th style="width: 80px;">Type</th>
-                                    <th style="width: 60px;">Hits</th>
-                                    <th style="width: 80px;">Status</th>
-                                    <th style="width: 120px;">Actions</th>
+                                    <th><?php esc_html_e('Source URL', 'ofast-x'); ?></th>
+                                    <th><?php esc_html_e('Target URL', 'ofast-x'); ?></th>
+                                    <th style="width: 80px;"><?php esc_html_e('Type', 'ofast-x'); ?></th>
+                                    <th style="width: 60px;"><?php esc_html_e('Hits', 'ofast-x'); ?></th>
+                                    <th style="width: 80px;"><?php esc_html_e('Status', 'ofast-x'); ?></th>
+                                    <th style="width: 120px;"><?php esc_html_e('Actions', 'ofast-x'); ?></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($redirects as $redirect): ?>
                                     <tr>
-                                        <td><input type="checkbox" class="redirect-checkbox" value="<?php echo $redirect->id; ?>"></td>
+                                        <td><input type="checkbox" class="redirect-checkbox" value="<?php echo esc_attr($redirect->id); ?>"></td>
                                         <td>
                                             <code style="font-size: 12px;"><?php echo esc_html($redirect->source_url); ?></code>
                                             <?php if ($redirect->is_regex): ?>
@@ -866,14 +751,14 @@ class Ofast_X_Redirects
                                         <td style="font-size: 12px;"><?php echo number_format($redirect->hits); ?></td>
                                         <td>
                                             <button class="button button-small ofast-redirect-toggle <?php echo $redirect->active ? 'button-primary' : ''; ?>"
-                                                data-id="<?php echo $redirect->id; ?>" data-active="<?php echo $redirect->active; ?>"
+                                                data-id="<?php echo esc_attr($redirect->id); ?>" data-active="<?php echo esc_attr($redirect->active); ?>"
                                                 style="min-width: 50px; font-size: 11px;">
-                                                <?php echo $redirect->active ? 'ON' : 'OFF'; ?>
+                                                <?php echo $redirect->active ? esc_html__('ON', 'ofast-x') : esc_html__('OFF', 'ofast-x'); ?>
                                             </button>
                                         </td>
                                         <td>
-                                            <a href="?page=ofast-redirects&edit=<?php echo $redirect->id; ?>" class="button button-small">Edit</a>
-                                            <button class="button button-small ofast-redirect-delete" data-id="<?php echo $redirect->id; ?>" style="color: #dc3545;">Delete</button>
+                                            <a href="?page=ofast-redirects&edit=<?php echo esc_attr($redirect->id); ?>" class="button button-small"><?php esc_html_e('Edit', 'ofast-x'); ?></a>
+                                            <button class="button button-small ofast-redirect-delete" data-id="<?php echo esc_attr($redirect->id); ?>" style="color: #dc3545;"><?php esc_html_e('Delete', 'ofast-x'); ?></button>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -882,189 +767,11 @@ class Ofast_X_Redirects
                     </div>
                 </div>
             <?php else: ?>
-                <div style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; padding: 40px; text-align: center; margin-top: 20px;">
-                    <p style="color: #666; margin: 0;">No redirects yet. Add your first redirect above!</p>
+                <div class="ofast-redirects-empty">
+                    <p><?php esc_html_e('No redirects yet. Add your first redirect above!', 'ofast-x'); ?></p>
                 </div>
             <?php endif; ?>
         </div>
-
-        <style>
-            .ofast-redirect-form .form-table th {
-                width: 120px;
-                padding: 12px 10px 12px 0;
-                font-weight: 500;
-            }
-
-            .ofast-redirect-form .form-table td {
-                padding: 10px 0;
-            }
-
-            .ofast-redirect-form input[type="text"],
-            .ofast-redirect-form select {
-                max-width: 400px;
-                width: 100%;
-                padding: 8px 12px;
-                border: 1px solid #ddd;
-                border-radius: 6px;
-            }
-
-            .ofast-redirect-form .description {
-                color: #666;
-                font-size: 12px;
-                margin-top: 5px;
-            }
-
-            @media screen and (max-width: 782px) {
-
-                .ofast-redirect-form .form-table th,
-                .ofast-redirect-form .form-table td {
-                    display: block;
-                    width: 100%;
-                }
-            }
-        </style>
-
-        <script>
-            jQuery(document).ready(function($) {
-                // Toggle redirect
-                $(document).on('click', '.ofast-redirect-toggle', function(e) {
-                    e.preventDefault();
-                    var $btn = $(this);
-                    var id = $btn.data('id');
-                    var active = $btn.data('active');
-
-                    $btn.prop('disabled', true);
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_toggle_redirect',
-                        nonce: '<?php echo wp_create_nonce('ofast_redirect_toggle'); ?>',
-                        id: id,
-                        active: active
-                    }, function(response) {
-                        if (response.success) {
-                            var newActive = response.data.active;
-                            $btn.data('active', newActive);
-                            $btn.text(newActive ? 'ON' : 'OFF');
-                            $btn.toggleClass('button-primary', newActive == 1);
-                        }
-                    }).always(function() {
-                        $btn.prop('disabled', false);
-                    });
-                });
-
-                // Delete redirect
-                $(document).on('click', '.ofast-redirect-delete', function(e) {
-                    e.preventDefault();
-                    var $btn = $(this);
-                    var id = $btn.data('id');
-
-                    if (!confirm('Are you sure you want to delete this redirect?')) {
-                        return;
-                    }
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_delete_redirect',
-                        nonce: '<?php echo wp_create_nonce('ofast_redirect_delete'); ?>',
-                        id: id
-                    }, function(response) {
-                        if (response.success) {
-                            $btn.closest('tr').fadeOut(function() {
-                                $(this).remove();
-                            });
-                        }
-                    });
-                });
-
-                // Import from plugin
-                $(document).on('click', '.import-from-plugin', function() {
-                    var $btn = $(this);
-                    var plugin = $btn.data('plugin');
-
-                    $btn.prop('disabled', true).text('Importing...');
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_import_redirects_from_plugin',
-                        nonce: '<?php echo wp_create_nonce('ofast_import_redirects'); ?>',
-                        plugin: plugin
-                    }, function(response) {
-                        if (response.success) {
-                            alert(response.data.message);
-                            if (response.data.imported > 0) {
-                                location.reload();
-                            }
-                        } else {
-                            alert('Import failed: ' + response.data);
-                        }
-                    }).always(function() {
-                        $btn.prop('disabled', false);
-                        location.reload();
-                    });
-                });
-
-                // Import from JSON file
-                $('#import-json-file').on('change', function(e) {
-                    var file = e.target.files[0];
-                    if (!file) return;
-
-                    var reader = new FileReader();
-                    reader.onload = function(e) {
-                        $.post(ajaxurl, {
-                            action: 'ofast_import_redirects_from_plugin',
-                            nonce: '<?php echo wp_create_nonce('ofast_import_redirects'); ?>',
-                            plugin: 'json',
-                            json_data: e.target.result
-                        }, function(response) {
-                            if (response.success) {
-                                alert(response.data.message);
-                                if (response.data.imported > 0) {
-                                    location.reload();
-                                }
-                            } else {
-                                alert('Import failed: ' + response.data);
-                            }
-                        });
-                    };
-                    reader.readAsText(file);
-                });
-
-                // Export redirects
-                $('#export-redirects').on('click', function() {
-                    var $btn = $(this);
-                    $btn.prop('disabled', true).text('Exporting...');
-
-                    // Collect selected IDs
-                    var selectedIds = [];
-                    $('.redirect-checkbox:checked').each(function() {
-                        selectedIds.push($(this).val());
-                    });
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_export_redirects',
-                        nonce: '<?php echo wp_create_nonce('ofast_export_redirects'); ?>',
-                        ids: selectedIds
-                    }, function(response) {
-                        if (response.success) {
-                            var blob = new Blob([JSON.stringify(response.data, null, 2)], {
-                                type: 'application/json'
-                            });
-                            var url = URL.createObjectURL(blob);
-                            var a = document.createElement('a');
-                            a.href = url;
-                            a.download = 'ofast-redirects-' + new Date().toISOString().split('T')[0] + '.json';
-                            a.click();
-                            URL.revokeObjectURL(url);
-                        }
-                    }).always(function() {
-                        $btn.prop('disabled', false).text('Export All');
-                    });
-                });
-
-                // Select all
-                $('#select-all-redirects').on('change', function() {
-                    $('.redirect-checkbox').prop('checked', $(this).prop('checked'));
-                });
-            });
-        </script>
 <?php
     }
 

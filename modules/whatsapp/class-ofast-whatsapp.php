@@ -413,7 +413,7 @@ class Ofast_X_WhatsApp
         // Handle send test message
         if (isset($_POST['ofast_send_test_whatsapp']) && wp_verify_nonce($_POST['whatsapp_nonce'], 'ofast_whatsapp_save')) {
             if ($this->is_configured() && !empty($this->admin_number)) {
-                $test_message = "Ofast X WhatsApp Test\n\nThis is a test message from " . get_bloginfo('name') . ".\n\nIf you received this, your WhatsApp notifications are working!\n\nTime: " . current_time('F j, Y g:i a');
+                $test_message = sprintf(__("WhatsApp Test from %s\n\nThis is a test message.\n\nIf you received this, your WhatsApp notifications are working!\n\nTime: %s", 'ofast-x'), get_bloginfo('name'), current_time('F j, Y g:i a'));
                 $result = $this->send_message($this->admin_number, $test_message);
                 if ($result) {
                     set_transient('ofast_whatsapp_test_result', array('type' => 'success', 'message' => 'Test message sent to ' . $this->admin_number . '! Check your WhatsApp.'), 30);

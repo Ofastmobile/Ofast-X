@@ -290,14 +290,30 @@ class Ofast_X_Logger {
      * @param string $filename Log filename
      */
     public static function download($filename) {
+        // Security: Require admin capability
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have permission to download log files.', 'ofast-x'), 403);
+        }
+        
+        // Sanitize filename to prevent path traversal
+        $filename = sanitize_file_name($filename);
         $file_path = self::$log_dir . '/' . $filename;
         
+        // Verify file exists
         if (!file_exists($file_path)) {
             wp_die(__('Log file not found.', 'ofast-x'));
         }
         
+        // Security: Verify file is within log directory (prevent path traversal)
+        $real_path = realpath($file_path);
+        $real_log_dir = realpath(self::$log_dir);
+        
+        if (!$real_path || !$real_log_dir || strpos($real_path, $real_log_dir) !== 0) {
+            wp_die(__('Invalid log file path.', 'ofast-x'), 403);
+        }
+        
         header('Content-Type: text/plain');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Disposition: attachment; filename="' . esc_attr($filename) . '"');
         header('Content-Length: ' . filesize($file_path));
         
         readfile($file_path);
@@ -311,9 +327,24 @@ class Ofast_X_Logger {
      * @return bool Success status
      */
     public static function delete($filename) {
+        // Security: Require admin capability
+        if (!current_user_can('manage_options')) {
+            return false;
+        }
+        
+        // Sanitize filename to prevent path traversal
+        $filename = sanitize_file_name($filename);
         $file_path = self::$log_dir . '/' . $filename;
         
         if (!file_exists($file_path)) {
+            return false;
+        }
+        
+        // Security: Verify file is within log directory (prevent path traversal)
+        $real_path = realpath($file_path);
+        $real_log_dir = realpath(self::$log_dir);
+        
+        if (!$real_path || !$real_log_dir || strpos($real_path, $real_log_dir) !== 0) {
             return false;
         }
         

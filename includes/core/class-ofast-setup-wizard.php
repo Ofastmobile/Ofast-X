@@ -62,7 +62,7 @@ class Ofast_X_Setup_Wizard {
         }
 
         if (!wp_verify_nonce($_POST['_wpnonce'], 'ofast_wizard_nonce')) {
-            wp_die('Security check failed');
+            wp_die(esc_html__('Security check failed', 'ofast-x'));
         }
 
         $action = sanitize_text_field($_POST['ofast_wizard_action']);
@@ -218,9 +218,9 @@ class Ofast_X_Setup_Wizard {
             .ofast-module-item.checked { border-color: #6366f1; background: #eef2ff; }
             .ofast-module-item input { margin: 0; }
             .ofast-module-item label { cursor: pointer; font-weight: 500; color: #1e293b; }
-            .ofast-smtp-detected { background: #ecfdf5; border: 2px solid #10b981; border-radius: 12px; padding: 20px; margin: 20px 0; }
-            .ofast-smtp-detected h3 { margin: 0 0 10px; color: #065f46; display: flex; align-items: center; gap: 8px; }
-            .ofast-smtp-not-found { background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 20px; margin: 20px 0; }
+            .ofast-smtp-detected { background: #fff; border: 2px solid #e5e7eb; border-radius: 12px; padding: 20px; margin: 20px 0; }
+            .ofast-smtp-detected h3 { margin: 0 0 10px; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+            .ofast-smtp-not-found { background: #fff; border: 2px solid #e5e7eb; border-radius: 12px; padding: 20px; margin: 20px 0; }
             .ofast-wizard-actions { display: flex; justify-content: space-between; margin-top: 30px; padding-top: 20px; border-top: 2px solid #f1f5f9; }
             .ofast-btn { padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; }
             .ofast-btn-primary { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; box-shadow: 0 4px 15px rgba(99,102,241,0.3); }
@@ -268,7 +268,7 @@ class Ofast_X_Setup_Wizard {
      * Step 1: Module Selection
      */
     private function render_step_1() {
-        $recommended = array('email', 'smtp', 'forms', 'snippets', 'redirects', 'admin-tweaks');
+        $recommended = array('email', 'smtp', 'forms', 'snippets', 'redirects', 'admin-tweaks', 'whatsapp', 'social-login', 'content-ordering');
         ?>
         <h2>Choose Your Modules</h2>
         <p>Select the features you want to enable. You can always change these later in Settings.</p>
@@ -279,7 +279,7 @@ class Ofast_X_Setup_Wizard {
 
             <div class="ofast-category-label"> Communication</div>
             <div class="ofast-module-grid">
-                <?php foreach (array('email' => 'Email Module', 'smtp' => 'SMTP Configuration', 'newsletter' => 'Newsletter', 'forms' => 'Contact Forms') as $slug => $name): ?>
+                <?php foreach (array('email' => 'Email Module', 'smtp' => 'SMTP Configuration', 'forms' => 'Contact Forms', 'whatsapp' => 'WhatsApp Chat', 'social-login' => 'Social Login') as $slug => $name): ?>
                 <div class="ofast-module-item <?php echo in_array($slug, $recommended) ? 'checked' : ''; ?>">
                     <input type="checkbox" name="modules[<?php echo $slug; ?>]" id="mod_<?php echo $slug; ?>" <?php checked(in_array($slug, $recommended)); ?>>
                     <label for="mod_<?php echo $slug; ?>"><?php echo $name; ?></label>
@@ -289,7 +289,7 @@ class Ofast_X_Setup_Wizard {
 
             <div class="ofast-category-label"> Security & Content</div>
             <div class="ofast-module-grid">
-                <?php foreach (array('admin-url' => 'Admin URL Customizer', 'spam-protection' => 'Spam Protection', 'snippets' => 'Code Snippets', 'redirects' => 'Redirects Manager') as $slug => $name): ?>
+                <?php foreach (array('admin-url' => 'Admin URL Customizer', 'spam-protection' => 'Spam Protection', 'snippets' => 'Code Snippets', 'redirects' => 'Redirects Manager', 'content-ordering' => 'Content Ordering') as $slug => $name): ?>
                 <div class="ofast-module-item <?php echo in_array($slug, $recommended) ? 'checked' : ''; ?>">
                     <input type="checkbox" name="modules[<?php echo $slug; ?>]" id="mod_<?php echo $slug; ?>" <?php checked(in_array($slug, $recommended)); ?>>
                     <label for="mod_<?php echo $slug; ?>"><?php echo $name; ?></label>
@@ -299,7 +299,7 @@ class Ofast_X_Setup_Wizard {
 
             <div class="ofast-category-label"> Customization</div>
             <div class="ofast-module-grid">
-                <?php foreach (array('admin-tweaks' => 'Admin Tweaks', 'login-redesign' => 'Login Redesign', 'menu-editor' => 'Menu Editor', 'whos-admin' => "Who's Admin") as $slug => $name): ?>
+                <?php foreach (array('admin-tweaks' => 'Admin Studio', 'login-redesign' => 'Login Redesign', 'menu-editor' => 'Menu Editor', 'whos-admin' => 'White Label', 'user-roles' => 'User Roles Manager', 'admin-design' => 'Admin Design') as $slug => $name): ?>
                 <div class="ofast-module-item <?php echo in_array($slug, $recommended) ? 'checked' : ''; ?>">
                     <input type="checkbox" name="modules[<?php echo $slug; ?>]" id="mod_<?php echo $slug; ?>" <?php checked(in_array($slug, $recommended)); ?>>
                     <label for="mod_<?php echo $slug; ?>"><?php echo $name; ?></label>
@@ -341,11 +341,11 @@ class Ofast_X_Setup_Wizard {
 
             <?php if (!empty($detected)): ?>
                 <div class="ofast-smtp-detected">
-                    <h3>✅ Existing SMTP Plugin Detected!</h3>
+                    <h3><span class="dashicons dashicons-email-alt" style="color: #6366f1;"></span> Existing SMTP Plugin Detected</h3>
                     <p>We found the following SMTP configuration. Would you like to import these settings?</p>
                     
                     <?php foreach ($detected as $key => $plugin): ?>
-                    <div class="ofast-module-item checked" style="margin-top: 15px; background: #fff;">
+                    <div class="ofast-module-item checked" style="margin-top: 15px; background: #f8fafc;">
                         <input type="radio" name="smtp_source" id="smtp_<?php echo $key; ?>" value="<?php echo $key; ?>" checked>
                         <label for="smtp_<?php echo $key; ?>">
                             <strong><?php echo esc_html($plugin['name']); ?></strong>
@@ -367,7 +367,7 @@ class Ofast_X_Setup_Wizard {
 
             <?php else: ?>
                 <div class="ofast-smtp-not-found">
-                    <h3> No SMTP Plugin Found</h3>
+                    <h3><span class="dashicons dashicons-info" style="color: #64748b;"></span> No SMTP Plugin Found</h3>
                     <p>No existing SMTP settings detected. You can configure SMTP later in <strong>Ofast Emailer → SMTP</strong>.</p>
                 </div>
 
@@ -390,7 +390,7 @@ class Ofast_X_Setup_Wizard {
         <h2 style="text-align: center;">🎉 You're All Set!</h2>
         <p style="text-align: center;">Ofast X is now configured with <strong><?php echo $count; ?> modules</strong> enabled.</p>
 
-        <div style="background: #f8fafc; border-radius: 12px; padding: 25px; margin: 30px 0;">
+        <div style="background: #fff; border: 2px solid #e5e7eb; border-radius: 12px; padding: 25px; margin: 30px 0;">
             <h3 style="margin: 0 0 15px; font-size: 16px;">What's Next?</h3>
             <ul style="margin: 0; padding-left: 20px; color: #64748b; line-height: 1.8;">
                 <li>Visit the <strong>Dashboard</strong> to see your site overview</li>

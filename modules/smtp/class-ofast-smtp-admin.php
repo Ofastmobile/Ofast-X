@@ -41,13 +41,15 @@ class Ofast_X_SMTP_Admin
                 gap: 8px;
                 margin-bottom: 25px;
                 padding: 10px 12px;
-                background: #fff;
+                background: rgba(241, 245, 249, 0.85);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
                 border-radius: 12px;
-                border: 1px solid rgba(226, 232, 240, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.5);
                 position: sticky;
                 top: 47px;
                 z-index: 100;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+                box-shadow: 0 4px 20px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
             }
             @media (max-width: 782px) {
                 .ofast-tabs-nav {
@@ -80,7 +82,7 @@ class Ofast_X_SMTP_Admin
                 box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             }
             .ofast-tab.active {
-                background: #6366f1;
+                background: linear-gradient(135deg, #6366f1 0%, #764ba2 100%);
                 color: #fff;
                 box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
             }
@@ -92,73 +94,6 @@ class Ofast_X_SMTP_Admin
             }
             .ofast-tab-content { display: none; }
             .ofast-tab-content.active { display: block; }
-
-            /* Ofast Header */
-            .ofast-header {
-                display: flex;
-                align-items: center;
-                gap: 20px;
-                background: #fff;
-                padding: 25px 30px;
-                border-radius: 12px;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-                margin-bottom: 30px;
-                margin-top: 20px;
-            }
-            .ofast-header-icon {
-                width: 56px;
-                height: 56px;
-                background: #fff;
-                border: 1px solid #e2e8f0;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-                border-radius: 16px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-shrink: 0;
-            }
-            .ofast-header-icon .dashicons {
-                font-size: 28px;
-                width: 28px;
-                height: 28px;
-                color: #6366f1;
-            }
-            .ofast-header-content h1 {
-                margin: 0 0 5px 0;
-                font-size: 24px;
-                font-weight: 700;
-                color: #1e293b;
-                display: block;
-                padding: 0;
-            }
-            .ofast-header-content p {
-                margin: 0;
-                color: #64748b;
-                font-size: 14px;
-            }
-
-            /* Button Override */
-            .button.button-primary,
-            .wrap .button.button-primary {
-                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
-                border-color: #6366f1 !important;
-                text-shadow: none !important;
-                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
-                transition: all 0.3s ease !important;
-                padding-top: 10px !important;
-                padding-bottom: 10px !important;
-                height: auto !important;
-            }
-            .button.button-primary:hover,
-            .wrap .button.button-primary:hover {
-                background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
-            }
-            .button.button-primary:active,
-            .wrap .button.button-primary:active {
-                transform: translateY(0);
-            }
 
             /* Layout helpers used by dashboard cards/chart */
             .ofast-grid-3 {
@@ -229,16 +164,8 @@ class Ofast_X_SMTP_Admin
         $default_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'dashboard';
         ?>
         <div class="wrap">
-            <!-- Ofast Header -->
-            <div class="ofast-header">
-                <div class="ofast-header-icon">
-                    <span class="dashicons dashicons-email"></span>
-                </div>
-                <div class="ofast-header-content">
-                    <h1>SMTP</h1>
-                    <p>Configure email delivery and monitor your SMTP performance.</p>
-                </div>
-            </div>
+            <h1>SMTP</h1>
+            
             <!-- Modern Tabs Navigation (sticky on scroll) -->
             <nav class="ofast-tabs-nav" id="smtp-tabs-nav">
                 <a href="#" class="ofast-tab <?php echo $default_tab === 'dashboard' ? 'active' : ''; ?>" data-tab="dashboard">
@@ -477,8 +404,8 @@ class Ofast_X_SMTP_Admin
         <div style="background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb;">
             <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #374151;">Quick Actions</h3>
             <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <a href="<?php echo admin_url('admin.php?page=ofast-smtp&tab=settings'); ?>" class="button button-large" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: #fff; border-color: #6366f1; text-shadow: none; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);">Configure SMTP</a>
-                <a href="<?php echo admin_url('admin.php?page=ofast-emailer'); ?>" class="button button-large" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: #fff; border-color: #6366f1; text-shadow: none; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);">Compose Email</a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-smtp&tab=settings'); ?>" class="button button-primary button-large">Configure SMTP</a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-smtp&tab=log'); ?>" class="button button-secondary button-large">View All Logs</a>
             </div>
         </div>
         <?php
@@ -622,7 +549,7 @@ class Ofast_X_SMTP_Admin
         ?>
             <div class="tablenav bottom">
                 <div class="tablenav-pages">
-                    <?php echo paginate_links(array('base' => add_query_arg(array('paged' => '%#%', 'tab' => 'log')), 'format' => '', 'prev_text' => '&laquo;', 'next_text' => '&raquo;', 'total' => $total_pages, 'current' => $current_page)); ?>
+                    <?php echo paginate_links(array('base' => add_query_arg('paged', '%#%'), 'format' => '', 'prev_text' => '&laquo;', 'next_text' => '&raquo;', 'total' => $total_pages, 'current' => $current_page)); ?>
                 </div>
             </div>
         <?php endif; ?>

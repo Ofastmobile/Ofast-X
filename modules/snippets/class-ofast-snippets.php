@@ -45,6 +45,17 @@ class Ofast_X_Snippets
         // Execute active snippets
         add_action('init', array($this, 'execute_snippets'), 999);
 
+        // Auto-purge trashed snippets via daily cron
+        add_action('ofast_purge_trashed_snippets', array($this, 'purge_old_trashed_snippets'));
+        if (!wp_next_scheduled('ofast_purge_trashed_snippets')) {
+            wp_schedule_event(time(), 'daily', 'ofast_purge_trashed_snippets');
+        }
+
+        // AJAX: Save trash retention setting
+        add_action('wp_ajax_ofast_save_trash_retention', array($this, 'ajax_save_trash_retention'));
+        // AJAX: Empty trash
+        add_action('wp_ajax_ofast_empty_snippet_trash', array($this, 'ajax_empty_snippet_trash'));
+
         // Show runtime error notices
         add_action('admin_notices', array($this, 'show_runtime_error_notice'));
 
@@ -153,7 +164,12 @@ class Ofast_X_Snippets
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_snippets';
 
-        $snippets = $wpdb->get_results("SELECT * FROM $table ORDER BY id DESC LIMIT 10");
+        // Filter out trashed snippets
+        if ($this->ensure_snippets_trash_schema()) {
+            $snippets = $wpdb->get_results("SELECT * FROM $table WHERE (status IS NULL OR status != 'trash') ORDER BY id DESC LIMIT 10");
+        } else {
+            $snippets = $wpdb->get_results("SELECT * FROM $table ORDER BY id DESC LIMIT 10");
+        }
 
         if (empty($snippets)) {
             echo '<p style="text-align: center; color: #999; padding: 20px;">No snippets yet. <a href="' . admin_url('admin.php?page=ofast-snippets') . '">Add your first snippet</a></p>';
@@ -170,19 +186,35 @@ class Ofast_X_Snippets
             $validation_result = $this->validate_php_code($snippet->code);
             $has_error = ($validation_result !== true);
 
+            // Check for duplicate conflicts
+            $dup_info = $this->get_potential_duplicates($snippet->id, $snippet->name, $snippet->code);
+            $is_duplicate = $dup_info['has_duplicate'];
+
             $active_class = $snippet->active ? 'button-primary' : '';
 
             // Add error indicator if validation fails
             $error_indicator = $has_error ? ' <span style="color: red; font-size: 16px;" title="' . esc_attr($validation_result) . '">● </span>' : '';
 
+            // Add duplicate indicator
+            $dup_indicator = '';
+            $dup_description = '';
+            if ($is_duplicate && !$has_error) {
+                $dup_reasons = implode('; ', array_slice($dup_info['reasons'], 0, 2));
+                $dup_indicator = ' <span style="color: red; font-size: 16px;" title="' . esc_attr($dup_reasons) . '">● </span>';
+                $dup_description = $dup_reasons;
+            }
+
             echo '<tr>';
-            echo '<td>' . $error_indicator . '<strong>' . esc_html($snippet->name) . '</strong>';
+            echo '<td>' . $error_indicator . $dup_indicator . '<strong>' . esc_html($snippet->name) . '</strong>';
             if ($has_error) {
                 echo '<br><small style="color: #dc3545;">' . esc_html($validation_result) . '</small>';
             }
+            if ($dup_description) {
+                echo '<br><small style="color: #dc3545;">' . esc_html($dup_description) . '</small>';
+            }
             echo '</td>';
             echo '<td style="text-align: center;">';
-            echo '<button class="button button-small ofast-snippet-toggle ' . $active_class . '" data-id="' . $snippet->id . '" data-active="' . $snippet->active . '" data-has-error="' . ($has_error ? '1' : '0') . '">';
+            echo '<button class="button button-small ofast-snippet-toggle ' . $active_class . '" data-id="' . $snippet->id . '" data-active="' . $snippet->active . '" data-has-error="' . ($has_error ? '1' : '0') . '" data-is-duplicate="' . ($is_duplicate ? '1' : '0') . '">';
             echo $snippet->active ? 'ON' : 'OFF';
             echo '</button>';
             echo '</td>';
@@ -203,6 +235,7 @@ class Ofast_X_Snippets
                     var id = $btn.data('id');
                     var active = $btn.data('active');
                     var hasError = $btn.data('has-error');
+                    var isDuplicate = $btn.data('is-duplicate');
 
                     // Prevent activation if has errors
                     if (active == 0 && hasError == 1) {
@@ -224,8 +257,15 @@ class Ofast_X_Snippets
                             $btn.html(newActive ? 'ON' : 'OFF');
                             $btn.toggleClass('button-primary', newActive);
                         } else {
-                            alert('Error: ' + response.data);
+                            var msg = response.data || 'Unknown error';
+                            if (msg.indexOf('duplicate conflict') !== -1) {
+                                alert('Cannot activate: a duplicate snippet is already active.\n\n' + msg + '\n\nDeactivate the conflicting snippet first, then try again.');
+                            } else {
+                                alert('Error: ' + msg);
+                            }
                         }
+                    }).fail(function() {
+                        alert('Request failed. Please check your connection and try again.');
                     }).always(function() {
                         $btn.prop('disabled', false);
                     });
@@ -494,7 +534,7 @@ class Ofast_X_Snippets
                 </div>
             </div>
 
-            <?php
+            <?php if (!$is_trash_view):
             // Detect other snippet plugins
             $other_plugins = $this->detect_other_snippet_plugins();
             if (!empty($other_plugins)):
@@ -617,6 +657,8 @@ class Ofast_X_Snippets
                 </div>
             <?php endif; ?>
 
+            <?php endif; /* !$is_trash_view */ ?>
+            <?php if (!$is_trash_view): ?>
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
                 <h2><?php echo $editing ? 'Edit Snippet' : 'Add New Snippet'; ?></h2>
                 <form method="post" class="ofast-snippet-form">
@@ -853,6 +895,7 @@ class Ofast_X_Snippets
                     </p>
                 </form>
             </div>
+            <?php endif; ?>
 
             <style>
                 /* Minimal Form Layout */
@@ -1136,6 +1179,27 @@ class Ofast_X_Snippets
             </style>
 
             <h2><?php echo $is_trash_view ? 'Trash' : 'Saved Snippets'; ?> (<?php echo count($snippets); ?>)</h2>
+
+            <?php if ($is_trash_view): ?>
+                <?php $retention_days = get_option('ofast_snippets_trash_retention', 30); ?>
+                <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 12px 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="dashicons dashicons-trash" style="color: #856404;"></span>
+                        <span style="color: #856404; font-size: 13px;">Auto-delete after:
+                            <select id="ofast-trash-retention" style="margin-left: 5px;">
+                                <option value="30" <?php selected($retention_days, 30); ?>>30 days</option>
+                                <option value="60" <?php selected($retention_days, 60); ?>>60 days</option>
+                                <option value="90" <?php selected($retention_days, 90); ?>>90 days</option>
+                                <option value="0" <?php selected($retention_days, 0); ?>>Never</option>
+                            </select>
+                        </span>
+                        <button type="button" class="button button-small" id="ofast-save-retention" style="color: #856404; border-color: #ffc107;">Save</button>
+                    </div>
+                    <button type="button" class="button button-small" id="ofast-empty-trash" style="color: #dc3545; border-color: #dc3545;">
+                        <span class="dashicons dashicons-trash" style="font-size: 14px; line-height: 1.8;"></span> Empty Trash
+                    </button>
+                </div>
+            <?php endif; ?>
 
             <?php if (empty($snippets)): ?>
                 <?php if ($is_trash_view): ?>
@@ -2362,6 +2426,56 @@ class Ofast_X_Snippets
                             alert('Failed: ' + response.data);
                             $btn.prop('disabled', false).text('Restore');
                         }
+                    });
+                });
+
+                // Empty Trash button
+                $('#ofast-empty-trash').on('click', function() {
+                    if (!confirm('Permanently delete ALL trashed snippets? This cannot be undone.')) {
+                        return;
+                    }
+                    var $btn = $(this);
+                    $btn.prop('disabled', true).text('Emptying...');
+
+                    $.post(ajaxurl, {
+                        action: 'ofast_empty_snippet_trash',
+                        nonce: '<?php echo wp_create_nonce('ofast_empty_trash'); ?>'
+                    }, function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert('Error: ' + (response.data || 'Failed to empty trash.'));
+                            $btn.prop('disabled', false).html('<span class="dashicons dashicons-trash" style="font-size: 14px; line-height: 1.8;"></span> Empty Trash');
+                        }
+                    }).fail(function() {
+                        alert('Request failed. Please try again.');
+                        $btn.prop('disabled', false).html('<span class="dashicons dashicons-trash" style="font-size: 14px; line-height: 1.8;"></span> Empty Trash');
+                    });
+                });
+
+                // Save trash retention setting
+                $('#ofast-save-retention').on('click', function() {
+                    var $btn = $(this);
+                    var days = $('#ofast-trash-retention').val();
+                    $btn.prop('disabled', true).text('Saving...');
+
+                    $.post(ajaxurl, {
+                        action: 'ofast_save_trash_retention',
+                        nonce: '<?php echo wp_create_nonce('ofast_save_retention'); ?>',
+                        days: days
+                    }, function(response) {
+                        if (response.success) {
+                            $btn.text('Saved!').css('color', '#28a745');
+                            setTimeout(function() {
+                                $btn.text('Save').css('color', '#856404').prop('disabled', false);
+                            }, 1500);
+                        } else {
+                            alert('Error: ' + (response.data || 'Failed to save.'));
+                            $btn.prop('disabled', false).text('Save');
+                        }
+                    }).fail(function() {
+                        alert('Request failed.');
+                        $btn.prop('disabled', false).text('Save');
                     });
                 });
             });
@@ -3750,6 +3864,91 @@ class Ofast_X_Snippets
     private function clear_snippets_cache()
     {
         delete_transient('ofast_active_snippets_cache');
+    }
+
+    /**
+     * Auto-purge trashed snippets older than the configured retention period.
+     * Called daily via wp_cron event 'ofast_purge_trashed_snippets'.
+     */
+    public function purge_old_trashed_snippets()
+    {
+        $retention_days = (int) get_option('ofast_snippets_trash_retention', 30);
+
+        // If set to 0 (Never), skip purge
+        if ($retention_days <= 0) {
+            return;
+        }
+
+        if (!$this->ensure_snippets_trash_schema()) {
+            return;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+        $cutoff = gmdate('Y-m-d H:i:s', time() - ($retention_days * DAY_IN_SECONDS));
+
+        $deleted = $wpdb->query($wpdb->prepare(
+            "DELETE FROM $table WHERE status = 'trash' AND trashed_at IS NOT NULL AND trashed_at < %s",
+            $cutoff
+        ));
+
+        if ($deleted > 0) {
+            $this->clear_snippets_cache();
+            $this->log_snippet_action('AUTO_PURGED', 0, '', "Purged {$deleted} trashed snippet(s) older than {$retention_days} days");
+        }
+    }
+
+    /**
+     * AJAX: Save trash retention setting
+     */
+    public function ajax_save_trash_retention()
+    {
+        check_ajax_referer('ofast_save_retention', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        $days = isset($_POST['days']) ? intval($_POST['days']) : 30;
+
+        // Validate: only allow 0, 30, 60, 90
+        if (!in_array($days, array(0, 30, 60, 90), true)) {
+            $days = 30;
+        }
+
+        update_option('ofast_snippets_trash_retention', $days);
+
+        wp_send_json_success(array('days' => $days));
+    }
+
+    /**
+     * AJAX: Empty snippet trash (permanently delete all trashed snippets)
+     */
+    public function ajax_empty_snippet_trash()
+    {
+        check_ajax_referer('ofast_empty_trash', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        if (!$this->check_rate_limit('empty_trash')) {
+            wp_send_json_error('Too many requests. Please wait a moment.');
+        }
+
+        if (!$this->ensure_snippets_trash_schema()) {
+            wp_send_json_error('Trash schema unavailable.');
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+
+        $deleted = $wpdb->query("DELETE FROM $table WHERE status = 'trash'");
+
+        $this->clear_snippets_cache();
+        $this->log_snippet_action('EMPTIED_TRASH', 0, '', "Permanently deleted {$deleted} trashed snippet(s)");
+
+        wp_send_json_success(array('deleted' => $deleted));
     }
 
     /**

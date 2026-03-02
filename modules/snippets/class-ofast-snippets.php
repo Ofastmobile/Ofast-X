@@ -75,7 +75,7 @@ class Ofast_X_Snippets
 
         // WordPress CodeMirror settings for PHP
         $settings = wp_enqueue_code_editor(array(
-            'type' => 'application/x-httpd-php',
+            'type' => 'text/x-php',
             'codemirror' => array(
                 'lineNumbers' => true,
                 'lineWrapping' => true,
@@ -500,7 +500,7 @@ class Ofast_X_Snippets
         $edit_snippet = $editing ? $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $editing)) : null;
 
     ?>
-        <div class="wrap">
+        <div class="wrap ofast-snippets-wrap">
             <h1>Code Snippets Manager</h1>
             <p>Add PHP code snippets that run on your WordPress site. Use with caution!</p>
 
@@ -544,6 +544,62 @@ class Ofast_X_Snippets
             </div>
 
             <style>
+                /* Ofast button styles for snippets page */
+                .ofast-snippets-wrap .button.button-primary,
+                .ofast-snippets-wrap a.button.button-primary {
+                    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+                    color: #fff !important;
+                    border: none !important;
+                    border-radius: 8px !important;
+                    font-weight: 600 !important;
+                    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3) !important;
+                    transition: all 0.3s ease !important;
+                    text-shadow: none !important;
+                }
+                .ofast-snippets-wrap .button.button-primary:hover,
+                .ofast-snippets-wrap a.button.button-primary:hover {
+                    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+                    transform: translateY(-1px) !important;
+                    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4) !important;
+                    color: #fff !important;
+                }
+                .ofast-snippets-wrap .button:not(.button-primary):not(#ofast-empty-trash) {
+                    background: #fff !important;
+                    color: #6366f1 !important;
+                    border: 1px solid #6366f1 !important;
+                    border-radius: 8px !important;
+                    font-weight: 500 !important;
+                    transition: all 0.3s ease !important;
+                }
+                .ofast-snippets-wrap .button:not(.button-primary):not(#ofast-empty-trash):hover {
+                    background: #f0f0ff !important;
+                    color: #4f46e5 !important;
+                    border-color: #4f46e5 !important;
+                    transform: translateY(-1px) !important;
+                }
+                .ofast-snippets-wrap #ofast-empty-trash {
+                    background: #fff !important;
+                    color: #dc2626 !important;
+                    border: 1px solid #dc2626 !important;
+                    border-radius: 8px !important;
+                    font-weight: 500 !important;
+                    transition: all 0.3s ease !important;
+                }
+                .ofast-snippets-wrap #ofast-empty-trash:hover {
+                    background: #fef2f2 !important;
+                    color: #b91c1c !important;
+                    border-color: #b91c1c !important;
+                    transform: translateY(-1px) !important;
+                }
+                /* Ofast toggle switch */
+                .ofast-toggle-wrap { position: relative; display: inline-block; width: 44px; height: 24px; }
+                .ofast-toggle-wrap input { opacity: 0; width: 0; height: 0; position: absolute; }
+                .ofast-toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ccc; border-radius: 24px; transition: 0.4s; }
+                .ofast-toggle-slider:before { content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.4s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+                .ofast-toggle-wrap input:checked + .ofast-toggle-slider { background: #6366f1; }
+                .ofast-toggle-wrap input:checked + .ofast-toggle-slider:before { transform: translateX(20px); }
+                .ofast-toggle-wrap input:disabled + .ofast-toggle-slider { opacity: 0.5; cursor: not-allowed; }
+                .ofast-toggle-wrap:hover .ofast-toggle-slider { opacity: 0.8; }
                 /* Desktop: hide full sections, show toggle buttons */
                 @media (min-width: 1025px) {
                     .ofast-desktop-toggle-btn { display: inline-flex !important; }
@@ -1247,6 +1303,7 @@ class Ofast_X_Snippets
                 <?php endif; ?>
             <?php else: ?>
                 <!-- Search and Bulk Actions Bar -->
+                <div style="background: #fff; border-radius: 16px; padding: 25px 30px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); border: 1px solid rgba(226, 232, 240, 0.6);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <select id="bulk-action-select" class="regular-text" style="width: auto;">
@@ -1292,7 +1349,7 @@ class Ofast_X_Snippets
                         <thead>
                             <tr>
                                 <th style="width: 30px;"><input type="checkbox" id="select-all-snippets"></th>
-                                <th style="width: 35px;">ID</th>
+                                <th style="width: 22px;">ID</th>
                                 <th style="width: 140px;">Name</th>
                                 <th style="width: 100px;">Category</th>
                                 <th>Description</th>
@@ -1401,13 +1458,13 @@ class Ofast_X_Snippets
                                         <?php if ($is_trash_view): ?>
                                             <span style="background: #fef2f2; color: #b91c1c; padding: 2px 8px; border-radius: 3px; font-size: 11px;">Trashed</span>
                                         <?php else: ?>
-                                            <button class="button button-small ofast-snippet-toggle <?php echo $snippet->active ? 'button-primary' : ''; ?>"
+                                            <label class="ofast-toggle-wrap ofast-snippet-toggle"
                                                 data-id="<?php echo $snippet->id; ?>" data-active="<?php echo $snippet->active; ?>"
                                                 data-has-duplicate="<?php echo $duplicate_warning['has_duplicate'] ? '1' : '0'; ?>"
-                                                data-duplicate-reasons="<?php echo esc_attr(implode(' | ', $duplicate_warning['reasons'])); ?>"
-                                                style="min-width: 60px; font-size: 11px;">
-                                                <?php echo $status_text; ?>
-                                            </button>
+                                                data-duplicate-reasons="<?php echo esc_attr(implode(' | ', $duplicate_warning['reasons'])); ?>">
+                                                <input type="checkbox" <?php echo $snippet->active ? 'checked' : ''; ?>>
+                                                <span class="ofast-toggle-slider"></span>
+                                            </label>
                                         <?php endif; ?>
                                     </td>
                                     <td style="font-size: 11px;"><?php echo date('M j, Y', strtotime($snippet->created_at)); ?></td>
@@ -1415,6 +1472,7 @@ class Ofast_X_Snippets
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                </div>
                 </div>
             <?php endif; ?>
         </div>
@@ -1430,7 +1488,7 @@ class Ofast_X_Snippets
                     // Get language-specific settings
                     var language = $('#snippet_language').val() || 'php';
                     var mimeTypes = {
-                        'php': 'application/x-httpd-php',
+                        'php': 'text/x-php',
                         'javascript': 'text/javascript',
                         'css': 'text/css',
                         'html': 'text/html'
@@ -1587,19 +1645,21 @@ class Ofast_X_Snippets
                 // Toggle snippet
                 $(document).on('click', '.ofast-snippet-toggle', function(e) {
                     e.preventDefault();
-                    var $btn = $(this);
-                    var id = $btn.data('id');
-                    var active = $btn.data('active');
-                    var hasDuplicate = Number($btn.data('has-duplicate')) === 1;
-                    var duplicateReasons = String($btn.data('duplicate-reasons') || '');
+                    var $toggle = $(this);
+                    var $checkbox = $toggle.find('input[type="checkbox"]');
+                    var id = $toggle.data('id');
+                    var active = $toggle.data('active');
+                    var hasDuplicate = Number($toggle.data('has-duplicate')) === 1;
+                    var duplicateReasons = String($toggle.data('duplicate-reasons') || '');
 
-                    // Fast client-side guard to stop accidental activation when duplicate warnings exist.
+                    // Client-side duplicate warning (user can choose to proceed; server does the real check).
                     if (active == 0 && hasDuplicate) {
-                        alert('Cannot activate this snippet until duplicate issues are resolved.\n\n' + (duplicateReasons || 'Potential duplicate conflict detected.'));
-                        return;
+                        if (!confirm('This snippet has potential duplicate issues:\n\n' + (duplicateReasons || 'Potential duplicate conflict detected.') + '\n\nDo you still want to try activating it?')) {
+                            return;
+                        }
                     }
 
-                    $btn.prop('disabled', true);
+                    $checkbox.prop('disabled', true);
 
                     $.post(ajaxurl, {
                         action: 'ofast_toggle_snippet',
@@ -1609,19 +1669,20 @@ class Ofast_X_Snippets
                     }, function(response) {
                         if (response.success) {
                             var newActive = response.data.active;
-                            $btn.data('active', newActive);
-                            $btn.html(newActive ? 'Deactivate' : 'Activate');
-                            $btn.toggleClass('button-primary', newActive);
+                            $toggle.data('active', newActive);
+                            $checkbox.prop('checked', newActive == 1);
 
                             // Show dependency warning if present
                             if (response.data.dependency_warning) {
                                 alert(response.data.dependency_warning + '\n\nThe snippet was deactivated, but the dependent snippet(s) listed above may stop working.');
                             }
                         } else {
+                            // Revert checkbox on error
+                            $checkbox.prop('checked', active == 1);
                             alert('Error: ' + (response.data || 'Unable to toggle snippet.'));
                         }
                     }).always(function() {
-                        $btn.prop('disabled', false);
+                        $checkbox.prop('disabled', false);
                     });
                 });
 

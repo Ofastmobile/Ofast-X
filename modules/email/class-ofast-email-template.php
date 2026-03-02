@@ -3,7 +3,7 @@
 /**
  * Ofast X Email Template Helper
  * Table-based, inline-styled email template for maximum email client compatibility
- * Based on user's blueprint design
+ * Supports Modern (gradient), Classic (solid), Minimal (no header), and Custom templates
  */
 
 if (!defined('ABSPATH')) {
@@ -13,16 +13,29 @@ if (!defined('ABSPATH')) {
 class Ofast_X_Email_Template
 {
     /**
-     * Get modern email template with table-based layout and inline styles
-     * Compatible with all email clients (Gmail, Outlook, Yahoo, etc.)
+     * Get email template with table-based layout and inline styles
+     * Respects template style setting (modern/classic/minimal/custom)
      */
     public static function get_template($content, $options = array())
     {
+        // Get template style
+        $style = get_option('ofast_email_template_style', 'modern');
+
+        // Custom template — use user's raw HTML with {{content}} placeholder
+        if ($style === 'custom') {
+            $custom_html = get_option('ofast_email_custom_template', '');
+            if (!empty($custom_html)) {
+                return str_replace('{{content}}', $content, $custom_html);
+            }
+            // Fallback to modern if custom template is empty
+            $style = 'modern';
+        }
+
         // Get customizable options from settings
-        $primary_color = get_option('ofast_email_primary_color', '#2563eb'); // Blue
-        $header_bg = get_option('ofast_email_header_bg', '#111827'); // Dark
-        $bg_color = get_option('ofast_email_bg_color', '#f3f4f6'); // Light gray
-        $text_color = get_option('ofast_email_text_color', '#111827'); // Dark text
+        $primary_color = get_option('ofast_email_primary_color', '#6366f1');
+        $accent_color = get_option('ofast_email_accent_color', '#10b981');
+        $bg_color = get_option('ofast_email_bg_color', '#f8fafc');
+        $text_color = get_option('ofast_email_text_color', '#1e293b');
         $logo_url = get_option('ofast_email_logo', '');
         $company_name = get_option('ofast_email_company_name', get_bloginfo('name'));
         $tagline = get_option('ofast_email_tagline', '');
@@ -30,6 +43,27 @@ class Ofast_X_Email_Template
         $show_footer = get_option('ofast_email_show_footer', true);
         $social_links = get_option('ofast_email_social', array());
         $logo_width = absint(get_option('ofast_email_logo_width', 140));
+        $font_family = get_option('ofast_email_font_family', 'system');
+        $font_size = absint(get_option('ofast_email_font_size', 15));
+
+        // Build header background based on style
+        switch ($style) {
+            case 'classic':
+                $header_bg = $primary_color; // Solid color
+                break;
+            case 'minimal':
+                $header_bg = 'transparent'; // No visible header
+                break;
+            case 'modern':
+            default:
+                $header_bg = $primary_color; // Fallback for email clients that don't support gradients
+                break;
+        }
+
+        // For modern style, we use a gradient via inline CSS (email-safe via background shorthand)
+        $header_bg_style = ($style === 'modern')
+            ? "background: linear-gradient(135deg, {$primary_color}, {$accent_color}); background-color: {$primary_color};"
+            : "background-color: {$header_bg};";
 
         // Override with passed options
         $options = wp_parse_args($options, array(
@@ -37,6 +71,12 @@ class Ofast_X_Email_Template
             'cta_text' => '',
             'cta_link' => ''
         ));
+
+        // Font stack
+        $font_stack = 'Arial, Helvetica, sans-serif';
+        if ($font_family === 'inter') $font_stack = '"Inter", Arial, sans-serif';
+        if ($font_family === 'roboto') $font_stack = '"Roboto", Arial, sans-serif';
+        if ($font_family === 'opensans') $font_stack = '"Open Sans", Arial, sans-serif';
 
         // Social platform colors
         $social_colors = array(
@@ -60,6 +100,10 @@ class Ofast_X_Email_Template
             'whatsapp' => 'WhatsApp'
         );
 
+        // Determine if header should show
+        // Minimal: never show header. Others: show if setting is on and there's content.
+        $render_header = ($style !== 'minimal') && $show_header && (!empty($logo_url) || !empty($company_name));
+
         ob_start();
 ?>
 <!DOCTYPE html>
@@ -68,7 +112,7 @@ class Ofast_X_Email_Template
     <meta charset="UTF-8">
     <title><?php echo esc_html($company_name); ?></title>
 </head>
-<body style="margin:0; padding:0; background-color:<?php echo esc_attr($bg_color); ?>; font-family:Arial, Helvetica, sans-serif;">
+<body style="margin:0; padding:0; background-color:<?php echo esc_attr($bg_color); ?>; font-family:<?php echo esc_attr($font_stack); ?>;">
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background-color:<?php echo esc_attr($bg_color); ?>; padding:30px 0;">
         <tr>
@@ -77,10 +121,10 @@ class Ofast_X_Email_Template
                 <!-- MAIN CARD -->
                 <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; max-width:100%;">
 
-                    <?php if ($show_header && (!empty($logo_url) || !empty($company_name))): ?>
+                    <?php if ($render_header): ?>
                     <!-- HEADER -->
                     <tr>
-                        <td style="background-color:<?php echo esc_attr($header_bg); ?>; padding:24px; text-align:center;">
+                        <td style="<?php echo $header_bg_style; ?> padding:24px; text-align:center;">
                             <?php if (!empty($logo_url)): ?>
                             <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($company_name); ?>" 
                                 style="max-width:<?php echo esc_attr($logo_width); ?>px; height:auto; display:block; margin:0 auto;">
@@ -94,7 +138,7 @@ class Ofast_X_Email_Template
                     <!-- CONTENT -->
                     <tr>
                         <td style="padding:32px; color:<?php echo esc_attr($text_color); ?>;">
-                            <div style="font-size:15px; line-height:1.7; color:#374151;">
+                            <div style="font-size:<?php echo esc_attr($font_size); ?>px; line-height:1.7; color:#374151;">
                                 <?php echo $content; ?>
                             </div>
 

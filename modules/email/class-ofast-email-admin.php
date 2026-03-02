@@ -750,22 +750,34 @@ class Ofast_X_Email_Admin
                     <!-- Template Style -->
                     <div class="ofast-card" style="padding: 20px; margin-bottom: 20px;">
                         <h3 style="margin: 0 0 15px 0; font-size: 16px;">Template Style</h3>
-                        <div style="display: flex; gap: 10px;">
-                            <label style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'modern' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'modern' ? '#eff6ff' : '#fff'; ?>;">
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;" id="ofast-style-selector">
+                            <label class="ofast-style-label" style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'modern' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'modern' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;">
                                 <input type="radio" name="template_style" value="modern" <?php checked($style, 'modern'); ?> style="display: none;">
                                 <div style="font-weight: 600;">Modern</div>
                                 <small style="color: #64748b;">Gradient header</small>
                             </label>
-                            <label style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'classic' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'classic' ? '#eff6ff' : '#fff'; ?>;">
+                            <label class="ofast-style-label" style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'classic' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'classic' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;">
                                 <input type="radio" name="template_style" value="classic" <?php checked($style, 'classic'); ?> style="display: none;">
                                 <div style="font-weight: 600;">Classic</div>
                                 <small style="color: #64748b;">Solid header</small>
                             </label>
-                            <label style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'minimal' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'minimal' ? '#eff6ff' : '#fff'; ?>;">
+                            <label class="ofast-style-label" style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'minimal' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'minimal' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;">
                                 <input type="radio" name="template_style" value="minimal" <?php checked($style, 'minimal'); ?> style="display: none;">
                                 <div style="font-weight: 600;">Minimal</div>
                                 <small style="color: #64748b;">Clean, no header</small>
                             </label>
+                            <label class="ofast-style-label" style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'custom' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'custom' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;">
+                                <input type="radio" name="template_style" value="custom" <?php checked($style, 'custom'); ?> style="display: none;">
+                                <div style="font-weight: 600;">Custom</div>
+                                <small style="color: #64748b;">Your own HTML</small>
+                            </label>
+                        </div>
+
+                        <!-- Custom Template Editor -->
+                        <div id="ofast-custom-template-wrap" style="margin-top: 15px; display: <?php echo $style === 'custom' ? 'block' : 'none'; ?>;">
+                            <p class="description" style="margin: 0 0 10px;">Paste your custom HTML email template below. Use <code>{{content}}</code> as the placeholder where your email body will be inserted.</p>
+                            <textarea name="custom_template" id="ofast_custom_template" rows="14" style="width: 100%; font-family: monospace; font-size: 13px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; background: #1e293b; color: #e2e8f0; resize: vertical;"><?php echo esc_textarea(get_option('ofast_email_custom_template', '')); ?></textarea>
+                            <p class="description" style="margin: 8px 0 0; color: #94a3b8;">Tip: Include full HTML structure (&lt;html&gt;, &lt;body&gt;, etc.) for best results. The <code>{{content}}</code> tag will be replaced with the email message.</p>
                         </div>
                     </div>
 
@@ -939,6 +951,18 @@ class Ofast_X_Email_Admin
                 $('.ofast-color-picker').wpColorPicker({
                     change: function(event, ui) {
                         setTimeout(updatePreview, 10);
+                    }
+                });
+
+                // Style selector active toggle
+                $('input[name="template_style"]').on('change', function() {
+                    $('.ofast-style-label').css({ 'border-color': '#e2e8f0', 'background': '#fff' });
+                    $(this).closest('.ofast-style-label').css({ 'border-color': '#6366f1', 'background': '#eff6ff' });
+                    // Toggle custom template editor
+                    if ($(this).val() === 'custom') {
+                        $('#ofast-custom-template-wrap').slideDown(200);
+                    } else {
+                        $('#ofast-custom-template-wrap').slideUp(200);
                     }
                 });
 
@@ -1406,6 +1430,37 @@ class Ofast_X_Email_Admin
                 box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
                 outline: none;
             }
+
+            /* Ofast custom dropdown (matches Code Snippets style) */
+            .wrap select,
+            .ofast-card select {
+                -webkit-appearance: none !important;
+                -moz-appearance: none !important;
+                appearance: none !important;
+                background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236366f1' d='M6 8.825a.7.7 0 0 1-.5-.2L2.05 5.15a.68.68 0 0 1 0-.975.68.68 0 0 1 .975 0L6 7.175l2.975-3a.68.68 0 0 1 .975 0 .68.68 0 0 1 0 .975L6.5 8.625a.7.7 0 0 1-.5.2Z'/%3E%3C/svg%3E") no-repeat right 10px center !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 8px !important;
+                padding: 8px 32px 8px 12px !important;
+                font-size: 13px !important;
+                color: #1e293b !important;
+                cursor: pointer !important;
+                transition: all 0.2s ease !important;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+                line-height: 1.4 !important;
+                height: auto !important;
+                min-height: 36px !important;
+            }
+            .wrap select:hover,
+            .ofast-card select:hover {
+                border-color: #6366f1 !important;
+                box-shadow: 0 1px 3px rgba(99, 102, 241, 0.15) !important;
+            }
+            .wrap select:focus,
+            .ofast-card select:focus {
+                outline: none !important;
+                border-color: #6366f1 !important;
+                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+            }
             
             /* Placeholders box */
             .ofast-placeholders-box {
@@ -1425,39 +1480,13 @@ class Ofast_X_Email_Admin
                 font-size: 12px;
             }
 
-            /* Roles grid */
-            .ofast-roles-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-                gap: 8px;
-            }
-            .ofast-role-item {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                padding: 8px 12px;
-                background: #f8fafc;
-                border-radius: 6px;
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-            .ofast-role-item:hover {
-                background: #eff6ff;
-            }
-            .ofast-role-item input[type="checkbox"] {
-                margin: 0;
-            }
-            input[type="checkbox"]:checked {
-                background-color: #fff !important;
-                border-color: #6366f1 !important;
-            }
-            input[type="checkbox"]:checked::before {
-                content: url("data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2020%2020%27%3E%3Cpath%20d%3D%27M14.83%204.89l1.34.94-5.81%208.38H9.02L5.78%209.67l1.34-1.25%202.57%202.4z%27%20fill%3D%27%236366f1%27%2F%3E%3C%2Fsvg%3E") !important;
-            }
-            input[type="checkbox"]:focus {
-                border-color: #6366f1;
-                box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-            }
+            /* Checkbox Pills (matches Admin Studio style) */
+            .ofast-checkbox-pill { display: inline-flex; align-items: center; padding: 6px 12px; background: #f1f5f9; border-radius: 20px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+            .ofast-checkbox-pill input { display: none; }
+            .ofast-checkbox-pill span { font-size: 13px; color: #475569; font-weight: 500; }
+            .ofast-checkbox-pill:hover { background: #e2e8f0; }
+            .ofast-checkbox-pill input:checked + span { color: #6366f1; }
+            .ofast-checkbox-pill:has(input:checked) { background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.2); }
 
             /* Sidebar card */
             .ofast-sidebar-card {
@@ -1654,13 +1683,13 @@ class Ofast_X_Email_Admin
                                 <code>{{user_first_name}}</code>, <code>{{user_last_name}}</code>, <code>{{user_email}}</code>
                             </div>
 
-                            <div class="ofast-form-group">
+                            <div class="ofast-form-group" style="margin-bottom: 45px;">
                                 <label><strong>Select Roles</strong></label>
-                                <div class="ofast-roles-grid">
+                                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px;">
                                     <?php foreach ($roles as $key => $label): ?>
-                                        <label class="ofast-role-item">
+                                        <label class="ofast-checkbox-pill">
                                             <input type="checkbox" name="roles[]" value="<?php echo esc_attr($key); ?>" <?php checked(in_array($key, $draft_roles)); ?>>
-                                            <?php echo esc_html($label); ?>
+                                            <span><?php echo esc_html($label); ?></span>
                                         </label>
                                     <?php endforeach; ?>
                                 </div>
@@ -1697,8 +1726,8 @@ class Ofast_X_Email_Admin
                             
                             <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
                                 <button type="submit" name="send_email" class="button button-primary" style="width: 100%;">Send Email</button>
-                                <button type="submit" name="save_draft" class="button button-secondary" style="width: 100%;">Save as Draft</button>
                                 <button type="button" id="preview-email-btn" class="button button-secondary" style="width: 100%;">Preview Email</button>
+                                <button type="submit" name="save_draft" class="button button-secondary" style="width: 100%;">Save as Draft</button>
                             </div>
                         </div>
                     </div>
@@ -2852,6 +2881,14 @@ class Ofast_X_Email_Admin
         update_option('ofast_email_font_size', absint($_POST['font_size'] ?? 15));
         update_option('ofast_email_logo_width', absint($_POST['logo_width'] ?? 120));
         update_option('ofast_email_logo_height', absint($_POST['logo_height'] ?? 0));
+
+        // Custom template HTML
+        if (!empty($_POST['custom_template'])) {
+            // wp_unslash to prevent backslash accumulation, then allow HTML
+            update_option('ofast_email_custom_template', wp_unslash($_POST['custom_template']));
+        } else {
+            update_option('ofast_email_custom_template', '');
+        }
 
         // Email Cron Settings - LEGACY (kept for backwards compat)
         update_option('ofast_email_cron_enabled', isset($_POST['queue_enabled']) ? 1 : 0);

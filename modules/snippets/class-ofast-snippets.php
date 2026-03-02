@@ -501,11 +501,18 @@ class Ofast_X_Snippets
 
     ?>
         <div class="wrap ofast-snippets-wrap">
-            <h1>Code Snippets Manager</h1>
-            <p>Add PHP code snippets that run on your WordPress site. Use with caution!</p>
-
+            <!-- Ofast Header -->
+            <div style="display: flex; align-items: center; gap: 20px; background: #fff; border: 1px solid rgba(226, 232, 240, 0.6); padding: 25px 30px; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); margin-bottom: 20px; margin-top: 20px;">
+                <div style="width: 56px; height: 56px; background: #fff; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02); border-radius: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <span class="dashicons dashicons-editor-code" style="font-size: 28px; width: 28px; height: 28px; color: #6366f1;"></span>
+                </div>
+                <div>
+                    <h1 style="margin: 0 0 5px 0; font-size: 24px; font-weight: 700; color: #1e293b; padding: 0;">Code Snippets Manager</h1>
+                    <p style="margin: 0; color: #64748b; font-size: 14px;">Add PHP, JavaScript, CSS & HTML code snippets that run on your WordPress site.</p>
+                </div>
+            </div>
             <!-- Action Buttons Bar -->
-            <div style="background: #f0f6fc; border: 1px solid #c3d9ed; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <div style="background: #fff; border: 1px solid rgba(226, 232, 240, 0.6); border-radius: 16px; padding: 15px 20px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);">
                 <a href="<?php echo admin_url('admin.php?page=ofast-snippets'); ?>" class="button button-primary" style="display: inline-flex; align-items: center; gap: 5px;">
                     New Snippet
                 </a>
@@ -591,13 +598,76 @@ class Ofast_X_Snippets
                     border-color: #b91c1c !important;
                     transform: translateY(-1px) !important;
                 }
+                /* Ofast custom dropdown */
+                .ofast-snippets-wrap select {
+                    -webkit-appearance: none !important;
+                    -moz-appearance: none !important;
+                    appearance: none !important;
+                    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236366f1' d='M6 8.825a.7.7 0 0 1-.5-.2L2.05 5.15a.68.68 0 0 1 0-.975.68.68 0 0 1 .975 0L6 7.175l2.975-3a.68.68 0 0 1 .975 0 .68.68 0 0 1 0 .975L6.5 8.625a.7.7 0 0 1-.5.2Z'/%3E%3C/svg%3E") no-repeat right 10px center !important;
+                    border: 1px solid #e2e8f0 !important;
+                    border-radius: 8px !important;
+                    padding: 8px 32px 8px 12px !important;
+                    font-size: 13px !important;
+                    color: #1e293b !important;
+                    cursor: pointer !important;
+                    transition: all 0.2s ease !important;
+                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+                    line-height: 1.4 !important;
+                    height: auto !important;
+                    min-height: 36px !important;
+                }
+                .ofast-snippets-wrap select:hover {
+                    border-color: #6366f1 !important;
+                    box-shadow: 0 1px 3px rgba(99, 102, 241, 0.15) !important;
+                }
+                .ofast-snippets-wrap select:focus {
+                    outline: none !important;
+                    border-color: #6366f1 !important;
+                    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+                }
+                .ofast-snippets-wrap input[type="text"]:hover { border-color: #6366f1 !important; }
+                .ofast-snippets-wrap input[type="text"]:focus { border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important; outline: none !important; }
+                /* Ofast custom dropdown component */
+                .ofast-dropdown { position: relative; display: inline-block; }
+                .ofast-dropdown-trigger {
+                    display: inline-flex; align-items: center; justify-content: space-between; gap: 8px;
+                    background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+                    padding: 8px 12px; font-size: 13px; color: #1e293b; cursor: pointer;
+                    transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                    min-height: 36px; line-height: 1.4; min-width: 120px; user-select: none;
+                }
+                .ofast-dropdown-trigger:hover { border-color: #6366f1; box-shadow: 0 1px 3px rgba(99,102,241,0.15); }
+                .ofast-dropdown.open .ofast-dropdown-trigger { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+                .ofast-dropdown-arrow {
+                    width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent;
+                    border-top: 5px solid #6366f1; transition: transform 0.2s ease; flex-shrink: 0;
+                }
+                .ofast-dropdown.open .ofast-dropdown-arrow { transform: rotate(180deg); }
+                .ofast-dropdown-menu {
+                    position: absolute; top: calc(100% + 4px); left: 0; z-index: 9999;
+                    background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+                    box-shadow: 0 10px 25px rgba(0,0,0,0.12), 0 4px 10px rgba(0,0,0,0.08);
+                    min-width: 100%; max-height: 220px; overflow-y: auto; padding: 4px;
+                    opacity: 0; transform: translateY(-8px); pointer-events: none;
+                    transition: all 0.2s ease;
+                }
+                .ofast-dropdown.open .ofast-dropdown-menu { opacity: 1; transform: translateY(0); pointer-events: auto; }
+                .ofast-dropdown-option {
+                    padding: 8px 12px; font-size: 13px; color: #334155; cursor: pointer;
+                    border-radius: 6px; transition: all 0.15s ease; display: flex;
+                    align-items: center; justify-content: space-between; gap: 8px;
+                }
+                .ofast-dropdown-option:hover { background: #f0edff; color: #6366f1; }
+                .ofast-dropdown-option.selected { background: #6366f1; color: #fff; font-weight: 500; }
+                .ofast-dropdown-option.selected:hover { background: #4f46e5; }
+                .ofast-dropdown-check { font-size: 11px; }
                 /* Ofast toggle switch */
-                .ofast-toggle-wrap { position: relative; display: inline-block; width: 44px; height: 24px; }
+                .ofast-toggle-wrap { position: relative; display: inline-block; width: 36px; height: 20px; }
                 .ofast-toggle-wrap input { opacity: 0; width: 0; height: 0; position: absolute; }
-                .ofast-toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ccc; border-radius: 24px; transition: 0.4s; }
-                .ofast-toggle-slider:before { content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.4s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+                .ofast-toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ccc; border-radius: 20px; transition: 0.4s; }
+                .ofast-toggle-slider:before { content: ''; position: absolute; height: 14px; width: 14px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.4s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
                 .ofast-toggle-wrap input:checked + .ofast-toggle-slider { background: #6366f1; }
-                .ofast-toggle-wrap input:checked + .ofast-toggle-slider:before { transform: translateX(20px); }
+                .ofast-toggle-wrap input:checked + .ofast-toggle-slider:before { transform: translateX(16px); }
                 .ofast-toggle-wrap input:disabled + .ofast-toggle-slider { opacity: 0.5; cursor: not-allowed; }
                 .ofast-toggle-wrap:hover .ofast-toggle-slider { opacity: 0.8; }
                 /* Desktop: hide full sections, show toggle buttons */
@@ -1279,7 +1349,7 @@ class Ofast_X_Snippets
 
             <?php if ($is_trash_view): ?>
                 <?php $retention_days = get_option('ofast_snippets_trash_retention', 30); ?>
-                <div style="background: rgba(241, 245, 249, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 12px; padding: 12px 18px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);">
+                <div style="background: #fff; border: 1px solid rgba(226, 232, 240, 0.6); border-radius: 16px; padding: 12px 18px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <span style="color: #475569; font-size: 13px; font-weight: 500;">Auto-delete after:
                             <select id="ofast-trash-retention" style="margin-left: 5px;">
@@ -1339,7 +1409,7 @@ class Ofast_X_Snippets
                         <?php endif; ?>
                     </div>
                     <div>
-                        <input type="text" id="snippet-search" placeholder="Search name, description, code, tags..." style="width: 300px;">
+                        <input type="text" id="snippet-search" placeholder="Search name, description, code, tags..." style="width: 300px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 13px; color: #1e293b; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s ease; outline: none; min-height: 36px;">
                     </div>
                 </div>
 
@@ -1358,7 +1428,7 @@ class Ofast_X_Snippets
                                 <th style="width: 65px;">Inject</th>
                                 <th style="width: 65px;">Priority</th>
 
-                                <th style="width: 70px;">Status</th>
+                                <th style="width: 50px;">Status</th>
                                 <th style="width: 80px;">Created</th>
                             </tr>
                         </thead>
@@ -1483,6 +1553,65 @@ class Ofast_X_Snippets
                 var cmEditor = null;
                 var $codeTextarea = $('#snippet_code');
                 var isTrashView = <?php echo $is_trash_view ? 'true' : 'false'; ?>;
+
+                // ── Ofast Custom Dropdown Init ──
+                (function() {
+                    $('.ofast-snippets-wrap select').each(function() {
+                        var $sel = $(this);
+                        // Skip if already wrapped or hidden inside CodeMirror
+                        if ($sel.closest('.CodeMirror').length || $sel.data('ofast-dropdown')) return;
+                        $sel.data('ofast-dropdown', true);
+
+                        var selId = $sel.attr('id') || '';
+                        var $wrap = $('<div class="ofast-dropdown"></div>');
+                        var selectedText = $sel.find('option:selected').text() || $sel.find('option').first().text();
+                        var $trigger = $('<div class="ofast-dropdown-trigger"><span class="ofast-dropdown-label">' + selectedText + '</span><span class="ofast-dropdown-arrow"></span></div>');
+                        var $menu = $('<div class="ofast-dropdown-menu"></div>');
+
+                        $sel.find('option').each(function() {
+                            var $opt = $(this);
+                            var isSelected = $opt.is(':selected');
+                            var $item = $('<div class="ofast-dropdown-option' + (isSelected ? ' selected' : '') + '" data-value="' + $opt.val() + '">' +
+                                '<span>' + $opt.text() + '</span>' +
+                                (isSelected ? '<span class="ofast-dropdown-check">✓</span>' : '') +
+                                '</div>');
+                            $menu.append($item);
+                        });
+
+                        $sel.after($wrap);
+                        $wrap.append($trigger).append($menu);
+                        $sel.hide();
+
+                        // Copy width hint
+                        if ($sel.css('width') !== 'auto' && $sel.attr('style') && $sel.attr('style').indexOf('width') !== -1) {
+                            $wrap.css('min-width', '0');
+                            $trigger.css('min-width', '0');
+                        }
+
+                        // Toggle open
+                        $trigger.on('click', function(e) {
+                            e.stopPropagation();
+                            var wasOpen = $wrap.hasClass('open');
+                            $('.ofast-dropdown').removeClass('open');
+                            if (!wasOpen) $wrap.addClass('open');
+                        });
+
+                        // Select option
+                        $menu.on('click', '.ofast-dropdown-option', function() {
+                            var val = $(this).data('value');
+                            $sel.val(val).trigger('change');
+                            $trigger.find('.ofast-dropdown-label').text($(this).find('span').first().text());
+                            $menu.find('.ofast-dropdown-option').removeClass('selected').find('.ofast-dropdown-check').remove();
+                            $(this).addClass('selected').append('<span class="ofast-dropdown-check">✓</span>');
+                            $wrap.removeClass('open');
+                        });
+                    });
+
+                    // Close on outside click
+                    $(document).on('click', function() { $('.ofast-dropdown').removeClass('open'); });
+                    // Close on Escape
+                    $(document).on('keydown', function(e) { if (e.key === 'Escape') $('.ofast-dropdown').removeClass('open'); });
+                })();
 
                 if ($codeTextarea.length && typeof wp !== 'undefined' && wp.codeEditor) {
                     // Get language-specific settings
@@ -1660,6 +1789,8 @@ class Ofast_X_Snippets
                     }
 
                     $checkbox.prop('disabled', true);
+                    // Optimistic: toggle immediately for instant feedback
+                    $checkbox.prop('checked', active == 0);
 
                     $.post(ajaxurl, {
                         action: 'ofast_toggle_snippet',

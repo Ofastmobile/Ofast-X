@@ -511,6 +511,7 @@ class Ofast_X_Snippets
                 </a>
                 <select id="ofast-export-type" class="regular-text" style="width: auto;">
                     <option value="json">Export as JSON</option>
+                    <option value="json_active">Export Active Only</option>
                     <option value="code">Export as Code</option>
                 </select>
                 <button type="button" class="button" id="ofast-export-snippets" style="display: inline-flex; align-items: center; gap: 5px;">
@@ -520,6 +521,14 @@ class Ofast_X_Snippets
                     Import
                 </button>
                 <input type="file" id="ofast-import-file" accept=".json" style="display: none;">
+                <?php if (!$is_trash_view): ?>
+                    <button type="button" class="button ofast-desktop-toggle-btn" id="ofast-toggle-import-section" style="display: none;">
+                        Import from Plugins
+                    </button>
+                    <button type="button" class="button ofast-desktop-toggle-btn" id="ofast-toggle-library-section" style="display: none;">
+                        Library
+                    </button>
+                <?php endif; ?>
                 <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
                     <span style="color: #666; font-size: 12px;">
                         <?php echo $is_trash_view ? 'Trash: ' : 'Total: '; ?><?php echo count($snippets); ?> snippet(s)
@@ -534,13 +543,27 @@ class Ofast_X_Snippets
                 </div>
             </div>
 
+            <style>
+                /* Desktop: hide full sections, show toggle buttons */
+                @media (min-width: 1025px) {
+                    .ofast-desktop-toggle-btn { display: inline-flex !important; }
+                    .ofast-collapsible-section { display: none; }
+                    .ofast-collapsible-section.ofast-section-visible { display: block; }
+                }
+                /* Tablet & Mobile: show full sections, hide toggle buttons */
+                @media (max-width: 1024px) {
+                    .ofast-desktop-toggle-btn { display: none !important; }
+                    .ofast-collapsible-section { display: block; }
+                }
+            </style>
+
             <?php if (!$is_trash_view):
             // Detect other snippet plugins
             $other_plugins = $this->detect_other_snippet_plugins();
             if (!empty($other_plugins)):
             ?>
                 <!-- Import from Other Plugins -->
-                <div style="background: #f0f6fc; border: 1px solid #c3d9ed; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                <div id="ofast-import-plugins-section" class="ofast-collapsible-section" style="background: #f0f6fc; border: 1px solid #c3d9ed; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
                         <h3 style="margin: 0; color: #1d4ed8; font-size: 15px;">Import from Other Plugins</h3>
                         <button type="button" class="button" id="toggle-import-plugins">Show Plugins</button>
@@ -594,7 +617,7 @@ class Ofast_X_Snippets
 
             if ($library && !empty($library['snippets'])):
             ?>
-                <div style="background: #f0f6fc; border: 1px solid #c3d9ed; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                <div id="ofast-library-section" class="ofast-collapsible-section" style="background: #f0f6fc; border: 1px solid #c3d9ed; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 style="margin: 0; color: #1d4ed8;">Snippet Library</h3>
                         <button type="button" class="button" id="toggle-library">Show Templates</button>
@@ -840,9 +863,27 @@ class Ofast_X_Snippets
                         <!-- Left Column: Code Editor (on desktop, appears on left due to flexbox order) -->
                         <div class="snippet-code-column">
                             <!-- Code Editor -->
-                            <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 500; color: #1e1e1e;">Code</h4>
+                            <link rel="stylesheet" href="<?php echo plugins_url('assets/codemirror-themes.css', __FILE__); ?>">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin: 0 0 10px 0;">
+                                <h4 style="margin: 0; font-size: 14px; font-weight: 500; color: #1e1e1e;">Code</h4>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <label for="snippet_editor_theme" style="font-size: 12px; color: #666;">Theme:</label>
+                                    <select id="snippet_editor_theme" style="width: auto; font-size: 12px; padding: 2px 6px; min-width: 0;">
+                                        <option value="default">Default</option>
+                                        <option value="monokai">Monokai</option>
+                                        <option value="dracula">Dracula</option>
+                                        <option value="material">Material</option>
+                                        <option value="eclipse">Eclipse</option>
+                                        <option value="ayu-mirage">Ayu Mirage</option>
+                                        <option value="cobalt">Cobalt</option>
+                                    </select>
+                                </div>
+                            </div>
                             <textarea name="snippet_code" id="snippet_code" rows="15" class="large-text code" required
                                 placeholder="Enter your code here..."><?php echo $edit_snippet ? esc_textarea($edit_snippet->code) : ''; ?></textarea>
+                            <?php if ($editing && $edit_snippet): ?>
+                                <textarea id="snippet_original_code" style="display:none;"><?php echo esc_textarea($edit_snippet->code); ?></textarea>
+                            <?php endif; ?>
                             <p class="description" id="snippet_code_help">
                                 <span class="php-help">Enter PHP code. You can paste it with or without &lt;?php ?&gt; tags.</span>
                                 <span class="js-help" style="display:none;">Enter JavaScript code. Will be wrapped in &lt;script&gt; tags automatically.</span>
@@ -1182,10 +1223,9 @@ class Ofast_X_Snippets
 
             <?php if ($is_trash_view): ?>
                 <?php $retention_days = get_option('ofast_snippets_trash_retention', 30); ?>
-                <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 12px 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div style="background: rgba(241, 245, 249, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 12px; padding: 12px 18px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);">
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <span class="dashicons dashicons-trash" style="color: #856404;"></span>
-                        <span style="color: #856404; font-size: 13px;">Auto-delete after:
+                        <span style="color: #475569; font-size: 13px; font-weight: 500;">Auto-delete after:
                             <select id="ofast-trash-retention" style="margin-left: 5px;">
                                 <option value="30" <?php selected($retention_days, 30); ?>>30 days</option>
                                 <option value="60" <?php selected($retention_days, 60); ?>>60 days</option>
@@ -1193,11 +1233,9 @@ class Ofast_X_Snippets
                                 <option value="0" <?php selected($retention_days, 0); ?>>Never</option>
                             </select>
                         </span>
-                        <button type="button" class="button button-small" id="ofast-save-retention" style="color: #856404; border-color: #ffc107;">Save</button>
+                        <button type="button" class="button button-small" id="ofast-save-retention" style="color: #475569;">Save</button>
                     </div>
-                    <button type="button" class="button button-small" id="ofast-empty-trash" style="color: #dc3545; border-color: #dc3545;">
-                        <span class="dashicons dashicons-trash" style="font-size: 14px; line-height: 1.8;"></span> Empty Trash
-                    </button>
+                    <button type="button" class="button button-small" id="ofast-empty-trash" style="color: #dc3545; border-color: #dc3545;">Empty Trash</button>
                 </div>
             <?php endif; ?>
 
@@ -1255,13 +1293,14 @@ class Ofast_X_Snippets
                             <tr>
                                 <th style="width: 30px;"><input type="checkbox" id="select-all-snippets"></th>
                                 <th style="width: 35px;">ID</th>
-                                <th style="width: 200px;">Name</th>
+                                <th style="width: 140px;">Name</th>
                                 <th style="width: 100px;">Category</th>
                                 <th>Description</th>
                                 <th style="width: 75px;">Language</th>
                                 <th style="width: 85px;">Scope</th>
                                 <th style="width: 65px;">Inject</th>
                                 <th style="width: 65px;">Priority</th>
+
                                 <th style="width: 70px;">Status</th>
                                 <th style="width: 80px;">Created</th>
                             </tr>
@@ -1357,6 +1396,7 @@ class Ofast_X_Snippets
                                     <td><span style="font-size: 12px;"><?php echo $scope_display; ?></span></td>
                                     <td><span style="font-size: 12px;"><?php echo $loc_display . $run_once_text; ?></span></td>
                                     <td><span style="font-size: 12px; font-weight: 600;"><?php echo $priority_value; ?></span></td>
+
                                     <td>
                                         <?php if ($is_trash_view): ?>
                                             <span style="background: #fef2f2; color: #b91c1c; padding: 2px 8px; border-radius: 3px; font-size: 11px;">Trashed</span>
@@ -1400,6 +1440,7 @@ class Ofast_X_Snippets
                     cmEditor = wp.codeEditor.initialize($codeTextarea, {
                         codemirror: {
                             mode: mimeTypes[language] || 'application/x-httpd-php',
+                            theme: localStorage.getItem('ofast_cm_theme') || 'default',
                             lineNumbers: true,
                             lineWrapping: true,
                             indentUnit: 4,
@@ -1415,6 +1456,19 @@ class Ofast_X_Snippets
                                     cm.replaceSelection('    ', 'end');
                                 }
                             }
+                        }
+                    });
+
+                    // Theme switcher
+                    var $themeSelect = $('#snippet_editor_theme');
+                    var savedTheme = localStorage.getItem('ofast_cm_theme') || 'default';
+                    $themeSelect.val(savedTheme);
+
+                    $themeSelect.on('change', function() {
+                        var theme = $(this).val();
+                        if (cmEditor && cmEditor.codemirror) {
+                            cmEditor.codemirror.setOption('theme', theme);
+                            localStorage.setItem('ofast_cm_theme', theme);
                         }
                     });
 
@@ -1459,6 +1513,77 @@ class Ofast_X_Snippets
                     $('#snippet_active_desktop').prop('checked', $(this).prop('checked'));
                 });
 
+                // Code diff before save (only when editing existing snippets)
+                var $originalCodeEl = $('#snippet_original_code');
+                if ($originalCodeEl.length) {
+                    var diffConfirmed = false;
+
+                    $('.ofast-snippet-form').on('submit', function(e) {
+                        if (diffConfirmed) return true; // Already confirmed, allow submit
+
+                        // Sync CodeMirror to textarea before comparing
+                        if (cmEditor && cmEditor.codemirror) {
+                            cmEditor.codemirror.save();
+                        }
+
+                        var originalCode = $originalCodeEl.val();
+                        var currentCode = $('#snippet_code').val();
+
+                        // If no change, submit normally
+                        if (originalCode === currentCode) return true;
+
+                        e.preventDefault();
+
+                        // Simple line-by-line diff
+                        var origLines = originalCode.split('\n');
+                        var currLines = currentCode.split('\n');
+                        var added = 0, removed = 0, unchanged = 0;
+                        var maxLen = Math.max(origLines.length, currLines.length);
+                        var diffPreview = [];
+
+                        for (var i = 0; i < maxLen; i++) {
+                            var orig = i < origLines.length ? origLines[i] : undefined;
+                            var curr = i < currLines.length ? currLines[i] : undefined;
+
+                            if (orig === undefined) {
+                                added++;
+                                if (diffPreview.length < 15) diffPreview.push('+ ' + curr.substring(0, 80));
+                            } else if (curr === undefined) {
+                                removed++;
+                                if (diffPreview.length < 15) diffPreview.push('- ' + orig.substring(0, 80));
+                            } else if (orig !== curr) {
+                                removed++;
+                                added++;
+                                if (diffPreview.length < 15) {
+                                    diffPreview.push('- ' + orig.substring(0, 80));
+                                    diffPreview.push('+ ' + curr.substring(0, 80));
+                                }
+                            } else {
+                                unchanged++;
+                            }
+                        }
+
+                        var summary = 'Code Changes Summary:\n\n';
+                        summary += '  Lines added:     +' + added + '\n';
+                        summary += '  Lines removed:   -' + removed + '\n';
+                        summary += '  Lines unchanged:  ' + unchanged + '\n\n';
+
+                        if (diffPreview.length > 0) {
+                            summary += 'Preview (first changes):\n';
+                            summary += diffPreview.join('\n');
+                            if (added + removed > 15) {
+                                summary += '\n... and more changes';
+                            }
+                        }
+
+                        summary += '\n\nSave these changes?';
+
+                        if (confirm(summary)) {
+                            diffConfirmed = true;
+                            $('.ofast-snippet-form').submit();
+                        }
+                    });
+                }
                 // Toggle snippet
                 $(document).on('click', '.ofast-snippet-toggle', function(e) {
                     e.preventDefault();
@@ -1487,6 +1612,11 @@ class Ofast_X_Snippets
                             $btn.data('active', newActive);
                             $btn.html(newActive ? 'Deactivate' : 'Activate');
                             $btn.toggleClass('button-primary', newActive);
+
+                            // Show dependency warning if present
+                            if (response.data.dependency_warning) {
+                                alert(response.data.dependency_warning + '\n\nThe snippet was deactivated, but the dependent snippet(s) listed above may stop working.');
+                            }
                         } else {
                             alert('Error: ' + (response.data || 'Unable to toggle snippet.'));
                         }
@@ -1805,11 +1935,18 @@ class Ofast_X_Snippets
                         selectedIds.push($(this).val());
                     });
 
-                    $.post(ajaxurl, {
+                    var postData = {
                         action: 'ofast_export_snippets',
                         nonce: '<?php echo wp_create_nonce('ofast_export_snippets'); ?>',
                         ids: selectedIds
-                    }, function(response) {
+                    };
+
+                    // If exporting active only, tell the server
+                    if (exportType === 'json_active') {
+                        postData.active_only = 1;
+                    }
+
+                    $.post(ajaxurl, postData, function(response) {
                         if (response.success) {
                             var content, filename, mimeType;
                             var date = new Date().toISOString().split('T')[0];
@@ -1841,10 +1978,11 @@ class Ofast_X_Snippets
                                 content = codeOutput.join('\n');
                                 filename = 'ofast-snippets-code-' + date + '.txt';
                                 mimeType = 'text/plain';
-                            } else {
+                            } else if (exportType === 'json' || exportType === 'json_active') {
                                 // Export as JSON
                                 content = JSON.stringify(response.data, null, 2);
-                                filename = 'ofast-snippets-' + date + '.json';
+                                var prefix = exportType === 'json_active' ? 'ofast-snippets-active-' : 'ofast-snippets-';
+                                filename = prefix + date + '.json';
                                 mimeType = 'application/json';
                             }
 
@@ -2214,6 +2352,27 @@ class Ofast_X_Snippets
                     }
                 });
 
+                // Desktop toggle buttons for Import from Plugins / Library sections
+                $('#ofast-toggle-import-section').on('click', function() {
+                    var $section = $('#ofast-import-plugins-section');
+                    if ($section.hasClass('ofast-section-visible')) {
+                        $section.slideUp(300, function() { $section.removeClass('ofast-section-visible'); });
+                    } else {
+                        $section.addClass('ofast-section-visible').slideDown(300);
+                        $('html, body').animate({ scrollTop: $section.offset().top - 50 }, 300);
+                    }
+                });
+
+                $('#ofast-toggle-library-section').on('click', function() {
+                    var $section = $('#ofast-library-section');
+                    if ($section.hasClass('ofast-section-visible')) {
+                        $section.slideUp(300, function() { $section.removeClass('ofast-section-visible'); });
+                    } else {
+                        $section.addClass('ofast-section-visible').slideDown(300);
+                        $('html, body').animate({ scrollTop: $section.offset().top - 50 }, 300);
+                    }
+                });
+
                 // Toggle Import from Other Plugins visibility
                 $('#toggle-import-plugins').on('click', function() {
                     var $content = $('#import-plugins-content');
@@ -2465,9 +2624,9 @@ class Ofast_X_Snippets
                         days: days
                     }, function(response) {
                         if (response.success) {
-                            $btn.text('Saved!').css('color', '#28a745');
+                            $btn.text('Saved!').css('color', '#10b981');
                             setTimeout(function() {
-                                $btn.text('Save').css('color', '#856404').prop('disabled', false);
+                                $btn.text('Save').css('color', '#475569').prop('disabled', false);
                             }, 1500);
                         } else {
                             alert('Error: ' + (response.data || 'Failed to save.'));
@@ -2546,6 +2705,19 @@ class Ofast_X_Snippets
             }
         }
 
+        // If turning OFF, check for dependent snippets (warning only, not blocking)
+        $dependency_warning = '';
+        if ($new_active == 0 && ($snippet->language === 'php' || empty($snippet->language))) {
+            $dependents = $this->get_dependent_snippets($snippet->id, $snippet->code);
+            if (!empty($dependents)) {
+                $dep_names = array_map(function($d) { return $d->name; }, $dependents);
+                $dependency_warning = 'Warning: ' . count($dependents) . ' active snippet(s) may depend on functions in this snippet: ' . implode(', ', array_slice($dep_names, 0, 3));
+                if (count($dep_names) > 3) {
+                    $dependency_warning .= ' +' . (count($dep_names) - 3) . ' more';
+                }
+            }
+        }
+
         $wpdb->update(
             $table,
             array('active' => $new_active),
@@ -2557,13 +2729,18 @@ class Ofast_X_Snippets
             $new_active ? 'ACTIVATED' : 'DEACTIVATED',
             $id,
             $snippet ? $snippet->name : '',
-            ''
+            $dependency_warning ? $dependency_warning : ''
         );
 
         // Clear cache when snippet is toggled
         $this->clear_snippets_cache();
 
-        wp_send_json_success(array('active' => $new_active));
+        $response = array('active' => $new_active);
+        if ($dependency_warning) {
+            $response['dependency_warning'] = $dependency_warning;
+        }
+
+        wp_send_json_success($response);
     }
 
     /**
@@ -2905,19 +3082,31 @@ class Ofast_X_Snippets
         // Check if specific IDs were passed (selected snippets)
         $selected_ids = isset($_POST['ids']) ? array_map('intval', (array)$_POST['ids']) : array();
         $selected_ids = array_filter($selected_ids); // Remove zeros
+        $active_only = !empty($_POST['active_only']);
+
+        // Build WHERE clause
+        $where_parts = array();
+        if ($this->ensure_snippets_trash_schema()) {
+            $where_parts[] = "(status IS NULL OR status != 'trash')";
+        }
+        if ($active_only) {
+            $where_parts[] = "active = 1";
+        }
 
         if (!empty($selected_ids)) {
             // Export only selected snippets
             $placeholders = implode(',', array_fill(0, count($selected_ids), '%d'));
+            $where_parts[] = "id IN ($placeholders)";
+            $where_clause = !empty($where_parts) ? 'WHERE ' . implode(' AND ', $where_parts) : '';
             $snippets = $wpdb->get_results($wpdb->prepare(
-                "SELECT {$export_fields} FROM $table WHERE id IN ($placeholders) ORDER BY {$export_order}",
+                "SELECT {$export_fields} FROM $table {$where_clause} ORDER BY {$export_order}",
                 $selected_ids
             ));
             $export_label = count($selected_ids) . ' Selected Snippets';
         } else {
-            // Export all snippets
-            $snippets = $wpdb->get_results("SELECT {$export_fields} FROM $table ORDER BY {$export_order}");
-            $export_label = 'All Snippets';
+            $where_clause = !empty($where_parts) ? 'WHERE ' . implode(' AND ', $where_parts) : '';
+            $snippets = $wpdb->get_results("SELECT {$export_fields} FROM $table {$where_clause} ORDER BY {$export_order}");
+            $export_label = $active_only ? 'Active Snippets Only' : 'All Snippets';
         }
 
         $export_data = array(
@@ -4213,6 +4402,62 @@ class Ofast_X_Snippets
         }
 
         return array_values(array_unique($conflicts));
+    }
+
+    /**
+     * Find active snippets that may depend on functions defined in the given snippet.
+     * Used to warn users before deactivating a snippet whose functions are called by others.
+     *
+     * @param int    $snippet_id   The snippet being deactivated.
+     * @param string $snippet_code The snippet's code.
+     * @return array Array of dependent snippet objects (id, name).
+     */
+    private function get_dependent_snippets($snippet_id, $snippet_code)
+    {
+        $code = $this->normalize_php_code($snippet_code);
+        $defined_functions = $this->extract_function_names($code);
+
+        if (empty($defined_functions)) {
+            return array();
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+
+        // Get other active PHP snippets
+        if ($this->ensure_snippets_trash_schema()) {
+            $active_snippets = $wpdb->get_results($wpdb->prepare(
+                "SELECT id, name, code FROM $table WHERE id != %d AND active = 1 AND (language = 'php' OR language IS NULL OR language = '') AND (status IS NULL OR status != 'trash')",
+                $snippet_id
+            ));
+        } else {
+            $active_snippets = $wpdb->get_results($wpdb->prepare(
+                "SELECT id, name, code FROM $table WHERE id != %d AND active = 1 AND (language = 'php' OR language IS NULL OR language = '')",
+                $snippet_id
+            ));
+        }
+
+        if (empty($active_snippets)) {
+            return array();
+        }
+
+        $dependents = array();
+        foreach ($active_snippets as $other) {
+            $other_code = $this->normalize_php_code($other->code);
+            foreach ($defined_functions as $func) {
+                // Check if the other snippet calls this function (not defines it)
+                if (preg_match('/\b' . preg_quote($func, '/') . '\s*\(/', $other_code)) {
+                    // Make sure the other snippet doesn't also define this function
+                    $other_functions = $this->extract_function_names($other_code);
+                    if (!in_array($func, $other_functions, true)) {
+                        $dependents[] = $other;
+                        break; // One match is enough to flag this snippet
+                    }
+                }
+            }
+        }
+
+        return $dependents;
     }
 
     /**

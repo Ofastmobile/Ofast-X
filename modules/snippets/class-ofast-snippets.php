@@ -288,6 +288,7 @@ class Ofast_X_Snippets
         $table = $wpdb->prefix . 'ofast_snippets';
         $trash_supported = $this->ensure_snippets_trash_schema();
         $priority_supported = $this->ensure_snippets_priority_schema();
+        $this->ensure_snippets_language_schema();
         $is_trash_view = isset($_GET['view']) && sanitize_key($_GET['view']) === 'trash';
         if (!$trash_supported) {
             $is_trash_view = false;
@@ -301,6 +302,10 @@ class Ofast_X_Snippets
             $name = sanitize_text_field($_POST['snippet_name']);
             $description = isset($_POST['snippet_description']) ? wp_unslash($_POST['snippet_description']) : '';
             $language = isset($_POST['snippet_language']) ? sanitize_text_field($_POST['snippet_language']) : 'php';
+            $allowed_languages = array('php', 'javascript', 'css', 'html');
+            if (!in_array($language, $allowed_languages, true)) {
+                $language = 'php';
+            }
             $scope = isset($_POST['snippet_scope']) ? sanitize_text_field($_POST['snippet_scope']) : 'global';
             $location = isset($_POST['snippet_location']) ? sanitize_text_field($_POST['snippet_location']) : 'footer';
             $run_once = isset($_POST['snippet_run_once']) ? 1 : 0;
@@ -329,11 +334,18 @@ class Ofast_X_Snippets
             }
             $active = isset($_POST['snippet_active']) ? 1 : 0;
 
-            // Validate PHP syntax only for PHP snippets
-            $validation = true;
-            if ($language === 'php') {
-                $validation = $this->validate_php_code($code);
+            // Language mismatch detection — warn if code looks like a different language
+            $detected_lang = $this->detect_code_language($code);
+            $lang_labels = array('php' => 'PHP', 'javascript' => 'JavaScript', 'css' => 'CSS', 'html' => 'HTML');
+            if ($detected_lang && $detected_lang !== $language) {
+                $detected_label = isset($lang_labels[$detected_lang]) ? $lang_labels[$detected_lang] : strtoupper($detected_lang);
+                $selected_label = isset($lang_labels[$language]) ? $lang_labels[$language] : strtoupper($language);
+                $active = 0; // Force inactive — wrong language could crash the site
+                echo Ofast_X_Toast::render("⚠️ Language mismatch: This code looks like {$detected_label} but you selected {$selected_label}. Code saved but NOT activated. Change the language and save again.", 'warning');
             }
+
+            // Validate syntax for ALL languages
+            $validation = $this->validate_code($code, $language);
 
             // If validation fails, force inactive and show warning
             if ($validation !== true) {
@@ -1598,8 +1610,11 @@ class Ofast_X_Snippets
 
                         // Select option
                         $menu.on('click', '.ofast-dropdown-option', function() {
-                            var val = $(this).data('value');
-                            $sel.val(val).trigger('change');
+                            var val = $(this).attr('data-value');
+                            // Set via both jQuery and native DOM for reliability
+                            $sel.val(val);
+                            $sel[0].value = val;
+                            $sel.trigger('change');
                             $trigger.find('.ofast-dropdown-label').text($(this).find('span').first().text());
                             $menu.find('.ofast-dropdown-option').removeClass('selected').find('.ofast-dropdown-check').remove();
                             $(this).addClass('selected').append('<span class="ofast-dropdown-check">✓</span>');
@@ -1611,6 +1626,19 @@ class Ofast_X_Snippets
                     $(document).on('click', function() { $('.ofast-dropdown').removeClass('open'); });
                     // Close on Escape
                     $(document).on('keydown', function(e) { if (e.key === 'Escape') $('.ofast-dropdown').removeClass('open'); });
+
+                    // Safety: sync all custom dropdowns to native selects on form submit
+                    $('form').on('submit', function() {
+                        $(this).find('.ofast-dropdown').each(function() {
+                            var $dd = $(this);
+                            var $sel = $dd.prev('select');
+                            var $selected = $dd.find('.ofast-dropdown-option.selected');
+                            if ($sel.length && $selected.length) {
+                                var val = $selected.attr('data-value');
+                                $sel[0].value = val;
+                            }
+                        });
+                    });
                 })();
 
                 if ($codeTextarea.length && typeof wp !== 'undefined' && wp.codeEditor) {
@@ -2865,18 +2893,30 @@ class Ofast_X_Snippets
             return;
         }
 
-        // If turning ON, validate first (only for PHP snippets)
+        // If turning ON, validate first
         if ($new_active == 1 && $snippet) {
-            if ($snippet->language === 'php' || empty($snippet->language)) {
-                $candidate_code = $this->normalize_php_code($snippet->code);
+            $lang = !empty($snippet->language) ? $snippet->language : 'php';
+            $candidate_code = ($lang === 'php') ? $this->normalize_php_code($snippet->code) : $snippet->code;
 
-                // Check syntax first
-                $validation = $this->validate_php_code($candidate_code);
-                if ($validation !== true) {
-                    wp_send_json_error('Cannot activate: ' . $validation);
-                    return;
-                }
+            // Language mismatch check
+            $detected_lang = $this->detect_code_language($candidate_code);
+            if ($detected_lang && $detected_lang !== $lang) {
+                $lang_labels = array('php' => 'PHP', 'javascript' => 'JavaScript', 'css' => 'CSS', 'html' => 'HTML');
+                $detected_label = isset($lang_labels[$detected_lang]) ? $lang_labels[$detected_lang] : strtoupper($detected_lang);
+                $selected_label = isset($lang_labels[$lang]) ? $lang_labels[$lang] : strtoupper($lang);
+                wp_send_json_error("Cannot activate: This code looks like {$detected_label} but is saved as {$selected_label}. Edit the snippet and change the language.");
+                return;
+            }
 
+            // Check syntax for ALL languages
+            $validation = $this->validate_code($candidate_code, $lang);
+            if ($validation !== true) {
+                wp_send_json_error('Cannot activate: ' . $validation);
+                return;
+            }
+
+            // PHP-specific checks: function conflicts & duplicate conflicts
+            if ($lang === 'php') {
                 // Check for function name conflicts
                 $conflict_check = $this->check_function_conflicts($candidate_code);
                 if ($conflict_check !== true) {
@@ -4333,6 +4373,49 @@ class Ofast_X_Snippets
     }
 
     /**
+     * Ensure language column supports HTML values for snippet saves.
+     */
+    private function ensure_snippets_language_schema()
+    {
+        static $checked = false;
+        static $supported = false;
+
+        if ($checked) {
+            return $supported;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_snippets';
+        $table_exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table));
+
+        if (!$table_exists) {
+            $checked = true;
+            $supported = false;
+            return false;
+        }
+
+        $column = $wpdb->get_row("SHOW COLUMNS FROM {$table} LIKE 'language'");
+        if (!$column) {
+            $checked = true;
+            $supported = false;
+            return false;
+        }
+
+        $column_type = strtolower((string) $column->Type);
+        if (strpos($column_type, 'enum(') === 0 && strpos($column_type, "'html'") === false) {
+            $wpdb->query("ALTER TABLE {$table} MODIFY COLUMN language ENUM('php', 'javascript', 'css', 'html') DEFAULT 'php'");
+            $column = $wpdb->get_row("SHOW COLUMNS FROM {$table} LIKE 'language'");
+            $column_type = $column ? strtolower((string) $column->Type) : '';
+        }
+
+        // Enum with html support is ideal; varchar/text columns are also acceptable.
+        $supported = (strpos($column_type, "'html'") !== false) || (strpos($column_type, 'char') !== false) || (strpos($column_type, 'text') !== false);
+        $checked = true;
+
+        return $supported;
+    }
+
+    /**
      * Ensure priority column exists for snippets table.
      * Returns true when priority schema is available.
      */
@@ -4660,70 +4743,126 @@ class Ofast_X_Snippets
     {
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_snippets';
+        $trash_supported = $this->ensure_snippets_trash_schema();
 
-        $result = array(
+        $empty_result = array(
             'has_duplicate' => false,
             'reasons' => array()
         );
 
-        // Get all other snippets
-        if ($this->ensure_snippets_trash_schema()) {
-            $other_snippets = $wpdb->get_results($wpdb->prepare(
-                "SELECT id, name, code, active FROM $table WHERE id != %d AND (status IS NULL OR status != 'trash')",
-                $snippet_id
-            ));
-        } else {
-            $other_snippets = $wpdb->get_results($wpdb->prepare(
-                "SELECT id, name, code, active FROM $table WHERE id != %d",
-                $snippet_id
-            ));
-        }
+        // Cache snippet rows and parsed metadata once per request.
+        static $duplicates_cache = array();
+        $cache_key = $table . '|' . ($trash_supported ? 'with_trash_schema' : 'without_trash_schema');
 
-        if (empty($other_snippets)) {
-            return $result;
-        }
-
-        // Check for same name
-        foreach ($other_snippets as $other) {
-            if (strtolower(trim($other->name)) === strtolower(trim($snippet_name))) {
-                $result['has_duplicate'] = true;
-                $status = $other->active ? 'ACTIVE' : 'inactive';
-                $result['reasons'][] = "Same name as snippet #{$other->id} ({$status})";
+        if (!isset($duplicates_cache[$cache_key])) {
+            if ($trash_supported) {
+                $all_snippets = $wpdb->get_results("SELECT id, name, code, active FROM $table WHERE status IS NULL OR status != 'trash'");
+            } else {
+                $all_snippets = $wpdb->get_results("SELECT id, name, code, active FROM $table");
             }
+
+            $parsed = array();
+            if (!empty($all_snippets)) {
+                foreach ($all_snippets as $snippet_row) {
+                    $row_id = (int) $snippet_row->id;
+                    $normalized_code = trim($this->normalize_php_code($snippet_row->code));
+                    $parsed[$row_id] = array(
+                        'name_key' => strtolower(trim((string) $snippet_row->name)),
+                        'active' => !empty($snippet_row->active),
+                        'code_hash' => $normalized_code !== '' ? md5($normalized_code) : '',
+                        'functions' => $this->extract_function_names($snippet_row->code),
+                    );
+                }
+            }
+
+            $result_map = array();
+            foreach ($parsed as $row_id => $meta) {
+                $result_map[$row_id] = $empty_result;
+            }
+
+            // Compute duplicate reasons once for all rows to avoid O(n^2) work per table row render.
+            $row_ids = array_keys($parsed);
+            foreach ($row_ids as $row_id) {
+                $current = $parsed[$row_id];
+                foreach ($row_ids as $other_id) {
+                    if ($other_id === $row_id) {
+                        continue;
+                    }
+
+                    $other = $parsed[$other_id];
+                    $status = $other['active'] ? 'ACTIVE' : 'inactive';
+
+                    if ($other['name_key'] === $current['name_key']) {
+                        $result_map[$row_id]['reasons'][] = "Same name as snippet #{$other_id} ({$status})";
+                    }
+
+                    if ($current['code_hash'] !== '' && $other['code_hash'] !== '' && $current['code_hash'] === $other['code_hash']) {
+                        $result_map[$row_id]['reasons'][] = "Exact same code as snippet #{$other_id} ({$status})";
+                    }
+
+                    if (!empty($current['functions']) && !empty($other['functions'])) {
+                        $overlap = array_intersect($current['functions'], $other['functions']);
+                        if (!empty($overlap)) {
+                            $result_map[$row_id]['reasons'][] = "Shares functions (" . implode(', ', $overlap) . ") with snippet #{$other_id} ({$status})";
+                        }
+                    }
+                }
+
+                if (!empty($result_map[$row_id]['reasons'])) {
+                    $result_map[$row_id]['reasons'] = array_values(array_unique($result_map[$row_id]['reasons']));
+                    $result_map[$row_id]['has_duplicate'] = true;
+                }
+            }
+
+            $duplicates_cache[$cache_key] = array(
+                'parsed' => $parsed,
+                'result_map' => $result_map,
+            );
         }
 
-        // Check for exact same normalized code
+        $parsed_rows = $duplicates_cache[$cache_key]['parsed'];
+        $snippet_id = (int) $snippet_id;
+        if (isset($duplicates_cache[$cache_key]['result_map'][$snippet_id])) {
+            return $duplicates_cache[$cache_key]['result_map'][$snippet_id];
+        }
+
+        // Fallback for non-persisted/unlisted snippets.
+        if (empty($parsed_rows)) {
+            return $empty_result;
+        }
+
+        $result = $empty_result;
+        $snippet_name_key = strtolower(trim((string) $snippet_name));
         $normalized_snippet_code = trim($this->normalize_php_code($snippet_code));
-        if ($normalized_snippet_code !== '') {
-            $snippet_code_hash = md5($normalized_snippet_code);
-            foreach ($other_snippets as $other) {
-                $other_normalized_code = trim($this->normalize_php_code($other->code));
-                if ($other_normalized_code === '') {
-                    continue;
-                }
-                $other_code_hash = md5($other_normalized_code);
-                if ($snippet_code_hash === $other_code_hash) {
-                    $result['has_duplicate'] = true;
-                    $status = $other->active ? 'ACTIVE' : 'inactive';
-                    $result['reasons'][] = "Exact same code as snippet #{$other->id} ({$status})";
-                }
-            }
-        }
-
-        // Extract function names from this snippet
+        $snippet_code_hash = $normalized_snippet_code !== '' ? md5($normalized_snippet_code) : '';
         $my_functions = $this->extract_function_names($snippet_code);
 
-        if (!empty($my_functions)) {
-            foreach ($other_snippets as $other) {
-                $other_functions = $this->extract_function_names($other->code);
-                $overlap = array_intersect($my_functions, $other_functions);
+        foreach ($parsed_rows as $other_id => $other_parsed) {
+            if ((int) $other_id === $snippet_id) {
+                continue;
+            }
 
+            $status = $other_parsed['active'] ? 'ACTIVE' : 'inactive';
+
+            if ($other_parsed['name_key'] === $snippet_name_key) {
+                $result['reasons'][] = "Same name as snippet #{$other_id} ({$status})";
+            }
+
+            if ($snippet_code_hash !== '' && $other_parsed['code_hash'] !== '' && $snippet_code_hash === $other_parsed['code_hash']) {
+                $result['reasons'][] = "Exact same code as snippet #{$other_id} ({$status})";
+            }
+
+            if (!empty($my_functions) && !empty($other_parsed['functions'])) {
+                $overlap = array_intersect($my_functions, $other_parsed['functions']);
                 if (!empty($overlap)) {
-                    $result['has_duplicate'] = true;
-                    $status = $other->active ? 'ACTIVE' : 'inactive';
-                    $result['reasons'][] = "Shares functions (" . implode(', ', $overlap) . ") with snippet #{$other->id} ({$status})";
+                    $result['reasons'][] = "Shares functions (" . implode(', ', $overlap) . ") with snippet #{$other_id} ({$status})";
                 }
             }
+        }
+
+        if (!empty($result['reasons'])) {
+            $result['reasons'] = array_values(array_unique($result['reasons']));
+            $result['has_duplicate'] = true;
         }
 
         return $result;
@@ -4980,6 +5119,12 @@ class Ofast_X_Snippets
     {
         $code = (string) $code;
         $code = preg_replace('/^\xEF\xBB\xBF/', '', $code); // Remove UTF-8 BOM.
+        // Normalize smart/curly quotes to straight quotes (common when copy-pasting from web/docs)
+        $code = str_replace(
+            array("\xe2\x80\x98", "\xe2\x80\x99", "\xe2\x80\x9c", "\xe2\x80\x9d", "\xc2\xab", "\xc2\xbb"),
+            array("'", "'", '"', '"', '"', '"'),
+            $code
+        );
         $code = trim($code);
 
         if ($code === '') {
@@ -4994,6 +5139,303 @@ class Ofast_X_Snippets
         $code = preg_replace('/\s*\?>\s*$/', '', $code);
 
         return trim($code);
+    }
+
+    /**
+     * Detect the likely language of code based on patterns.
+     * Returns 'php', 'javascript', 'css', 'html', or null if unsure.
+     */
+    private function detect_code_language($code)
+    {
+        $code = trim($code);
+        if (empty($code)) return null;
+
+        $scores = array('php' => 0, 'javascript' => 0, 'css' => 0, 'html' => 0);
+
+        // PHP indicators
+        $php_patterns = array(
+            '/\$[a-zA-Z_]\w*/' => 3,           // $variable
+            '/\b(add_action|add_filter|remove_action|remove_filter)\s*\(/' => 5,
+            '/\b(get_option|update_option|delete_option)\s*\(/' => 5,
+            '/\b(wp_enqueue_script|wp_enqueue_style)\s*\(/' => 5,
+            '/\b(function\s+\w+\s*\()/' => 2,   // function declaration
+            '/->/' => 3,                         // object operator
+            '/::/' => 3,                         // static operator
+            '/\barray\s*\(/' => 3,               // array()
+            '/\b(echo|print|return)\s/' => 2,
+            '/\b(global\s+\$|namespace\s|use\s)/' => 4,
+            '/\$wpdb/' => 5,
+            '/\bdo_action\s*\(/' => 5,
+            '/\bapply_filters\s*\(/' => 5,
+        );
+
+        // JavaScript indicators
+        $js_patterns = array(
+            '/\b(document\.|window\.|navigator\.)/' => 5,
+            '/\b(getElementById|querySelector|addEventListener)\s*\(/' => 5,
+            '/\b(console\.(log|warn|error))\s*\(/' => 5,
+            '/\b(const|let)\s+\w+/' => 4,        // const/let declarations
+            '/\bvar\s+\w+/' => 2,                 // var (could be PHP too)
+            '/=>\s*\{/' => 4,                      // arrow function with block
+            '/=>\s*[^{]/' => 3,                    // arrow function expression
+            '/\b(async|await)\s/' => 4,
+            '/\bnew\s+Promise\s*\(/' => 5,
+            '/\b(fetch|XMLHttpRequest)\s*\(/' => 5,
+            '/\b(module\.exports|require\s*\()/' => 5,
+            '/\bJSON\.(parse|stringify)\s*\(/' => 4,
+            '/\balert\s*\(/' => 3,
+            '/\bsetTimeout\s*\(/' => 3,
+        );
+
+        // CSS indicators
+        $css_patterns = array(
+            '/[.#]\w+\s*\{/' => 4,               // .class { or #id {
+            '/\b(margin|padding|color|background|font-size|display|position|border)\s*:/' => 4,
+            '/@media\s/' => 5,
+            '/@keyframes\s/' => 5,
+            '/@import\s/' => 4,
+            '/\b(flex|grid|none|block|inline|absolute|relative|fixed)\s*;/' => 3,
+            '/\b(width|height|top|left|right|bottom)\s*:\s*\d/' => 3,
+            '/:\s*(hover|focus|active|visited)\s*\{/' => 5, // pseudo-classes
+            '/\b(opacity|z-index|overflow|transform|transition)\s*:/' => 4,
+        );
+
+        // HTML indicators
+        $html_patterns = array(
+            '/^<(!DOCTYPE|html|head|body)/im' => 5,
+            '/<(div|span|p|h[1-6]|table|form|input|button|a|img|ul|ol|li|section|article|nav|header|footer)\b/i' => 4,
+            '/<\/\w+>/' => 3,                     // closing tags
+            '/\b(class|id|style|href|src|alt)\s*=\s*["\']/' => 3,
+            '/<script\b/' => 3,
+            '/<style\b/' => 3,
+        );
+
+        foreach ($php_patterns as $pattern => $weight) {
+            if (preg_match($pattern, $code)) $scores['php'] += $weight;
+        }
+        foreach ($js_patterns as $pattern => $weight) {
+            if (preg_match($pattern, $code)) $scores['javascript'] += $weight;
+        }
+        foreach ($css_patterns as $pattern => $weight) {
+            if (preg_match($pattern, $code)) $scores['css'] += $weight;
+        }
+        foreach ($html_patterns as $pattern => $weight) {
+            if (preg_match($pattern, $code)) $scores['html'] += $weight;
+        }
+
+        // Get the winner
+        arsort($scores);
+        $top = array_keys($scores);
+        $top_lang = $top[0];
+        $top_score = $scores[$top_lang];
+
+        // Only return if confident (score >= 4 and at least 2x the runner-up)
+        $runner_up_score = $scores[$top[1]];
+        if ($top_score >= 4 && ($runner_up_score == 0 || $top_score >= $runner_up_score * 1.5)) {
+            return $top_lang;
+        }
+
+        return null; // Not confident enough
+    }
+
+    /**
+     * Validate JavaScript code syntax (basic bracket balance check)
+     * Returns true if valid, error message if invalid
+     */
+    private function validate_js_code($code)
+    {
+        $code = trim($code);
+        if (empty($code)) return true;
+
+        $open_paren = 0;
+        $open_bracket = 0;
+        $open_brace = 0;
+        $in_string = false;
+        $string_char = '';
+        $in_line_comment = false;
+        $in_block_comment = false;
+        $len = strlen($code);
+
+        for ($i = 0; $i < $len; $i++) {
+            $char = $code[$i];
+            $next = ($i + 1 < $len) ? $code[$i + 1] : '';
+
+            // Handle line comments
+            if ($in_line_comment) {
+                if ($char === "\n") $in_line_comment = false;
+                continue;
+            }
+
+            // Handle block comments
+            if ($in_block_comment) {
+                if ($char === '*' && $next === '/') {
+                    $in_block_comment = false;
+                    $i++;
+                }
+                continue;
+            }
+
+            // Handle strings
+            if ($in_string) {
+                if ($char === '\\') { $i++; continue; }
+                if ($char === $string_char) $in_string = false;
+                continue;
+            }
+
+            // Start comments
+            if ($char === '/' && $next === '/') { $in_line_comment = true; $i++; continue; }
+            if ($char === '/' && $next === '*') { $in_block_comment = true; $i++; continue; }
+
+            // Start strings
+            if ($char === '"' || $char === "'" || $char === '`') {
+                $in_string = true;
+                $string_char = $char;
+                continue;
+            }
+
+            if ($char === '(') $open_paren++;
+            if ($char === ')') $open_paren--;
+            if ($char === '[') $open_bracket++;
+            if ($char === ']') $open_bracket--;
+            if ($char === '{') $open_brace++;
+            if ($char === '}') $open_brace--;
+
+            if ($open_paren < 0) return 'Extra closing parenthesis ) detected';
+            if ($open_bracket < 0) return 'Extra closing bracket ] detected';
+            if ($open_brace < 0) return 'Extra closing brace } detected';
+        }
+
+        if ($open_paren != 0) return 'Unclosed parenthesis ( ) detected';
+        if ($open_bracket != 0) return 'Unclosed bracket [ ] detected';
+        if ($open_brace != 0) return 'Unclosed brace { } detected';
+        if ($in_string) return 'Unclosed string detected';
+
+        return true;
+    }
+
+    /**
+     * Validate CSS code syntax (basic structure check)
+     * Returns true if valid, error message if invalid
+     */
+    private function validate_css_code($code)
+    {
+        $code = trim($code);
+        if (empty($code)) return true;
+
+        $open_brace = 0;
+        $open_paren = 0;
+        $in_string = false;
+        $string_char = '';
+        $in_comment = false;
+        $len = strlen($code);
+
+        for ($i = 0; $i < $len; $i++) {
+            $char = $code[$i];
+            $next = ($i + 1 < $len) ? $code[$i + 1] : '';
+
+            if ($in_comment) {
+                if ($char === '*' && $next === '/') {
+                    $in_comment = false;
+                    $i++;
+                }
+                continue;
+            }
+
+            if ($in_string) {
+                if ($char === '\\') { $i++; continue; }
+                if ($char === $string_char) $in_string = false;
+                continue;
+            }
+
+            if ($char === '/' && $next === '*') { $in_comment = true; $i++; continue; }
+
+            if ($char === '"' || $char === "'") {
+                $in_string = true;
+                $string_char = $char;
+                continue;
+            }
+
+            if ($char === '{') $open_brace++;
+            if ($char === '}') $open_brace--;
+            if ($char === '(') $open_paren++;
+            if ($char === ')') $open_paren--;
+
+            if ($open_brace < 0) return 'Extra closing brace } detected';
+            if ($open_paren < 0) return 'Extra closing parenthesis ) detected';
+        }
+
+        if ($open_brace != 0) return 'Unclosed brace { } detected';
+        if ($open_paren != 0) return 'Unclosed parenthesis ( ) detected';
+
+        return true;
+    }
+
+    /**
+     * Validate HTML code syntax (basic tag balance check)
+     * Returns true if valid, error message if invalid
+     */
+    private function validate_html_code($code)
+    {
+        $code = trim($code);
+        if (empty($code)) return true;
+
+        // Check for balanced common HTML tags (ignore self-closing and void elements)
+        $void_elements = array('area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr');
+
+        $tag_stack = array();
+        // Match all opening and closing tags
+        if (preg_match_all('/<\/?([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/', $code, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $match) {
+                $tag = strtolower($match[1]);
+                $is_closing = (strpos($match[0], '</') === 0);
+                $is_self_closing = (substr($match[0], -2) === '/>');
+
+                // Skip void elements and self-closing tags
+                if (in_array($tag, $void_elements) || $is_self_closing) continue;
+                // Skip script and style (they can contain unbalanced < > inside)
+                if ($tag === 'script' || $tag === 'style') continue;
+
+                if ($is_closing) {
+                    if (empty($tag_stack)) {
+                        return "Extra closing tag </{$tag}> without matching opening tag";
+                    }
+                    $expected = array_pop($tag_stack);
+                    if ($expected !== $tag) {
+                        return "Mismatched tags: expected </{$expected}> but found </{$tag}>";
+                    }
+                } else {
+                    $tag_stack[] = $tag;
+                }
+            }
+        }
+
+        if (!empty($tag_stack)) {
+            $unclosed = $tag_stack[count($tag_stack) - 1];
+            return "Unclosed <{$unclosed}> tag detected";
+        }
+
+        return true;
+    }
+
+    /**
+     * Validate code based on its language
+     * Returns true if valid, error message if invalid
+     */
+    private function validate_code($code, $language)
+    {
+        switch ($language) {
+            case 'php':
+            case '':
+                return $this->validate_php_code($code);
+            case 'javascript':
+                return $this->validate_js_code($code);
+            case 'css':
+                return $this->validate_css_code($code);
+            case 'html':
+                return $this->validate_html_code($code);
+            default:
+                return true;
+        }
     }
 
     /**

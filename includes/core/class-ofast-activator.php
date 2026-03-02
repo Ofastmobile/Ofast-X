@@ -395,5 +395,15 @@ class Ofast_X_Activator
                 error_log("Ofast X: Added missing column '{$column}' to {$table_snippets}");
             }
         }
+
+        // Ensure language column supports HTML for legacy installs with older ENUM sets.
+        $language_column = $wpdb->get_row("SHOW COLUMNS FROM {$table_snippets} LIKE 'language'");
+        if ($language_column) {
+            $language_type = strtolower((string) $language_column->Type);
+            if (strpos($language_type, 'enum(') === 0 && strpos($language_type, "'html'") === false) {
+                $wpdb->query("ALTER TABLE {$table_snippets} MODIFY COLUMN language ENUM('php', 'javascript', 'css', 'html') DEFAULT 'php'");
+                error_log("Ofast X: Updated language enum to include 'html' in {$table_snippets}");
+            }
+        }
     }
 }

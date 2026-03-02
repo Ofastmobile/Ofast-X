@@ -24,7 +24,7 @@ class Ofast_X_Admin_Tweaks
 
         $settings = get_option('ofast_admin_tweaks', array());
 
-        // Post/Page ID Column
+        // Post/Page/Product ID Column
         if (!empty($settings['show_post_id'])) {
             add_filter('manage_posts_columns', array($this, 'add_id_column'));
             add_action('manage_posts_custom_column', array($this, 'render_id_column'), 10, 2);
@@ -237,10 +237,12 @@ class Ofast_X_Admin_Tweaks
     {
         $my_account = $wp_admin_bar->get_node('my-account');
         if ($my_account) {
-            // Remove "Howdy, " prefix completely - show just the display name
-            $current_user = wp_get_current_user();
-            $display_name = $current_user->display_name;
-            $newtitle = preg_replace('/^Howdy,\s*/', '', $my_account->title);
+            // Remove greeting label span; robust across locale/custom markup.
+            $newtitle = preg_replace('/<span[^>]*class=[\'"][^\'"]*ab-label[^\'"]*[\'"][^>]*>.*?<\/span>\s*/i', '', $my_account->title);
+            if (empty($newtitle) || $newtitle === $my_account->title) {
+                // Fallback for plain-text titles.
+                $newtitle = str_replace(array('Howdy,', __('Howdy,', 'default')), '', $my_account->title);
+            }
             $wp_admin_bar->add_node(array(
                 'id' => 'my-account',
                 'title' => $newtitle,
@@ -650,8 +652,8 @@ class Ofast_X_Admin_Tweaks
                                 <div class="ofast-card-body">
                                     <div class="ofast-tweak-row">
                                         <div class="ofast-tweak-content">
-                                            <label for="ofast_show_post_id">Post/Page ID Column</label>
-                                            <p class="description">Adds a handy ID column to your Posts and Pages lists.</p>
+                                            <label for="ofast_show_post_id">Post/Page/Product ID Column</label>
+                                            <p class="description">Adds a handy ID column to your Posts, Pages, and Products lists.</p>
                                         </div>
                                         <div class="ofast-tweak-action">
                                             <label class="ofast-toggle">

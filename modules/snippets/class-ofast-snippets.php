@@ -301,11 +301,7 @@ class Ofast_X_Snippets
             $id = isset($_POST['snippet_id']) ? intval($_POST['snippet_id']) : 0;
             $name = sanitize_text_field($_POST['snippet_name']);
             $description = isset($_POST['snippet_description']) ? wp_unslash($_POST['snippet_description']) : '';
-            $language = isset($_POST['snippet_language']) ? sanitize_text_field($_POST['snippet_language']) : 'php';
-            $allowed_languages = array('php', 'javascript', 'css', 'html');
-            if (!in_array($language, $allowed_languages, true)) {
-                $language = 'php';
-            }
+            $language = $this->normalize_snippet_language(isset($_POST['snippet_language']) ? sanitize_text_field($_POST['snippet_language']) : 'php');
             $scope = isset($_POST['snippet_scope']) ? sanitize_text_field($_POST['snippet_scope']) : 'global';
             $location = isset($_POST['snippet_location']) ? sanitize_text_field($_POST['snippet_location']) : 'footer';
             $run_once = isset($_POST['snippet_run_once']) ? 1 : 0;
@@ -510,6 +506,9 @@ class Ofast_X_Snippets
         // Editing mode
         $editing = isset($_GET['edit']) ? intval($_GET['edit']) : 0;
         $edit_snippet = $editing ? $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $editing)) : null;
+        if ($edit_snippet && isset($edit_snippet->language)) {
+            $edit_snippet->language = $this->normalize_snippet_language($edit_snippet->language);
+        }
 
     ?>
         <div class="wrap ofast-snippets-wrap">
@@ -908,11 +907,12 @@ class Ofast_X_Snippets
                                 <tr>
                                     <th><label for="snippet_language">Language</label></th>
                                     <td>
+                                        <?php $edit_language = $edit_snippet ? $this->normalize_snippet_language($edit_snippet->language) : 'php'; ?>
                                         <select name="snippet_language" id="snippet_language" class="regular-text">
-                                            <option value="php" <?php selected($edit_snippet ? $edit_snippet->language : 'php', 'php'); ?>>PHP</option>
-                                            <option value="javascript" <?php selected($edit_snippet ? $edit_snippet->language : '', 'javascript'); ?>>JavaScript</option>
-                                            <option value="css" <?php selected($edit_snippet ? $edit_snippet->language : '', 'css'); ?>>CSS</option>
-                                            <option value="html" <?php selected($edit_snippet ? $edit_snippet->language : '', 'html'); ?>>HTML</option>
+                                            <option value="php" <?php selected($edit_language, 'php'); ?>>PHP</option>
+                                            <option value="javascript" <?php selected($edit_language, 'javascript'); ?>>JavaScript</option>
+                                            <option value="css" <?php selected($edit_language, 'css'); ?>>CSS</option>
+                                            <option value="html" <?php selected($edit_language, 'html'); ?>>HTML</option>
                                         </select>
                                         <p class="description">Select the code language for this snippet.</p>
                                     </td>
@@ -1440,7 +1440,7 @@ class Ofast_X_Snippets
                                 <th style="width: 65px;">Inject</th>
                                 <th style="width: 65px;">Priority</th>
 
-                                <th style="width: 50px;">Status</th>
+                                <th style="width: 60px;">Status</th>
                                 <th style="width: 80px;">Created</th>
                             </tr>
                         </thead>
@@ -1448,7 +1448,7 @@ class Ofast_X_Snippets
                             <?php foreach ($snippets as $snippet):
                                 // Language text labels
                                 $lang_labels = array('php' => 'PHP', 'javascript' => 'JavaScript', 'css' => 'CSS', 'html' => 'HTML');
-                                $lang = $snippet->language ?: 'php';
+                                $lang = $this->normalize_snippet_language($snippet->language ?: 'php');
                                 $lang_display = isset($lang_labels[$lang]) ? $lang_labels[$lang] : 'PHP';
 
                                 // Scope text labels
@@ -1471,7 +1471,7 @@ class Ofast_X_Snippets
 
                                 // Check for potential duplicates (only for PHP and inactive snippets)
                                 $duplicate_warning = array('has_duplicate' => false, 'reasons' => array());
-                                if (!$is_trash_view && ($snippet->language === 'php' || empty($snippet->language))) {
+                                if (!$is_trash_view && $lang === 'php') {
                                     $duplicate_warning = $this->get_potential_duplicates($snippet->id, $snippet->name, $snippet->code);
                                 }
                             ?>
@@ -1538,7 +1538,7 @@ class Ofast_X_Snippets
 
                                     <td>
                                         <?php if ($is_trash_view): ?>
-                                            <span style="background: #fef2f2; color: #b91c1c; padding: 2px 8px; border-radius: 3px; font-size: 11px;">Trashed</span>
+                                            <span style="background: #fef2f2; color: #b91c1c; padding: 1px 5px; border-radius: 3px; font-size: 10px; line-height: 1.2; white-space: nowrap; display: inline-block;">Trashed</span>
                                         <?php else: ?>
                                             <label class="ofast-toggle-wrap ofast-snippet-toggle"
                                                 data-id="<?php echo $snippet->id; ?>" data-active="<?php echo $snippet->active; ?>"
@@ -3209,8 +3209,9 @@ class Ofast_X_Snippets
             $new_name = $base_name . ' (Copy ' . $copy_num . ')';
         }
 
+        $duplicate_language = $this->normalize_snippet_language(isset($snippet->language) ? $snippet->language : 'php');
         $duplicated_code = isset($snippet->code) ? (string) $snippet->code : '';
-        if (empty($snippet->language) || $snippet->language === 'php') {
+        if ($duplicate_language === 'php') {
             $duplicated_code = $this->normalize_php_code($duplicated_code);
         }
 
@@ -3218,7 +3219,7 @@ class Ofast_X_Snippets
             'name' => $new_name,
             'description' => isset($snippet->description) ? $snippet->description : '',
             'code' => $duplicated_code,
-            'language' => !empty($snippet->language) ? $snippet->language : 'php',
+            'language' => $duplicate_language,
             'scope' => !empty($snippet->scope) ? $snippet->scope : 'global',
             'location' => !empty($snippet->location) ? $snippet->location : 'footer',
             'target_type' => !empty($snippet->target_type) ? $snippet->target_type : 'all',
@@ -3404,7 +3405,7 @@ class Ofast_X_Snippets
             }
 
             // Validate PHP code if language is PHP
-            $language = isset($snippet['language']) ? $snippet['language'] : 'php';
+            $language = $this->normalize_snippet_language(isset($snippet['language']) ? $snippet['language'] : 'php');
             $snippet_code = isset($snippet['code']) ? (string) $snippet['code'] : '';
             if ($language === 'php') {
                 $snippet_code = $this->normalize_php_code($snippet_code);
@@ -3436,7 +3437,7 @@ class Ofast_X_Snippets
                 'name' => sanitize_text_field($snippet['name']) . ' (imported)',
                 'description' => isset($snippet['description']) ? sanitize_textarea_field($snippet['description']) : '',
                 'code' => $snippet_code,
-                'language' => in_array($language, array('php', 'javascript', 'css', 'html')) ? $language : 'php',
+                'language' => $language,
                 'scope' => isset($snippet['scope']) ? sanitize_text_field($snippet['scope']) : 'global',
                 'location' => isset($snippet['location']) ? sanitize_text_field($snippet['location']) : 'footer',
                 'target_type' => isset($snippet['target_type']) ? sanitize_text_field($snippet['target_type']) : 'all',
@@ -3534,8 +3535,9 @@ class Ofast_X_Snippets
         }
 
         // Insert as inactive
+        $template_language = $this->normalize_snippet_language(isset($template['language']) ? $template['language'] : 'php');
         $template_code = isset($template['code']) ? (string) $template['code'] : '';
-        if (isset($template['language']) && $template['language'] === 'php') {
+        if ($template_language === 'php') {
             $template_code = $this->normalize_php_code($template_code);
         }
 
@@ -3543,7 +3545,7 @@ class Ofast_X_Snippets
             'name' => $snippet_name,
             'description' => $template['description'],
             'code' => $template_code,
-            'language' => $template['language'],
+            'language' => $template_language,
             'scope' => $template['scope'],
             'category' => $template['category'],
             'active' => 0,
@@ -3834,6 +3836,7 @@ class Ofast_X_Snippets
                 // Determine language
                 $language = 'php';
                 $code_type = isset($post->code_type) ? $post->code_type : get_post_meta($post->ID, '_wpcode_code_type', true);
+                $code_type = strtolower(trim((string) $code_type));
                 if ($code_type === 'js' || $code_type === 'javascript') {
                     $language = 'javascript';
                 } elseif ($code_type === 'css') {
@@ -3980,6 +3983,7 @@ class Ofast_X_Snippets
 
                 $language = 'php';
                 $code_type = isset($post->code_type) ? $post->code_type : get_post_meta($post->ID, '_wpcode_code_type', true);
+                $code_type = strtolower(trim((string) $code_type));
                 if ($code_type === 'js' || $code_type === 'javascript') {
                     $language = 'javascript';
                 } elseif ($code_type === 'css') {
@@ -4141,6 +4145,7 @@ class Ofast_X_Snippets
 
                 $language = 'php';
                 $code_type = isset($post->code_type) ? $post->code_type : get_post_meta($post->ID, '_wpcode_code_type', true);
+                $code_type = strtolower(trim((string) $code_type));
                 if ($code_type === 'js' || $code_type === 'javascript') {
                     $language = 'javascript';
                 } elseif ($code_type === 'css') {
@@ -5139,6 +5144,25 @@ class Ofast_X_Snippets
         $code = preg_replace('/\s*\?>\s*$/', '', $code);
 
         return trim($code);
+    }
+
+    /**
+     * Normalize language value to supported snippet types.
+     */
+    private function normalize_snippet_language($language)
+    {
+        $language = strtolower(trim((string) $language));
+
+        $aliases = array(
+            'js' => 'javascript',
+            'htm' => 'html',
+            'text' => 'html',
+        );
+        if (isset($aliases[$language])) {
+            $language = $aliases[$language];
+        }
+
+        return in_array($language, array('php', 'javascript', 'css', 'html'), true) ? $language : 'php';
     }
 
     /**

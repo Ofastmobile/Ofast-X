@@ -24,9 +24,12 @@ class Ofast_X_User_Roles
         add_action('show_user_profile', array($this, 'render_quick_capabilities_link'));
         add_action('edit_user_profile', array($this, 'render_quick_capabilities_link'));
 
-        // Save roles on profile update
-        add_action('personal_options_update', array($this, 'save_user_roles'));
-        add_action('edit_user_profile_update', array($this, 'save_user_roles'));
+        // Save roles on profile update (priority 99 = runs AFTER WordPress core sets role via wp_update_user)
+        add_action('profile_update', array($this, 'save_user_roles'), 99);
+
+        // Hide the default WordPress "Role" dropdown (replaced by our multi-role checkboxes)
+        add_action('admin_footer-user-edit.php', array($this, 'hide_default_role_dropdown'));
+        add_action('admin_footer-profile.php', array($this, 'hide_default_role_dropdown'));
 
         // Add roles column to users list
         add_filter('manage_users_columns', array($this, 'add_roles_column'));
@@ -174,7 +177,7 @@ class Ofast_X_User_Roles
         $user = new WP_User($user_id);
 
         // Remove all current roles
-        foreach ($user->roles as $role) {
+        foreach (array_values($user->roles) as $role) {
             $user->remove_role($role);
         }
 
@@ -182,6 +185,22 @@ class Ofast_X_User_Roles
         foreach ($new_roles as $role) {
             $user->add_role($role);
         }
+    }
+
+    /**
+     * Hide the default WordPress "Role" dropdown on user edit screens
+     * since Ofast-X replaces it with multi-role checkboxes
+     */
+    public function hide_default_role_dropdown()
+    {
+?>
+        <script>
+        jQuery(document).ready(function($) {
+            // Hide the default role row (label + dropdown)
+            $('select#role').closest('tr').hide();
+        });
+        </script>
+<?php
     }
 
     /**

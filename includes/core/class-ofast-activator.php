@@ -196,6 +196,7 @@ class Ofast_X_Activator
             target_url VARCHAR(500) NOT NULL,
             type ENUM('301', '302', '307') DEFAULT '301',
             is_regex TINYINT(1) DEFAULT 0,
+            priority INT(11) DEFAULT 10,
             hits INT(11) DEFAULT 0,
             last_accessed DATETIME,
             active TINYINT(1) DEFAULT 1,
@@ -204,9 +205,11 @@ class Ofast_X_Activator
             PRIMARY KEY (id),
             KEY idx_source (source_url(255)),
             KEY idx_active (active),
+            KEY idx_priority (priority),
             KEY idx_hits (hits)
         ) {$charset_collate};";
         dbDelta($sql_redirects);
+        update_option('ofast_redirects_priority_schema', '1', false);
 
         // 7. Redirect Logs Table
         $table_redirect_logs = $wpdb->prefix . 'ofast_redirect_logs';
@@ -404,6 +407,19 @@ class Ofast_X_Activator
                 $wpdb->query("ALTER TABLE {$table_snippets} MODIFY COLUMN language ENUM('php', 'javascript', 'css', 'html') DEFAULT 'php'");
                 error_log("Ofast X: Updated language enum to include 'html' in {$table_snippets}");
             }
+        }
+
+        // Redirects table upgrades
+        $table_redirects = $wpdb->prefix . 'ofast_redirects';
+        $redirects_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_redirects}'");
+        if ($redirects_exists) {
+            $redirect_columns = $wpdb->get_col("DESCRIBE {$table_redirects}", 0);
+            if (!in_array('priority', $redirect_columns, true)) {
+                $wpdb->query("ALTER TABLE {$table_redirects} ADD COLUMN priority INT(11) DEFAULT 10 AFTER is_regex");
+                error_log("Ofast X: Added missing column 'priority' to {$table_redirects}");
+                $redirect_columns[] = 'priority';
+            }
+            update_option('ofast_redirects_priority_schema', in_array('priority', $redirect_columns, true) ? '1' : '0', false);
         }
     }
 }

@@ -455,6 +455,35 @@ class Ofast_X_Forms_Builder
                     }
                 });
 
+                // XSS Security: Escaping functions for safe HTML generation
+                function escapeHtml(unsafe) {
+                    if (unsafe === null || unsafe === undefined) {
+                        return '';
+                    }
+                    return String(unsafe)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#x27;')
+                        .replace(/\//g, '&#x2F;');
+                }
+
+                function escapeAttribute(unsafe) {
+                    if (unsafe === null || unsafe === undefined) {
+                        return '';
+                    }
+                    var safe = escapeHtml(unsafe);
+                    return safe
+                        .replace(/`/g, '&#x60;')
+                        .replace(/=/g, '&#x3D;');
+                }
+
+                function sanitizeInputType(type) {
+                    var allowedTypes = ['text', 'email', 'password', 'number', 'tel', 'url', 'date', 'time', 'datetime-local', 'month', 'week', 'color', 'range', 'file', 'hidden', 'search', 'checkbox', 'radio'];
+                    return allowedTypes.includes(type) ? type : 'text';
+                }
+
                 // Preview functionality
                 $('#preview-form-btn').on('click', function() {
                     var previewHtml = generatePreview();
@@ -500,7 +529,7 @@ class Ofast_X_Forms_Builder
                         html += '<div style="margin-bottom:20px;width:' + fieldWidth + ';flex:0 0 ' + fieldWidth + ';box-sizing:border-box;">';
                         if (label) {
                             html += '<label style="display:block;font-weight:600;font-size:' + labelSize + 'px;margin-bottom:8px;">';
-                            html += label;
+                            html += escapeHtml(label);
                             if (required) html += ' <span style="color:#dc3545;">*</span>';
                             html += '</label>';
                         }
@@ -509,14 +538,14 @@ class Ofast_X_Forms_Builder
 
                         switch (type) {
                             case 'textarea':
-                                html += '<textarea placeholder="' + placeholder + '" style="' + inputStyle + 'min-height:120px;resize:vertical;"></textarea>';
+                                html += '<textarea placeholder="' + escapeAttribute(placeholder) + '" style="' + inputStyle + 'min-height:120px;resize:vertical;"></textarea>';
                                 break;
                             case 'select':
-                                html += '<select style="' + inputStyle + '"><option>' + (placeholder || 'Select an option') + '</option>';
+                                html += '<select style="' + inputStyle + '"><option>' + escapeHtml(placeholder || 'Select an option') + '</option>';
                                 if (options) {
                                     options.split('\n').forEach(function(opt) {
                                         opt = opt.trim();
-                                        if (opt) html += '<option>' + opt + '</option>';
+                                        if (opt) html += '<option>' + escapeHtml(opt) + '</option>';
                                     });
                                 }
                                 html += '</select>';
@@ -529,15 +558,15 @@ class Ofast_X_Forms_Builder
                                         opt = opt.trim();
                                         if (opt) {
                                             html += '<label style="font-weight:normal;display:flex;align-items:center;gap:8px;">';
-                                            html += '<input type="' + type + '"> ' + opt + '</label>';
+                                            html += '<input type="' + sanitizeInputType(type) + '"> ' + escapeHtml(opt) + '</label>';
                                         }
                                     });
                                 }
                                 html += '</div>';
                                 break;
                             default:
-                                var inputType = type === 'phone' ? 'tel' : type;
-                                html += '<input type="' + inputType + '" placeholder="' + placeholder + '" style="' + inputStyle + '">';
+                                var inputType = sanitizeInputType(type === 'phone' ? 'tel' : type);
+                                html += '<input type="' + inputType + '" placeholder="' + escapeAttribute(placeholder) + '" style="' + inputStyle + '">';
                         }
                         html += '</div>';
                     });
@@ -548,11 +577,11 @@ class Ofast_X_Forms_Builder
                     // Submit button
                     var successMsg = $('input[name="settings[success_message]"]').val() || 'Thank you! Your message has been sent.';
                     html += '<div style="margin-top:20px;">';
-                    html += '<button type="button" id="preview-submit-btn" style="background:' + btnBg + ';color:' + btnText + ';border:none;padding:14px 30px;font-size:16px;font-weight:600;border-radius:' + btnRadius + 'px;cursor:pointer;transition:background 0.2s;">' + submitText + '</button>';
+                    html += '<button type="button" id="preview-submit-btn" style="background:' + btnBg + ';color:' + btnText + ';border:none;padding:14px 30px;font-size:16px;font-weight:600;border-radius:' + btnRadius + 'px;cursor:pointer;transition:background 0.2s;">' + escapeHtml(submitText) + '</button>';
                     html += '</div>';
 
                     // Success message (hidden)
-                    html += '<div id="preview-success-msg" style="display:none;padding:12px 15px;border-radius:5px;margin-top:20px;font-size:14px;background:#d4edda;color:#155724;border:1px solid #c3e6cb;">' + successMsg + '</div>';
+                    html += '<div id="preview-success-msg" style="display:none;padding:12px 15px;border-radius:5px;margin-top:20px;font-size:14px;background:#d4edda;color:#155724;border:1px solid #c3e6cb;">' + escapeHtml(successMsg) + '</div>';
 
                     html += '</div></div>';
                     return html;

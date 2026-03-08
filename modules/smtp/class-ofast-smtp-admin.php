@@ -536,8 +536,10 @@ class Ofast_X_SMTP_Admin
                                     <?php else: ?>
                                         <span style="color: #6b7280; font-style: italic;">No content stored</span>
                                     <?php endif; ?>
-                                    <?php if ($log->status === 'failed'): ?>
+                                    <?php if ($log->status === 'failed' && !empty($log->body)): ?>
                                         <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-smtp&tab=log&resend=' . $log->id), 'resend_email'); ?>" class="button button-small">Resend</a>
+                                    <?php elseif ($log->status === 'failed'): ?>
+                                        <span style="color: #6b7280; font-style: italic; margin-left: 8px;">Resend unavailable</span>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -912,18 +914,19 @@ class Ofast_X_SMTP_Admin
 
         // Save all settings
         update_option('ofast_smtp_enabled', isset($_POST['smtp_enabled']) ? 1 : 0);
-        update_option('ofast_smtp_mailer_type', sanitize_text_field($_POST['smtp_mailer_type'] ?? 'default'));
-        update_option('ofast_smtp_provider', sanitize_text_field($_POST['smtp_provider'] ?? 'custom'));
-        update_option('ofast_smtp_host', sanitize_text_field($_POST['smtp_host'] ?? ''));
+        update_option('ofast_smtp_mailer_type', sanitize_text_field(wp_unslash($_POST['smtp_mailer_type'] ?? 'default')));
+        update_option('ofast_smtp_provider', sanitize_text_field(wp_unslash($_POST['smtp_provider'] ?? 'custom')));
+        update_option('ofast_smtp_host', sanitize_text_field(wp_unslash($_POST['smtp_host'] ?? '')));
         update_option('ofast_smtp_port', intval($_POST['smtp_port'] ?? 587));
-        update_option('ofast_smtp_encryption', sanitize_text_field($_POST['smtp_encryption'] ?? 'tls'));
-        update_option('ofast_smtp_username', sanitize_text_field($_POST['smtp_username'] ?? ''));
-        update_option('ofast_smtp_from_email', sanitize_email($_POST['smtp_from_email'] ?? ''));
-        update_option('ofast_smtp_from_name', sanitize_text_field($_POST['smtp_from_name'] ?? ''));
+        update_option('ofast_smtp_encryption', sanitize_text_field(wp_unslash($_POST['smtp_encryption'] ?? 'tls')));
+        update_option('ofast_smtp_username', sanitize_text_field(wp_unslash($_POST['smtp_username'] ?? '')));
+        update_option('ofast_smtp_from_email', sanitize_email(wp_unslash($_POST['smtp_from_email'] ?? '')));
+        update_option('ofast_smtp_from_name', sanitize_text_field(wp_unslash($_POST['smtp_from_name'] ?? '')));
 
         // Only update password if provided (not empty placeholder)
-        if (!empty($_POST['smtp_password']) && $_POST['smtp_password'] !== '••••••••') {
-            $encrypted = Ofast_X_SMTP::encrypt_password($_POST['smtp_password']);
+        $smtp_password = wp_unslash($_POST['smtp_password'] ?? '');
+        if (!empty($smtp_password) && $smtp_password !== '••••••••') {
+            $encrypted = Ofast_X_SMTP::encrypt_password($smtp_password);
             update_option('ofast_smtp_password', $encrypted);
         }
 
@@ -935,14 +938,9 @@ class Ofast_X_SMTP_Admin
         $log_body_content = isset($_POST['log_body_content']) ? 1 : 0;
         update_option('ofast_smtp_log_body_content', $log_body_content);
         
-        // Log security setting changes for audit
+        // Notify listeners when body logging is enabled (for optional auditing).
         if ($log_body_content) {
-            error_log(sprintf(
-                'SECURITY: Email body logging enabled by user %s (ID: %d) at %s',
-                wp_get_current_user()->user_login,
-                get_current_user_id(),
-                current_time('mysql')
-            ));
+            do_action('ofast_smtp_body_logging_enabled', get_current_user_id(), current_time('mysql'));
         }
 
         Ofast_X_Toast::add('SMTP settings saved successfully!', 'success');
@@ -1692,6 +1690,11 @@ class Ofast_X_SMTP_Admin
 
         if (!$log) {
             add_settings_error('ofast_smtp', 'not_found', 'Email not found.', 'error');
+            return;
+        }
+
+        if (empty($log->body)) {
+            add_settings_error('ofast_smtp', 'body_missing', 'Cannot resend this email because content logging is disabled.', 'error');
             return;
         }
 

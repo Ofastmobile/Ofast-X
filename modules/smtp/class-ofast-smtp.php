@@ -507,11 +507,16 @@ class Ofast_X_SMTP
         global $wpdb;
         $table_name = $wpdb->prefix . 'ofast_smtp_log';
 
+        $to_value = isset($args['to']) ? $args['to'] : '';
+        $subject = isset($args['subject']) ? $args['subject'] : '';
+        $message = isset($args['message']) ? $args['message'] : '';
+        $headers = isset($args['headers']) ? $args['headers'] : array();
+
         // Create table if not exists
         $this->ensure_log_table();
 
         // Get recipient(s) as string
-        $to = is_array($args['to']) ? implode(', ', $args['to']) : $args['to'];
+        $to = is_array($to_value) ? implode(', ', $to_value) : $to_value;
 
         // Get logging level setting (default: metadata only for security)
         $body_logging_enabled = get_option('ofast_smtp_log_body_content', false);
@@ -519,20 +524,20 @@ class Ofast_X_SMTP
         // Filter sensitive content from message body before storage
         $filtered_body = null;
         if ($body_logging_enabled) {
-            $filtered_body = $this->filter_sensitive_content($args['message']);
+            $filtered_body = $this->filter_sensitive_content($message);
         }
 
         // Filter headers to remove sensitive information
         $filtered_headers = null;
-        if (!empty($args['headers'])) {
-            $headers_array = is_array($args['headers']) ? $args['headers'] : array($args['headers']);
-            $filtered_headers = serialize($this->filter_sensitive_headers($headers_array));
+        if (!empty($headers)) {
+            $headers_array = is_array($headers) ? $headers : array($headers);
+            $filtered_headers = maybe_serialize($this->filter_sensitive_headers($headers_array));
         }
 
         // Insert log entry with filtered content
         $wpdb->insert($table_name, array(
             'to_email' => sanitize_text_field($to),
-            'subject' => sanitize_text_field($args['subject']),
+            'subject' => sanitize_text_field($subject),
             'body' => $filtered_body,
             'headers' => $filtered_headers,
             'status' => 'pending',
@@ -599,7 +604,7 @@ class Ofast_X_SMTP
         }
 
         // Define sensitive patterns to filter
-        $sensitive_patterns = array(
+        $sensitive_patterns = apply_filters('ofast_smtp_sensitive_content_patterns', array(
             // Passwords in various formats
             '/(password[=:\s]+)[^\s&<>"\']{3,}/i' => '$1[REDACTED]',
             '/"password"\s*:\s*"[^"]+"/i' => '"password":"[REDACTED]"',
@@ -632,12 +637,16 @@ class Ofast_X_SMTP
             
             // Email addresses in sensitive contexts (except standard to/from)
             '/(?:email[=:\s]+|user[_-]?email[=:\s]+)[^\s<>"\'@]+@[^\s<>"\']+/' => '[EMAIL_REDACTED]',
-        );
+        ));
 
         $filtered_content = $content;
         
         foreach ($sensitive_patterns as $pattern => $replacement) {
-            $filtered_content = preg_replace($pattern, $replacement, $filtered_content);
+            $updated_content = preg_replace($pattern, $replacement, $filtered_content);
+
+            if (null !== $updated_content) {
+                $filtered_content = $updated_content;
+            }
         }
 
         return $filtered_content;
@@ -648,13 +657,13 @@ class Ofast_X_SMTP
      */
     private function filter_sensitive_headers($headers)
     {
-        $sensitive_header_names = array(
+        $sensitive_header_names = apply_filters('ofast_smtp_sensitive_header_names', array(
             'Authorization',
-            'X-Api-Key', 
+            'X-Api-Key',
             'X-Auth-Token',
             'Cookie',
             'Set-Cookie',
-        );
+        ));
 
         $filtered = array();
         

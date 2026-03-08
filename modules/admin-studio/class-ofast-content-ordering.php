@@ -316,6 +316,11 @@ class Ofast_X_Content_Ordering
                 continue; // Skip invalid posts
             }
             
+            // Security: Verify user has permission to edit this specific post
+            if (!current_user_can('edit_post', $post_id)) {
+                continue; // Skip posts user cannot edit
+            }
+            
             // Use wp_update_post instead of direct $wpdb for proper hook execution
             $result = wp_update_post(array(
                 'ID' => $post_id,

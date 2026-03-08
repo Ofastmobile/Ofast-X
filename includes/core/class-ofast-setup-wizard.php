@@ -76,8 +76,14 @@ class Ofast_X_Setup_Wizard {
             case 'complete_step_1':
                 // Save selected modules
                 if (isset($_POST['modules']) && is_array($_POST['modules'])) {
+                    // Define whitelist of allowed modules to prevent arbitrary keys
+                    $allowed_modules = $this->get_allowed_wizard_modules();
+                    
+                    // Filter submitted modules against whitelist
+                    $filtered_modules = array_intersect_key($_POST['modules'], $allowed_modules);
+                    
                     $modules = array();
-                    foreach ($_POST['modules'] as $slug => $value) {
+                    foreach ($filtered_modules as $slug => $value) {
                         $modules[$slug] = true;
                     }
                     update_option('ofastx_modules_enabled', $modules);
@@ -407,5 +413,36 @@ class Ofast_X_Setup_Wizard {
             </div>
         </form>
         <?php
+    }
+
+    /**
+     * Get allowed modules for wizard validation
+     * 
+     * @return array Whitelist of allowed module keys
+     */
+    private function get_allowed_wizard_modules() {
+        return array(
+            // Communication modules
+            'email' => true,
+            'smtp' => true,
+            'forms' => true,
+            'whatsapp' => true,
+            'social-login' => true,
+            
+            // Security & Content modules  
+            'admin-url' => true,
+            'spam-protection' => true,
+            'snippets' => true,
+            'redirects' => true,
+            'content-ordering' => true,
+            
+            // Customization modules
+            'admin-tweaks' => true,
+            'login-redesign' => true,
+            'menu-editor' => true,
+            'whos-admin' => true,
+            'user-roles' => true,
+            'admin-design' => true,
+        );
     }
 }

@@ -428,21 +428,57 @@ class Ofast_X_Email_Admin
         // Handle delete action
         if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['draft_id'])) {
             if (isset($_GET['_wpnonce']) && wp_verify_nonce($_GET['_wpnonce'], 'delete_draft_' . $_GET['draft_id'])) {
-                $wpdb->delete($table, array('id' => intval($_GET['draft_id']), 'admin_id' => $current_user_id));
-                echo Ofast_X_Toast::render('Draft deleted successfully!', 'success', true);
+                $draft_id = intval($_GET['draft_id']);
+                
+                // Explicit ownership verification before deletion
+                $draft = $wpdb->get_row($wpdb->prepare(
+                    "SELECT id, admin_id FROM $table WHERE id = %d",
+                    $draft_id
+                ));
+                
+                if (!$draft) {
+                    echo Ofast_X_Toast::render('Draft not found.', 'error', true);
+                } elseif ((int)$draft->admin_id !== $current_user_id) {
+                    // Log unauthorized access attempt
+                    error_log(sprintf(
+                        'SECURITY: User %d attempted unauthorized deletion of draft %d (owned by user %d)',
+                        $current_user_id,
+                        $draft_id,
+                        $draft->admin_id
+                    ));
+                    echo Ofast_X_Toast::render('Draft not found.', 'error', true);
+                } else {
+                    // User owns the draft, proceed with deletion
+                    $wpdb->delete($table, array('id' => $draft_id));
+                    echo Ofast_X_Toast::render('Draft deleted successfully!', 'success', true);
+                }
             }
         }
 
         // Handle send now action
         if (isset($_GET['action']) && $_GET['action'] === 'send' && isset($_GET['draft_id'])) {
             if (isset($_GET['_wpnonce']) && wp_verify_nonce($_GET['_wpnonce'], 'send_draft_' . $_GET['draft_id'])) {
+                $draft_id = intval($_GET['draft_id']);
+                
+                // Explicit ownership verification before accessing draft
                 $draft = $wpdb->get_row($wpdb->prepare(
-                    "SELECT * FROM $table WHERE id = %d AND admin_id = %d",
-                    intval($_GET['draft_id']),
-                    $current_user_id
+                    "SELECT * FROM $table WHERE id = %d",
+                    $draft_id
                 ));
-
-                if ($draft) {
+                
+                if (!$draft) {
+                    echo Ofast_X_Toast::render('Draft not found.', 'error', true);
+                } elseif ((int)$draft->admin_id !== $current_user_id) {
+                    // Log unauthorized access attempt
+                    error_log(sprintf(
+                        'SECURITY: User %d attempted unauthorized send of draft %d (owned by user %d)',
+                        $current_user_id,
+                        $draft_id,
+                        $draft->admin_id
+                    ));
+                    echo Ofast_X_Toast::render('Draft not found.', 'error', true);
+                } else {
+                    // User owns the draft, proceed with send preparation
                     $roles = json_decode($draft->roles, true) ?: array();
                     $user_ids_str = '';
                     $specific_ids = json_decode($draft->user_ids, true) ?: array();
@@ -1149,9 +1185,28 @@ class Ofast_X_Email_Admin
             );
 
             if ($draft_id > 0) {
-                // Update existing draft
-                $wpdb->update($table, $data, array('id' => $draft_id, 'admin_id' => get_current_user_id()));
-                $result_message = Ofast_X_Toast::render('Draft updated successfully!', 'success', true);
+                // Explicit ownership verification before update
+                $existing_draft = $wpdb->get_row($wpdb->prepare(
+                    "SELECT id, admin_id FROM $table WHERE id = %d",
+                    $draft_id
+                ));
+                
+                if (!$existing_draft) {
+                    $result_message = Ofast_X_Toast::render('Draft not found.', 'error', true);
+                } elseif ((int)$existing_draft->admin_id !== get_current_user_id()) {
+                    // Log unauthorized access attempt
+                    error_log(sprintf(
+                        'SECURITY: User %d attempted unauthorized update of draft %d (owned by user %d)',
+                        get_current_user_id(),
+                        $draft_id,
+                        $existing_draft->admin_id
+                    ));
+                    $result_message = Ofast_X_Toast::render('Draft not found.', 'error', true);
+                } else {
+                    // User owns the draft, proceed with update
+                    $wpdb->update($table, $data, array('id' => $draft_id));
+                    $result_message = Ofast_X_Toast::render('Draft updated successfully!', 'success', true);
+                }
             } else {
                 // Insert new draft
                 $data['created_at'] = current_time('mysql');
@@ -1315,11 +1370,29 @@ class Ofast_X_Email_Admin
         if ($draft_id > 0) {
             global $wpdb;
             $table = $wpdb->prefix . 'ofast_email_drafts';
-            $draft = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM $table WHERE id = %d AND admin_id = %d",
-                $draft_id,
-                get_current_user_id()
+            
+            // Explicit ownership verification before loading draft
+            $draft_check = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM $table WHERE id = %d",
+                $draft_id
             ));
+            
+            if (!$draft_check) {
+                // Draft doesn't exist - could show error but for UX just show empty form
+                $draft = null;
+            } elseif ((int)$draft_check->admin_id !== get_current_user_id()) {
+                // Log unauthorized access attempt
+                error_log(sprintf(
+                    'SECURITY: User %d attempted unauthorized access to draft %d (owned by user %d)',
+                    get_current_user_id(),
+                    $draft_id,
+                    $draft_check->admin_id
+                ));
+                $draft = null; // Show empty form, don't reveal draft exists
+            } else {
+                // User owns the draft, proceed with loading
+                $draft = $draft_check;
+            }
         }
         
         $draft_subject = $draft ? $draft->subject : '';
@@ -2955,21 +3028,57 @@ class Ofast_X_Email_Admin
         // Handle delete action
         if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['draft_id'])) {
             if (isset($_GET['_wpnonce']) && wp_verify_nonce($_GET['_wpnonce'], 'delete_draft_' . $_GET['draft_id'])) {
-                $wpdb->delete($table, array('id' => intval($_GET['draft_id']), 'admin_id' => $current_user_id));
-                echo Ofast_X_Toast::render('Draft deleted successfully!', 'success', true);
+                $draft_id = intval($_GET['draft_id']);
+                
+                // Explicit ownership verification before deletion
+                $draft = $wpdb->get_row($wpdb->prepare(
+                    "SELECT id, admin_id FROM $table WHERE id = %d",
+                    $draft_id
+                ));
+                
+                if (!$draft) {
+                    echo Ofast_X_Toast::render('Draft not found.', 'error', true);
+                } elseif ((int)$draft->admin_id !== $current_user_id) {
+                    // Log unauthorized access attempt
+                    error_log(sprintf(
+                        'SECURITY: User %d attempted unauthorized deletion of draft %d (owned by user %d)',
+                        $current_user_id,
+                        $draft_id,
+                        $draft->admin_id
+                    ));
+                    echo Ofast_X_Toast::render('Draft not found.', 'error', true);
+                } else {
+                    // User owns the draft, proceed with deletion
+                    $wpdb->delete($table, array('id' => $draft_id));
+                    echo Ofast_X_Toast::render('Draft deleted successfully!', 'success', true);
+                }
             }
         }
 
         // Handle send now action
         if (isset($_GET['action']) && $_GET['action'] === 'send' && isset($_GET['draft_id'])) {
             if (isset($_GET['_wpnonce']) && wp_verify_nonce($_GET['_wpnonce'], 'send_draft_' . $_GET['draft_id'])) {
+                $draft_id = intval($_GET['draft_id']);
+                
+                // Explicit ownership verification before sending draft
                 $draft = $wpdb->get_row($wpdb->prepare(
-                    "SELECT * FROM $table WHERE id = %d AND admin_id = %d",
-                    intval($_GET['draft_id']),
-                    $current_user_id
+                    "SELECT * FROM $table WHERE id = %d",
+                    $draft_id
                 ));
                 
-                if ($draft) {
+                if (!$draft) {
+                    echo Ofast_X_Toast::render('Draft not found.', 'error', true);
+                } elseif ((int)$draft->admin_id !== $current_user_id) {
+                    // Log unauthorized access attempt
+                    error_log(sprintf(
+                        'SECURITY: User %d attempted unauthorized send of draft %d (owned by user %d)',
+                        $current_user_id,
+                        $draft_id,
+                        $draft->admin_id
+                    ));
+                    echo Ofast_X_Toast::render('Draft not found.', 'error', true);
+                } else {
+                    // User owns the draft, proceed with sending
                     $roles = json_decode($draft->roles, true) ?: array();
                     $user_ids = json_decode($draft->user_ids, true) ?: array();
                     

@@ -101,59 +101,61 @@ class Ofast_X_SMTP
     }
 
     /**
-     * SECURITY: Sanitize email content to remove sensitive information
-     * Skips HTML template emails (trusted), applies to plain text only
+     * SECURITY FIX (CWE-532): Enhanced content sanitization for logging
+     * Now applies comprehensive pattern matching to remove all sensitive data
      */
     public function sanitize_email_content($args)
     {
         if (!empty($args['message'])) {
             $message = $args['message'];
 
+            // Apply comprehensive sensitive pattern redaction
+            $message = $this->redact_sensitive_patterns($message, 'body');
+
+            // Apply existing patterns for system information
             // Skip sanitization for HTML emails (structured templates we control)
-            // These are trusted and sanitization breaks their HTML structure
-            if (stripos($message, '<!DOCTYPE') !== false || 
-                stripos($message, '<html') !== false ||
-                stripos($message, '<table') !== false) {
-                return $args; // Trust HTML template emails
+            if (!(stripos($message, '<!DOCTYPE') !== false || 
+                  stripos($message, '<html') !== false ||
+                  stripos($message, '<table') !== false)) {
+                
+                // 1. Remove ALL wp-admin URLs - replace with site URL
+                $admin_url = admin_url();
+                $message = str_replace($admin_url, site_url(), $message);
+                $message = preg_replace('#https?://[^\s<>"\']+/wp-admin[^\s<>"\']*#i', site_url(), $message);
+
+                // 2. Remove server file paths (e.g., /var/www/, C:\xampp\, etc.)
+                $message = preg_replace('#(/var/www|/home/\w+|/srv|C:\\\\[^<\s]+|/usr/share)[^\s<>"\']*#i', '[hidden]', $message);
+
+                // 3. Remove WordPress installation paths
+                $abspath = preg_quote(ABSPATH, '#');
+                $message = preg_replace('#' . $abspath . '[^\s<>"\']*#i', '[hidden]', $message);
+
+                // 4. Remove debug patterns
+                $debug_patterns = array(
+                    '#\bWP_DEBUG\b#i',
+                    '#\bPHP (Fatal|Warning|Notice|Error)[^<\n]*#i',
+                    '#Stack trace:[^<]*#is',
+                    '#\bin /[^\s]+\.php on line \d+#i',
+                    '#\bCall Stack\b[^<]*#is',
+                    '#\bvar_dump\s*\([^)]*\)#is',
+                    '#\bprint_r\s*\([^)]*\)#is',
+                );
+                foreach ($debug_patterns as $pattern) {
+                    $message = preg_replace($pattern, '', $message);
+                }
+
+                // 5. Remove MySQL/database info
+                $message = preg_replace('#\b(mysql|mysqli|pdo|wpdb)\s*:?[^<\n]*#i', '', $message);
+
+                // 6. Remove wp-config references
+                $message = preg_replace('#wp-config\.php#i', '', $message);
+
+                // 7. Remove WordPress version info
+                $message = preg_replace('#WordPress\s+\d+\.\d+(\.\d+)?#i', 'WordPress', $message);
+
+                // 8. Remove PHP version info
+                $message = preg_replace('#PHP\s+\d+\.\d+(\.\d+)?#i', 'PHP', $message);
             }
-
-            // 1. Remove ALL wp-admin URLs - replace with site URL
-            $admin_url = admin_url();
-            $message = str_replace($admin_url, site_url(), $message);
-            $message = preg_replace('#https?://[^\s<>"\']+/wp-admin[^\s<>"\']*#i', site_url(), $message);
-
-            // 2. Remove server file paths (e.g., /var/www/, C:\xampp\, etc.)
-            $message = preg_replace('#(/var/www|/home/\w+|/srv|C:\\\\[^<\s]+|/usr/share)[^\s<>"\']*#i', '[hidden]', $message);
-
-            // 3. Remove WordPress installation paths
-            $abspath = preg_quote(ABSPATH, '#');
-            $message = preg_replace('#' . $abspath . '[^\s<>"\']*#i', '[hidden]', $message);
-
-            // 4. Remove debug patterns
-            $debug_patterns = array(
-                '#\bWP_DEBUG\b#i',
-                '#\bPHP (Fatal|Warning|Notice|Error)[^<\n]*#i',
-                '#Stack trace:[^<]*#is',
-                '#\bin /[^\s]+\.php on line \d+#i',
-                '#\bCall Stack\b[^<]*#is',
-                '#\bvar_dump\s*\([^)]*\)#is',
-                '#\bprint_r\s*\([^)]*\)#is',
-            );
-            foreach ($debug_patterns as $pattern) {
-                $message = preg_replace($pattern, '', $message);
-            }
-
-            // 5. Remove MySQL/database info
-            $message = preg_replace('#\b(mysql|mysqli|pdo|wpdb)\s*:?[^<\n]*#i', '', $message);
-
-            // 6. Remove wp-config references
-            $message = preg_replace('#wp-config\.php#i', '', $message);
-
-            // 7. Remove WordPress version info
-            $message = preg_replace('#WordPress\s+\d+\.\d+(\.\d+)?#i', 'WordPress', $message);
-
-            // 8. Remove PHP version info
-            $message = preg_replace('#PHP\s+\d+\.\d+(\.\d+)?#i', 'PHP', $message);
 
             $args['message'] = $message;
         }
@@ -499,7 +501,77 @@ class Ofast_X_SMTP
     }
 
     /**
-     * Log outgoing email (before sending)
+     * SECURITY FIX (CWE-532): Enhanced pattern matching for sensitive data
+     */
+    private function redact_sensitive_patterns($content, $context = 'body')
+    {
+        if (empty($content) || !is_string($content)) {
+            return '';
+        }
+
+        // Comprehensive sensitive patterns
+        $sensitive_patterns = array(
+            // Authentication credentials (with capturing groups to preserve labels)
+            'password_field' => '/(\b(?:password|passwd|pwd|pass|secret|credential)["\']?\s*[:=]\s*["\']?)[^\s"\'&<>]+/i',
+            'password_param' => '/([\?&](?:password|passwd|pwd|pass|secret|token|key|api_key|apikey|auth)[=])[^&\s<>"\']+/i',
+            
+            // Authorization headers
+            'auth_header' => '/(Authorization:\s*(?:Bearer|Basic|Token)\s+)[^\s\r\n]+/i',
+            'api_key_header' => '/(X-API-Key:\s*)[^\s\r\n]+/i',
+            
+            // Tokens in URLs (reset links, verification, etc.)
+            'url_token' => '/([\?&](?:token|reset_key|activation_key|verify|confirm|auth_token|access_token|refresh_token)[=])[^&\s<>"\']+/i',
+            'path_token' => '/(\/(?:reset|verify|confirm|activate|unsubscribe)\/)[a-zA-Z0-9_\-]{16,}/i',
+            
+            // Common secret patterns
+            'generic_secret' => '/(\b(?:api_key|apikey|api_secret|client_secret|private_key|secret_key)["\']?\s*[:=]\s*["\']?)[^\s"\'&<>,}{]+/i',
+            
+            // Credit card patterns (basic)
+            'credit_card' => '/\b(?:\d{4}[\s\-]?){3}\d{4}\b/',
+            
+            // SSN pattern (US)
+            'ssn' => '/\b\d{3}[\s\-]?\d{2}[\s\-]?\d{4}\b/',
+            
+            // JWT tokens (header.payload.signature format)
+            'jwt_token' => '/\beyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+\b/',
+            
+            // Base64-encoded credentials in URLs
+            'base64_auth' => '/(\/\/[^:]+:)[^@]+(@)/i',
+        );
+
+        $sanitized = $content;
+
+        foreach ($sensitive_patterns as $pattern_name => $pattern) {
+            // Check if pattern uses capture groups for partial replacement
+            if (preg_match('/\([^)]+\)/', $pattern)) {
+                // Pattern has capture groups - replace only the sensitive portion
+                $sanitized = preg_replace_callback(
+                    $pattern,
+                    function($matches) {
+                        // Keep the first capture group (the label/prefix), redact the rest
+                        if (isset($matches[1])) {
+                            $result = $matches[1] . '[REDACTED]';
+                            // If there's a third group (suffix), append it
+                            if (isset($matches[2])) {
+                                $result .= $matches[2];
+                            }
+                            return $result;
+                        }
+                        return '[REDACTED]';
+                    },
+                    $sanitized
+                );
+            } else {
+                // Simple pattern - replace entire match
+                $sanitized = preg_replace($pattern, '[REDACTED]', $sanitized);
+            }
+        }
+
+        return $sanitized;
+    }
+
+    /**
+     * SECURITY FIX (CWE-532): Secure email logging with admin controls
      */
     public function log_outgoing_email($args)
     {
@@ -512,12 +584,40 @@ class Ofast_X_SMTP
         // Get recipient(s) as string
         $to = is_array($args['to']) ? implode(', ', $args['to']) : $args['to'];
 
+        // SECURITY FIX: Check if body logging is enabled (default: true for backwards compatibility)
+        $log_body = get_option('ofast_smtp_log_body', true);
+        $sanitize_content = get_option('ofast_smtp_sanitize_logs', true);
+        
+        $body = '';
+        if ($log_body) {
+            $body = $args['message'];
+            
+            // Apply sanitization (enabled by default for security)
+            if ($sanitize_content) {
+                $body = $this->redact_sensitive_patterns($body, 'body');
+            }
+            
+            // Limit body size to prevent excessive storage (10KB default)
+            $max_length = get_option('ofast_smtp_max_log_body', 10000);
+            if ($max_length > 0 && strlen($body) > $max_length) {
+                $body = substr($body, 0, $max_length) . "\n\n[Content truncated for security]";
+            }
+        } else {
+            $body = '[Body logging disabled for security]';
+        }
+
+        // SECURITY FIX: Always sanitize headers as they often contain auth data
+        $headers = is_array($args['headers']) ? serialize($args['headers']) : $args['headers'];
+        if (!empty($headers)) {
+            $headers = $this->redact_sensitive_patterns($headers, 'headers');
+        }
+
         // Insert log entry
         $wpdb->insert($table_name, array(
             'to_email' => sanitize_text_field($to),
             'subject' => sanitize_text_field($args['subject']),
-            'body' => $args['message'],
-            'headers' => is_array($args['headers']) ? serialize($args['headers']) : $args['headers'],
+            'body' => $body,
+            'headers' => $headers,
             'status' => 'pending',
             'sent_at' => current_time('mysql')
         ));

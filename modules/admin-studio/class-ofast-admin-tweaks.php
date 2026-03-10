@@ -455,37 +455,14 @@ class Ofast_X_Admin_Tweaks
 
         update_option('ofast_admin_tweaks', $settings);
 
-        // Save Admin URL settings if enabled
+        // Save Admin URL settings if enabled with additional CSRF protection
         if (!empty($settings['enable_admin_url']) && isset($_POST['ofast_admin_url_slug'])) {
-            $old_slug = get_option('ofast_admin_custom_slug', '');
-            $new_slug = sanitize_title($_POST['ofast_admin_url_slug']);
-            
-            // Don't allow reserved slugs
-            $reserved = array('wp-admin', 'wp-login', 'wp-login.php', 'admin', 'login', 'dashboard', 'wp-content', 'wp-includes');
-            if (!in_array($new_slug, $reserved)) {
-                if (!empty($new_slug) && $new_slug !== $old_slug) {
-                    update_option('ofast_admin_custom_slug', $new_slug);
-                    // Generate emergency key if not exists
-                    if (empty(get_option('ofast_admin_emergency_key'))) {
-                        update_option('ofast_admin_emergency_key', wp_generate_password(32, false));
-                    }
-                } elseif (empty($new_slug)) {
-                    delete_option('ofast_admin_custom_slug');
-                }
+            // Additional CSRF verification for sensitive admin URL operations
+            if (!wp_verify_nonce($_POST['admin_url_nonce'] ?? '', 'ofast_admin_url_change_' . get_current_user_id())) {
+                wp_die('Security verification failed for admin URL change.');
             }
             
-            // Save security settings
-            if (isset($_POST['ofast_max_attempts'])) {
-                $max_attempts = max(1, min(20, intval($_POST['ofast_max_attempts'])));
-                update_option('ofast_security_max_attempts', $max_attempts);
-            }
-            if (isset($_POST['ofast_lockout_duration'])) {
-                $lockout_duration = max(1, min(1440, intval($_POST['ofast_lockout_duration'])));
-                update_option('ofast_security_lockout_duration', $lockout_duration);
-            }
-            if (isset($_POST['ofast_ip_whitelist'])) {
-                update_option('ofast_security_ip_whitelist', sanitize_textarea_field($_POST['ofast_ip_whitelist']));
-            }
+            $this->handle_admin_url_settings($_POST);
         }
 
         // Save Admin Design CSS if enabled
@@ -499,6 +476,110 @@ class Ofast_X_Admin_Tweaks
         // Redirect with success flag
         wp_redirect(add_query_arg('settings_saved', '1', wp_get_referer()));
         exit;
+    }
+
+    /**
+     * Handle admin URL settings with enhanced security
+     */
+    private function handle_admin_url_settings($post_data)
+    {
+        $old_slug = get_option('ofast_admin_custom_slug', '');
+        $new_slug = sanitize_title($post_data['ofast_admin_url_slug'] ?? '');
+        
+        // Enhanced reserved slug validation
+        $reserved = $this->get_reserved_admin_slugs();
+        if (!empty($new_slug) && in_array($new_slug, $reserved, true)) {
+            wp_die('The specified admin URL slug is reserved and cannot be used.');
+        }
+        
+        // Validate slug format and security
+        if (!empty($new_slug)) {
+            if (!preg_match('/^[a-z0-9-]+$/', $new_slug)) {
+                wp_die('Admin URL slug can only contain lowercase letters, numbers, and hyphens.');
+            }
+            if (strlen($new_slug) < 6) {
+                wp_die('Admin URL slug must be at least 6 characters long for security.');
+            }
+        }
+        
+        // Handle slug changes with logging
+        if (!empty($new_slug) && $new_slug !== $old_slug) {
+            // Rate limiting: prevent rapid successive changes
+            $user_id = get_current_user_id();
+            $change_count = get_transient('ofast_admin_url_changes_' . $user_id) ?: 0;
+            if ($change_count >= 3) {
+                wp_die('Too many admin URL changes detected. Please wait one hour before making another change.');
+            }
+            
+            // Store previous slug for potential rollback
+            update_option('ofast_admin_previous_slug', $old_slug);
+            update_option('ofast_admin_slug_changed_at', time());
+            update_option('ofast_admin_custom_slug', $new_slug);
+            
+            // Increment rate limit counter
+            set_transient('ofast_admin_url_changes_' . $user_id, $change_count + 1, HOUR_IN_SECONDS);
+            
+            // Ensure emergency key exists and is fresh
+            $emergency_key = wp_generate_password(32, false, false);
+            update_option('ofast_admin_emergency_key', $emergency_key);
+            
+            // Security logging
+            error_log(sprintf(
+                '[Ofast Security] Admin URL changed from "%s" to "%s" by user %d (%s)',
+                $old_slug,
+                $new_slug,
+                $user_id,
+                wp_get_current_user()->user_login
+            ));
+            
+        } elseif (empty($new_slug) && !empty($old_slug)) {
+            // Disabling admin URL protection
+            delete_option('ofast_admin_custom_slug');
+            error_log(sprintf(
+                '[Ofast Security] Admin URL protection disabled by user %d (%s)',
+                get_current_user_id(),
+                wp_get_current_user()->user_login
+            ));
+        }
+        
+        // Save security settings with validation
+        if (isset($post_data['ofast_max_attempts'])) {
+            $max_attempts = max(1, min(20, intval($post_data['ofast_max_attempts'])));
+            update_option('ofast_security_max_attempts', $max_attempts);
+        }
+        if (isset($post_data['ofast_lockout_duration'])) {
+            $lockout_duration = max(1, min(1440, intval($post_data['ofast_lockout_duration'])));
+            update_option('ofast_security_lockout_duration', $lockout_duration);
+        }
+        if (isset($post_data['ofast_ip_whitelist'])) {
+            $ip_whitelist = sanitize_textarea_field($post_data['ofast_ip_whitelist']);
+            // Validate IP addresses
+            $ips = array_filter(array_map('trim', explode("\n", $ip_whitelist)));
+            $valid_ips = array();
+            foreach ($ips as $ip) {
+                if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                    $valid_ips[] = $ip;
+                }
+            }
+            update_option('ofast_security_ip_whitelist', implode("\n", $valid_ips));
+        }
+    }
+
+    /**
+     * Get comprehensive list of reserved admin URL slugs
+     */
+    private function get_reserved_admin_slugs()
+    {
+        return array(
+            'wp-admin', 'wp-login', 'wp-login.php', 'admin', 'login', 
+            'dashboard', 'wp-content', 'wp-includes', 'wp-json',
+            'xmlrpc', 'xmlrpc.php', 'wp-cron', 'wp-cron.php',
+            'favicon.ico', 'robots.txt', 'sitemap', 'feed',
+            'comments', 'trackback', 'wp-mail', 'wp-mail.php',
+            'wp-config', 'wp-config.php', '.htaccess', 'index.php',
+            'readme.html', 'license.txt', 'wp-blog-header.php',
+            'wp-load.php', 'wp-settings.php'
+        );
     }
 
     /**
@@ -607,6 +688,7 @@ class Ofast_X_Admin_Tweaks
 
             <form method="post" action="">
                 <?php wp_nonce_field('ofast_admin_tweaks_save', 'admin_tweaks_nonce'); ?>
+                <?php wp_nonce_field('ofast_admin_url_change_' . get_current_user_id(), 'admin_url_nonce'); ?>
                 
                 <!-- Mobile Only Save Button (Top) -->
                 <div class="ofast-form-actions mobile-only" style="margin-bottom: 20px; text-align: center;">

@@ -308,10 +308,10 @@ class Ofast_X_Security_Hardening
         }
 
         $key = hash('sha256', SECURE_AUTH_KEY);
-        $iv = substr(hash('sha256', AUTH_KEY), 0, 16);
+        $iv = openssl_random_pseudo_bytes(16);
 
         $encrypted = openssl_encrypt($value, 'AES-256-CBC', $key, 0, $iv);
-        return base64_encode($encrypted);
+        return base64_encode($iv . $encrypted);
     }
 
     /**
@@ -324,10 +324,16 @@ class Ofast_X_Security_Hardening
         }
 
         $key = hash('sha256', SECURE_AUTH_KEY);
-        $iv = substr(hash('sha256', AUTH_KEY), 0, 16);
-
         $decoded = base64_decode($encrypted);
-        return openssl_decrypt($decoded, 'AES-256-CBC', $key, 0, $iv);
+        
+        if (strlen($decoded) < 16) {
+            return $encrypted; // Invalid encrypted data
+        }
+        
+        $iv = substr($decoded, 0, 16);
+        $encrypted_data = substr($decoded, 16);
+
+        return openssl_decrypt($encrypted_data, 'AES-256-CBC', $key, 0, $iv);
     }
 
     /**

@@ -259,22 +259,34 @@ class Ofast_X_Forms_Submissions
         $form_id = isset($_GET['form_id']) ? absint($_GET['form_id']) : 0;
         $status = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
 
-        $where = "WHERE 1=1";
+        // Build parameterized query with proper WHERE conditions
+        $where_conditions = array();
+        $query_params = array();
+        
         if ($form_id) {
-            $where .= $wpdb->prepare(" AND s.form_id = %d", $form_id);
+            $where_conditions[] = "s.form_id = %d";
+            $query_params[] = $form_id;
         }
+        
         if ($status) {
-            $where .= $wpdb->prepare(" AND s.status = %s", $status);
+            $where_conditions[] = "s.status = %s";
+            $query_params[] = $status;
         }
-
-        $submissions = $wpdb->get_results("
+        
+        $where_clause = !empty($where_conditions) ? 'WHERE ' . implode(' AND ', $where_conditions) : '';
+        
+        $query = "
             SELECT s.*, f.title as form_title 
             FROM {$table} s 
             LEFT JOIN {$forms_table} f ON s.form_id = f.id 
-            {$where}
+            {$where_clause}
             ORDER BY s.submitted_at DESC 
             LIMIT 100
-        ");
+        ";
+        
+        $submissions = !empty($query_params) ? 
+            $wpdb->get_results($wpdb->prepare($query, $query_params)) :
+            $wpdb->get_results($query);
 
         // Get forms for filter
         $forms = $wpdb->get_results("SELECT id, title FROM {$forms_table} ORDER BY title");

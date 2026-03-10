@@ -302,13 +302,26 @@ class Ofast_X_Activator
                 'woocommerce' => false,       // Coming soon
                 'learndash' => false          // Coming soon
             ),
-            'ofast_email_retention_days' => 90
+            'ofast_email_retention_days' => 90,
+            // SECURITY FIX (CWE-532): SMTP logging security defaults
+            'ofast_smtp_log_body' => 1,        // Keep logging enabled for backwards compatibility
+            'ofast_smtp_sanitize_logs' => 1,   // Enable sanitization by default for security  
+            'ofast_smtp_max_log_body' => 10000 // Limit content size to 10KB
         );
 
         foreach ($default_options as $key => $value) {
             if (get_option($key) === false) {
                 add_option($key, $value);
             }
+        }
+
+        // SECURITY FIX (CWE-532): Ensure security defaults for existing installations  
+        // These options need to be set even for existing users for security
+        if (get_option('ofast_smtp_sanitize_logs') === false) {
+            add_option('ofast_smtp_sanitize_logs', 1); // Enable sanitization by default
+        }
+        if (get_option('ofast_smtp_max_log_body') === false) {
+            add_option('ofast_smtp_max_log_body', 10000); // Set content limit
         }
     }
 

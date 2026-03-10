@@ -730,6 +730,42 @@ class Ofast_X_SMTP_Admin
                 </div>
             </div>
 
+            <!-- SECURITY FIX (CWE-532): Email Logging Security -->
+            <div style="background: #fefce8; border: 1px solid #facc15; border-radius: 8px; padding: 20px; margin: 30px 0;">
+                <h3 style="margin-top: 0; color: #a16207;"><span class="dashicons dashicons-shield-alt" style="margin-right: 5px;"></span>Email Logging Security</h3>
+                <p style="color: #78716c;">Control what information is stored in email logs to protect sensitive data.</p>
+                
+                <table class="form-table" style="background: none;">
+                    <tr>
+                        <th>Log Email Bodies</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="log_body" value="1" <?php checked(get_option('ofast_smtp_log_body', true)); ?>> 
+                                Store email content in logs for debugging
+                            </label>
+                            <p class="description">Disable for high-security environments. Only metadata (to, subject, status) will be logged.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Sanitize Logged Content</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="sanitize_logs" value="1" <?php checked(get_option('ofast_smtp_sanitize_logs', true)); ?>> 
+                                Remove passwords, tokens, and sensitive data from logs
+                            </label>
+                            <p class="description"><strong>Recommended:</strong> Filters out passwords, API keys, credit cards, and other sensitive patterns.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><label for="max_log_body">Max Content Length</label></th>
+                        <td>
+                            <input type="number" name="max_log_body" id="max_log_body" value="<?php echo esc_attr(get_option('ofast_smtp_max_log_body', 10000)); ?>" min="0" max="100000" style="width: 100px;"> characters
+                            <p class="description">Limit stored content size (0 = unlimited, not recommended). Default: 10,000 characters.</p>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
             <p class="submit">
                 <button type="submit" name="ofast_smtp_save" class="button button-primary button-large">Save SMTP Settings</button>
             </p>
@@ -893,6 +929,11 @@ class Ofast_X_SMTP_Admin
         // Rate limiting settings
         update_option('ofast_smtp_rate_limit_enabled', isset($_POST['rate_limit_enabled']) ? 1 : 0);
         update_option('ofast_smtp_rate_limit', max(1, intval($_POST['rate_limit'] ?? 60)));
+
+        // SECURITY FIX (CWE-532): Email logging security options
+        update_option('ofast_smtp_log_body', isset($_POST['log_body']) ? 1 : 0);
+        update_option('ofast_smtp_sanitize_logs', isset($_POST['sanitize_logs']) ? 1 : 0);
+        update_option('ofast_smtp_max_log_body', max(0, intval($_POST['max_log_body'] ?? 10000)));
 
         Ofast_X_Toast::add('SMTP settings saved successfully!', 'success');
     }

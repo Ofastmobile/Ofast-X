@@ -531,9 +531,15 @@ class Ofast_X_SMTP_Admin
                                 </td>
                                 <td><?php echo esc_html($log->sent_at); ?></td>
                                 <td>
-                                    <button type="button" class="button button-small preview-email" data-id="<?php echo esc_attr($log->id); ?>" data-content="<?php echo esc_attr(base64_encode($log->body)); ?>">Preview</button>
-                                    <?php if ($log->status === 'failed'): ?>
+                                    <?php if (!empty($log->body)): ?>
+                                        <button type="button" class="button button-small preview-email" data-id="<?php echo esc_attr($log->id); ?>" data-content="<?php echo esc_attr(base64_encode($log->body)); ?>">Preview</button>
+                                    <?php else: ?>
+                                        <span style="color: #6b7280; font-style: italic;">No content stored</span>
+                                    <?php endif; ?>
+                                    <?php if ($log->status === 'failed' && !empty($log->body)): ?>
                                         <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-smtp&tab=log&resend=' . $log->id), 'resend_email'); ?>" class="button button-small">Resend</a>
+                                    <?php elseif ($log->status === 'failed'): ?>
+                                        <span style="color: #6b7280; font-style: italic; margin-left: 8px;">Resend unavailable</span>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -561,6 +567,13 @@ class Ofast_X_SMTP_Admin
                     <h3 style="margin: 0;">Email Preview</h3>
                     <button type="button" id="close-preview" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
                 </div>
+                
+                <?php if (get_option('ofast_smtp_log_body_content', false)): ?>
+                <div style="padding: 10px 20px; background: #fffbeb; border-bottom: 1px solid #f59e0b; color: #92400e; font-size: 13px;">
+                    <strong>🔒 Security Notice:</strong> Sensitive patterns (passwords, tokens, API keys) have been automatically filtered from this preview.
+                </div>
+                <?php endif; ?>
+                
                 <iframe id="email-preview-frame" style="width: 100%; height: 60vh; border: none;"></iframe>
             </div>
         </div>
@@ -730,6 +743,32 @@ class Ofast_X_SMTP_Admin
                 </div>
             </div>
 
+            <!-- Email Logging Security Settings -->
+            <div style="background: #fffbeb; border: 1px solid #f59e0b; border-radius: 8px; padding: 20px; margin: 30px 0;">
+                <h3 style="margin-top: 0; color: #92400e;">🔒 Email Logging Security</h3>
+                <p style="color: #92400e;">
+                    <strong>Security Notice:</strong> Email logs may contain sensitive information like passwords, tokens, and personal data.
+                    Configure logging level based on your security requirements.
+                </p>
+                
+                <table class="form-table">
+                    <tr>
+                        <th>Log Email Content</th>
+                        <td>
+                            <?php $log_body = get_option('ofast_smtp_log_body_content', false); ?>
+                            <label>
+                                <input type="checkbox" name="log_body_content" value="1" <?php checked($log_body); ?>>
+                                Store filtered email content in logs
+                            </label>
+                            <p class="description" style="color: #92400e;">
+                                <strong>Recommended: Leave unchecked</strong> - Only metadata (to, subject, status, timestamp) will be logged for security.<br>
+                                When enabled, sensitive patterns (passwords, tokens, API keys) are automatically filtered before storage.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
             <p class="submit">
                 <button type="submit" name="ofast_smtp_save" class="button button-primary button-large">Save SMTP Settings</button>
             </p>
@@ -875,24 +914,34 @@ class Ofast_X_SMTP_Admin
 
         // Save all settings
         update_option('ofast_smtp_enabled', isset($_POST['smtp_enabled']) ? 1 : 0);
-        update_option('ofast_smtp_mailer_type', sanitize_text_field($_POST['smtp_mailer_type'] ?? 'default'));
-        update_option('ofast_smtp_provider', sanitize_text_field($_POST['smtp_provider'] ?? 'custom'));
-        update_option('ofast_smtp_host', sanitize_text_field($_POST['smtp_host'] ?? ''));
+        update_option('ofast_smtp_mailer_type', sanitize_text_field(wp_unslash($_POST['smtp_mailer_type'] ?? 'default')));
+        update_option('ofast_smtp_provider', sanitize_text_field(wp_unslash($_POST['smtp_provider'] ?? 'custom')));
+        update_option('ofast_smtp_host', sanitize_text_field(wp_unslash($_POST['smtp_host'] ?? '')));
         update_option('ofast_smtp_port', intval($_POST['smtp_port'] ?? 587));
-        update_option('ofast_smtp_encryption', sanitize_text_field($_POST['smtp_encryption'] ?? 'tls'));
-        update_option('ofast_smtp_username', sanitize_text_field($_POST['smtp_username'] ?? ''));
-        update_option('ofast_smtp_from_email', sanitize_email($_POST['smtp_from_email'] ?? ''));
-        update_option('ofast_smtp_from_name', sanitize_text_field($_POST['smtp_from_name'] ?? ''));
+        update_option('ofast_smtp_encryption', sanitize_text_field(wp_unslash($_POST['smtp_encryption'] ?? 'tls')));
+        update_option('ofast_smtp_username', sanitize_text_field(wp_unslash($_POST['smtp_username'] ?? '')));
+        update_option('ofast_smtp_from_email', sanitize_email(wp_unslash($_POST['smtp_from_email'] ?? '')));
+        update_option('ofast_smtp_from_name', sanitize_text_field(wp_unslash($_POST['smtp_from_name'] ?? '')));
 
         // Only update password if provided (not empty placeholder)
-        if (!empty($_POST['smtp_password']) && $_POST['smtp_password'] !== '••••••••') {
-            $encrypted = Ofast_X_SMTP::encrypt_password($_POST['smtp_password']);
+        $smtp_password = wp_unslash($_POST['smtp_password'] ?? '');
+        if (!empty($smtp_password) && $smtp_password !== '••••••••') {
+            $encrypted = Ofast_X_SMTP::encrypt_password($smtp_password);
             update_option('ofast_smtp_password', $encrypted);
         }
 
         // Rate limiting settings
         update_option('ofast_smtp_rate_limit_enabled', isset($_POST['rate_limit_enabled']) ? 1 : 0);
         update_option('ofast_smtp_rate_limit', max(1, intval($_POST['rate_limit'] ?? 60)));
+
+        // Email logging security settings
+        $log_body_content = isset($_POST['log_body_content']) ? 1 : 0;
+        update_option('ofast_smtp_log_body_content', $log_body_content);
+        
+        // Notify listeners when body logging is enabled (for optional auditing).
+        if ($log_body_content) {
+            do_action('ofast_smtp_body_logging_enabled', get_current_user_id(), current_time('mysql'));
+        }
 
         Ofast_X_Toast::add('SMTP settings saved successfully!', 'success');
     }
@@ -1641,6 +1690,11 @@ class Ofast_X_SMTP_Admin
 
         if (!$log) {
             add_settings_error('ofast_smtp', 'not_found', 'Email not found.', 'error');
+            return;
+        }
+
+        if (empty($log->body)) {
+            add_settings_error('ofast_smtp', 'body_missing', 'Cannot resend this email because content logging is disabled.', 'error');
             return;
         }
 

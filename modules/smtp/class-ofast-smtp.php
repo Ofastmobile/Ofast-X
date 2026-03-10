@@ -500,24 +500,46 @@ class Ofast_X_SMTP
 
     /**
      * Log outgoing email (before sending)
+     * SECURITY FIX (CWE-532): Implements content filtering for sensitive data
      */
     public function log_outgoing_email($args)
     {
         global $wpdb;
         $table_name = $wpdb->prefix . 'ofast_smtp_log';
 
+        $to_value = isset($args['to']) ? $args['to'] : '';
+        $subject = isset($args['subject']) ? $args['subject'] : '';
+        $message = isset($args['message']) ? $args['message'] : '';
+        $headers = isset($args['headers']) ? $args['headers'] : array();
+
         // Create table if not exists
         $this->ensure_log_table();
 
         // Get recipient(s) as string
-        $to = is_array($args['to']) ? implode(', ', $args['to']) : $args['to'];
+        $to = is_array($to_value) ? implode(', ', $to_value) : $to_value;
 
-        // Insert log entry
+        // Get logging level setting (default: metadata only for security)
+        $body_logging_enabled = get_option('ofast_smtp_log_body_content', false);
+        
+        // Filter sensitive content from message body before storage
+        $filtered_body = null;
+        if ($body_logging_enabled) {
+            $filtered_body = $this->filter_sensitive_content($message);
+        }
+
+        // Filter headers to remove sensitive information
+        $filtered_headers = null;
+        if (!empty($headers)) {
+            $headers_array = is_array($headers) ? $headers : array($headers);
+            $filtered_headers = maybe_serialize($this->filter_sensitive_headers($headers_array));
+        }
+
+        // Insert log entry with filtered content
         $wpdb->insert($table_name, array(
             'to_email' => sanitize_text_field($to),
-            'subject' => sanitize_text_field($args['subject']),
-            'body' => $args['message'],
-            'headers' => is_array($args['headers']) ? serialize($args['headers']) : $args['headers'],
+            'subject' => sanitize_text_field($subject),
+            'body' => $filtered_body,
+            'headers' => $filtered_headers,
             'status' => 'pending',
             'sent_at' => current_time('mysql')
         ));
@@ -572,6 +594,103 @@ class Ofast_X_SMTP
     }
 
     /**
+     * Filter sensitive content from email body
+     * SECURITY: Prevents storage of passwords, tokens, and personal data
+     */
+    private function filter_sensitive_content($content)
+    {
+        if (empty($content)) {
+            return $content;
+        }
+
+        // Define sensitive patterns to filter
+        $sensitive_patterns = apply_filters('ofast_smtp_sensitive_content_patterns', array(
+            // Passwords in various formats
+            '/(password[=:\s]+)[^\s&<>"\']{3,}/i' => '$1[REDACTED]',
+            '/"password"\s*:\s*"[^"]+"/i' => '"password":"[REDACTED]"',
+            '/(\bpwd[=:\s]+)[^\s&<>"\']{3,}/i' => '$1[REDACTED]',
+            
+            // Tokens and API keys
+            '/(token[=:\s]+)[A-Za-z0-9\-_\.]{16,}/i' => '$1[REDACTED]',
+            '/(api[_-]?key[=:\s]+)[A-Za-z0-9\-_\.]{16,}/i' => '$1[REDACTED]',
+            '/(bearer\s+)[A-Za-z0-9\-_\.]{20,}/i' => '$1[REDACTED]',
+            
+            // JWT tokens
+            '/eyJ[A-Za-z0-9\-_]{10,}\.[A-Za-z0-9\-_]{10,}\.[A-Za-z0-9\-_]{10,}/' => '[JWT_TOKEN_REDACTED]',
+            
+            // Reset/verification tokens in URLs
+            '/([?&]token=)[A-Za-z0-9\-_\.]{16,}/' => '$1[REDACTED]',
+            '/([?&]reset[_-]?token=)[A-Za-z0-9\-_\.]{16,}/' => '$1[REDACTED]',
+            '/([?&]verify[_-]?token=)[A-Za-z0-9\-_\.]{16,}/' => '$1[REDACTED]',
+            
+            // Credit card numbers (basic pattern)
+            '/\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})\b/' => '[CARD_NUMBER_REDACTED]',
+            
+            // Social Security Numbers (US format)
+            '/\b[0-9]{3}-[0-9]{2}-[0-9]{4}\b/' => '[SSN_REDACTED]',
+            
+            // WordPress admin URLs that might contain sensitive info
+            '/https?:\/\/[^\/\s]+\/wp-admin\/[^\s<>"\']*/' => '[ADMIN_URL_REDACTED]',
+            
+            // Private keys
+            '/-----BEGIN\s+(?:RSA\s+)?PRIVATE\s+KEY-----[\s\S]*?-----END\s+(?:RSA\s+)?PRIVATE\s+KEY-----/' => '[PRIVATE_KEY_REDACTED]',
+            
+            // Email addresses in sensitive contexts (except standard to/from)
+            '/(?:email[=:\s]+|user[_-]?email[=:\s]+)[^\s<>"\'@]+@[^\s<>"\']+/' => '[EMAIL_REDACTED]',
+        ));
+
+        $filtered_content = $content;
+        
+        foreach ($sensitive_patterns as $pattern => $replacement) {
+            $updated_content = preg_replace($pattern, $replacement, $filtered_content);
+
+            if (null !== $updated_content) {
+                $filtered_content = $updated_content;
+            }
+        }
+
+        return $filtered_content;
+    }
+
+    /**
+     * Filter sensitive headers
+     */
+    private function filter_sensitive_headers($headers)
+    {
+        $sensitive_header_names = apply_filters('ofast_smtp_sensitive_header_names', array(
+            'Authorization',
+            'X-Api-Key',
+            'X-Auth-Token',
+            'Cookie',
+            'Set-Cookie',
+        ));
+
+        $filtered = array();
+        
+        foreach ($headers as $key => $value) {
+            if (is_numeric($key)) {
+                // Handle indexed array headers like "Authorization: Bearer token"
+                foreach ($sensitive_header_names as $sensitive_name) {
+                    if (stripos($value, $sensitive_name . ':') === 0) {
+                        $filtered[$key] = $sensitive_name . ': [REDACTED]';
+                        continue 2;
+                    }
+                }
+                $filtered[$key] = $value;
+            } else {
+                // Handle associative array headers
+                if (in_array($key, $sensitive_header_names, true)) {
+                    $filtered[$key] = '[REDACTED]';
+                } else {
+                    $filtered[$key] = $value;
+                }
+            }
+        }
+
+        return $filtered;
+    }
+
+    /**
      * Ensure log table exists
      */
     private function ensure_log_table()
@@ -597,7 +716,7 @@ class Ofast_X_SMTP
                 id bigint(20) NOT NULL AUTO_INCREMENT,
                 to_email varchar(255) NOT NULL,
                 subject varchar(255) NOT NULL,
-                body longtext NOT NULL,
+                body longtext,
                 headers text,
                 status varchar(20) DEFAULT 'pending',
                 error_message text,

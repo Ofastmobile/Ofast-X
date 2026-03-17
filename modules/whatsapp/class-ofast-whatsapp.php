@@ -68,14 +68,21 @@ class Ofast_X_WhatsApp
             return '';
         }
 
-        if (class_exists('Ofast_X_Security_Hardening')) {
-            $decrypted = Ofast_X_Security_Hardening::decrypt_option($encrypted);
-            if (!empty($decrypted) && strlen($decrypted) > 5) {
-                return $decrypted;
-            }
+        // Require encryption class for sensitive credentials
+        if (!class_exists('Ofast_X_Security_Hardening')) {
+            error_log('Ofast WhatsApp: Encryption class not available for decrypting credentials');
+            return '';
         }
 
-        return $encrypted;
+        $decrypted = Ofast_X_Security_Hardening::decrypt_option($encrypted);
+        
+        // Validate decryption succeeded - empty or very short results indicate failure
+        if (empty($decrypted) || strlen($decrypted) < 6) {
+            error_log('Ofast WhatsApp: Failed to decrypt credential for option: ' . $option_name);
+            return '';
+        }
+
+        return $decrypted;
     }
 
     /**
@@ -119,27 +126,35 @@ class Ofast_X_WhatsApp
         update_option('ofast_whatsapp_enabled', !empty($data['enabled']));
         update_option('ofast_whatsapp_provider', sanitize_text_field($data['provider'] ?? self::PROVIDER_TERMII));
 
-        // Encrypt sensitive data
+        // Encrypt sensitive data - require encryption for security
         if (!empty($data['api_key'])) {
-            if (class_exists('Ofast_X_Security_Hardening')) {
-                update_option(
-                    'ofast_whatsapp_api_key',
-                    Ofast_X_Security_Hardening::encrypt_option($data['api_key'])
-                );
-            } else {
-                update_option('ofast_whatsapp_api_key', sanitize_text_field($data['api_key']));
+            if (!class_exists('Ofast_X_Security_Hardening')) {
+                error_log('Ofast WhatsApp: Encryption class not available - cannot store API key securely');
+                wp_die(__('Error: Cannot store API credentials securely. Encryption module is required.', 'ofast-x'));
             }
+            
+            $encrypted_key = Ofast_X_Security_Hardening::encrypt_option($data['api_key']);
+            if (empty($encrypted_key)) {
+                error_log('Ofast WhatsApp: Failed to encrypt API key');
+                wp_die(__('Error: Failed to encrypt API key. Please try again.', 'ofast-x'));
+            }
+            
+            update_option('ofast_whatsapp_api_key', $encrypted_key);
         }
 
         if (!empty($data['api_secret'])) {
-            if (class_exists('Ofast_X_Security_Hardening')) {
-                update_option(
-                    'ofast_whatsapp_api_secret',
-                    Ofast_X_Security_Hardening::encrypt_option($data['api_secret'])
-                );
-            } else {
-                update_option('ofast_whatsapp_api_secret', sanitize_text_field($data['api_secret']));
+            if (!class_exists('Ofast_X_Security_Hardening')) {
+                error_log('Ofast WhatsApp: Encryption class not available - cannot store API secret securely');
+                wp_die(__('Error: Cannot store API credentials securely. Encryption module is required.', 'ofast-x'));
             }
+            
+            $encrypted_secret = Ofast_X_Security_Hardening::encrypt_option($data['api_secret']);
+            if (empty($encrypted_secret)) {
+                error_log('Ofast WhatsApp: Failed to encrypt API secret');
+                wp_die(__('Error: Failed to encrypt API secret. Please try again.', 'ofast-x'));
+            }
+            
+            update_option('ofast_whatsapp_api_secret', $encrypted_secret);
         }
 
         if (isset($data['sender_id'])) {

@@ -503,6 +503,10 @@ class Ofast_X_SMTP
         
         // Generate a random IV for each encryption operation
         $iv = openssl_random_pseudo_bytes(16);
+        if ($iv === false) {
+            // Fallback to deterministic IV if random source fails
+            $iv = substr(hash('sha256', AUTH_KEY), 0, 16);
+        }
         $encrypted = openssl_encrypt($password, 'AES-256-CBC', $key, 0, $iv);
 
         // Store IV with ciphertext: IV (16 bytes) + encrypted data

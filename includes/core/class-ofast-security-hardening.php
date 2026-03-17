@@ -309,6 +309,10 @@ class Ofast_X_Security_Hardening
 
         $key = hash('sha256', SECURE_AUTH_KEY);
         $iv = openssl_random_pseudo_bytes(16);
+        if ($iv === false) {
+            // Fallback to deterministic IV if random source fails
+            $iv = substr(hash('sha256', AUTH_KEY), 0, 16);
+        }
 
         $encrypted = openssl_encrypt($value, 'AES-256-CBC', $key, 0, $iv);
         return base64_encode($iv . $encrypted);

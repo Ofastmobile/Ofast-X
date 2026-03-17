@@ -499,6 +499,17 @@ class Ofast_X_Settings
                         </label>
                     </div>
                     <p style="margin: 15px 0 0 0; font-style: italic; color: #64748b; font-size: 13px;">Note: This setting only takes effect when the plugin is deleted (not just deactivated). Deactivating the plugin will never remove your data.</p>
+                    
+                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <strong style="display: block; color: #1e293b; font-size: 14px; margin-bottom: 4px;">Setup Wizard</strong>
+                            <span style="color: #64748b; font-size: 13px;">Relaunch the setup wizard to quickly configure core features.</span>
+                        </div>
+                        <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-setup-wizard')); ?>" class="ofast-btn-secondary" style="padding: 10px 20px; text-decoration: none; border: 1px solid #cbd5e1; border-radius: 8px; color: #475569; font-weight: 600; font-size: 13px; transition: all 0.2s;">
+                            <span class="dashicons dashicons-admin-generic" style="vertical-align: middle; margin-right: 5px; font-size: 16px; height: 16px; width: 16px;"></span>
+                            Launch Wizard
+                        </a>
+                    </div>
                 </div>
 
                 <p class="submit" style="margin-top: 30px; display: flex; gap: 15px; align-items: center;">

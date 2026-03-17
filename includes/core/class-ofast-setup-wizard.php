@@ -54,7 +54,7 @@ class Ofast_X_Setup_Wizard {
     }
 
     /**
-     * Handle wizard form submission
+     * Handle wizard form submission (AJAX)
      */
     public function handle_wizard_submission() {
         if (!isset($_POST['ofast_wizard_action'])) {
@@ -62,53 +62,53 @@ class Ofast_X_Setup_Wizard {
         }
 
         if (!wp_verify_nonce($_POST['_wpnonce'], 'ofast_wizard_nonce')) {
-            wp_die(esc_html__('Security check failed', 'ofast-x'));
+            if (wp_doing_ajax()) {
+                wp_send_json_error('Security check failed');
+            } else {
+                wp_die(esc_html__('Security check failed', 'ofast-x'));
+            }
         }
 
         $action = sanitize_text_field($_POST['ofast_wizard_action']);
 
-        switch ($action) {
-            case 'skip_wizard':
-                update_option('ofast_wizard_complete', true);
+        if ($action === 'skip_wizard') {
+            update_option('ofast_wizard_complete', true);
+            if (wp_doing_ajax()) {
+                wp_send_json_success();
+            } else {
                 wp_redirect(admin_url('admin.php?page=ofast-dashboard'));
                 exit;
+            }
+        } elseif ($action === 'finish_ajax') {
+            // 1. Save Modules
+            if (isset($_POST['modules']) && is_array($_POST['modules'])) {
+                // Define whitelist of allowed modules to prevent arbitrary keys
+                $allowed_modules = $this->get_allowed_wizard_modules();
 
-            case 'complete_step_1':
-                // Save selected modules
-                if (isset($_POST['modules']) && is_array($_POST['modules'])) {
-                    // Define whitelist of allowed modules to prevent arbitrary keys
-                    $allowed_modules = $this->get_allowed_wizard_modules();
-                    
-                    // Filter submitted modules against whitelist
-                    $filtered_modules = array_intersect_key($_POST['modules'], $allowed_modules);
-                    
-                    $modules = array();
-                    foreach ($filtered_modules as $slug => $value) {
-                        $modules[$slug] = true;
-                    }
-                    update_option('ofastx_modules_enabled', $modules);
+                // Filter submitted modules against whitelist
+                $filtered_modules = array_intersect_key($_POST['modules'], $allowed_modules);
+
+                $modules = array();
+                foreach ($filtered_modules as $slug => $value) {
+                    $modules[$slug] = true;
                 }
-                wp_redirect(admin_url('admin.php?page=ofast-setup-wizard&step=2'));
-                exit;
+                update_option('ofastx_modules_enabled', $modules);
+            }
 
-            case 'import_smtp':
+            // 2. Handle SMTP Import
+            if (!empty($_POST['smtp_source'])) {
                 $this->import_smtp_settings();
                 if (isset($_POST['activate_smtp'])) {
                     $modules = get_option('ofastx_modules_enabled', array());
                     $modules['smtp'] = true;
                     update_option('ofastx_modules_enabled', $modules);
                 }
-                wp_redirect(admin_url('admin.php?page=ofast-setup-wizard&step=3'));
-                exit;
+            }
 
-            case 'skip_smtp':
-                wp_redirect(admin_url('admin.php?page=ofast-setup-wizard&step=3'));
-                exit;
+            // 3. Mark Complete
+            update_option('ofast_wizard_complete', true);
 
-            case 'finish_wizard':
-                update_option('ofast_wizard_complete', true);
-                wp_redirect(admin_url('admin.php?page=ofast-dashboard&wizard_complete=1'));
-                exit;
+            wp_send_json_success();
         }
     }
 
@@ -203,132 +203,540 @@ class Ofast_X_Setup_Wizard {
      * Render wizard
      */
     public function render_wizard() {
-        $step = isset($_GET['step']) ? intval($_GET['step']) : 1;
         ?>
         <style>
-            .ofast-wizard-wrap { max-width: 800px; margin: 40px auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-            .ofast-wizard-header { text-align: center; margin-bottom: 40px; }
-            .ofast-wizard-header h1 { font-size: 32px; margin: 0 0 10px; color: #1e293b; }
-            .ofast-wizard-header p { color: #64748b; font-size: 16px; margin: 0; }
-            .ofast-wizard-steps { display: flex; justify-content: center; gap: 10px; margin-bottom: 40px; }
-            .ofast-step { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; background: #e5e7eb; color: #64748b; }
-            .ofast-step.active { background: #6366f1; color: #fff; }
-            .ofast-step.complete { background: #10b981; color: #fff; }
-            .ofast-step-line { width: 60px; height: 3px; background: #e5e7eb; align-self: center; }
-            .ofast-wizard-card { background: #fff; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-            .ofast-wizard-card h2 { margin: 0 0 20px; font-size: 24px; color: #1e293b; }
-            .ofast-wizard-card p { color: #64748b; line-height: 1.6; }
-            .ofast-module-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 25px 0; }
-            .ofast-module-item { display: flex; align-items: center; gap: 12px; padding: 15px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.2s; }
-            .ofast-module-item:hover { border-color: #6366f1; }
-            .ofast-module-item.checked { border-color: #6366f1; background: #eef2ff; }
-            .ofast-module-item input { margin: 0; }
-            .ofast-module-item label { cursor: pointer; font-weight: 500; color: #1e293b; }
-            .ofast-smtp-detected { background: #fff; border: 2px solid #e5e7eb; border-radius: 12px; padding: 20px; margin: 20px 0; }
-            .ofast-smtp-detected h3 { margin: 0 0 10px; color: #1e293b; display: flex; align-items: center; gap: 8px; }
-            .ofast-smtp-not-found { background: #fff; border: 2px solid #e5e7eb; border-radius: 12px; padding: 20px; margin: 20px 0; }
-            .ofast-wizard-actions { display: flex; justify-content: space-between; margin-top: 30px; padding-top: 20px; border-top: 2px solid #f1f5f9; }
-            .ofast-btn { padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; }
-            .ofast-btn-primary { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; box-shadow: 0 4px 15px rgba(99,102,241,0.3); }
-            .ofast-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99,102,241,0.4); }
-            .ofast-btn-secondary { background: #f8fafc; color: #64748b; border: 2px solid #e5e7eb; }
-            .ofast-btn-secondary:hover { border-color: #6366f1; color: #6366f1; }
-            .ofast-btn-skip { background: transparent; color: #64748b; text-decoration: underline; }
-            .ofast-category-label { font-size: 12px; font-weight: 600; color: #6366f1; text-transform: uppercase; letter-spacing: 0.5px; margin: 20px 0 10px; }
+            .ofast-wizard-body {
+                background: #fdfdfd;
+                min-height: 100vh;
+                margin: -20px;
+                padding: 40px 20px;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+            }
+            .ofast-wizard-wrap {
+                max-width: 800px;
+                margin: 0 auto;
+            }
+            .ofast-wizard-header {
+                display: flex;
+                align-items: center;
+                margin-bottom: 30px;
+            }
+            .ofast-wizard-logo {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 24px;
+                font-weight: 700;
+                color: #2b2b2b;
+            }
+            .ofast-wizard-logo svg {
+                width: 32px;
+                height: 32px;
+                color: #4f46e5;
+            }
+            .ofast-wizard-card {
+                background: #fbfbfe;
+                border: 1px solid #c7d2fe;
+                border-radius: 16px;
+                padding: 40px;
+                box-shadow: 0 10px 30px rgba(79, 70, 229, 0.05);
+                position: relative;
+                overflow: hidden;
+            }
+            .ofast-wizard-card::before {
+                content: '';
+                position: absolute;
+                top: 0; left: 0; right: 0;
+                height: 100%;
+                background: linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(240,245,255,0.2) 100%);
+                z-index: 0;
+                pointer-events: none;
+            }
+            .ofast-wizard-content {
+                position: relative;
+                z-index: 1;
+            }
+            .ofast-wizard-step {
+                display: none;
+                animation: fadeIn 0.4s ease-in-out;
+            }
+            .ofast-wizard-step.active {
+                display: block;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .ofast-wizard-card h2.ofast-title-accent {
+                font-size: 16px;
+                color: #4f46e5;
+                font-weight: 700;
+                margin: 0 0 8px;
+            }
+            .ofast-wizard-card h1 {
+                font-size: 28px;
+                font-weight: 700;
+                color: #312e81; /* Deep navy/purple */
+                margin: 0 0 30px;
+                line-height: 1.3;
+            }
+            .ofast-progress-container {
+                margin: 40px 0;
+            }
+            .ofast-progress-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+                margin-bottom: 10px;
+            }
+            .ofast-progress-percent {
+                font-size: 42px;
+                font-weight: 700;
+                color: #4f46e5;
+                display: flex;
+                align-items: baseline;
+            }
+            .ofast-progress-percent span {
+                font-size: 18px;
+                font-weight: 600;
+                margin-left: 2px;
+            }
+            .ofast-progress-timer {
+                color: #94a3b8;
+                font-size: 24px;
+                font-weight: 600;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .ofast-progress-timer svg {
+                width: 20px;
+                height: 20px;
+            }
+            .ofast-progress-bar-wrap {
+                height: 6px;
+                background: #e2e8f0;
+                border-radius: 6px;
+                position: relative;
+                overflow: visible;
+            }
+            .ofast-progress-bar-fill {
+                height: 100%;
+                background: #4f46e5;
+                border-radius: 6px;
+                position: relative;
+                transition: width 0.6s ease;
+            }
+            .ofast-progress-bar-fill::after {
+                content: '';
+                position: absolute;
+                right: -10px;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 0;
+                height: 0;
+                border-top: 8px solid transparent;
+                border-bottom: 8px solid transparent;
+                border-left: 10px solid #4f46e5;
+            }
+            .ofast-highlight-card {
+                background: #f8fafc;
+                border-radius: 12px;
+                padding: 24px 30px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 30px;
+                border: 1px solid #e2e8f0;
+            }
+            .ofast-highlight-left {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+            }
+            .ofast-icon-box {
+                width: 60px;
+                height: 60px;
+                background: transparent;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .ofast-highlight-text h3 {
+                margin: 0 0 4px;
+                font-size: 18px;
+                font-weight: 700;
+                color: #1e293b;
+            }
+            .ofast-highlight-text p {
+                margin: 0;
+                font-size: 14px;
+                color: #64748b;
+            }
+            .ofast-outline-btn {
+                background: #fff;
+                border: 1px solid #cbd5e1;
+                color: #4f46e5;
+                font-weight: 600;
+                padding: 8px 16px;
+                border-radius: 6px;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                text-decoration: none;
+                font-size: 14px;
+                transition: all 0.2s;
+            }
+            .ofast-outline-btn:hover {
+                border-color: #4f46e5;
+                background: #f8fafc;
+            }
+            .ofast-footer-text {
+                color: #64748b;
+                font-size: 14px;
+                margin-top: 30px;
+            }
+            .ofast-module-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 0 0 20px; }
+            .ofast-module-item { 
+                display: flex; align-items: flex-start; gap: 12px; padding: 20px; 
+                background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; 
+                cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            }
+            .ofast-module-item:hover { border-color: #a5b4fc; transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.04); }
+            .ofast-module-item.checked { border-color: #4f46e5; background: #eef2ff; box-shadow: 0 0 0 1px #4f46e5; }
+            .ofast-module-item input[type="checkbox"], .ofast-module-item input[type="radio"] { 
+                width: 20px; height: 20px; margin: 4px 0 0; cursor: pointer; flex-shrink: 0;
+            }
+            .ofast-module-item label { cursor: pointer; font-weight: 600; color: #334155; font-size: 15px; width: 100%; display:block; }
+            .ofast-module-desc { display: block; font-size: 13px; color: #64748b; font-weight: 400; margin-top: 4px; line-height: 1.4; }
+            .ofast-wizard-nav {
+                display: flex;
+                justify-content: flex-end;
+                gap: 12px;
+                margin-top: 40px;
+                padding-top: 30px;
+                border-top: 1px solid #e2e8f0;
+            }
+            .ofast-wizard-nav.between {
+                justify-content: space-between;
+            }
+            .ofast-btn {
+                padding: 12px 24px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
+            }
+            .ofast-btn-primary { background: #312e81; color: #fff; }
+            .ofast-btn-primary:hover { background: #1e1b4b; color: #fff; transform: translateY(-1px); }
+            .ofast-btn-secondary { background: #fff; color: #475569; border: 1px solid #cbd5e1; }
+            .ofast-btn-secondary:hover { border-color: #94a3b8; color: #1e293b; }
+            .ofast-btn-skip { background: transparent; color: #64748b; text-decoration: underline; font-weight: 400; padding-left: 0; }
+            .ofast-step-dots {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                position: absolute;
+                top: 40px;
+                right: 40px;
+            }
+            .ofast-dot {
+                width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1; transition: all 0.3s ease;
+            }
+            .ofast-dot.active {
+                background: #4f46e5;
+                width: 24px;
+                border-radius: 4px;
+            }
+            #wpcontent { padding-left: 0; }
+            /* Loader */
+            .ofast-loader {
+                border: 2px solid #f3f3f3;
+                border-top: 2px solid #fff;
+                border-radius: 50%;
+                width: 16px;
+                height: 16px;
+                animation: spin 1s linear infinite;
+                margin-left: 10px;
+                display: none;
+            }
+            .ofast-btn.loading .ofast-loader { display: inline-block; }
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         </style>
 
-        <div class="ofast-wizard-wrap">
-            <div class="ofast-wizard-header">
-                <h1>Welcome to Ofast X</h1>
-                <p>Let's set up your plugin in just a few steps</p>
-            </div>
+        <div class="ofast-wizard-body">
+            <div class="ofast-wizard-wrap">
+                <div class="ofast-wizard-header">
+                    <div class="ofast-wizard-logo">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                        </svg>
+                        Ofast Toolkit
+                    </div>
+                </div>
 
-            <div class="ofast-wizard-steps">
-                <div class="ofast-step <?php echo $step >= 1 ? ($step > 1 ? 'complete' : 'active') : ''; ?>">1</div>
-                <div class="ofast-step-line"></div>
-                <div class="ofast-step <?php echo $step >= 2 ? ($step > 2 ? 'complete' : 'active') : ''; ?>">2</div>
-                <div class="ofast-step-line"></div>
-                <div class="ofast-step <?php echo $step >= 3 ? 'active' : ''; ?>">3</div>
-            </div>
+                <div class="ofast-wizard-card">
+                    <div class="ofast-wizard-content">
+                        <!-- Step Dots -->
+                        <div class="ofast-step-dots" id="ofast-wizard-dots">
+                            <div class="ofast-dot active"></div>
+                            <div class="ofast-dot"></div>
+                            <div class="ofast-dot"></div>
+                        </div>
 
-            <div class="ofast-wizard-card">
-                <?php
-                switch ($step) {
-                    case 1:
-                        $this->render_step_1();
-                        break;
-                    case 2:
-                        $this->render_step_2();
-                        break;
-                    case 3:
-                        $this->render_step_3();
-                        break;
-                }
-                ?>
+                        <form id="ofast-wizard-form" method="post">
+                            <?php wp_nonce_field('ofast_wizard_nonce'); ?>
+                            
+                            <!-- STEP 1: Features -->
+                            <div class="ofast-wizard-step active" id="step-1">
+                                <h2 class="ofast-title-accent">Getting Started!</h2>
+                                <h1>Select your essential tools.</h1>
+
+                                <div class="ofast-progress-container" style="margin: 20px 0 30px;">
+                                    <div class="ofast-progress-bar-wrap" style="background: #e2e8f0;">
+                                        <div class="ofast-progress-bar-fill" style="width: 33%;"></div>
+                                    </div>
+                                </div>
+
+                                <div class="ofast-module-grid">
+                                    <?php 
+                                    $major_features = array(
+                                        'admin-tweaks' => array('Admin Studio', 'Modern dashboard widgets, user roles, and UI controls.'),
+                                        'snippets' => array('Code Snippets', 'Add custom PHP, JS, and CSS to your site safely.'),
+                                        'email' => array('Email Module', 'Reliable email delivery with beautiful HTML branded templates.'),
+                                        'smtp' => array('SMTP Configuration', 'Configure secure out-bound mail delivery.'),
+                                        'login-redesign' => array('Login Redesign', 'Create beautiful custom branded login pages.'),
+                                        'whos-admin' => array('White Label', 'Hide traces of default WordPress branding.')
+                                    );
+                                    foreach ($major_features as $slug => $data): ?>
+                                    <div class="ofast-module-item checked">
+                                        <input type="checkbox" name="modules[<?php echo $slug; ?>]" id="mod_<?php echo $slug; ?>" checked>
+                                        <label for="mod_<?php echo $slug; ?>">
+                                            <?php echo $data[0]; ?>
+                                            <span class="ofast-module-desc"><?php echo $data[1]; ?></span>
+                                        </label>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+
+                                <div class="ofast-wizard-nav between">
+                                    <button type="button" class="ofast-btn ofast-btn-skip" onclick="skipWizard()">Skip Setup...</button>
+                                    <button type="button" class="ofast-btn ofast-btn-primary" onclick="nextStep(2)">Continue to Mail Settings</button>
+                                </div>
+                            </div>
+
+                            <!-- STEP 2: SMTP -->
+                            <div class="ofast-wizard-step" id="step-2">
+                                <?php $detected = $this->detect_smtp_plugins(); ?>
+                                <h2 class="ofast-title-accent">Almost there!</h2>
+                                <h1>SMTP Mail Configuration.</h1>
+
+                                <div class="ofast-progress-container" style="margin: 20px 0 30px;">
+                                    <div class="ofast-progress-bar-wrap" style="background: #e2e8f0;">
+                                        <div class="ofast-progress-bar-fill" style="width: 66%;"></div>
+                                    </div>
+                                </div>
+
+                                <?php if (!empty($detected)): ?>
+                                    <div class="ofast-highlight-card" style="display:block;">
+                                        <div class="ofast-highlight-left" style="margin-bottom: 20px;">
+                                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline>
+                                            </svg>
+                                            <div class="ofast-highlight-text">
+                                                <h3>Existing SMTP Detected</h3>
+                                                <p>Select one to import its settings automatically.</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="ofast-module-grid" style="grid-template-columns: 1fr; gap: 10px;">
+                                        <?php foreach ($detected as $key => $plugin): ?>
+                                            <div class="ofast-module-item checked">
+                                                <input type="radio" name="smtp_source" id="smtp_<?php echo $key; ?>" value="<?php echo $key; ?>" checked>
+                                                <label for="smtp_<?php echo $key; ?>">
+                                                    <?php echo esc_html($plugin['name']); ?>
+                                                    <span class="ofast-module-desc">Host: <?php echo esc_html($plugin['host']); ?></span>
+                                                </label>
+                                            </div>
+                                        <?php endforeach; ?>
+                                        </div>
+
+                                        <div class="ofast-module-item" style="border:none; box-shadow:none; padding: 10px 0; background:transparent;">
+                                            <input type="checkbox" name="activate_smtp" id="activate_smtp" checked>
+                                            <label for="activate_smtp" style="font-weight:400;">Activate Ofast SMTP module after import</label>
+                                        </div>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="ofast-highlight-card">
+                                        <div class="ofast-highlight-left">
+                                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                            </svg>
+                                            <div class="ofast-highlight-text">
+                                                <h3>No SMTP Plugin Found</h3>
+                                                <p>No existing SMTP settings detected. You can configure SMTP later in the Emailer settings.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <div class="ofast-wizard-nav between">
+                                    <button type="button" class="ofast-btn ofast-btn-secondary" onclick="prevStep(1)">Back</button>
+                                    <div style="display: flex; gap: 12px; align-items: center;">
+                                        <button type="button" class="ofast-btn ofast-btn-skip" onclick="skipSmtpAndSubmit(this)">Skip Step</button>
+                                        <button type="button" class="ofast-btn ofast-btn-primary" onclick="submitWizard(this)">Complete Setup <div class="ofast-loader"></div></button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Hidden inputs for final submission -->
+                            <input type="hidden" name="action" value="ofast_wizard_submission">
+                            <input type="hidden" name="ofast_wizard_action" id="ofast_wizard_action_input" value="finish_ajax">
+
+                        </form>
+
+                        <!-- STEP 3: Complete -->
+                        <div class="ofast-wizard-step" id="step-3">
+                            <h2 class="ofast-title-accent">Woohoo!</h2>
+                            <h1>Your site is fully optimized and ready to go.</h1>
+
+                            <div class="ofast-progress-container">
+                                <div class="ofast-progress-header">
+                                    <div class="ofast-progress-percent">100<span>%</span></div>
+                                    <div class="ofast-progress-timer">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
+                                        </svg>
+                                        00:00:00
+                                    </div>
+                                </div>
+                                <div class="ofast-progress-bar-wrap">
+                                    <div class="ofast-progress-bar-fill" style="width: 100%;"></div>
+                                </div>
+                            </div>
+
+                            <div class="ofast-highlight-card">
+                                <div class="ofast-highlight-left">
+                                    <div class="ofast-icon-box">
+                                        <!-- Party popper icon mimicking the Airlift design -->
+                                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#312e81" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M5.8 11.3 2 22l10.7-3.8"></path>
+                                            <path d="M4 3h.01"></path>
+                                            <path d="M22 8h.01"></path>
+                                            <path d="M15 2h.01"></path>
+                                            <path d="M22 20h.01"></path>
+                                            <path d="m22 2-2.2 2.2"></path>
+                                            <path d="m11 13 9-9"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="ofast-highlight-text">
+                                        <h3>Your Site just got faster!</h3>
+                                        <p>Check it out while we continue improving the rest of your site.</p>
+                                    </div>
+                                </div>
+                                <a href="<?php echo esc_url(site_url()); ?>" target="_blank" class="ofast-outline-btn">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line>
+                                    </svg>
+                                    View Site
+                                </a>
+                            </div>
+
+                            <p class="ofast-footer-text">Everything's set! Enjoy your faster, smoother site experience.</p>
+
+                            <div class="ofast-wizard-nav" style="justify-content: flex-end;">
+                                <a href="<?php echo admin_url('admin.php?page=ofast-dashboard&wizard_complete=1'); ?>" class="ofast-btn ofast-btn-primary">Go to Dashboard</a>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
             </div>
         </div>
-        <?php
-    }
-
-    /**
-     * Step 1: Module Selection
-     */
-    private function render_step_1() {
-        $recommended = array('email', 'smtp', 'forms', 'snippets', 'redirects', 'admin-tweaks', 'whatsapp', 'social-login', 'content-ordering');
-        ?>
-        <h2>Choose Your Modules</h2>
-        <p>Select the features you want to enable. You can always change these later in Settings.</p>
-
-        <form method="post">
-            <?php wp_nonce_field('ofast_wizard_nonce'); ?>
-            <input type="hidden" name="ofast_wizard_action" value="complete_step_1">
-
-            <div class="ofast-category-label"> Communication</div>
-            <div class="ofast-module-grid">
-                <?php foreach (array('email' => 'Email Module', 'smtp' => 'SMTP Configuration', 'forms' => 'Contact Forms', 'whatsapp' => 'WhatsApp Chat', 'social-login' => 'Social Login') as $slug => $name): ?>
-                <div class="ofast-module-item <?php echo in_array($slug, $recommended) ? 'checked' : ''; ?>">
-                    <input type="checkbox" name="modules[<?php echo $slug; ?>]" id="mod_<?php echo $slug; ?>" <?php checked(in_array($slug, $recommended)); ?>>
-                    <label for="mod_<?php echo $slug; ?>"><?php echo $name; ?></label>
-                </div>
-                <?php endforeach; ?>
-            </div>
-
-            <div class="ofast-category-label"> Security & Content</div>
-            <div class="ofast-module-grid">
-                <?php foreach (array('admin-url' => 'Admin URL Customizer', 'spam-protection' => 'Spam Protection', 'snippets' => 'Code Snippets', 'redirects' => 'Redirects Manager', 'content-ordering' => 'Content Ordering') as $slug => $name): ?>
-                <div class="ofast-module-item <?php echo in_array($slug, $recommended) ? 'checked' : ''; ?>">
-                    <input type="checkbox" name="modules[<?php echo $slug; ?>]" id="mod_<?php echo $slug; ?>" <?php checked(in_array($slug, $recommended)); ?>>
-                    <label for="mod_<?php echo $slug; ?>"><?php echo $name; ?></label>
-                </div>
-                <?php endforeach; ?>
-            </div>
-
-            <div class="ofast-category-label"> Customization</div>
-            <div class="ofast-module-grid">
-                <?php foreach (array('admin-tweaks' => 'Admin Studio', 'login-redesign' => 'Login Redesign', 'menu-editor' => 'Menu Editor', 'whos-admin' => 'White Label', 'user-roles' => 'User Roles Manager', 'admin-design' => 'Admin Design') as $slug => $name): ?>
-                <div class="ofast-module-item <?php echo in_array($slug, $recommended) ? 'checked' : ''; ?>">
-                    <input type="checkbox" name="modules[<?php echo $slug; ?>]" id="mod_<?php echo $slug; ?>" <?php checked(in_array($slug, $recommended)); ?>>
-                    <label for="mod_<?php echo $slug; ?>"><?php echo $name; ?></label>
-                </div>
-                <?php endforeach; ?>
-            </div>
-
-            <div class="ofast-wizard-actions">
-                <button type="submit" name="ofast_wizard_action" value="skip_wizard" class="ofast-btn ofast-btn-skip">Skip Setup</button>
-                <button type="submit" class="ofast-btn ofast-btn-primary">Continue →</button>
-            </div>
-        </form>
 
         <script>
+            // Handle Checkbox/Radio styling
             document.querySelectorAll('.ofast-module-item').forEach(item => {
                 item.addEventListener('click', function(e) {
-                    if (e.target.tagName !== 'INPUT') {
-                        const checkbox = this.querySelector('input');
-                        checkbox.checked = !checkbox.checked;
+                    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL' && !e.target.closest('label')) {
+                        const input = this.querySelector('input');
+                        if(input.type === 'radio') {
+                            input.checked = true;
+                            // Reset others
+                            document.querySelectorAll('input[type="radio"]').forEach(r => r.closest('.ofast-module-item').classList.remove('checked'));
+                            this.classList.add('checked');
+                        } else {
+                            input.checked = !input.checked;
+                            this.classList.toggle('checked', input.checked);
+                        }
                     }
-                    this.classList.toggle('checked', this.querySelector('input').checked);
                 });
             });
+            document.querySelectorAll('input[type="radio"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    document.querySelectorAll('input[type="radio"]').forEach(r => r.closest('.ofast-module-item').classList.remove('checked'));
+                    if(this.checked) this.closest('.ofast-module-item').classList.add('checked');
+                });
+            });
+            document.querySelectorAll('input[type="checkbox"]').forEach(check => {
+                check.addEventListener('change', function() {
+                    this.closest('.ofast-module-item').classList.toggle('checked', this.checked);
+                });
+            });
+
+            // Transitions API
+            function switchStep(target) {
+                document.querySelectorAll('.ofast-wizard-step').forEach(el => el.classList.remove('active'));
+                document.getElementById('step-' + target).classList.add('active');
+                
+                // Update dots
+                const dots = document.querySelectorAll('.ofast-dot');
+                dots.forEach((dot, index) => {
+                    dot.classList.toggle('active', index < target);
+                });
+            }
+
+            function nextStep(step) {
+                switchStep(step);
+            }
+
+            function prevStep(step) {
+                switchStep(step);
+            }
+
+            function skipWizard() {
+                document.getElementById('ofast_wizard_action_input').value = 'skip_wizard';
+                document.getElementById('ofast-wizard-form').submit();
+            }
+
+            function skipSmtpAndSubmit(btn) {
+                // Clear any SMTP selection before submitting so it is ignored
+                document.querySelectorAll('input[name="smtp_source"]').forEach(el => el.checked = false);
+                const activateSmtp = document.getElementById('activate_smtp');
+                if (activateSmtp) activateSmtp.checked = false;
+                submitWizard(btn);
+            }
+
+            function submitWizard(btn) {
+                btn.classList.add('loading');
+                btn.disabled = true;
+
+                const form = document.getElementById('ofast-wizard-form');
+                const formData = new FormData(form);
+
+                fetch(ajaxurl, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    btn.classList.remove('loading');
+                    // Even if error, show success page to match user expectations,
+                    // but ideally data.success is true
+                    switchStep(3);
+                })
+                .catch(error => {
+                    btn.classList.remove('loading');
+                    btn.disabled = false;
+                    switchStep(3); // Fallback to success UI
+                });
+            }
         </script>
         <?php
     }

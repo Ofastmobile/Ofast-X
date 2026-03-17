@@ -606,6 +606,7 @@ class Ofast_X_SMTP
 
     /**
      * Log outgoing email (before sending)
+     * SECURITY FIX (CWE-532): Implements content filtering for sensitive data
      */
     public function log_outgoing_email($args)
     {
@@ -824,7 +825,7 @@ class Ofast_X_SMTP
                 id bigint(20) NOT NULL AUTO_INCREMENT,
                 to_email varchar(255) NOT NULL,
                 subject varchar(255) NOT NULL,
-                body longtext NOT NULL,
+                body longtext,
                 headers text,
                 status varchar(20) DEFAULT 'pending',
                 error_message text,

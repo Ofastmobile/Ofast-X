@@ -567,6 +567,13 @@ class Ofast_X_SMTP_Admin
                     <h3 style="margin: 0;">Email Preview</h3>
                     <button type="button" id="close-preview" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
                 </div>
+                
+                <?php if (get_option('ofast_smtp_log_body_content', false)): ?>
+                <div style="padding: 10px 20px; background: #fffbeb; border-bottom: 1px solid #f59e0b; color: #92400e; font-size: 13px;">
+                    <strong>🔒 Security Notice:</strong> Sensitive patterns (passwords, tokens, API keys) have been automatically filtered from this preview.
+                </div>
+                <?php endif; ?>
+                
                 <iframe id="email-preview-frame" style="width: 100%; height: 60vh; border: none;"></iframe>
             </div>
         </div>
@@ -734,6 +741,32 @@ class Ofast_X_SMTP_Admin
                 <div id="test-details" style="margin-top: 15px; display: none;">
                     <pre style="background: #1e293b; color: #10b981; padding: 15px; border-radius: 5px; overflow-x: auto;"></pre>
                 </div>
+            </div>
+
+            <!-- Email Logging Security Settings -->
+            <div style="background: #fffbeb; border: 1px solid #f59e0b; border-radius: 8px; padding: 20px; margin: 30px 0;">
+                <h3 style="margin-top: 0; color: #92400e;">🔒 Email Logging Security</h3>
+                <p style="color: #92400e;">
+                    <strong>Security Notice:</strong> Email logs may contain sensitive information like passwords, tokens, and personal data.
+                    Configure logging level based on your security requirements.
+                </p>
+                
+                <table class="form-table">
+                    <tr>
+                        <th>Log Email Content</th>
+                        <td>
+                            <?php $log_body = get_option('ofast_smtp_log_body_content', false); ?>
+                            <label>
+                                <input type="checkbox" name="log_body_content" value="1" <?php checked($log_body); ?>>
+                                Store filtered email content in logs
+                            </label>
+                            <p class="description" style="color: #92400e;">
+                                <strong>Recommended: Leave unchecked</strong> - Only metadata (to, subject, status, timestamp) will be logged for security.<br>
+                                When enabled, sensitive patterns (passwords, tokens, API keys) are automatically filtered before storage.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
             </div>
 
             <p class="submit">

@@ -1,0 +1,554 @@
+PLUGIN NAME: Ofast Toolkit
+AUDIT DATE: 2026-03-07
+AUDIT BASIS: Plugin-wide static audit using the review criteria in prompt.pmd, plus targeted manual review of high-risk execution paths.
+
+SCOPE
+- Static scan of 71 PHP files and 97 PHP/JS/CSS files in the plugin root.
+- PHP lint pass across all PHP files: no syntax errors detected.
+- Manual review focused on bootstrap, activation/deactivation/uninstall, AJAX handlers, admin pages, redirects, snippet execution, SMTP credential handling, social login, admin URL protection, and custom dashboard rendering.
+- This is not a dynamic browser test or penetration test against a running WordPress site. Findings below are code-confirmed unless explicitly marked as a standards-risk observation.
+
+PURPOSE
+- All-in-one admin utility plugin bundling SMTP, email, forms, snippets, redirects, social login, spam protection, admin customization, and notification features.
+
+FILES INCLUDED
+- Bootstrap: ofast-x.php, uninstall.php
+- Core: includes/core/*.php
+- Security: includes/security/*.php
+- Notifications/utilities: includes/notifications/*.php, includes/utilities/*.php
+- Major modules reviewed: admin-design/custom-dashboard, admin-studio, forms, contact forms, redirects, smtp, snippets, social-login, spam-protection, whatsapp, notification-channels, email
+
+PUBLIC HOOKS
+- Activation/deactivation: register_activation_hook, register_deactivation_hook
+- Admin/AJAX: multiple wp_ajax_* handlers across custom-dashboard, snippets, redirects, forms, smtp, admin-footer, admin-studio, email
+- Runtime hooks: plugins_loaded, admin_init, admin_menu, wp_enqueue_scripts, admin_enqueue_scripts, init, template_redirect, login_init, wp_login_failed, wp_login, authenticate, phpmailer_init, pre_wp_mail, wp_mail, wp_mail_succeeded, wp_mail_failed
+- Cron hooks scheduled by plugin code: ofast_integrity_check, ofast_email_cleanup, ofast_purge_trashed_snippets
+
+INTERNAL CLASSES / MODULES
+- Core controller: Ofast_X_Core
+- Settings/bootstrap: Ofast_X_Settings, Ofast_X_Activator, Ofast_X_Setup_Wizard, Ofast_X_Security_Hardening
+- Security modules: Ofast_X_Turnstile, Ofast_X_Honeypot, Ofast_X_Universal_Spam, Ofast_X_Rate_Limiter
+- Feature modules: Ofast_X_SMTP, Ofast_X_Email, Ofast_X_Snippets, Ofast_X_Redirects, Ofast_X_Forms, Ofast_X_Social_Login, Ofast_X_Spam_Protection, Ofast_X_Admin_Url, Ofast_X_Custom_Dashboard, Ofast_X_WhatsApp
+
+DATA FLOW
+- Bootstrap file loads core/security classes, then instantiates Ofast_X_Core.
+- Ofast_X_Core conditionally initializes modules based on ofastx_modules_enabled.
+- Several features bypass the module loader and are loaded earlier in ofast-x.php for shared/runtime behavior.
+- Admin forms mostly write options or custom tables through $wpdb and update_option.
+- Frontend forms and social login move user-controlled data through AJAX/OAuth callbacks into DB records, notifications, or redirects.
+- Snippets module stores code in DB, writes temporary PHP files, then includes them for execution.
+
+SECURITY NOTES
+- Many admin AJAX handlers correctly use check_ajax_referer plus current_user_can('manage_options').
+- The broad scanner report previously provided contains many false positives around fixed-path require_once usage and option names that include "secret" or "password".
+- The real blockers are concentrated in custom dashboard rendering, secret handling, emergency access design, duplicated module architecture, and inconsistent trust of proxy headers.
+
+PERFORMANCE NOTES
+- Core caches module settings and some options.
+- Custom dashboard performs multiple uncached analytics queries on dashboard load.
+- Duplicate module trees inflate maintenance surface and cognitive load.
+- Unused tables and stale defaults indicate unfinished or partially removed features still shipping in production code.
+
+DEPENDENCIES
+- WordPress core admin/AJAX APIs, wp_mail/PHPMailer, $wpdb, transients, cron
+- External providers: Cloudflare Turnstile, Google/Facebook OAuth, SMTP providers, Termii/Twilio
+
+WORDPRESS.ORG READINESS STATUS
+- NO
+
+ISSUES BREAKDOWN
+
+CRITICAL
+
+1. Stored DOM XSS in custom dashboard search results
+File name:
+- modules/admin-design/custom-dashboard/class-ofast-custom-dashboard.php:645-727
+- modules/admin-design/custom-dashboard/assets/dashboard.js:276-309
+
+What is wrong:
+- ajax_global_search() returns raw post titles, user display names, user emails, labels, URLs, and avatar URLs.
+- renderSearchResults() concatenates those values directly into HTML strings and injects them with $searchResults.html(html).
+
+Why it is a problem:
+- get_the_title($post) and $user->display_name are not escaped for HTML output in the AJAX payload.
+- A malicious title or display name can execute script when an admin uses the dashboard search.
+
+Real-world impact:
+- Any role able to create content with a crafted title can potentially trigger stored XSS in an administrator session.
+- This can lead to nonce theft, forced admin actions, plugin setting changes, or full site compromise when chained with the snippets/admin modules.
+
+Blocks production usage:
+- YES
+
+Exact fix:
+- Enforce an administrative capability at the endpoint.
+- Sanitize returned strings for plain-text transport.
+- Stop building HTML from untrusted strings on the client; create DOM nodes and assign text via textContent / jQuery .text().
+
+Corrected code approach:
+
+In modules/admin-design/custom-dashboard/class-ofast-custom-dashboard.php:
+
+    public function ajax_global_search()
+    {
+        check_ajax_referer('ofast_dashboard_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized', 403);
+        }
+
+        $query = sanitize_text_field(wp_unslash($_POST['query'] ?? ''));
+        $results = array();
+
+        ...
+
+        $results[] = array(
+            'type'  => 'post',
+            'subtype' => sanitize_key($post->post_type),
+            'label' => sanitize_text_field($label),
+            'title' => wp_strip_all_tags(get_the_title($post)),
+            'url'   => esc_url_raw(get_edit_post_link($post->ID)),
+            'date'  => sanitize_text_field(get_the_date('', $post)),
+        );
+
+        ...
+    }
+
+In modules/admin-design/custom-dashboard/assets/dashboard.js:
+
+    function renderSearchResults(data) {
+        $searchResults.empty();
+        var currentType = '';
+
+        data.forEach(function (item) {
+            if (item.type !== currentType) {
+                var headerLabel = item.type === 'post' ? 'Content' : (item.type.charAt(0).toUpperCase() + item.type.slice(1) + 's');
+                $('<div>', { 'class': 'ofast-result-header', text: headerLabel }).appendTo($searchResults);
+                currentType = item.type;
+            }
+
+            var iconClass = 'dashicons-admin-post';
+            if (item.type === 'user') iconClass = 'dashicons-admin-users';
+            if (item.type === 'plugin') iconClass = 'dashicons-admin-plugins';
+            if (item.subtype === 'page') iconClass = 'dashicons-admin-page';
+            if (item.subtype === 'product') iconClass = 'dashicons-cart';
+
+            var $link = $('<a>', { 'class': 'ofast-search-item', href: item.url || '#' });
+
+            if (item.avatar) {
+                $('<img>', { 'class': 'ofast-result-avatar', src: item.avatar, alt: '' }).appendTo($link);
+            } else {
+                $('<span>', { 'class': 'dashicons ' + iconClass }).appendTo($link);
+            }
+
+            var $content = $('<div>', { 'class': 'ofast-result-content' }).appendTo($link);
+            $('<span>', { 'class': 'ofast-result-title', text: item.title || '' }).appendTo($content);
+
+            if (item.label) {
+                $('<span>', { 'class': 'ofast-result-meta', text: item.label }).appendTo($content);
+            }
+
+            $searchResults.append($link);
+        });
+    }
+
+WARNING
+
+2. SMTP setup wizard stores passwords/secrets in plaintext and bypasses the module’s encryption contract
+File name:
+- includes/core/class-ofast-setup-wizard.php:173-193
+- modules/smtp/class-ofast-smtp-admin.php:887-890
+- modules/smtp/class-ofast-smtp.php:419-433
+
+What is wrong:
+- The setup wizard writes ofast_smtp_password directly from imported/manual settings.
+- The normal SMTP settings page encrypts before storage.
+- Runtime code always assumes the option is encrypted/base64-wrapped and attempts to decrypt it.
+
+Why it is a problem:
+- Imported or wizard-saved credentials are stored in plaintext in wp_options.
+- The same option is stored in two incompatible formats depending on code path.
+
+Real-world impact:
+- SMTP credentials are easier to leak from DB exports and debug tools.
+- SMTP authentication can break after setup/import because the runtime decryption path receives a plaintext value.
+
+Blocks production usage:
+- YES for secure handling; FUNCTIONAL RISK present.
+
+Exact fix:
+- Use the same encryption helper everywhere the password is persisted.
+
+Corrected code:
+
+In includes/core/class-ofast-setup-wizard.php:
+
+    update_option('ofast_smtp_enabled', 1);
+    update_option('ofast_smtp_host', sanitize_text_field($settings['host']));
+    update_option('ofast_smtp_port', (int) $settings['port']);
+    update_option('ofast_smtp_username', sanitize_text_field($settings['username']));
+    update_option('ofast_smtp_password', Ofast_X_SMTP::encrypt_password((string) $settings['password']));
+    update_option('ofast_smtp_encryption', sanitize_text_field($settings['encryption']));
+    update_option('ofast_smtp_from_email', sanitize_email($settings['from_email']));
+    update_option('ofast_smtp_from_name', sanitize_text_field($settings['from_name']));
+
+3. Emergency bypass is implemented as a query-string bearer secret
+File name:
+- modules/admin-studio/class-ofast-admin-url.php:89-131
+- modules/admin-studio/class-ofast-admin-url.php:285
+- modules/admin-studio/class-ofast-admin-url.php:377
+- modules/admin-studio/class-ofast-admin-url.php:878-880
+
+What is wrong:
+- Emergency access is granted via wp-login.php?ofast_emergency=<secret>.
+- The full secret URL is emailed and also rendered inside the admin settings UI.
+
+Why it is a problem:
+- Query-string secrets leak into browser history, logs, reverse proxies, server access logs, clipboard history, screenshots, and email archives.
+- Rotation helps after use, but it does not prevent passive leakage before use.
+
+Real-world impact:
+- Anyone obtaining the emailed URL or a logged request can bypass the custom admin URL protection for one hour.
+
+Blocks production usage:
+- YES for a WordPress.org-grade security design.
+
+Recommended remediation path:
+- Replace query-string bearer access with a short-lived, single-use token flow stored in a transient and consumed via POST on a dedicated recovery endpoint.
+- Do not render the actual emergency token back into the admin page after generation.
+- Store only a masked indicator in the UI and allow explicit regeneration.
+
+Safer design sketch:
+
+    $token = wp_generate_password(48, false);
+    set_transient('ofast_admin_recovery_' . $token, array('created' => time()), 10 * MINUTE_IN_SECONDS);
+    $recovery_url = add_query_arg('ofast_recovery', '1', home_url('/'));
+
+    // Email only a one-time landing URL plus instructions to submit the token,
+    // or require logged-in regeneration and copy only on demand.
+
+4. Duplicate module trees and duplicate class definitions are shipped in the repository
+File name:
+- modules/forms/class-ofast-forms.php:12
+- modules/contact forms/class-ofast-forms.php:12
+- modules/whatsapp/class-ofast-whatsapp.php:13
+- modules/notification-channels/class-ofast-whatsapp.php:13
+- ofast-x.php:87,90
+- includes/core/class-ofast-core.php:473-475
+
+What is wrong:
+- Two identical forms module trees exist: modules/forms and modules/contact forms.
+- Two identical WhatsApp implementation files exist with the same class name Ofast_X_WhatsApp.
+- Only one copy is actually loaded in bootstrap, leaving the others as dormant duplicates.
+
+Why it is a problem:
+- This is architectural drift and a maintenance hazard.
+- If a future refactor accidentally requires the orphan copy, PHP will fatal on class redeclaration.
+- Duplicate source trees make security fixes easy to apply to only one copy.
+
+Real-world impact:
+- Increased chance of regressions, missed patches, and fatal errors during future maintenance.
+
+Blocks production usage:
+- YES for WordPress.org readiness and maintainability.
+
+Exact fix:
+- Remove the duplicate trees, or move legacy copies out of the runtime source tree.
+- If historical copies must remain, rename classes or place them in a non-autoloaded archive directory.
+
+5. Module registry/default state is inconsistent across activation, reset, and runtime
+File name:
+- includes/core/class-ofast-activator.php:286-306
+- includes/core/class-ofast-settings.php:119-125
+- includes/core/class-ofast-settings.php:813-888
+
+What is wrong:
+- Activation defaults still reference old/future module slugs such as contact, seo, analytics, backup, security, performance, woocommerce, learndash.
+- Settings reset uses a different minimal default set.
+- Runtime loader and settings UI use a newer module map with admin-tweaks, forms, notification-channels, spam-protection, login-redesign, social-login, snippets, redirects.
+
+Why it is a problem:
+- Fresh installs, resets, and runtime loading do not share one source of truth.
+- Features may appear disabled by default or behave inconsistently depending on code path.
+
+Real-world impact:
+- Broken initial experience, unpredictable module activation state, and difficult support/debugging.
+
+Blocks production usage:
+- NO, but this is a serious release-quality issue.
+
+Exact fix:
+- Replace hard-coded default maps with a single canonical module registry and derive defaults from it.
+
+Corrected approach:
+
+    private static function default_module_state()
+    {
+        return array(
+            'dashboard' => true,
+            'admin-tweaks' => true,
+            'email' => true,
+            'smtp' => true,
+            'forms' => true,
+            'notification-channels' => false,
+            'spam-protection' => true,
+            'login-redesign' => false,
+            'social-login' => false,
+            'snippets' => false,
+            'redirects' => false,
+            'debug' => true,
+        );
+    }
+
+6. Client IP trust is inconsistent; several rate-limit and spam paths still trust spoofable forwarding headers
+File name:
+- modules/forms/class-ofast-forms-submissions.php:192-208
+- includes/security/class-ofast-turnstile.php:203-219
+- includes/notifications/class-ofast-notification-hub.php:469-485
+- modules/admin-studio/class-ofast-admin-url.php:1058-1080
+
+What is wrong:
+- Multiple modules trust HTTP_X_FORWARDED_FOR, HTTP_X_REAL_IP, or HTTP_CF_CONNECTING_IP directly.
+- A safer implementation already exists in class-ofast-admin-url.php and trusts forwarded headers only when REMOTE_ADDR is a known proxy.
+
+Why it is a problem:
+- Attackers can spoof headers to evade per-IP throttles, poison audit logs, and reduce the reliability of spam controls.
+
+Real-world impact:
+- Lower effectiveness of form abuse prevention and inaccurate security records.
+
+Blocks production usage:
+- NO, but materially weakens protections.
+
+Exact fix:
+- Centralize IP resolution in one helper and reuse it everywhere.
+
+Corrected code pattern:
+
+    private function get_client_ip()
+    {
+        $ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '';
+        $trusted_proxies = apply_filters('ofast_trusted_proxies', array('127.0.0.1', '::1'));
+
+        if (in_array($ip, $trusted_proxies, true) && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $forwarded_ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+            $ip = trim($forwarded_ips[0]);
+        }
+
+        $validated_ip = filter_var($ip, FILTER_VALIDATE_IP);
+        return $validated_ip ? sanitize_text_field($validated_ip) : '0.0.0.0';
+    }
+
+7. Social login secrets are decrypted and rendered back into the settings page
+File name:
+- modules/social-login/class-ofast-social-login.php:88-101
+- modules/social-login/class-ofast-social-login.php:1016
+- modules/social-login/class-ofast-social-login.php:1056
+
+What is wrong:
+- get_provider_settings() decrypts stored OAuth secrets.
+- The settings page prints those secrets directly into password input values.
+
+Why it is a problem:
+- Secrets stored encrypted at rest are exposed again in the DOM and page source to any administrator viewing the page.
+- This defeats part of the value of the encryption-at-rest design.
+
+Real-world impact:
+- Secrets are easier to extract from admin HTML, screenshots, browser autofill caches, or support captures.
+
+Blocks production usage:
+- NO, but this is below WordPress.org-grade secret handling.
+
+Exact fix:
+- Do not prefill secret fields.
+- Show masked placeholders and keep the existing secret unless a new non-empty value is submitted.
+
+Corrected UI approach:
+
+    <input type="password" name="google_client_secret" value="" class="regular-text" placeholder="Stored securely; enter to replace">
+
+IMPROVEMENT
+
+8. Orphaned tables and cron jobs remain in shipping code
+File name:
+- includes/core/class-ofast-activator.php:178-189
+- includes/core/class-ofast-activator.php:215-227
+- includes/core/class-ofast-activator.php:318-336
+- includes/core/class-ofast-security-hardening.php:76-77
+- modules/email/class-ofast-email.php:61-62
+- modules/snippets/class-ofast-snippets.php:50-51
+
+What is wrong:
+- The plugin creates wp_ofast_rate_limits and wp_ofast_redirect_logs, but no runtime code uses them.
+- Deactivation only clears a subset of scheduled hooks and misses ofast_integrity_check, ofast_email_cleanup, and ofast_purge_trashed_snippets.
+
+Why it is a problem:
+- Dead schema and orphaned cron entries increase maintenance burden and leave inactive plugin residue behind.
+
+Real-world impact:
+- Harder support/debugging, unnecessary DB clutter, and stale scheduled events after deactivation.
+
+Blocks production usage:
+- NO
+
+Exact fix:
+- Remove unused tables until a real consumer exists.
+- Clear every hook the plugin schedules during deactivation.
+
+9. Unsafe redirect pattern is repeated across admin handlers
+File name:
+- includes/core/class-ofast-settings.php:96,136
+- modules/admin-studio/class-ofast-admin-tweaks.php:500
+- modules/admin-studio/class-ofast-admin-url.php:175,188,191,264
+- modules/login-redesign/class-ofast-login-redesign.php:202,264
+- modules/social-login/class-ofast-social-login.php:705
+- modules/spam-protection/class-ofast-spam-protection.php:360
+
+What is wrong:
+- Multiple handlers redirect to add_query_arg(..., wp_get_referer()) using wp_redirect().
+
+Why it is a problem:
+- Even in admin-only code, WordPress.org review expects wp_safe_redirect() with a safe fallback.
+
+Real-world impact:
+- Lower confidence in redirect safety and avoidable review-team friction.
+
+Blocks production usage:
+- NO
+
+Exact fix:
+
+    $redirect_to = wp_get_referer();
+    if (!$redirect_to) {
+        $redirect_to = admin_url('admin.php?page=ofast-dashboard');
+    }
+    wp_safe_redirect(add_query_arg('settings_saved', '1', $redirect_to));
+    exit;
+
+10. Direct error_log usage writes operational and user-identifying data without an explicit debug gate
+File name:
+- includes/core/class-ofast-activator.php:347,356
+- modules/forms/class-ofast-forms-submissions.php:33
+- modules/email/class-ofast-email-admin.php:1258,2148
+- modules/email/class-ofast-email.php:105,136,156
+- modules/snippets/class-ofast-snippets.php:5010,5021,5685
+- modules/spam-protection/class-ofast-spam-protection.php:274
+
+What is wrong:
+- The plugin writes IP addresses, attempted usernames, email addresses, and runtime details straight to PHP error logs.
+
+Why it is a problem:
+- Error logs are not a structured audit system and are often retained outside WordPress control.
+- This creates privacy and supportability risk.
+
+Real-world impact:
+- Sensitive operational data leaks into hosting logs and support archives.
+
+Blocks production usage:
+- NO
+
+Exact fix:
+- Gate verbose logging behind WP_DEBUG or a plugin debug option and prefer a structured, access-controlled logging abstraction.
+
+CLEAN
+
+11. PHP syntax baseline is clean
+Evidence:
+- Full php -l pass across all PHP files returned no syntax errors.
+
+12. Most privileged AJAX endpoints do the right basic things
+Evidence:
+- Snippets, redirects, SMTP test, email preview, user-role toggle, forms save/delete, and admin-tweaks AJAX handlers generally combine nonce checks with manage_options or an appropriate capability.
+
+13. The scanner-supplied “variable require_once/file inclusion” findings are mostly false positives
+Evidence:
+- The reported includes in ofast-x.php and includes/core/class-ofast-core.php resolve from plugin constants or known WordPress template functions, not user input.
+
+ENGINEERING & SECURITY AUDIT SUMMARY
+
+1. Dead / unreachable code
+- Duplicate modules under modules/contact forms and modules/notification-channels/class-ofast-whatsapp.php are dormant duplicates.
+- Unused tables: ofast_rate_limits, ofast_redirect_logs.
+
+2. Repetitive or redundant logic
+- Duplicate forms and WhatsApp implementations ship identical code copies.
+- IP detection logic is copy-pasted with inconsistent trust rules.
+
+3. Unused or orphaned database tables, options, transients, cron jobs
+- Unused tables confirmed above.
+- Module defaults reference retired/future module slugs not present in the current runtime registry.
+- Deactivation misses hooks scheduled by security hardening, email cleanup, and snippets cleanup.
+
+4. Architectural loopholes
+- Runtime module registry is not canonical; activation, reset, and settings each define different states.
+- Bootstrap loads some classes early while core loads others conditionally, producing a mixed lifecycle.
+
+5. Vulnerabilities
+- Confirmed stored admin XSS in custom dashboard search.
+- Confirmed plaintext/incompatible SMTP secret persistence in setup wizard.
+- Confirmed emergency bypass secret leakage via query string and UI/email distribution.
+- Confirmed spoofable client-IP usage in multiple security-sensitive paths.
+
+6. Security posture
+- Broadly decent nonce/capability coverage in admin handlers.
+- Weaknesses are concentrated around rendering, secret lifecycle, and proxy/header trust.
+
+7. Performance risks
+- Dashboard analytics perform several per-load queries without caching.
+- Duplicate code trees and unused schema enlarge the maintenance/performance surface.
+
+8. Compatibility risks
+- Duplicate class names increase fatal-risk during future refactors.
+- Mixed default module maps can create inconsistent behavior on fresh installs/resets.
+- Repository readiness is weakened by custom code execution in the snippets module, which will attract closer WordPress.org scrutiny even when admin-only.
+
+PUBLICATION-READY IN CURRENT STATE
+- NO
+
+WORDPRESS.ORG APPROVAL REVIEW
+
+Errors / violations / review blockers
+- Stored admin XSS path in custom dashboard search.
+- Secret-bearing recovery URL in query string.
+- Plaintext SMTP secret storage path in setup wizard.
+- Duplicate class/module trees in shipping code.
+- Module registry/default-state inconsistency.
+
+Missing or weak requirements
+- Canonical module registry missing.
+- Consistent secret masking UX missing in social login.
+- Safe redirect pattern not applied consistently.
+- Deactivation cleanup incomplete.
+
+Anti-patterns
+- Duplicate source trees in runtime path.
+- Repeated direct error_log usage for operational/user data.
+- Inconsistent trust of forwarded IP headers.
+
+Future maintenance risks
+- Security fixes can be applied to one duplicate copy and missed in the other.
+- Orphaned tables/hooks suggest unfinished feature removals and make future upgrades harder.
+
+FINAL VERDICT
+
+1. Is this plugin acceptable for WordPress.org submission in its current form?
+- NO
+
+2. Recommended WordPress-standard remediation path
+- First fix the custom dashboard XSS and add a capability gate to the search endpoint.
+- Replace emergency query-string bypass with a transient-backed, one-time recovery flow that does not expose bearer secrets in URLs or the settings page.
+- Unify SMTP secret storage through the same encryption helper across setup wizard, imports, and settings.
+- Remove duplicate module trees or move them outside the runtime source tree; eliminate duplicate class names.
+- Replace all copied IP-resolution routines with one trusted-proxy-aware helper.
+- Align activation defaults, reset defaults, and settings UI to one canonical module registry.
+- Remove or implement orphaned tables and clear every scheduled hook on deactivation.
+- Stop rendering decrypted provider secrets into admin forms.
+
+3. Is refactoring sufficient, or is architectural redesign required?
+- Refactoring is sufficient for the immediate security blockers.
+- Moderate architectural cleanup is required for module registry consistency and duplicate-tree removal.
+- A full redesign is not required, but the plugin is not close to WordPress.org-ready until the duplicated runtime structure is cleaned up.
+
+CONFIDENCE NOTE
+- I am confident in the confirmed findings above because they are directly supported by code paths inspected in this audit.
+- I am not claiming dynamic runtime coverage; if you want that next, the correct follow-up is a live admin/browser verification pass after fixes are applied.

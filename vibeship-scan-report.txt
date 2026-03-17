@@ -1,0 +1,4007 @@
+============================================================
+VIBESHIP SECURITY SCAN REPORT
+============================================================
+
+Scan URL: https://scanner.vibeship.co/scan/2ad12c77-aba3-4a65-b3c9-b5df337f9d95
+Repository: https://github.com/Ofastmobile/Ofast-X
+Date: 07/03/2026, 17:15:27
+
+----------------------------------------
+SCORE SUMMARY
+----------------------------------------
+Score: 0/100
+Grade: F
+Status: 🔧 Fix Required
+
+----------------------------------------
+DETECTED STACK
+----------------------------------------
+Languages: JavaScript, PHP
+
+----------------------------------------
+FINDING COUNTS
+----------------------------------------
+Critical: 36
+High: 79
+Medium: 60
+Low: 0
+Info: 13
+
+============================================================
+DETAILED FINDINGS
+============================================================
+
+[1] jQuery DOM manipulation - XSS sink if data is user-controlled (CWE-79)
+--------------------------------------------------
+Severity: INFO
+Category: code
+CWE: CWE-79 - Cross-site Scripting (XSS)
+CVSS: 6.1 (Medium)
+Location: modules/admin-design/assets/modern-app.js:7
+
+Risk & Fix:
+Attackers can inject malicious scripts that run in your users' browsers, stealing sessions, credentials, or personal data. Fix: Sanitize all user input before rendering, use textContent instead of innerHTML.
+
+Fix: Use textContent or Sanitize HTML
+Estimated Time: 5-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: XSS via innerHTML
+element.innerHTML = userInput;
+
+// React vulnerable pattern
+<div dangerouslySetInnerHTML={{__html: userContent}} />
+
+After (Safe):
+// Safe: Use textContent for plain text
+element.textContent = userInput;
+
+// If HTML is needed, sanitize with DOMPurify
+import DOMPurify from 'dompurify';
+element.innerHTML = DOMPurify.sanitize(userInput);
+
+// React with sanitization
+<div dangerouslySetInnerHTML={{
+  __html: DOMPurify.sanitize(userContent)
+}} />
+
+
+[2] jQuery .html() - DOM XSS sink if data is user-controlled (CWE-79)
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-79 - Cross-site Scripting (XSS)
+CVSS: 6.1 (Medium)
+Location: modules/admin-design/assets/modern-app.js:15
+
+Risk & Fix:
+Attackers can inject malicious scripts that run in your users' browsers, stealing sessions, credentials, or personal data. Fix: Sanitize all user input before rendering, use textContent instead of innerHTML.
+
+Fix: Use textContent or Sanitize HTML
+Estimated Time: 5-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: XSS via innerHTML
+element.innerHTML = userInput;
+
+// React vulnerable pattern
+<div dangerouslySetInnerHTML={{__html: userContent}} />
+
+After (Safe):
+// Safe: Use textContent for plain text
+element.textContent = userInput;
+
+// If HTML is needed, sanitize with DOMPurify
+import DOMPurify from 'dompurify';
+element.innerHTML = DOMPurify.sanitize(userInput);
+
+// React with sanitization
+<div dangerouslySetInnerHTML={{
+  __html: DOMPurify.sanitize(userContent)
+}} />
+
+
+[3] jQuery DOM manipulation - XSS sink if data is user-controlled (CWE-79)
+--------------------------------------------------
+Severity: INFO
+Category: code
+CWE: CWE-79 - Cross-site Scripting (XSS)
+CVSS: 6.1 (Medium)
+Location: modules/admin-design/assets/modern-app.js:48
+
+Risk & Fix:
+Attackers can inject malicious scripts that run in your users' browsers, stealing sessions, credentials, or personal data. Fix: Sanitize all user input before rendering, use textContent instead of innerHTML.
+
+Fix: Use textContent or Sanitize HTML
+Estimated Time: 5-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: XSS via innerHTML
+element.innerHTML = userInput;
+
+// React vulnerable pattern
+<div dangerouslySetInnerHTML={{__html: userContent}} />
+
+After (Safe):
+// Safe: Use textContent for plain text
+element.textContent = userInput;
+
+// If HTML is needed, sanitize with DOMPurify
+import DOMPurify from 'dompurify';
+element.innerHTML = DOMPurify.sanitize(userInput);
+
+// React with sanitization
+<div dangerouslySetInnerHTML={{
+  __html: DOMPurify.sanitize(userContent)
+}} />
+
+
+[4] jQuery DOM manipulation - XSS sink if data is user-controlled (CWE-79)
+--------------------------------------------------
+Severity: INFO
+Category: code
+CWE: CWE-79 - Cross-site Scripting (XSS)
+CVSS: 6.1 (Medium)
+Location: modules/admin-design/custom-dashboard/assets/dashboard.js:133
+
+Risk & Fix:
+Attackers can inject malicious scripts that run in your users' browsers, stealing sessions, credentials, or personal data. Fix: Sanitize all user input before rendering, use textContent instead of innerHTML.
+
+Fix: Use textContent or Sanitize HTML
+Estimated Time: 5-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: XSS via innerHTML
+element.innerHTML = userInput;
+
+// React vulnerable pattern
+<div dangerouslySetInnerHTML={{__html: userContent}} />
+
+After (Safe):
+// Safe: Use textContent for plain text
+element.textContent = userInput;
+
+// If HTML is needed, sanitize with DOMPurify
+import DOMPurify from 'dompurify';
+element.innerHTML = DOMPurify.sanitize(userInput);
+
+// React with sanitization
+<div dangerouslySetInnerHTML={{
+  __html: DOMPurify.sanitize(userContent)
+}} />
+
+
+[5] Reading location.href - DOM XSS source if rendered without sanitization (CWE-79)
+--------------------------------------------------
+Severity: INFO
+Category: code
+CWE: CWE-79 - Cross-site Scripting (XSS)
+CVSS: 6.1 (Medium)
+Location: modules/admin-design/custom-dashboard/assets/dashboard.js:324
+
+Risk & Fix:
+Attackers can inject malicious scripts that run in your users' browsers, stealing sessions, credentials, or personal data. Fix: Sanitize all user input before rendering, use textContent instead of innerHTML.
+
+Fix: Use textContent or Sanitize HTML
+Estimated Time: 5-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: XSS via innerHTML
+element.innerHTML = userInput;
+
+// React vulnerable pattern
+<div dangerouslySetInnerHTML={{__html: userContent}} />
+
+After (Safe):
+// Safe: Use textContent for plain text
+element.textContent = userInput;
+
+// If HTML is needed, sanitize with DOMPurify
+import DOMPurify from 'dompurify';
+element.innerHTML = DOMPurify.sanitize(userInput);
+
+// React with sanitization
+<div dangerouslySetInnerHTML={{
+  __html: DOMPurify.sanitize(userContent)
+}} />
+
+
+[6] location.href assigned from user input - open redirect risk (CWE-601)
+--------------------------------------------------
+Severity: HIGH
+Category: code
+CWE: CWE-601 - Open Redirect
+CVSS: 6.1 (Medium)
+Location: modules/admin-design/custom-dashboard/assets/dashboard.js:324
+
+Risk & Fix:
+Attackers use your domain's reputation for phishing by redirecting users to malicious sites. Fix: Validate redirect URLs against a whitelist of allowed domains.
+
+Fix: Validate Redirect URLs
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Open redirect
+const returnUrl = req.query.returnUrl;
+res.redirect(returnUrl);
+
+After (Safe):
+function getSafeRedirectUrl(url, allowedHosts) {
+  try {
+    const parsed = new URL(url, 'https://yourapp.com');
+
+    // Only allow relative paths or whitelisted hosts
+    if (parsed.origin === 'https://yourapp.com') {
+      return parsed.pathname + parsed.search;
+    }
+
+    if (allowedHosts.includes(parsed.host)) {
+      return url;
+    }
+  } catch {
+    // Invalid URL
+  }
+
+  return '/'; // Default safe redirect
+}
+
+const safeUrl = getSafeRedirectUrl(
+  req.query.returnUrl,
+  ['auth.yourapp.com']
+);
+res.redirect(safeUrl);
+
+
+[7] Password reset endpoint - add rate limiting to prevent abuse
+--------------------------------------------------
+Severity: INFO
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/smtp/smtp-admin.js:3
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[8] Password reset endpoint - add rate limiting to prevent abuse
+--------------------------------------------------
+Severity: INFO
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/smtp/smtp-admin.js:12
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[9] Password reset endpoint - add rate limiting to prevent abuse
+--------------------------------------------------
+Severity: INFO
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/smtp/smtp-admin.js:14
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[10] Password reset endpoint - add rate limiting to prevent abuse
+--------------------------------------------------
+Severity: INFO
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/smtp/smtp-admin.js:15
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[11] Password reset endpoint - add rate limiting to prevent abuse
+--------------------------------------------------
+Severity: INFO
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/smtp/smtp-admin.js:17
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[12] Password reset endpoint - add rate limiting to prevent abuse
+--------------------------------------------------
+Severity: INFO
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/smtp/smtp-admin.js:19
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[13] Password reset endpoint - add rate limiting to prevent abuse
+--------------------------------------------------
+Severity: INFO
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/smtp/smtp-admin.js:20
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[14] Password reset endpoint - add rate limiting to prevent abuse
+--------------------------------------------------
+Severity: INFO
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/smtp/smtp-admin.js:21
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[15] Password reset endpoint - add rate limiting to prevent abuse
+--------------------------------------------------
+Severity: INFO
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/smtp/smtp-admin.js:25
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[16] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:45
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[17] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:147
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[18] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:158
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[19] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:169
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[20] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:170
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[21] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:182
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[22] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:200
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[23] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:213
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[24] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:227
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[25] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:233
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[26] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:239
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[27] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:250
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[28] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:262
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[29] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:275
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[30] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:290
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[31] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:303
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[32] Laravel debug mode enabled - disable in production (CWE-489)
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: includes/core/class-ofast-core.php:325
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[33] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:442
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[34] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:453
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[35] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:464
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[36] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:475
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[37] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-core.php:486
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[38] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: includes/core/class-ofast-security-hardening.php:263
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[39] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: includes/security/class-ofast-honeypot.php:65
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[40] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: includes/security/class-ofast-rate-limiter.php:130
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[41] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/security/class-ofast-security.php:40
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[42] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/security/class-ofast-security.php:41
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[43] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/security/class-ofast-security.php:42
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[44] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: includes/security/class-ofast-security.php:201
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[45] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: ofast-x.php:39
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[46] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: ofast-x.php:49
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[47] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: ofast-x.php:59
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[48] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: ofast-x.php:60
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[49] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: ofast-x.php:63
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[50] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: ofast-x.php:66
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[51] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: ofast-x.php:69
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[52] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: ofast-x.php:72
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[53] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: ofast-x.php:75
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[54] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: ofast-x.php:78
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[55] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: ofast-x.php:81
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[56] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: ofast-x.php:84
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[57] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: ofast-x.php:87
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[58] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: ofast-x.php:90
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[59] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: ofast-x.php:93
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[60] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: ofast-x.php:96
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[61] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: ofast-x.php:99
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[62] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: ofast-x.php:102
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[63] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: uninstall.php:48
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[64] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: uninstall.php:127
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[65] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: uninstall.php:128
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[66] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: uninstall.php:165
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[67] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: uninstall.php:166
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[68] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: uninstall.php:171
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[69] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: includes/core/class-ofast-activator.php:72
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[70] Laravel debug mode enabled - disable in production (CWE-489)
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: includes/core/class-ofast-activator.php:293
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[71] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: includes/core/class-ofast-activator.php:397
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[72] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: includes/core/class-ofast-activator.php:407
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[73] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: includes/core/class-ofast-activator.php:418
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[74] Laravel debug mode enabled - disable in production (CWE-489)
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: includes/core/class-ofast-settings.php:121
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[75] PHP loose comparison - use === for security comparisons
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/admin-design/custom-dashboard/class-ofast-custom-dashboard.php:521
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[76] PHP password - use password_verify() instead
+--------------------------------------------------
+Severity: HIGH
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/admin-design/custom-dashboard/class-ofast-custom-dashboard.php:521
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[77] PHP loose comparison - use === for security comparisons
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/admin-design/custom-dashboard/class-ofast-custom-dashboard.php:545
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[78] PHP password - use password_verify() instead
+--------------------------------------------------
+Severity: HIGH
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/admin-design/custom-dashboard/class-ofast-custom-dashboard.php:545
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[79] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/admin-design/custom-dashboard/class-ofast-custom-dashboard.php:708
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[80] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/forms/class-ofast-forms-submissions.php:39
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[81] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/forms/class-ofast-forms-submissions.php:72
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[82] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/contact forms/class-ofast-forms-submissions.php:39
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[83] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/contact forms/class-ofast-forms-submissions.php:72
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[84] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/forms/class-ofast-forms.php:209
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[85] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/forms/class-ofast-forms.php:252
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[86] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/forms/class-ofast-forms.php:661
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[87] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/forms/class-ofast-forms.php:671
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[88] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/smtp/class-ofast-smtp-admin.php:829
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[89] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/smtp/class-ofast-smtp-admin.php:1377
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[90] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/smtp/class-ofast-smtp-admin.php:1625
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[91] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: modules/smtp/class-ofast-smtp-admin.php:1709
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[92] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/smtp/class-ofast-smtp.php:44
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[93] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/smtp/class-ofast-smtp.php:300
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[94] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/smtp/class-ofast-smtp.php:301
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[95] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/smtp/class-ofast-smtp.php:302
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[96] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/smtp/class-ofast-smtp.php:610
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[97] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/admin-studio/class-ofast-admin-tweaks.php:298
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[98] PHP file_get_contents with URL - potential SSRF
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: modules/admin-studio/class-ofast-admin-tweaks.php:519
+
+Risk & Fix:
+Server-Side Request Forgery allows attackers to make your server fetch internal resources, potentially accessing private APIs or cloud metadata. Fix: Validate URLs and block private IP ranges.
+
+Fix: Validate and Whitelist URLs
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: SSRF
+const url = req.body.webhookUrl;
+const response = await fetch(url);
+
+After (Safe):
+import { URL } from 'url';
+
+const ALLOWED_HOSTS = ['api.example.com', 'webhook.example.com'];
+
+function validateUrl(urlString) {
+  const url = new URL(urlString);
+
+  // Block private IPs and localhost
+  const blockedPatterns = [
+    /^localhost$/i,
+    /^127\./,
+    /^10\./,
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+    /^192\.168\./,
+    /^0\./
+  ];
+
+  if (blockedPatterns.some(p => p.test(url.hostname))) {
+    throw new Error('Invalid URL: private addresses not allowed');
+  }
+
+  // Optionally: whitelist specific hosts
+  if (!ALLOWED_HOSTS.includes(url.hostname)) {
+    throw new Error('Invalid URL: host not allowed');
+  }
+
+  return url.href;
+}
+
+const safeUrl = validateUrl(req.body.webhookUrl);
+const response = await fetch(safeUrl);
+
+
+[99] PHP file_get_contents with URL - potential SSRF
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: modules/admin-studio/class-ofast-admin-tweaks.php:1364
+
+Risk & Fix:
+Server-Side Request Forgery allows attackers to make your server fetch internal resources, potentially accessing private APIs or cloud metadata. Fix: Validate URLs and block private IP ranges.
+
+Fix: Validate and Whitelist URLs
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: SSRF
+const url = req.body.webhookUrl;
+const response = await fetch(url);
+
+After (Safe):
+import { URL } from 'url';
+
+const ALLOWED_HOSTS = ['api.example.com', 'webhook.example.com'];
+
+function validateUrl(urlString) {
+  const url = new URL(urlString);
+
+  // Block private IPs and localhost
+  const blockedPatterns = [
+    /^localhost$/i,
+    /^127\./,
+    /^10\./,
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+    /^192\.168\./,
+    /^0\./
+  ];
+
+  if (blockedPatterns.some(p => p.test(url.hostname))) {
+    throw new Error('Invalid URL: private addresses not allowed');
+  }
+
+  // Optionally: whitelist specific hosts
+  if (!ALLOWED_HOSTS.includes(url.hostname)) {
+    throw new Error('Invalid URL: host not allowed');
+  }
+
+  return url.href;
+}
+
+const safeUrl = validateUrl(req.body.webhookUrl);
+const response = await fetch(safeUrl);
+
+
+[100] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/admin-studio/class-ofast-admin-url.php:93
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[101] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/admin-studio/class-ofast-admin-url.php:126
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[102] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/admin-studio/class-ofast-admin-url.php:138
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[103] PHP include with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/admin-studio/class-ofast-admin-url.php:538
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[104] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/admin-studio/class-ofast-admin-url.php:581
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[105] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/admin-studio/class-ofast-admin-url.php:968
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[106] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/admin-studio/class-ofast-admin-url.php:980
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[107] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/admin-studio/class-ofast-admin-url.php:1003
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[108] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/admin-studio/class-ofast-admin-url.php:1014
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[109] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/admin-studio/class-ofast-admin-url.php:1043
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[110] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/admin-studio/class-ofast-admin-url.php:1044
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[111] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/contact forms/class-ofast-forms.php:209
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[112] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/contact forms/class-ofast-forms.php:252
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[113] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/contact forms/class-ofast-forms.php:661
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[114] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/contact forms/class-ofast-forms.php:671
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[115] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: modules/redirects/class-ofast-redirects.php:294
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[116] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: modules/redirects/class-ofast-redirects.php:1033
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[117] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/email/class-ofast-email-admin.php:59
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[118] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: modules/email/class-ofast-email-admin.php:68
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[119] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: modules/email/class-ofast-email-admin.php:72
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[120] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/email/class-ofast-email-admin.php:424
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[121] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/email/class-ofast-email-admin.php:658
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[122] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/email/class-ofast-email-admin.php:2167
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[123] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/email/class-ofast-email-admin.php:2180
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[124] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/email/class-ofast-email-admin.php:2339
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[125] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/email/class-ofast-email-admin.php:2951
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[126] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/email/class-ofast-email.php:33
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[127] PHP require_once with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/email/class-ofast-email.php:34
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[128] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: modules/email/class-ofast-email.php:86
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[129] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/snippets/class-ofast-snippets.php:430
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[130] PHP file_get_contents with URL - potential SSRF
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: modules/snippets/class-ofast-snippets.php:752
+
+Risk & Fix:
+Server-Side Request Forgery allows attackers to make your server fetch internal resources, potentially accessing private APIs or cloud metadata. Fix: Validate URLs and block private IP ranges.
+
+Fix: Validate and Whitelist URLs
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: SSRF
+const url = req.body.webhookUrl;
+const response = await fetch(url);
+
+After (Safe):
+import { URL } from 'url';
+
+const ALLOWED_HOSTS = ['api.example.com', 'webhook.example.com'];
+
+function validateUrl(urlString) {
+  const url = new URL(urlString);
+
+  // Block private IPs and localhost
+  const blockedPatterns = [
+    /^localhost$/i,
+    /^127\./,
+    /^10\./,
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+    /^192\.168\./,
+    /^0\./
+  ];
+
+  if (blockedPatterns.some(p => p.test(url.hostname))) {
+    throw new Error('Invalid URL: private addresses not allowed');
+  }
+
+  // Optionally: whitelist specific hosts
+  if (!ALLOWED_HOSTS.includes(url.hostname)) {
+    throw new Error('Invalid URL: host not allowed');
+  }
+
+  return url.href;
+}
+
+const safeUrl = validateUrl(req.body.webhookUrl);
+const response = await fetch(safeUrl);
+
+
+[131] PHP include with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/snippets/class-ofast-snippets.php:3149
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[132] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/snippets/class-ofast-snippets.php:3425
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[133] PHP file_get_contents with URL - potential SSRF
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: modules/snippets/class-ofast-snippets.php:3497
+
+Risk & Fix:
+Server-Side Request Forgery allows attackers to make your server fetch internal resources, potentially accessing private APIs or cloud metadata. Fix: Validate URLs and block private IP ranges.
+
+Fix: Validate and Whitelist URLs
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: SSRF
+const url = req.body.webhookUrl;
+const response = await fetch(url);
+
+After (Safe):
+import { URL } from 'url';
+
+const ALLOWED_HOSTS = ['api.example.com', 'webhook.example.com'];
+
+function validateUrl(urlString) {
+  const url = new URL(urlString);
+
+  // Block private IPs and localhost
+  const blockedPatterns = [
+    /^localhost$/i,
+    /^127\./,
+    /^10\./,
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+    /^192\.168\./,
+    /^0\./
+  ];
+
+  if (blockedPatterns.some(p => p.test(url.hostname))) {
+    throw new Error('Invalid URL: private addresses not allowed');
+  }
+
+  // Optionally: whitelist specific hosts
+  if (!ALLOWED_HOSTS.includes(url.hostname)) {
+    throw new Error('Invalid URL: host not allowed');
+  }
+
+  return url.href;
+}
+
+const safeUrl = validateUrl(req.body.webhookUrl);
+const response = await fetch(safeUrl);
+
+
+[134] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/snippets/class-ofast-snippets.php:3794
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[135] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/snippets/class-ofast-snippets.php:3863
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[136] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/snippets/class-ofast-snippets.php:3932
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[137] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/snippets/class-ofast-snippets.php:3999
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[138] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/snippets/class-ofast-snippets.php:4104
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[139] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/snippets/class-ofast-snippets.php:4172
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[140] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: modules/snippets/class-ofast-snippets.php:4316
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[141] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: modules/snippets/class-ofast-snippets.php:4372
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[142] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: modules/snippets/class-ofast-snippets.php:4411
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[143] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: modules/snippets/class-ofast-snippets.php:4448
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[144] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: modules/snippets/class-ofast-snippets.php:4484
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[145] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: modules/snippets/class-ofast-snippets.php:4489
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[146] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: modules/snippets/class-ofast-snippets.php:4494
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[147] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/snippets/class-ofast-snippets.php:4644
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[148] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/snippets/class-ofast-snippets.php:4665
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[149] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/snippets/class-ofast-snippets.php:4777
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[150] PHP MD5 for password - use password_hash() instead
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/snippets/class-ofast-snippets.php:4842
+
+Risk & Fix:
+Passwords in code are a severe security risk. Anyone with code access can authenticate as that user/service. Fix: Remove immediately, use environment variables, rotate the password.
+
+Fix: Use bcrypt or Argon2
+Estimated Time: 15-20 min
+Difficulty: MEDIUM
+
+Before (Vulnerable):
+// Vulnerable: MD5/SHA1 is not suitable for passwords
+const hash = crypto.createHash('md5').update(password).digest('hex');
+
+After (Safe):
+// Safe: Use bcrypt
+import bcrypt from 'bcrypt';
+
+// Hashing (on registration)
+const saltRounds = 12;
+const hash = await bcrypt.hash(password, saltRounds);
+
+// Verification (on login)
+const isValid = await bcrypt.compare(password, storedHash);
+
+
+[151] PHP PDO query() - use prepare() with bound parameters
+--------------------------------------------------
+Severity: MEDIUM
+Category: code
+Location: modules/snippets/class-ofast-snippets.php:4892
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[152] PHP include with variable - file inclusion risk
+--------------------------------------------------
+Severity: HIGH
+Category: code
+Location: modules/snippets/class-ofast-snippets.php:5015
+
+Risk & Fix:
+This pattern was flagged as a potential security issue. Review the code context and apply the recommended fix to prevent exploitation.
+
+
+[153] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: includes/security/class-ofast-universal-spam.php:117
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[154] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: includes/security/class-ofast-universal-spam.php:145
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[155] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: includes/security/class-ofast-universal-spam.php:164
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[156] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/admin-studio/class-ofast-admin-url.php:120
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[157] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/admin-studio/class-ofast-admin-url.php:137
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[158] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/admin-studio/class-ofast-admin-url.php:579
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[159] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/email/class-ofast-email-admin.php:1172
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[160] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/notification-channels/class-ofast-whatsapp.php:55
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[161] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/notification-channels/class-ofast-whatsapp.php:56
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[162] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/smtp/class-ofast-smtp-admin.php:596
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[163] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/smtp/class-ofast-smtp.php:193
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[164] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/smtp/class-ofast-smtp-admin.php:804
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[165] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/smtp/class-ofast-smtp.php:288
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[166] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/smtp/class-ofast-smtp.php:290
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[167] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/smtp/class-ofast-smtp.php:312
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[168] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/smtp/class-ofast-smtp-admin.php:1154
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[169] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/social-login/class-ofast-social-login.php:91
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[170] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/social-login/class-ofast-social-login.php:95
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[171] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/smtp/class-ofast-smtp-admin.php:1364
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[172] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/social-login/class-ofast-social-login.php:362
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[173] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/social-login/class-ofast-social-login.php:679
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[174] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/social-login/class-ofast-social-login.php:681
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[175] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/social-login/class-ofast-social-login.php:692
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[176] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/social-login/class-ofast-social-login.php:694
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[177] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/spam-protection/class-ofast-spam-protection.php:126
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[178] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/spam-protection/class-ofast-spam-protection.php:128
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[179] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/spam-protection/class-ofast-spam-protection.php:180
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[180] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/spam-protection/class-ofast-spam-protection.php:182
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[181] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/spam-protection/class-ofast-spam-protection.php:254
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[182] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/spam-protection/class-ofast-spam-protection.php:256
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[183] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/spam-protection/class-ofast-spam-protection.php:337
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[184] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/spam-protection/class-ofast-spam-protection.php:339
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[185] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/spam-protection/class-ofast-spam-protection.php:349
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[186] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/spam-protection/class-ofast-spam-protection.php:351
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[187] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/whatsapp/class-ofast-whatsapp.php:55
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+[188] Exposed Secret: Generic Secret Assignment in Config
+--------------------------------------------------
+Severity: CRITICAL
+Category: secrets
+CWE: CWE-798 - Hardcoded Credentials
+CVSS: 9.8 (Critical)
+Location: modules/whatsapp/class-ofast-whatsapp.php:56
+
+Risk & Fix:
+Sensitive values in source code can be discovered through code leaks, decompilation, or git history. Fix: Store secrets in environment variables or a secrets manager.
+
+Suggested Fix:
+Move to environment variable and rotate the exposed secret immediately
+
+Fix: Move to Environment Variables
+Estimated Time: 10-15 min
+Difficulty: EASY
+
+Before (Vulnerable):
+// Vulnerable: Hardcoded API key
+const API_KEY = "sk-abc123xyz789";
+const client = new OpenAI({ apiKey: API_KEY });
+
+After (Safe):
+// Safe: Environment variable
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// .env file (add to .gitignore!)
+// OPENAI_API_KEY=sk-abc123xyz789
+
+// For client-side (Next.js/Vite)
+// Use NEXT_PUBLIC_ or VITE_ prefix only for non-sensitive keys
+
+
+============================================================
+Generated by Vibeship Scanner
+https://vibeship.com
+============================================================

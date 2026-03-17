@@ -66,7 +66,7 @@ class Ofast_X_User_Roles
      */
     public function render_role_checkboxes($user)
     {
-        if (!current_user_can('promote_users') && !current_user_can('edit_users')) {
+        if (!current_user_can('promote_users')) {
             return;
         }
 
@@ -148,7 +148,7 @@ class Ofast_X_User_Roles
     public function save_user_roles($user_id)
     {
         // Security checks
-        if (!current_user_can('promote_users') && !current_user_can('edit_users')) {
+        if (!current_user_can('promote_users')) {
             return;
         }
 

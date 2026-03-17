@@ -325,15 +325,30 @@ class Ofast_X_Security_Hardening
 
         $key = hash('sha256', SECURE_AUTH_KEY);
         $decoded = base64_decode($encrypted);
+
+        if ($decoded === false) {
+            return $encrypted;
+        }
         
         if (strlen($decoded) < 16) {
-            return $encrypted; // Invalid encrypted data
+            // Backward compatibility: old format (deterministic IV, no prefix)
+            $legacy_iv = substr(hash('sha256', AUTH_KEY), 0, 16);
+            $legacy = openssl_decrypt($decoded, 'AES-256-CBC', $key, 0, $legacy_iv);
+            return $legacy !== false ? $legacy : $encrypted;
         }
         
         $iv = substr($decoded, 0, 16);
         $encrypted_data = substr($decoded, 16);
 
-        return openssl_decrypt($encrypted_data, 'AES-256-CBC', $key, 0, $iv);
+        $decrypted = openssl_decrypt($encrypted_data, 'AES-256-CBC', $key, 0, $iv);
+        if ($decrypted === false) {
+            // Backward compatibility fallback
+            $legacy_iv = substr(hash('sha256', AUTH_KEY), 0, 16);
+            $legacy = openssl_decrypt($decoded, 'AES-256-CBC', $key, 0, $legacy_iv);
+            return $legacy !== false ? $legacy : $encrypted;
+        }
+
+        return $decrypted;
     }
 
     /**

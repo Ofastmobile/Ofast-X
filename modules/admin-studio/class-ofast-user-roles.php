@@ -66,7 +66,8 @@ class Ofast_X_User_Roles
      */
     public function render_role_checkboxes($user)
     {
-        if (!current_user_can('promote_users') && !current_user_can('edit_users')) {
+        // SECURITY FIX: Consistent with save_user_roles - require 'promote_users' capability
+        if (!current_user_can('promote_users')) {
             return;
         }
 
@@ -144,11 +145,17 @@ class Ofast_X_User_Roles
 
     /**
      * Save user roles
+     * 
+     * SECURITY FIX: Addresses CWE-269 Insufficient Authorization vulnerability
+     * - Requires 'promote_users' capability (not just 'edit_users')
+     * - Prevents privilege escalation by enforcing role hierarchy
+     * - Prevents modification of users with higher privileges
      */
     public function save_user_roles($user_id)
     {
-        // Security checks
-        if (!current_user_can('promote_users') && !current_user_can('edit_users')) {
+        // SECURITY FIX: Require 'promote_users' capability specifically
+        // This is the primary fix for CWE-269 - only users with 'promote_users' can change roles
+        if (!current_user_can('promote_users')) {
             return;
         }
 
@@ -173,8 +180,113 @@ class Ofast_X_User_Roles
         $all_roles = array_keys(wp_roles()->roles);
         $new_roles = array_intersect($new_roles, $all_roles);
 
+        // SECURITY FIX: Add hierarchy validation to prevent privilege escalation
+        $current_user = wp_get_current_user();
+        $target_user = get_userdata($user_id);
+        
+        if (!$target_user) {
+            return;
+        }
+
+        // Define role hierarchy (higher number = more privileges)
+        $role_hierarchy = array(
+            'subscriber'    => 0,
+            'contributor'   => 1,  
+            'author'        => 2,
+            'editor'        => 7,
+            'administrator' => 10,
+        );
+
+        // Get current user's highest privilege level
+        $current_user_max_level = 0;
+        foreach ($current_user->roles as $role) {
+            $level = isset($role_hierarchy[$role]) ? $role_hierarchy[$role] : 0;
+            // Handle custom roles by checking key capabilities
+            if ($level === 0) {
+                $role_obj = get_role($role);
+                if ($role_obj && !empty($role_obj->capabilities['manage_options'])) {
+                    $level = 10; // Admin-level custom role
+                } elseif ($role_obj && !empty($role_obj->capabilities['edit_others_posts'])) {
+                    $level = 7; // Editor-level custom role  
+                } elseif ($role_obj && !empty($role_obj->capabilities['publish_posts'])) {
+                    $level = 2; // Author-level custom role
+                } elseif ($role_obj && !empty($role_obj->capabilities['edit_posts'])) {
+                    $level = 1; // Contributor-level custom role
+                }
+            }
+            $current_user_max_level = max($current_user_max_level, $level);
+        }
+
+        // Get target user's current highest privilege level
+        $target_user_current_max_level = 0;
+        foreach ($target_user->roles as $role) {
+            $level = isset($role_hierarchy[$role]) ? $role_hierarchy[$role] : 0;
+            // Handle custom roles by checking key capabilities  
+            if ($level === 0) {
+                $role_obj = get_role($role);
+                if ($role_obj && !empty($role_obj->capabilities['manage_options'])) {
+                    $level = 10; // Admin-level custom role
+                } elseif ($role_obj && !empty($role_obj->capabilities['edit_others_posts'])) {
+                    $level = 7; // Editor-level custom role
+                } elseif ($role_obj && !empty($role_obj->capabilities['publish_posts'])) {
+                    $level = 2; // Author-level custom role
+                } elseif ($role_obj && !empty($role_obj->capabilities['edit_posts'])) {
+                    $level = 1; // Contributor-level custom role
+                }
+            }
+            $target_user_current_max_level = max($target_user_current_max_level, $level);
+        }
+
+        // SECURITY FIX: Cannot modify users with higher privileges than current user
+        if ($target_user_current_max_level > $current_user_max_level) {
+            // Log security attempt
+            error_log(sprintf(
+                '[SECURITY] User %d attempted to modify user %d who has higher privileges (current level: %d, target level: %d)',
+                $current_user->ID,
+                $user_id,
+                $current_user_max_level,
+                $target_user_current_max_level
+            ));
+            return;
+        }
+
+        // SECURITY FIX: Check each new role to prevent privilege escalation
+        foreach ($new_roles as $new_role) {
+            $new_role_level = isset($role_hierarchy[$new_role]) ? $role_hierarchy[$new_role] : 0;
+            
+            // Handle custom roles
+            if ($new_role_level === 0) {
+                $role_obj = get_role($new_role);
+                if ($role_obj && !empty($role_obj->capabilities['manage_options'])) {
+                    $new_role_level = 10; // Admin-level custom role
+                } elseif ($role_obj && !empty($role_obj->capabilities['edit_others_posts'])) {
+                    $new_role_level = 7; // Editor-level custom role
+                } elseif ($role_obj && !empty($role_obj->capabilities['publish_posts'])) {
+                    $new_role_level = 2; // Author-level custom role  
+                } elseif ($role_obj && !empty($role_obj->capabilities['edit_posts'])) {
+                    $new_role_level = 1; // Contributor-level custom role
+                }
+            }
+            
+            // Cannot assign roles with higher privileges than current user
+            if ($new_role_level > $current_user_max_level) {
+                // Log privilege escalation attempt
+                error_log(sprintf(
+                    '[SECURITY] Privilege escalation blocked: User %d attempted to assign role "%s" (level %d) but only has level %d',
+                    $current_user->ID,
+                    $new_role,
+                    $new_role_level,
+                    $current_user_max_level
+                ));
+                return;
+            }
+        }
+
         // Get user object
         $user = new WP_User($user_id);
+
+        // Store old roles for audit logging
+        $old_roles = $user->roles;
 
         // Remove all current roles
         foreach (array_values($user->roles) as $role) {
@@ -185,6 +297,15 @@ class Ofast_X_User_Roles
         foreach ($new_roles as $role) {
             $user->add_role($role);
         }
+
+        // Log successful role change for audit trail
+        error_log(sprintf(
+            '[AUDIT] Role change: User %d changed user %d from [%s] to [%s]',
+            $current_user->ID,
+            $user_id,
+            implode(', ', $old_roles),
+            implode(', ', $new_roles)
+        ));
     }
 
     /**

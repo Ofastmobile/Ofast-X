@@ -101,6 +101,21 @@ class Ofast_X_Redirects
      */
     public function handle_form_submissions()
     {
+        if (isset($_POST['ofast_save_redirect_settings'])) {
+            if (!current_user_can('manage_options')) {
+                return;
+            }
+
+            check_admin_referer('ofast_redirect_settings_save', '_wpnonce');
+
+            $strict = isset($_POST['redirects_regex_strict']) ? 1 : 0;
+            update_option('ofast_redirects_regex_strict', $strict);
+
+            add_settings_error('ofast_redirects', 'success', __('Redirect settings saved.', 'ofast-x'), 'success');
+            wp_redirect(admin_url('admin.php?page=ofast-redirects'));
+            exit;
+        }
+
         if (!isset($_POST['ofast_save_redirect'])) {
             return;
         }
@@ -656,6 +671,7 @@ class Ofast_X_Redirects
 
         // Detect import sources
         $import_sources = $this->detect_import_sources();
+        $regex_strict = get_option('ofast_redirects_regex_strict', 0);
 
         settings_errors('ofast_redirects');
 ?>
@@ -753,6 +769,26 @@ class Ofast_X_Redirects
 
                 <!-- Right Column: Import/Export -->
                 <div class="ofast-column-right">
+                    <div class="ofast-card" style="margin-bottom: 20px;">
+                        <h3 style="margin-top: 0;"><?php esc_html_e('Regex Security', 'ofast-x'); ?></h3>
+                        <p class="description"><?php esc_html_e('Control how strict regex validation should be for redirects.', 'ofast-x'); ?></p>
+                        <form method="post">
+                            <?php wp_nonce_field('ofast_redirect_settings_save', '_wpnonce'); ?>
+                            <label style="display: block; margin: 10px 0;">
+                                <input type="checkbox" name="redirects_regex_strict" value="1" <?php checked($regex_strict, 1); ?>>
+                                <?php esc_html_e('Enable strict regex validation (advanced)', 'ofast-x'); ?>
+                            </label>
+                            <p class="description" style="margin-top: 0;">
+                                <?php esc_html_e('Strict mode blocks complex patterns to reduce ReDoS risk but may reject valid regex.', 'ofast-x'); ?>
+                            </p>
+                            <p style="margin-bottom: 0;">
+                                <button type="submit" name="ofast_save_redirect_settings" class="button">
+                                    <?php esc_html_e('Save Settings', 'ofast-x'); ?>
+                                </button>
+                            </p>
+                        </form>
+                    </div>
+
                     <!-- Import Section -->
                     <?php if (!empty($import_sources)): ?>
                         <div class="ofast-card" style="margin-bottom: 20px;">
@@ -1243,9 +1279,12 @@ class Ofast_X_Redirects
             return false;
         }
 
+        $strict = $this->is_strict_regex_mode();
+
         // 1. BASIC CONSTRAINTS
         // Reasonable length limit to reduce ReDoS risk without breaking common patterns
-        if (strlen($pattern) > 300) {
+        $max_length = $strict ? 200 : 300;
+        if (strlen($pattern) > $max_length) {
             return false;
         }
 
@@ -1305,11 +1344,33 @@ class Ofast_X_Redirects
 
         // 3. STRUCTURAL VALIDATION
         $quantifier_count = preg_match_all('/[^\\\\][+*?]|\{[0-9,]+\}/', $pattern);
-        if ($quantifier_count > 20) { // Too many quantifiers = likely problematic
+        $max_quantifiers = $strict ? 10 : 20;
+        if ($quantifier_count > $max_quantifiers) { // Too many quantifiers = likely problematic
             return false;
         }
 
-        // 4. FINAL SANITIZATION
+        // 4. STRICT MODE: Additional checks (advanced)
+        if ($strict) {
+            $complexity_score = $this->calculate_regex_complexity($pattern);
+            if ($complexity_score > 100) {
+                return false;
+            }
+
+            $max_depth = $this->get_regex_nesting_depth($pattern);
+            if ($max_depth > 4) {
+                return false;
+            }
+
+            if (!$this->validate_alternations($pattern)) {
+                return false;
+            }
+
+            if (!$this->is_whitelisted_regex_pattern($pattern)) {
+                return false;
+            }
+        }
+
+        // 5. FINAL SANITIZATION
         // Remove redundant quantifier duplications
         $pattern = preg_replace('/(\+|\*|\?)\1+/', '$1', $pattern);
         
@@ -1318,5 +1379,157 @@ class Ofast_X_Redirects
         $pattern = preg_replace('/\.\+\*/', '.+', $pattern);  // .+* -> .+
 
         return $pattern;
+    }
+
+    /**
+     * Check if strict regex mode is enabled.
+     */
+    private function is_strict_regex_mode()
+    {
+        return (bool) get_option('ofast_redirects_regex_strict', 0);
+    }
+
+    /**
+     * Calculate complexity score for regex pattern.
+     */
+    private function calculate_regex_complexity($pattern)
+    {
+        $score = 0;
+        $score += strlen($pattern) * 0.5;
+        $quantifiers = preg_match_all('/[+*?]|\{[0-9,]+\}/', $pattern);
+        $score += $quantifiers * 5;
+        $groups = preg_match_all('/\([^)]*\)/', $pattern);
+        $score += $groups * 3;
+        $alternations = preg_match_all('/\|/', $pattern);
+        $score += $alternations * 8;
+        $nesting_depth = $this->get_regex_nesting_depth($pattern);
+        $score += pow($nesting_depth, 2) * 5;
+        $char_classes = preg_match_all('/\[[^\]]*\]/', $pattern);
+        $score += $char_classes * 2;
+        $assertions = preg_match_all('/\(\?[=!<]/', $pattern);
+        $score += $assertions * 15;
+        $backrefs = preg_match_all('/\\\\[1-9]/', $pattern);
+        $score += $backrefs * 10;
+
+        return (int) $score;
+    }
+
+    /**
+     * Calculate maximum nesting depth of groups in regex.
+     */
+    private function get_regex_nesting_depth($pattern)
+    {
+        $max_depth = 0;
+        $current_depth = 0;
+        $in_char_class = false;
+
+        for ($i = 0; $i < strlen($pattern); $i++) {
+            $char = $pattern[$i];
+            $prev_char = $pattern[$i - 1] ?? '';
+
+            if ($prev_char === '\\') {
+                continue;
+            }
+
+            if ($char === '[' && !$in_char_class) {
+                $in_char_class = true;
+                continue;
+            }
+            if ($char === ']' && $in_char_class) {
+                $in_char_class = false;
+                continue;
+            }
+
+            if ($in_char_class) {
+                continue;
+            }
+
+            if ($char === '(') {
+                $current_depth++;
+                $max_depth = max($max_depth, $current_depth);
+            } elseif ($char === ')') {
+                $current_depth = max(0, $current_depth - 1);
+            }
+        }
+
+        return $max_depth;
+    }
+
+    /**
+     * Validate alternation patterns for overlapping branches.
+     */
+    private function validate_alternations($pattern)
+    {
+        if (preg_match_all('/\(([^()]+\|[^()]+)\)[+*?]/', $pattern, $matches)) {
+            foreach ($matches[1] as $alternation) {
+                $branches = explode('|', $alternation);
+
+                if (count($branches) > 8) {
+                    return false;
+                }
+
+                for ($i = 0; $i < count($branches); $i++) {
+                    for ($j = $i + 1; $j < count($branches); $j++) {
+                        $branch_a = trim($branches[$i]);
+                        $branch_b = trim($branches[$j]);
+
+                        if ($branch_a === $branch_b) {
+                            return false;
+                        }
+
+                        if (strlen($branch_a) > 0 && strlen($branch_b) > 0) {
+                            if (strpos($branch_b, $branch_a) === 0 || strpos($branch_a, $branch_b) === 0) {
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Whitelist validation for strict mode.
+     */
+    private function is_whitelisted_regex_pattern($pattern)
+    {
+        $remaining = $pattern;
+
+        // Safe literals
+        $remaining = preg_replace('/[a-zA-Z0-9\-\/_.]/', '', $remaining);
+
+        // Safe character classes
+        $remaining = preg_replace('/\[[a-zA-Z0-9\-_\/\.]+\]/', '', $remaining);
+
+        // Safe quantifiers
+        $remaining = preg_replace('/[+*?]/', '', $remaining);
+        $remaining = preg_replace('/\{[0-9]+,?[0-9]*\}/', '', $remaining);
+
+        // Safe anchors
+        $remaining = preg_replace('/[\^$]/', '', $remaining);
+
+        // Safe escapes for URL patterns and common classes
+        $remaining = preg_replace('/\\\\[\/\-\.dDwWsS]/', '', $remaining);
+
+        // Non-capturing groups and grouping
+        $remaining = preg_replace('/\(\?\:/', '', $remaining);
+        $remaining = preg_replace('/[()]/', '', $remaining);
+
+        // Alternation
+        $remaining = preg_replace('/\|/', '', $remaining);
+
+        // Whitespace
+        $remaining = preg_replace('/\s/', '', $remaining);
+
+        if (strlen($remaining) > 0) {
+            $dangerous_remaining = preg_match('/[?=!<>]|\\\\[^\/\-\.dDwWsS]/', $remaining);
+            if ($dangerous_remaining) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

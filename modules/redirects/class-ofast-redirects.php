@@ -1244,8 +1244,8 @@ class Ofast_X_Redirects
         }
 
         // 1. BASIC CONSTRAINTS
-        // Strict length limit - even short patterns can be dangerous
-        if (strlen($pattern) > 200) {
+        // Reasonable length limit to reduce ReDoS risk without breaking common patterns
+        if (strlen($pattern) > 300) {
             return false;
         }
 
@@ -1303,36 +1303,13 @@ class Ofast_X_Redirects
             }
         }
 
-        // 3. COMPLEXITY ANALYSIS
-        $complexity_score = $this->calculate_regex_complexity($pattern);
-        if ($complexity_score > 100) { // Strict limit for redirects
-            return false;
-        }
-
-        // 4. STRUCTURAL VALIDATION
-        // Count nesting depth
-        $max_depth = $this->get_regex_nesting_depth($pattern);
-        if ($max_depth > 4) { // Reasonable limit for URL redirects
-            return false;
-        }
-
-        // Count quantifiers
+        // 3. STRUCTURAL VALIDATION
         $quantifier_count = preg_match_all('/[^\\\\][+*?]|\{[0-9,]+\}/', $pattern);
-        if ($quantifier_count > 10) { // Too many quantifiers = likely problematic
+        if ($quantifier_count > 20) { // Too many quantifiers = likely problematic
             return false;
         }
 
-        // 5. ALTERNATION VALIDATION  
-        if (!$this->validate_alternations($pattern)) {
-            return false;
-        }
-
-        // 6. WHITELIST CHECK - Ensure pattern uses only safe constructs
-        if (!$this->is_whitelisted_regex_pattern($pattern)) {
-            return false;
-        }
-
-        // 7. FINAL SANITIZATION
+        // 4. FINAL SANITIZATION
         // Remove redundant quantifier duplications
         $pattern = preg_replace('/(\+|\*|\?)\1+/', '$1', $pattern);
         
@@ -1341,203 +1318,5 @@ class Ofast_X_Redirects
         $pattern = preg_replace('/\.\+\*/', '.+', $pattern);  // .+* -> .+
 
         return $pattern;
-    }
-
-    /**
-     * Calculate complexity score for regex pattern
-     * Higher scores indicate more potential for ReDoS
-     */
-    private function calculate_regex_complexity($pattern)
-    {
-        $score = 0;
-        
-        // Base score from length
-        $score += strlen($pattern) * 0.5;
-        
-        // Quantifier penalty
-        $quantifiers = preg_match_all('/[+*?]|\{[0-9,]+\}/', $pattern);
-        $score += $quantifiers * 5;
-        
-        // Group penalty (each group adds complexity)
-        $groups = preg_match_all('/\([^)]*\)/', $pattern);
-        $score += $groups * 3;
-        
-        // Alternation penalty (exponential complexity risk)
-        $alternations = preg_match_all('/\|/', $pattern);
-        $score += $alternations * 8;
-        
-        // Nested structure penalty
-        $nesting_depth = $this->get_regex_nesting_depth($pattern);
-        $score += pow($nesting_depth, 2) * 5;
-        
-        // Character class penalty
-        $char_classes = preg_match_all('/\[[^\]]*\]/', $pattern);
-        $score += $char_classes * 2;
-        
-        // Lookahead/lookbehind heavy penalty
-        $assertions = preg_match_all('/\(\?[=!<]/', $pattern);
-        $score += $assertions * 15;
-        
-        // Backreference penalty
-        $backrefs = preg_match_all('/\\\\[1-9]/', $pattern);
-        $score += $backrefs * 10;
-
-        return (int) $score;
-    }
-
-    /**
-     * Calculate maximum nesting depth of groups in regex
-     */
-    private function get_regex_nesting_depth($pattern)
-    {
-        $max_depth = 0;
-        $current_depth = 0;
-        $in_char_class = false;
-        
-        for ($i = 0; $i < strlen($pattern); $i++) {
-            $char = $pattern[$i];
-            $prev_char = $pattern[$i - 1] ?? '';
-            
-            // Skip escaped characters
-            if ($prev_char === '\\') {
-                continue;
-            }
-            
-            // Handle character classes
-            if ($char === '[' && !$in_char_class) {
-                $in_char_class = true;
-                continue;
-            }
-            if ($char === ']' && $in_char_class) {
-                $in_char_class = false;
-                continue;
-            }
-            
-            if ($in_char_class) {
-                continue;
-            }
-            
-            // Track group depth
-            if ($char === '(') {
-                $current_depth++;
-                $max_depth = max($max_depth, $current_depth);
-            } elseif ($char === ')') {
-                $current_depth = max(0, $current_depth - 1);
-            }
-        }
-        
-        return $max_depth;
-    }
-
-    /**
-     * Validate alternation patterns for overlapping branches
-     */
-    private function validate_alternations($pattern)
-    {
-        // Find quantified alternation groups: (a|b)+, (x|y)*, etc.
-        if (preg_match_all('/\(([^()]+\|[^()]+)\)[+*?]/', $pattern, $matches)) {
-            foreach ($matches[1] as $alternation) {
-                $branches = explode('|', $alternation);
-                
-                // Too many branches = complexity risk
-                if (count($branches) > 8) {
-                    return false;
-                }
-                
-                // Check for obviously overlapping branches
-                for ($i = 0; $i < count($branches); $i++) {
-                    for ($j = $i + 1; $j < count($branches); $j++) {
-                        $branch_a = trim($branches[$i]);
-                        $branch_b = trim($branches[$j]);
-                        
-                        // Identical branches
-                        if ($branch_a === $branch_b) {
-                            return false;
-                        }
-                        
-                        // One is prefix of another
-                        if (strlen($branch_a) > 0 && strlen($branch_b) > 0) {
-                            if (strpos($branch_b, $branch_a) === 0 || strpos($branch_a, $branch_b) === 0) {
-                                return false;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        return true;
-    }
-
-    /**
-     * Whitelist validation - ensure pattern only uses safe constructs
-     * This implements a restrictive approach suitable for redirect URL patterns
-     */
-    private function is_whitelisted_regex_pattern($pattern)
-    {
-        // For redirects, we primarily need these safe constructs:
-        $allowed_constructs = array(
-            // Basic literals and word characters
-            '/^[a-zA-Z0-9\-\/_.]/',
-            
-            // Safe character classes
-            '/\[[a-zA-Z0-9\-_\/\.]+\]/',
-            
-            // Simple quantifiers (non-nested)
-            '/[^(][+*?]/',
-            '/\{[0-9]+,?[0-9]*\}/',
-            
-            // Safe anchors
-            '/[\^$]/',
-            
-            // Safe escapes for URL patterns
-            '/\\\\[\/\-\.]/',
-            
-            // Non-capturing groups (safer than capturing)
-            '/\(\?\:/',
-            
-            // Simple alternation (not quantified)
-            '/[^)]\|[^(]/',
-        );
-        
-        // Remove all allowed constructs and see what remains
-        $remaining = $pattern;
-        
-        // Remove safe literals
-        $remaining = preg_replace('/[a-zA-Z0-9\-\/_.]/', '', $remaining);
-        
-        // Remove safe character classes
-        $remaining = preg_replace('/\[[a-zA-Z0-9\-_\/\.]+\]/', '', $remaining);
-        
-        // Remove safe quantifiers
-        $remaining = preg_replace('/[+*?]/', '', $remaining);
-        $remaining = preg_replace('/\{[0-9]+,?[0-9]*\}/', '', $remaining);
-        
-        // Remove anchors
-        $remaining = preg_replace('/[\^$]/', '', $remaining);
-        
-        // Remove safe escapes
-        $remaining = preg_replace('/\\\\[\/\-\.]/', '', $remaining);
-        
-        // Remove non-capturing groups
-        $remaining = preg_replace('/\(\?\:/', '', $remaining);
-        $remaining = preg_replace('/[()]/', '', $remaining);
-        
-        // Remove simple alternation
-        $remaining = preg_replace('/\|/', '', $remaining);
-        
-        // Remove whitespace
-        $remaining = preg_replace('/\s/', '', $remaining);
-        
-        // If anything suspicious remains, reject
-        if (strlen($remaining) > 0) {
-            // Check if remaining characters are dangerous
-            $dangerous_remaining = preg_match('/[?=!<>]|\\\\[^\/\-\.]/', $remaining);
-            if ($dangerous_remaining) {
-                return false;
-            }
-        }
-        
-        return true;
     }
 }

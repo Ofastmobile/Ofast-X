@@ -209,7 +209,9 @@ class Ofast_X_Social_Login
 
         // Check for error from provider
         if (isset($_GET['error'])) {
-            $this->redirect_with_error($_GET['error_description'] ?? 'Authentication cancelled');
+            $error_code = sanitize_text_field($_GET['error']);
+            $sanitized_error = $this->sanitize_oauth_error($error_code);
+            $this->redirect_with_error($sanitized_error);
             return;
         }
 
@@ -430,6 +432,43 @@ class Ofast_X_Social_Login
         }
 
         return $username;
+    }
+
+    /**
+     * Sanitize OAuth error message to prevent information disclosure
+     */
+    private function sanitize_oauth_error($provider_error)
+    {
+        // Map provider-specific errors to generic user-friendly messages
+        $error_mappings = array(
+            // Generic OAuth errors
+            'access_denied' => 'Login was cancelled.',
+            'invalid_request' => 'Authentication failed. Please try again.',
+            'invalid_client' => 'Authentication service temporarily unavailable.',
+            'invalid_grant' => 'Authentication failed. Please try again.',
+            'unsupported_response_type' => 'Authentication service temporarily unavailable.',
+            'invalid_scope' => 'Authentication service temporarily unavailable.',
+            'server_error' => 'Authentication service temporarily unavailable.',
+            'temporarily_unavailable' => 'Authentication service temporarily unavailable.',
+            
+            // Google-specific errors
+            'consent_required' => 'Login was cancelled.',
+            'invalid_user_agent' => 'Please use a supported browser.',
+            'user_cancelled' => 'Login was cancelled.',
+            
+            // Facebook-specific errors
+            'user_denied' => 'Login was cancelled.',
+            'redirect_uri_mismatch' => 'Authentication service temporarily unavailable.',
+            'invalid_client_id' => 'Authentication service temporarily unavailable.',
+        );
+        
+        // Normalize error code (remove spaces, convert to lowercase)
+        $normalized_error = strtolower(str_replace(' ', '_', trim($provider_error)));
+        
+        // Return mapped error or generic message
+        return isset($error_mappings[$normalized_error]) 
+            ? $error_mappings[$normalized_error] 
+            : 'Authentication failed. Please try again.';
     }
 
     /**

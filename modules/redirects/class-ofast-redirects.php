@@ -101,21 +101,6 @@ class Ofast_X_Redirects
      */
     public function handle_form_submissions()
     {
-        if (isset($_POST['ofast_save_redirect_settings'])) {
-            if (!current_user_can('manage_options')) {
-                return;
-            }
-
-            check_admin_referer('ofast_redirect_settings_save', '_wpnonce');
-
-            $strict = isset($_POST['redirects_regex_strict']) ? 1 : 0;
-            update_option('ofast_redirects_regex_strict', $strict);
-
-            add_settings_error('ofast_redirects', 'success', __('Redirect settings saved.', 'ofast-x'), 'success');
-            wp_redirect(admin_url('admin.php?page=ofast-redirects'));
-            exit;
-        }
-
         if (!isset($_POST['ofast_save_redirect'])) {
             return;
         }
@@ -129,6 +114,10 @@ class Ofast_X_Redirects
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_redirects';
         $priority_supported = $this->ensure_redirects_priority_schema();
+
+        // Save regex strict setting from the same form
+        $strict = isset($_POST['redirects_regex_strict']) ? 1 : 0;
+        update_option('ofast_redirects_regex_strict', $strict);
 
         $id = isset($_POST['redirect_id']) ? intval($_POST['redirect_id']) : 0;
         $source_url = isset($_POST['source_url']) ? sanitize_text_field(wp_unslash($_POST['source_url'])) : '';
@@ -753,6 +742,17 @@ class Ofast_X_Redirects
                                         </label>
                                     </td>
                                 </tr>
+                                <tr>
+                                    <th><?php esc_html_e('Regex Security', 'ofast-x'); ?></th>
+                                    <td>
+                                        <label class="ofast-toggle">
+                                            <input type="checkbox" name="redirects_regex_strict" value="1" <?php checked($regex_strict, 1); ?>>
+                                            <span class="ofast-toggle-slider"></span>
+                                            <span class="ofast-toggle-text"><?php esc_html_e('Enable strict regex validation (advanced)', 'ofast-x'); ?></span>
+                                        </label>
+                                        <p class="description"><?php esc_html_e('Strict mode blocks complex patterns to reduce ReDoS risk but may reject valid regex.', 'ofast-x'); ?></p>
+                                    </td>
+                                </tr>
                             </table>
 
                             <p class="submit" style="margin-bottom: 0; padding-bottom: 0;">
@@ -769,26 +769,6 @@ class Ofast_X_Redirects
 
                 <!-- Right Column: Import/Export -->
                 <div class="ofast-column-right">
-                    <div class="ofast-card" style="margin-bottom: 20px;">
-                        <h3 style="margin-top: 0;"><?php esc_html_e('Regex Security', 'ofast-x'); ?></h3>
-                        <p class="description"><?php esc_html_e('Control how strict regex validation should be for redirects.', 'ofast-x'); ?></p>
-                        <form method="post">
-                            <?php wp_nonce_field('ofast_redirect_settings_save', '_wpnonce'); ?>
-                            <label style="display: block; margin: 10px 0;">
-                                <input type="checkbox" name="redirects_regex_strict" value="1" <?php checked($regex_strict, 1); ?>>
-                                <?php esc_html_e('Enable strict regex validation (advanced)', 'ofast-x'); ?>
-                            </label>
-                            <p class="description" style="margin-top: 0;">
-                                <?php esc_html_e('Strict mode blocks complex patterns to reduce ReDoS risk but may reject valid regex.', 'ofast-x'); ?>
-                            </p>
-                            <p style="margin-bottom: 0;">
-                                <button type="submit" name="ofast_save_redirect_settings" class="button">
-                                    <?php esc_html_e('Save Settings', 'ofast-x'); ?>
-                                </button>
-                            </p>
-                        </form>
-                    </div>
-
                     <!-- Import Section -->
                     <?php if (!empty($import_sources)): ?>
                         <div class="ofast-card" style="margin-bottom: 20px;">

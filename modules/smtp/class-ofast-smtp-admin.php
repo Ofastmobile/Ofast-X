@@ -912,6 +912,17 @@ class Ofast_X_SMTP_Admin
             return;
         }
 
+        // SECURITY FIX: Validate encryption keys before processing SMTP credentials
+        if (!empty($_POST['smtp_password']) && $_POST['smtp_password'] !== '••••••••') {
+            if (!Ofast_X_SMTP::validate_encryption_keys()) {
+                error_log('OFAST SMTP Security Warning: Attempted to save credentials without proper encryption keys configured');
+                add_action('admin_notices', function() {
+                    echo '<div class="notice notice-error is-dismissible"><p><strong>SMTP Configuration Error:</strong> WordPress security keys (SECURE_AUTH_KEY, AUTH_KEY) must be properly configured in wp-config.php before SMTP credentials can be stored securely.</p></div>';
+                });
+                return;
+            }
+        }
+
         // Save all settings
         update_option('ofast_smtp_enabled', isset($_POST['smtp_enabled']) ? 1 : 0);
         update_option('ofast_smtp_mailer_type', sanitize_text_field(wp_unslash($_POST['smtp_mailer_type'] ?? 'default')));
@@ -926,8 +937,17 @@ class Ofast_X_SMTP_Admin
         // Only update password if provided (not empty placeholder)
         $smtp_password = wp_unslash($_POST['smtp_password'] ?? '');
         if (!empty($smtp_password) && $smtp_password !== '••••••••') {
-            $encrypted = Ofast_X_SMTP::encrypt_password($smtp_password);
-            update_option('ofast_smtp_password', $encrypted);
+            try {
+                $encrypted = Ofast_X_SMTP::encrypt_password($smtp_password);
+                update_option('ofast_smtp_password', $encrypted);
+            } catch (Exception $e) {
+                // SECURITY FIX: Handle encryption failures securely
+                error_log('OFAST SMTP Security Error: ' . $e->getMessage());
+                add_action('admin_notices', function() use ($e) {
+                    printf('<div class="notice notice-error is-dismissible"><p><strong>SMTP Configuration Error:</strong> %s</p></div>', esc_html($e->getMessage()));
+                });
+                return; // Stop processing if credentials cannot be stored securely
+            }
         }
 
         // Rate limiting settings

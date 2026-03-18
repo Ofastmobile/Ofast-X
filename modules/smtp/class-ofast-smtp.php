@@ -495,6 +495,7 @@ class Ofast_X_SMTP
 
     /**
      * Encrypt password for storage
+     * SECURITY FIX: Require proper encryption keys, fail securely if unavailable
      */
     public static function encrypt_password($password)
     {
@@ -502,8 +503,9 @@ class Ofast_X_SMTP
             return '';
         }
 
-        if (!defined('SECURE_AUTH_KEY') || empty(SECURE_AUTH_KEY)) {
-            return base64_encode($password);
+        // SECURITY: Require proper WordPress security keys to be configured
+        if (!self::validate_encryption_keys()) {
+            throw new Exception('SMTP credentials cannot be stored: WordPress security keys (SECURE_AUTH_KEY, AUTH_KEY) must be properly configured in wp-config.php for secure credential storage.');
         }
 
         $key = hash('sha256', SECURE_AUTH_KEY);
@@ -511,10 +513,14 @@ class Ofast_X_SMTP
         // Generate a random IV for each encryption operation
         $iv = openssl_random_pseudo_bytes(16);
         if ($iv === false) {
-            // Fallback to deterministic IV if random source fails
-            $iv = substr(hash('sha256', AUTH_KEY), 0, 16);
+            // SECURITY: Fail securely if cryptographically secure random source is unavailable
+            throw new Exception('SMTP credentials cannot be stored: Secure random number generation is unavailable on this server.');
         }
+        
         $encrypted = openssl_encrypt($password, 'AES-256-CBC', $key, 0, $iv);
+        if ($encrypted === false) {
+            throw new Exception('SMTP credentials cannot be stored: Encryption failed.');
+        }
 
         // Store IV with ciphertext: IV (16 bytes) + encrypted data
         return base64_encode($iv . $encrypted);
@@ -522,6 +528,7 @@ class Ofast_X_SMTP
 
     /**
      * Decrypt password from storage
+     * SECURITY FIX: Enhanced validation and secure fallback handling
      */
     private function decrypt_password($encrypted)
     {
@@ -529,25 +536,161 @@ class Ofast_X_SMTP
             return '';
         }
 
-        if (!defined('SECURE_AUTH_KEY') || empty(SECURE_AUTH_KEY)) {
-            return base64_decode($encrypted);
+        // SECURITY: Check if encryption keys are available
+        if (!self::validate_encryption_keys()) {
+            error_log('OFAST SMTP Security Warning: Cannot decrypt credentials - WordPress security keys not properly configured');
+            return '';
         }
 
         $key = hash('sha256', SECURE_AUTH_KEY);
         $decoded = base64_decode($encrypted);
+        
+        if ($decoded === false) {
+            error_log('OFAST SMTP Security Warning: Invalid base64 encoding in stored credentials');
+            return '';
+        }
+
+        // SECURITY: Check for legacy insecure storage (base64 only)
+        // This identifies credentials that were stored without proper encryption
+        if (self::is_legacy_insecure_storage($encrypted)) {
+            error_log('OFAST SMTP Security Warning: Legacy insecure credential storage detected. Please re-enter your SMTP password to upgrade to secure storage.');
+            // Return empty to force re-entry of credentials
+            return '';
+        }
 
         // Check if this is old format (without random IV)
         if (strlen($decoded) < 16) {
-            // Fallback: try old decryption method for backward compatibility
-            $iv = substr(hash('sha256', AUTH_KEY), 0, 16);
-            return openssl_decrypt($decoded, 'AES-256-CBC', $key, 0, $iv);
+            // SECURITY: Only allow fallback for properly encrypted old format
+            if (defined('AUTH_KEY') && !empty(AUTH_KEY)) {
+                $iv = substr(hash('sha256', AUTH_KEY), 0, 16);
+                $decrypted = openssl_decrypt($decoded, 'AES-256-CBC', $key, 0, $iv);
+                if ($decrypted !== false) {
+                    return $decrypted;
+                }
+            }
+            error_log('OFAST SMTP Security Warning: Cannot decrypt old format credentials');
+            return '';
         }
 
         // Extract IV (first 16 bytes) and ciphertext (remaining bytes)
         $iv = substr($decoded, 0, 16);
         $ciphertext = substr($decoded, 16);
 
-        return openssl_decrypt($ciphertext, 'AES-256-CBC', $key, 0, $iv);
+        $decrypted = openssl_decrypt($ciphertext, 'AES-256-CBC', $key, 0, $iv);
+        if ($decrypted === false) {
+            error_log('OFAST SMTP Security Warning: Failed to decrypt credentials');
+            return '';
+        }
+
+        return $decrypted;
+    }
+
+    /**
+     * Validate that WordPress security keys are properly configured
+     * SECURITY FIX: Ensure proper encryption keys are available before storing credentials
+     */
+    public static function validate_encryption_keys()
+    {
+        // Check that required WordPress security keys are defined and not empty/default
+        $required_keys = array('SECURE_AUTH_KEY', 'AUTH_KEY');
+        
+        foreach ($required_keys as $key_name) {
+            if (!defined($key_name)) {
+                return false;
+            }
+            
+            $key_value = constant($key_name);
+            
+            // Check if key is empty or contains default/placeholder values
+            if (empty($key_value) || 
+                strlen($key_value) < 32 || 
+                $key_value === 'put your unique phrase here' ||
+                strpos($key_value, 'your unique phrase') !== false) {
+                return false;
+            }
+        }
+        
+        // Additional check: ensure OpenSSL is available for encryption
+        if (!extension_loaded('openssl')) {
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
+     * Detect legacy insecure storage (base64 only, no proper encryption)
+     * SECURITY FIX: Identify credentials stored with weak base64 encoding
+     */
+    private static function is_legacy_insecure_storage($encrypted)
+    {
+        if (empty($encrypted)) {
+            return false;
+        }
+        
+        $decoded = base64_decode($encrypted, true);
+        if ($decoded === false) {
+            return false;
+        }
+        
+        // If the decoded content looks like readable text/password, it's likely insecure base64 storage
+        // This is a heuristic - properly encrypted data should look random
+        
+        // Check if decoded data is printable ASCII (common for passwords stored as base64)
+        if (ctype_print($decoded) && strlen($decoded) < 100) {
+            // Additional checks to confirm this is likely a password:
+            // - Contains common password characters
+            // - Length is typical for passwords (6-64 chars)
+            // - Does not contain binary data patterns
+            $length = strlen($decoded);
+            if ($length >= 6 && $length <= 64) {
+                // Check for password-like patterns vs encrypted binary data
+                $printable_ratio = strlen(preg_replace('/[^\x20-\x7E]/', '', $decoded)) / $length;
+                if ($printable_ratio > 0.8) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Audit existing stored credentials for security issues
+     * SECURITY FIX: Provide method to identify and report insecure credential storage
+     */
+    public static function audit_stored_credentials()
+    {
+        $stored_password = get_option('ofast_smtp_password', '');
+        if (empty($stored_password)) {
+            return array(
+                'status' => 'no_credentials',
+                'message' => 'No SMTP credentials stored.'
+            );
+        }
+        
+        // Check if encryption keys are properly configured
+        if (!self::validate_encryption_keys()) {
+            return array(
+                'status' => 'keys_missing',
+                'message' => 'WordPress security keys are not properly configured. SMTP credentials cannot be securely stored.',
+                'action_required' => 'Configure SECURE_AUTH_KEY and AUTH_KEY in wp-config.php'
+            );
+        }
+        
+        // Check for insecure legacy storage
+        if (self::is_legacy_insecure_storage($stored_password)) {
+            return array(
+                'status' => 'insecure_storage',
+                'message' => 'SMTP credentials are stored using weak base64 encoding instead of proper encryption.',
+                'action_required' => 'Re-enter your SMTP password to upgrade to secure storage'
+            );
+        }
+        
+        return array(
+            'status' => 'secure',
+            'message' => 'SMTP credentials are properly encrypted and secure.'
+        );
     }
 
     /**

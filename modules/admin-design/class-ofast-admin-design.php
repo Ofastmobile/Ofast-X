@@ -33,9 +33,14 @@ class Ofast_X_Admin_Design
         // Get custom CSS from database
         $custom_css = get_option('ofast_admin_design_css', '');
         
-        // If custom CSS exists in database, output it inline
+        // If custom CSS exists in database, sanitize and output it inline
         if (!empty($custom_css)) {
-            wp_add_inline_style('common', $custom_css);
+            // SECURITY: Sanitize CSS to prevent XSS attacks via CSS injection
+            $sanitized_css = Ofast_X_Sanitizer::css($custom_css);
+            
+            if (!empty($sanitized_css)) {
+                wp_add_inline_style('common', $sanitized_css);
+            }
         } else {
             // Fall back to default CSS file
             wp_enqueue_style(

@@ -239,4 +239,66 @@ class Ofast_X_Sanitizer {
         
         return '';
     }
+    
+    /**
+     * Sanitize CSS input safely
+     * 
+     * Validates and sanitizes CSS content to prevent CSS injection attacks
+     * while preserving valid CSS declarations.
+     * 
+     * @param string $input CSS input to sanitize
+     * @return string Sanitized CSS or empty string if invalid
+     */
+    public static function css($input) {
+        if (empty($input) || !is_string($input)) {
+            return '';
+        }
+        
+        // Remove any HTML/XML markup - CSS should not contain tags
+        if (preg_match('#</?[a-z]#i', $input)) {
+            return '';
+        }
+        
+        // Remove null bytes and other control characters
+        $css = str_replace(chr(0), '', $input);
+        $css = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $css);
+        
+        // Remove dangerous CSS patterns that could lead to XSS
+        $dangerous_patterns = array(
+            '/javascript\s*:/i',           // javascript: protocol
+            '/vbscript\s*:/i',            // vbscript: protocol
+            '/data\s*:/i',                // data: protocol (could contain scripts)
+            '/expression\s*\(/i',         // CSS expression() - IE specific
+            '/behavior\s*:/i',            // CSS behavior (IE specific)
+            '/-moz-binding\s*:/i',        // Mozilla binding
+            '/binding\s*:/i',             // CSS binding
+            '/@import/i',                 // @import rules (could load external malicious CSS)
+            '/mocha\s*:/i',               // mocha: protocol
+            '/livescript\s*:/i',          // livescript: protocol
+        );
+        
+        foreach ($dangerous_patterns as $pattern) {
+            $css = preg_replace($pattern, '', $css);
+        }
+        
+        // Remove any remaining URL protocols except safe ones
+        $css = preg_replace_callback('/url\s*\(\s*["\']?([^"\'()]*)["\']?\s*\)/i', function($matches) {
+            $url = trim($matches[1]);
+            // Only allow http, https, and relative URLs
+            if (preg_match('/^(https?:\/\/|\/|\.\/|\.\.\/)/', $url) || !preg_match('/^[a-z]+:/', $url)) {
+                return 'url(' . esc_url_raw($url) . ')';
+            }
+            return '';
+        }, $css);
+        
+        // Basic CSS syntax validation - ensure balanced braces
+        $open_braces = substr_count($css, '{');
+        $close_braces = substr_count($css, '}');
+        if ($open_braces !== $close_braces) {
+            return '';
+        }
+        
+        // Trim whitespace and return
+        return trim($css);
+    }
 }

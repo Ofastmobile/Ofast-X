@@ -57,7 +57,6 @@ class Ofast_X_Forms_Builder
         $description = $this->form ? $this->form->description : '';
         $fields = $this->form ? $this->form->fields : array();
         $settings = $this->form ? $this->form->settings : array();
-        $notifications = $this->form ? (isset($this->form->notifications) ? $this->form->notifications : array()) : array();
         $active = $this->form ? $this->form->active : 1;
         // Content only for tabbed view
         $is_edit = $this->form_id > 0;
@@ -132,31 +131,6 @@ class Ofast_X_Forms_Builder
                                 <tr>
                                     <th>Submit Button Text</th>
                                     <td><input type="text" name="settings[submit_text]" value="<?php echo esc_attr($settings['submit_text'] ?? 'Send Message'); ?>" class="regular-text"></td>
-                                </tr>
-                            </table>
-                        </div>
-
-                        <div class="ofast-card">
-                            <h2>Notifications</h2>
-                            <table class="form-table">
-                                <tr>
-                                    <th>Admin Email</th>
-                                    <td>
-                                        <input type="email" name="notifications[admin_email]" value="<?php echo esc_attr($notifications['admin_email'] ?? get_option('admin_email')); ?>" class="regular-text">
-                                        <p class="description">Email address to receive form submissions</p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Email Subject</th>
-                                    <td><input type="text" name="notifications[email_subject]" value="<?php echo esc_attr($notifications['email_subject'] ?? 'New Contact Form Submission'); ?>" class="regular-text"></td>
-                                </tr>
-                                <tr>
-                                    <th>Send WhatsApp</th>
-                                    <td><label><input type="checkbox" name="notifications[whatsapp_enabled]" value="1" <?php checked(!empty($notifications['whatsapp_enabled'])); ?>> Send WhatsApp notification to admin</label></td>
-                                </tr>
-                                <tr>
-                                    <th>Log to Google Sheets</th>
-                                    <td><label><input type="checkbox" name="notifications[gsheets_enabled]" value="1" <?php checked(!empty($notifications['gsheets_enabled'])); ?>> Add submission to Google Sheets</label></td>
                                 </tr>
                             </table>
                         </div>
@@ -663,7 +637,6 @@ class Ofast_X_Forms_Builder
             'description' => $_POST['description'] ?? '',
             'fields' => $_POST['fields'] ?? array(),
             'settings' => $_POST['settings'] ?? array(),
-            'notifications' => $_POST['notifications'] ?? array(),
             'active' => isset($_POST['active'])
         );
 

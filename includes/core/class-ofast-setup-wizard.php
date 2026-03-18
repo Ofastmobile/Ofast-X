@@ -834,7 +834,6 @@ class Ofast_X_Setup_Wizard {
             'email' => true,
             'smtp' => true,
             'forms' => true,
-            'whatsapp' => true,
             'social-login' => true,
             
             // Security & Content modules  

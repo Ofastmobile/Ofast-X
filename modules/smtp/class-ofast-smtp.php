@@ -85,7 +85,9 @@ class Ofast_X_SMTP
 
         if ($current_count >= $this->rate_limit_per_minute) {
             // Rate limit exceeded - log and block
-            error_log('Ofast SMTP: Rate limit exceeded (' . $this->rate_limit_per_minute . '/min). Email blocked.');
+            if ((defined('OFAST_SMTP_DEBUG') && OFAST_SMTP_DEBUG) || (defined('WP_DEBUG') && WP_DEBUG)) {
+                error_log('Ofast SMTP: Rate limit exceeded (' . $this->rate_limit_per_minute . '/min). Email blocked.');
+            }
 
             // Return a WP_Error to prevent sending
             return new WP_Error(
@@ -106,6 +108,11 @@ class Ofast_X_SMTP
      */
     public function sanitize_email_content($args)
     {
+        $apply_sanitization = apply_filters('ofast_smtp_sanitize_outgoing_email', false, $args);
+        if (!$apply_sanitization) {
+            return $args;
+        }
+
         if (!empty($args['message'])) {
             $message = $args['message'];
 

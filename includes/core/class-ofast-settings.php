@@ -852,12 +852,12 @@ class Ofast_X_Settings
             ),
             'forms' => array(
                 'name' => 'Contact Forms',
-                'description' => 'Custom contact form builder with multi-channel notifications (email, SMS, WhatsApp)',
+                'description' => 'Custom contact form builder with submission storage and admin review',
                 'category' => 'communication',
             ),
-            'notification-channels' => array(
-                'name' => 'Notification Channels',
-                'description' => 'Get instant WhatsApp/SMS alerts when users submit forms or subscribe',
+            'bulk-sms-channel' => array(
+                'name' => 'Bulk SMS Channel',
+                'description' => 'Placeholder for bulk SMS integrations (coming soon)',
                 'category' => 'communication',
             ),
             

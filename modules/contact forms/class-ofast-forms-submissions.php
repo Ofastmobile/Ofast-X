@@ -2,7 +2,7 @@
 
 /**
  * Ofast X - Form Submissions Handler
- * Handles form submissions, validation, storage, and notifications
+ * Handles form submissions, validation, and storage
  */
 
 if (!defined('ABSPATH')) {
@@ -89,9 +89,6 @@ class Ofast_X_Forms_Submissions
             wp_send_json_error(array('message' => 'Failed to save submission. Please try again.'));
         }
 
-        // Send notifications via Notification Hub
-        $this->dispatch_notifications($form, $submission_data, $submission_id);
-
         // Get response
         $settings = $form->settings;
         $redirect_url = !empty($settings['redirect_url']) ? $settings['redirect_url'] : '';
@@ -123,67 +120,6 @@ class Ofast_X_Forms_Submissions
         ));
 
         return $result ? $wpdb->insert_id : false;
-    }
-
-    /**
-     * Dispatch notifications through Notification Hub
-     */
-    private function dispatch_notifications($form, $data, $submission_id)
-    {
-        $notifications = isset($form->notifications) ? $form->notifications : array();
-
-        // Build message content
-        $message_lines = array();
-        foreach ($data as $label => $value) {
-            if (is_array($value)) {
-                $value = implode(', ', $value);
-            }
-            $message_lines[] = $label . ': ' . $value;
-        }
-        $message_text = implode("\n", $message_lines);
-
-        // Dispatch via Notification Hub
-        if (class_exists('Ofast_X_Notification_Hub')) {
-            $hub = Ofast_X_Notification_Hub::get_instance();
-
-            // Build context
-            $context = array(
-                'form_id' => $form->id,
-                'form_title' => $form->title,
-                'submission_id' => $submission_id,
-                'fields' => $data,
-                'admin_email' => $notifications['admin_email'] ?? get_option('admin_email'),
-                'email_subject' => $notifications['email_subject'] ?? 'New Contact Form Submission',
-                'whatsapp_enabled' => !empty($notifications['whatsapp_enabled']),
-                'gsheets_enabled' => !empty($notifications['gsheets_enabled'])
-            );
-
-            // Build email body
-            $email_body = "<h2>New Submission: {$form->title}</h2>";
-            $email_body .= "<table style='border-collapse:collapse;width:100%;'>";
-            foreach ($data as $label => $value) {
-                if (is_array($value)) {
-                    $value = implode(', ', $value);
-                }
-                $email_body .= "<tr><td style='padding:10px;border:1px solid #ddd;font-weight:bold;'>" . esc_html($label) . "</td>";
-                $email_body .= "<td style='padding:10px;border:1px solid #ddd;'>" . esc_html($value) . "</td></tr>";
-            }
-            $email_body .= "</table>";
-            $email_body .= "<p style='margin-top:20px;color:#666;'>Submitted from: " . home_url() . "</p>";
-
-            $context['email_body'] = $email_body;
-
-            // Build WhatsApp message
-            $context['whatsapp_message'] = "New {$form->title} submission:\n\n{$message_text}";
-
-            // Build Google Sheets row
-            $context['gsheets_row'] = array_merge(
-                array(current_time('Y-m-d H:i:s')),
-                array_values($data)
-            );
-
-            $hub->dispatch('contact_form', $context);
-        }
     }
 
     /**

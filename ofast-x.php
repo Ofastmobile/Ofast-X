@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Ofast Toolkit
  * Plugin URI: https://ofastshop.com/ofast-x
- * Description: All-in-One WordPress plugin with Email System, SMTP Configuration, Dashboard Customization, Newsletter, WhatsApp, Contact Forms, Code Snippets, Redirects, and more.
+ * Description: All-in-One WordPress plugin with Email System, SMTP Configuration, Dashboard Customization, Newsletter, Contact Forms, Code Snippets, Redirects, and more.
  * Version: 1.0.0
  * Author: Olabode Oluwaseun (Ofastshop Digitals)
  * Author URI: https://ofastshop.com
@@ -79,12 +79,6 @@ function ofast_x_init_plugin()
 
     // Load Math CAPTCHA (arithmetic challenge)
     require_once OFAST_X_PLUGIN_DIR . 'includes/security/class-ofast-math-captcha.php';
-
-    // Load Notification Hub (central dispatcher)
-    require_once OFAST_X_PLUGIN_DIR . 'includes/notifications/class-ofast-notification-hub.php';
-
-    // Load WhatsApp integration
-    require_once OFAST_X_PLUGIN_DIR . 'modules/whatsapp/class-ofast-whatsapp.php';
 
     // Load Contact Forms module
     require_once OFAST_X_PLUGIN_DIR . 'modules/forms/class-ofast-forms.php';

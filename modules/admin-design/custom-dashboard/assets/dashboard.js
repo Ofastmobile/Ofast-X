@@ -272,6 +272,25 @@ jQuery(document).ready(function ($) {
         }, 300); // 300ms debounce
     });
 
+    // HTML Escaping Function
+    function escapeHtml(unsafe) {
+        return $('<div>').text(unsafe).html();
+    }
+
+    // Escape HTML Attributes
+    function escapeAttr(unsafe) {
+        return unsafe.replace(/[&<>"']/g, function(match) {
+            var escapeMap = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#x27;'
+            };
+            return escapeMap[match];
+        });
+    }
+
     // Render Results
     function renderSearchResults(data) {
         var html = '';
@@ -280,7 +299,7 @@ jQuery(document).ready(function ($) {
         data.forEach(function (item) {
             // Add Section Header if type changes
             if (item.type !== currentType) {
-                var headerLabel = item.type === 'post' ? 'Content' : (item.type.charAt(0).toUpperCase() + item.type.slice(1) + 's');
+                var headerLabel = item.type === 'post' ? 'Content' : (escapeHtml(item.type.charAt(0).toUpperCase() + item.type.slice(1)) + 's');
                 html += '<div class="ofast-result-header">' + headerLabel + '</div>';
                 currentType = item.type;
             }
@@ -291,16 +310,16 @@ jQuery(document).ready(function ($) {
             if (item.subtype === 'page') iconClass = 'dashicons-admin-page';
             if (item.subtype === 'product') iconClass = 'dashicons-cart';
 
-            html += '<a href="' + item.url + '" class="ofast-search-item">';
+            html += '<a href="' + escapeAttr(item.url) + '" class="ofast-search-item">';
             if (item.avatar) {
-                html += '<img src="' + item.avatar + '" class="ofast-result-avatar">';
+                html += '<img src="' + escapeAttr(item.avatar) + '" class="ofast-result-avatar">';
             } else {
                 html += '<span class="dashicons ' + iconClass + '"></span>';
             }
             html += '<div class="ofast-result-content">';
-            html += '<span class="ofast-result-title">' + item.title + '</span>';
+            html += '<span class="ofast-result-title">' + escapeHtml(item.title) + '</span>';
             if (item.label) {
-                html += '<span class="ofast-result-meta">' + item.label + '</span>';
+                html += '<span class="ofast-result-meta">' + escapeHtml(item.label) + '</span>';
             }
             html += '</div>';
             html += '</a>';

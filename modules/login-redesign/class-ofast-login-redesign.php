@@ -235,7 +235,7 @@ class Ofast_X_Login_Redesign
         update_option('ofast_login_btn_border_color', sanitize_hex_color($_POST['btn_border_color'] ?? '#2271b1'));
         update_option('ofast_login_btn_border_width', absint($_POST['btn_border_width'] ?? 1));
         update_option('ofast_login_hide_back_link', isset($_POST['hide_back_link']));
-        update_option('ofast_login_custom_css', wp_strip_all_tags($_POST['custom_css'] ?? ''));
+        update_option('ofast_login_custom_css', Ofast_X_Sanitizer::css($_POST['custom_css'] ?? ''));
 
         // Two-column settings
         update_option('ofast_login_tc_side_image', esc_url_raw($_POST['tc_side_image'] ?? ''));
@@ -669,7 +669,7 @@ class Ofast_X_Login_Redesign
 
         // Custom CSS
         if (!empty($s['custom_css'])) {
-            $css .= wp_strip_all_tags($s['custom_css']);
+            $css .= Ofast_X_Sanitizer::css($s['custom_css']);
         }
 
         return $css;

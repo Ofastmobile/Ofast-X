@@ -503,9 +503,10 @@ class Ofast_X_SMTP
             return '';
         }
 
-        // SECURITY: Require proper WordPress security keys to be configured
+        // SECURITY: Require proper WordPress security keys to be configured with adequate strength
         if (!self::validate_encryption_keys()) {
-            throw new Exception('SMTP credentials cannot be stored: WordPress security keys (SECURE_AUTH_KEY, AUTH_KEY) must be properly configured in wp-config.php for secure credential storage.');
+            $key_diagnostics = self::get_key_validation_details();
+            throw new Exception('SMTP credentials cannot be stored: ' . $key_diagnostics['message']);
         }
 
         $key = hash('sha256', SECURE_AUTH_KEY);
@@ -586,8 +587,9 @@ class Ofast_X_SMTP
     }
 
     /**
-     * Validate that WordPress security keys are properly configured
-     * SECURITY FIX: Ensure proper encryption keys are available before storing credentials
+     * Validate that WordPress security keys are properly configured with sufficient entropy
+     * SECURITY FIX: Ensure proper encryption keys with adequate strength for credential storage
+     * Addresses CWE-326: Weak Encryption
      */
     public static function validate_encryption_keys()
     {
@@ -601,11 +603,16 @@ class Ofast_X_SMTP
             
             $key_value = constant($key_name);
             
-            // Check if key is empty or contains default/placeholder values
+            // Basic validation: empty, length, and default values
             if (empty($key_value) || 
-                strlen($key_value) < 32 || 
+                strlen($key_value) < 64 || // Increased minimum length requirement
                 $key_value === 'put your unique phrase here' ||
                 strpos($key_value, 'your unique phrase') !== false) {
+                return false;
+            }
+            
+            // SECURITY: Validate key entropy and complexity
+            if (!self::validate_key_strength($key_value)) {
                 return false;
             }
         }
@@ -616,6 +623,192 @@ class Ofast_X_SMTP
         }
         
         return true;
+    }
+    
+    /**
+     * Validate the entropy and strength of a security key
+     * SECURITY FIX: Implement entropy checking for WordPress security keys
+     * Uses similar complexity requirements to wp_generate_password()
+     */
+    private static function validate_key_strength($key)
+    {
+        if (strlen($key) < 64) {
+            return false;
+        }
+        
+        // Check for minimum character set diversity (similar to wp_generate_password requirements)
+        $has_lowercase = preg_match('/[a-z]/', $key);
+        $has_uppercase = preg_match('/[A-Z]/', $key);
+        $has_numbers = preg_match('/[0-9]/', $key);
+        $has_special = preg_match('/[^a-zA-Z0-9]/', $key);
+        
+        // Require at least 3 out of 4 character types
+        $diversity_score = $has_lowercase + $has_uppercase + $has_numbers + $has_special;
+        if ($diversity_score < 3) {
+            return false;
+        }
+        
+        // Check for weak patterns that indicate low entropy
+        if (self::has_weak_patterns($key)) {
+            return false;
+        }
+        
+        // Calculate approximate entropy using character frequency analysis
+        $entropy = self::calculate_entropy($key);
+        if ($entropy < 4.0) { // Minimum entropy per character (bits)
+            return false;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Check for weak patterns that indicate low entropy keys
+     */
+    private static function has_weak_patterns($key)
+    {
+        // Check for repeated characters (more than 25% of the string)
+        $key_length = strlen($key);
+        $char_counts = array_count_values(str_split($key));
+        foreach ($char_counts as $char => $count) {
+            if ($count > ($key_length * 0.25)) {
+                return true; // Too many repeated characters
+            }
+        }
+        
+        // Check for simple sequential patterns
+        $sequential_patterns = array(
+            'abcdefghijklmnopqrstuvwxyz',
+            'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+            '0123456789',
+            'qwertyuiopasdfghjklzxcvbnm' // Common keyboard layout
+        );
+        
+        foreach ($sequential_patterns as $pattern) {
+            // Check for sequences of 6+ characters
+            for ($i = 0; $i <= strlen($pattern) - 6; $i++) {
+                $sequence = substr($pattern, $i, 6);
+                if (strpos($key, $sequence) !== false) {
+                    return true;
+                }
+                
+                // Check reverse sequence too
+                $reverse_sequence = strrev($sequence);
+                if (strpos($key, $reverse_sequence) !== false) {
+                    return true;
+                }
+            }
+        }
+        
+        // Check for common weak patterns
+        $weak_patterns = array(
+            '/(.)\1{4,}/', // 5+ consecutive identical characters
+            '/^(.{1,4})\1{3,}/', // Pattern repeated 4+ times
+            '/password/i',
+            '/123456/',
+            '/qwerty/i',
+            '/admin/i'
+        );
+        
+        foreach ($weak_patterns as $pattern) {
+            if (preg_match($pattern, $key)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Calculate approximate entropy of a string using Shannon entropy
+     */
+    private static function calculate_entropy($string)
+    {
+        $length = strlen($string);
+        if ($length <= 1) {
+            return 0;
+        }
+        
+        // Count character frequencies
+        $char_counts = array_count_values(str_split($string));
+        
+        // Calculate Shannon entropy
+        $entropy = 0;
+        foreach ($char_counts as $count) {
+            $probability = $count / $length;
+            if ($probability > 0) {
+                $entropy -= $probability * log($probability, 2);
+            }
+        }
+        
+        return $entropy;
+    }
+    
+    /**
+     * Get detailed validation information for encryption keys
+     * SECURITY FIX: Provide specific guidance for weak key issues
+     */
+    public static function get_key_validation_details()
+    {
+        $required_keys = array('SECURE_AUTH_KEY', 'AUTH_KEY');
+        $issues = array();
+        
+        // Check OpenSSL availability first
+        if (!extension_loaded('openssl')) {
+            return array(
+                'valid' => false,
+                'message' => 'OpenSSL extension is not available. This is required for secure credential encryption.',
+                'suggestion' => 'Contact your hosting provider to enable OpenSSL PHP extension.'
+            );
+        }
+        
+        foreach ($required_keys as $key_name) {
+            if (!defined($key_name)) {
+                $issues[] = "$key_name is not defined in wp-config.php";
+                continue;
+            }
+            
+            $key_value = constant($key_name);
+            
+            // Check basic requirements
+            if (empty($key_value)) {
+                $issues[] = "$key_name is empty";
+                continue;
+            }
+            
+            if (strlen($key_value) < 64) {
+                $issues[] = "$key_name is too short (minimum 64 characters required)";
+                continue;
+            }
+            
+            if ($key_value === 'put your unique phrase here' || 
+                strpos($key_value, 'your unique phrase') !== false) {
+                $issues[] = "$key_name contains default placeholder text";
+                continue;
+            }
+            
+            // Check entropy and strength
+            if (!self::validate_key_strength($key_value)) {
+                $issues[] = "$key_name has insufficient entropy or contains weak patterns";
+            }
+        }
+        
+        if (empty($issues)) {
+            return array(
+                'valid' => true,
+                'message' => 'WordPress security keys are properly configured with adequate strength.',
+                'suggestion' => ''
+            );
+        }
+        
+        $message = 'WordPress security keys have issues: ' . implode(', ', $issues) . '.';
+        $suggestion = 'Generate strong security keys using https://api.wordpress.org/secret-key/1.1/salt/ and update your wp-config.php file. Keys should be at least 64 characters long with mixed case letters, numbers, and special characters.';
+        
+        return array(
+            'valid' => false,
+            'message' => $message,
+            'suggestion' => $suggestion
+        );
     }
 
     /**
@@ -657,7 +850,7 @@ class Ofast_X_SMTP
 
     /**
      * Audit existing stored credentials for security issues
-     * SECURITY FIX: Provide method to identify and report insecure credential storage
+     * SECURITY FIX: Provide method to identify and report insecure credential storage with detailed key validation
      */
     public static function audit_stored_credentials()
     {
@@ -669,12 +862,13 @@ class Ofast_X_SMTP
             );
         }
         
-        // Check if encryption keys are properly configured
-        if (!self::validate_encryption_keys()) {
+        // Get detailed key validation information
+        $key_validation = self::get_key_validation_details();
+        if (!$key_validation['valid']) {
             return array(
-                'status' => 'keys_missing',
-                'message' => 'WordPress security keys are not properly configured. SMTP credentials cannot be securely stored.',
-                'action_required' => 'Configure SECURE_AUTH_KEY and AUTH_KEY in wp-config.php'
+                'status' => 'keys_invalid',
+                'message' => $key_validation['message'],
+                'action_required' => $key_validation['suggestion']
             );
         }
         
@@ -689,7 +883,7 @@ class Ofast_X_SMTP
         
         return array(
             'status' => 'secure',
-            'message' => 'SMTP credentials are properly encrypted and secure.'
+            'message' => 'SMTP credentials are properly encrypted with strong security keys.'
         );
     }
 

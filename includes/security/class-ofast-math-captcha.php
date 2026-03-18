@@ -180,6 +180,9 @@ class Ofast_X_Math_Captcha
     private function generate_pattern_problem($min, $max)
     {
         $pattern_type = wp_rand(1, 3);
+        $num1 = 0;
+        $num2 = 0;
+        $symbol = "+";
         
         switch ($pattern_type) {
             case 1:
@@ -187,6 +190,9 @@ class Ofast_X_Math_Captcha
                 $base = wp_rand(3, intval(sqrt($max)));
                 $answer = $base * $base;
                 $question = "{$base}²";
+                $num1 = $base;
+                $num2 = $base;
+                $symbol = '²';
                 break;
                 
             case 2:
@@ -194,6 +200,9 @@ class Ofast_X_Math_Captcha
                 $start = wp_rand(2, 5) * 2; // Even numbers
                 $answer = $start + ($start + 2) + ($start + 4);
                 $question = "{$start} + " . ($start + 2) . " + " . ($start + 4);
+                $num1 = $start;
+                $num2 = $start + 2;
+                $symbol = "+";
                 break;
                 
             case 3:
@@ -203,10 +212,13 @@ class Ofast_X_Math_Captcha
                 shuffle($nums);
                 $answer = $nums[0] * $nums[1] * $nums[2];
                 $question = "{$nums[0]} × {$nums[1]} × {$nums[2]}";
+                $num1 = $nums[0];
+                $num2 = $nums[1];
+                $symbol = '×';
                 break;
         }
         
-        return $this->finalize_problem($question, $answer, $base ?? $nums[0], 0, '×');
+        return $this->finalize_problem($question, $answer, $num1, $num2, $symbol);
     }
     
     /**

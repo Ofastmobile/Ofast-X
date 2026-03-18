@@ -915,9 +915,15 @@ class Ofast_X_SMTP_Admin
         // SECURITY FIX: Validate encryption keys before processing SMTP credentials
         if (!empty($_POST['smtp_password']) && $_POST['smtp_password'] !== '••••••••') {
             if (!Ofast_X_SMTP::validate_encryption_keys()) {
-                error_log('OFAST SMTP Security Warning: Attempted to save credentials without proper encryption keys configured');
-                add_action('admin_notices', function() {
-                    echo '<div class="notice notice-error is-dismissible"><p><strong>SMTP Configuration Error:</strong> WordPress security keys (SECURE_AUTH_KEY, AUTH_KEY) must be properly configured in wp-config.php before SMTP credentials can be stored securely.</p></div>';
+                $key_diagnostics = Ofast_X_SMTP::get_key_validation_details();
+                error_log('OFAST SMTP Security Warning: Attempted to save credentials with invalid encryption keys: ' . $key_diagnostics['message']);
+                add_action('admin_notices', function() use ($key_diagnostics) {
+                    echo '<div class="notice notice-error is-dismissible">';
+                    echo '<p><strong>SMTP Configuration Error:</strong> ' . esc_html($key_diagnostics['message']) . '</p>';
+                    if (!empty($key_diagnostics['suggestion'])) {
+                        echo '<p><strong>Solution:</strong> ' . esc_html($key_diagnostics['suggestion']) . '</p>';
+                    }
+                    echo '</div>';
                 });
                 return;
             }

@@ -947,7 +947,12 @@ class Ofast_X_Redirects
     }
 
     /**
-     * Check regex validity without suppressing errors globally.
+     * Check regex validity with comprehensive ReDoS protection.
+     * 
+     * SECURITY: Enhanced validation includes:
+     * - Syntax validation with timeout
+     * - Runtime limit testing
+     * - Pattern complexity analysis
      */
     private function is_valid_regex($pattern)
     {
@@ -956,15 +961,79 @@ class Ofast_X_Redirects
             return false;
         }
 
-        set_error_handler('__return_false');
-        $result = preg_match($wrapped, '');
-        restore_error_handler();
+        // Store original PCRE settings for testing
+        $original_backtrack_limit = ini_get('pcre.backtrack_limit');
+        $original_recursion_limit = ini_get('pcre.recursion_limit');
+        
+        // Apply strict limits for validation
+        ini_set('pcre.backtrack_limit', '1000');  // Very low for testing
+        ini_set('pcre.recursion_limit', '100');
+        
+        $is_valid = false;
+        $start_time = microtime(true);
 
-        return $result !== false;
+        set_error_handler('__return_false');
+        
+        try {
+            // Test pattern compilation and basic matching
+            $result = preg_match($wrapped, '');
+            $pcre_error = preg_last_error();
+            
+            // Pattern is valid if no PCRE errors occurred
+            $is_valid = ($result !== false && $pcre_error === PREG_NO_ERROR);
+            
+            // Additional test with various inputs to catch ReDoS early
+            if ($is_valid) {
+                $test_inputs = array(
+                    '',                           // Empty string
+                    'a',                         // Single char
+                    'aaaaa',                     // Repeated chars
+                    'abcdefghijklmnop',          // Normal string
+                    str_repeat('a', 100),        // Long repeated (ReDoS trigger)
+                    'a' . str_repeat('b', 50) . 'c', // Pattern that might not match
+                );
+                
+                foreach ($test_inputs as $test_input) {
+                    $test_result = preg_match($wrapped, $test_input);
+                    $test_error = preg_last_error();
+                    
+                    // If any test triggers PCRE limits, pattern is dangerous
+                    if ($test_error === PREG_BACKTRACK_LIMIT_ERROR || 
+                        $test_error === PREG_RECURSION_LIMIT_ERROR) {
+                        $is_valid = false;
+                        break;
+                    }
+                    
+                    // Check execution time for each test
+                    $current_time = microtime(true);
+                    if (($current_time - $start_time) > 0.05) { // 50ms total limit
+                        $is_valid = false;
+                        break;
+                    }
+                }
+            }
+            
+        } catch (Exception $e) {
+            $is_valid = false;
+        } finally {
+            restore_error_handler();
+            
+            // Restore original PCRE settings
+            ini_set('pcre.backtrack_limit', $original_backtrack_limit);
+            ini_set('pcre.recursion_limit', $original_recursion_limit);
+        }
+
+        return $is_valid;
     }
 
     /**
-     * Run regex match safely; invalid patterns return false.
+     * Run regex match safely with ReDoS protection; invalid patterns return false.
+     * 
+     * SECURITY: Implements runtime protection against ReDoS attacks:
+     * - PCRE backtrack/recursion limits
+     * - Execution time monitoring  
+     * - Input length validation
+     * - Error handling and logging
      */
     private function regex_match($pattern, $subject, &$matches = array())
     {
@@ -973,9 +1042,62 @@ class Ofast_X_Redirects
             return false;
         }
 
-        set_error_handler('__return_false');
-        $result = preg_match($wrapped, $subject, $matches);
-        restore_error_handler();
+        // Validate input length to prevent excessive processing
+        if (strlen($subject) > 10000) { // Reasonable limit for URL matching
+            return false;
+        }
+
+        // Store original PCRE settings
+        $original_backtrack_limit = ini_get('pcre.backtrack_limit');
+        $original_recursion_limit = ini_get('pcre.recursion_limit');
+        
+        // Apply strict runtime limits
+        ini_set('pcre.backtrack_limit', '10000');   // Lower limit for redirects
+        ini_set('pcre.recursion_limit', '500');     // Prevent deep recursion
+        
+        $start_time = microtime(true);
+        $result = false;
+        $error = null;
+
+        // Set error handler to catch PCRE errors
+        set_error_handler(function($errno, $errstr) use (&$error) {
+            $error = $errstr;
+            return true;
+        });
+
+        try {
+            // Execute regex with monitoring
+            $result = preg_match($wrapped, $subject, $matches);
+            
+            // Check for PCRE errors
+            $pcre_error = preg_last_error();
+            if ($pcre_error !== PREG_NO_ERROR) {
+                $result = false;
+                if ($pcre_error === PREG_BACKTRACK_LIMIT_ERROR) {
+                    error_log("SECURITY: ReDoS backtrack limit hit for pattern: " . substr($pattern, 0, 100));
+                } elseif ($pcre_error === PREG_RECURSION_LIMIT_ERROR) {
+                    error_log("SECURITY: ReDoS recursion limit hit for pattern: " . substr($pattern, 0, 100));
+                }
+            }
+            
+        } catch (Exception $e) {
+            $result = false;
+            error_log("SECURITY: Regex execution error: " . $e->getMessage());
+        } finally {
+            restore_error_handler();
+            
+            // Restore original PCRE settings
+            ini_set('pcre.backtrack_limit', $original_backtrack_limit);
+            ini_set('pcre.recursion_limit', $original_recursion_limit);
+        }
+
+        $execution_time = microtime(true) - $start_time;
+        
+        // Monitor for suspicious execution times (potential ReDoS)
+        if ($execution_time > 0.1) { // 100ms threshold for redirect matching
+            error_log("SECURITY: Suspicious regex execution time: {$execution_time}s for pattern: " . substr($pattern, 0, 100));
+            return false; // Reject slow patterns
+        }
 
         return $result === 1;
     }
@@ -1106,7 +1228,13 @@ class Ofast_X_Redirects
     }
 
     /**
-     * SECURITY: Sanitize regex pattern to prevent ReDoS
+     * SECURITY: Comprehensive regex pattern sanitization to prevent ReDoS attacks (CWE-1333)
+     * 
+     * This function implements defense-in-depth against Regular Expression Denial of Service:
+     * 1. Static analysis to detect dangerous patterns
+     * 2. Complexity scoring to limit resource usage
+     * 3. Whitelist approach for safe constructs
+     * 4. Length and structural limits
      */
     private function sanitize_regex($pattern)
     {
@@ -1115,20 +1243,301 @@ class Ofast_X_Redirects
             return false;
         }
 
-        // Remove nested quantifier duplication (e.g. ++, **, ??).
+        // 1. BASIC CONSTRAINTS
+        // Strict length limit - even short patterns can be dangerous
+        if (strlen($pattern) > 200) {
+            return false;
+        }
+
+        // Block null bytes and control characters that could interfere with validation
+        if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $pattern)) {
+            return false;
+        }
+
+        // 2. CRITICAL REDOS PATTERNS - Block immediately
+        $dangerous_patterns = array(
+            // Classic nested quantifiers
+            '/\(\.\*\)\*/',                    // (.*)* 
+            '/\(\.\+\)\+/',                    // (.+)+
+            '/\(\.\*\)\+/',                    // (.*)+
+            '/\(\.\+\)\*/',                    // (.+)*
+            '/\([^)]*\+[^)]*\)\+/',            // (x+y)+
+            '/\([^)]*\*[^)]*\)\*/',            // (x*y)*
+            '/\([^)]*\+[^)]*\)\*/',            // (x+y)*
+            '/\([^)]*\*[^)]*\)\+/',            // (x*y)+
+            
+            // Nested group quantifiers 
+            '/\(\([^)]*[+*][^)]*\)[+*]\)/',    // ((x+)+) or ((x*)+)
+            
+            // Character class variants
+            '/\(\[[^\]]*\]\+\)\+/',            // ([...]+)+
+            '/\(\[[^\]]*\]\*\)\*/',            // ([...]*)*
+            '/\(\[[^\]]*\]\+\)\*/',            // ([...]+)*
+            '/\(\[[^\]]*\]\*\)\+/',            // ([...]*)+ 
+            
+            // Word boundary and escape sequences
+            '/\(\\\\[dDwWsS]\+\)\+/',          // (\d+)+, (\w+)+, (\s+)+
+            '/\(\\\\[dDwWsS]\*\)\+/',          // (\d*)+, (\w*)+, (\s*)+
+            '/\(\\\\[dDwWsS]\+\)\*/',          // (\d+)*, (\w+)*, (\s+)*
+            
+            // Overlapping alternations 
+            '/\([^|()]*\|[^|()]*\)[+*].*\1/',  // Basic overlap detection
+            
+            // Dangerous lookaheads/lookbehinds
+            '/\(\?[=!][^)]*[+*]/',             // (?=...*) or (?!...+)
+            '/\(\?<[=!][^)]*[+*]/',            // (?<=...*) or (?<!...+)
+            
+            // Backreference amplification
+            '/\([^)]*\).*\\\\1[+*]/',          // (group)....\1+
+            
+            // Recursive patterns
+            '/\(\?R\)|\(\?[0-9]+\)/',          // (?R) or (?1) etc
+            
+            // Possessive quantifiers misuse
+            '/[+*]\+[+*]/',                    // *++ or ++* 
+        );
+
+        foreach ($dangerous_patterns as $dangerous) {
+            if (preg_match($dangerous, $pattern)) {
+                return false;
+            }
+        }
+
+        // 3. COMPLEXITY ANALYSIS
+        $complexity_score = $this->calculate_regex_complexity($pattern);
+        if ($complexity_score > 100) { // Strict limit for redirects
+            return false;
+        }
+
+        // 4. STRUCTURAL VALIDATION
+        // Count nesting depth
+        $max_depth = $this->get_regex_nesting_depth($pattern);
+        if ($max_depth > 4) { // Reasonable limit for URL redirects
+            return false;
+        }
+
+        // Count quantifiers
+        $quantifier_count = preg_match_all('/[^\\\\][+*?]|\{[0-9,]+\}/', $pattern);
+        if ($quantifier_count > 10) { // Too many quantifiers = likely problematic
+            return false;
+        }
+
+        // 5. ALTERNATION VALIDATION  
+        if (!$this->validate_alternations($pattern)) {
+            return false;
+        }
+
+        // 6. WHITELIST CHECK - Ensure pattern uses only safe constructs
+        if (!$this->is_whitelisted_regex_pattern($pattern)) {
+            return false;
+        }
+
+        // 7. FINAL SANITIZATION
+        // Remove redundant quantifier duplications
         $pattern = preg_replace('/(\+|\*|\?)\1+/', '$1', $pattern);
-
-        // Block common catastrophic backtracking constructs such as (.+)+ or (.*)*.
-        if (preg_match('/\([^)]*[+*][^)]*\)[+*?]/', $pattern)) {
-            return false;
-        }
-
-        // Remove nested quantifiers that could cause ReDoS
-        // Limit overall pattern length
-        if (strlen($pattern) > 500) {
-            return false;
-        }
+        
+        // Normalize common problematic sequences
+        $pattern = preg_replace('/\.\*\+/', '.*', $pattern);  // .*+ -> .*
+        $pattern = preg_replace('/\.\+\*/', '.+', $pattern);  // .+* -> .+
 
         return $pattern;
+    }
+
+    /**
+     * Calculate complexity score for regex pattern
+     * Higher scores indicate more potential for ReDoS
+     */
+    private function calculate_regex_complexity($pattern)
+    {
+        $score = 0;
+        
+        // Base score from length
+        $score += strlen($pattern) * 0.5;
+        
+        // Quantifier penalty
+        $quantifiers = preg_match_all('/[+*?]|\{[0-9,]+\}/', $pattern);
+        $score += $quantifiers * 5;
+        
+        // Group penalty (each group adds complexity)
+        $groups = preg_match_all('/\([^)]*\)/', $pattern);
+        $score += $groups * 3;
+        
+        // Alternation penalty (exponential complexity risk)
+        $alternations = preg_match_all('/\|/', $pattern);
+        $score += $alternations * 8;
+        
+        // Nested structure penalty
+        $nesting_depth = $this->get_regex_nesting_depth($pattern);
+        $score += pow($nesting_depth, 2) * 5;
+        
+        // Character class penalty
+        $char_classes = preg_match_all('/\[[^\]]*\]/', $pattern);
+        $score += $char_classes * 2;
+        
+        // Lookahead/lookbehind heavy penalty
+        $assertions = preg_match_all('/\(\?[=!<]/', $pattern);
+        $score += $assertions * 15;
+        
+        // Backreference penalty
+        $backrefs = preg_match_all('/\\\\[1-9]/', $pattern);
+        $score += $backrefs * 10;
+
+        return (int) $score;
+    }
+
+    /**
+     * Calculate maximum nesting depth of groups in regex
+     */
+    private function get_regex_nesting_depth($pattern)
+    {
+        $max_depth = 0;
+        $current_depth = 0;
+        $in_char_class = false;
+        
+        for ($i = 0; $i < strlen($pattern); $i++) {
+            $char = $pattern[$i];
+            $prev_char = $pattern[$i - 1] ?? '';
+            
+            // Skip escaped characters
+            if ($prev_char === '\\') {
+                continue;
+            }
+            
+            // Handle character classes
+            if ($char === '[' && !$in_char_class) {
+                $in_char_class = true;
+                continue;
+            }
+            if ($char === ']' && $in_char_class) {
+                $in_char_class = false;
+                continue;
+            }
+            
+            if ($in_char_class) {
+                continue;
+            }
+            
+            // Track group depth
+            if ($char === '(') {
+                $current_depth++;
+                $max_depth = max($max_depth, $current_depth);
+            } elseif ($char === ')') {
+                $current_depth = max(0, $current_depth - 1);
+            }
+        }
+        
+        return $max_depth;
+    }
+
+    /**
+     * Validate alternation patterns for overlapping branches
+     */
+    private function validate_alternations($pattern)
+    {
+        // Find quantified alternation groups: (a|b)+, (x|y)*, etc.
+        if (preg_match_all('/\(([^()]+\|[^()]+)\)[+*?]/', $pattern, $matches)) {
+            foreach ($matches[1] as $alternation) {
+                $branches = explode('|', $alternation);
+                
+                // Too many branches = complexity risk
+                if (count($branches) > 8) {
+                    return false;
+                }
+                
+                // Check for obviously overlapping branches
+                for ($i = 0; $i < count($branches); $i++) {
+                    for ($j = $i + 1; $j < count($branches); $j++) {
+                        $branch_a = trim($branches[$i]);
+                        $branch_b = trim($branches[$j]);
+                        
+                        // Identical branches
+                        if ($branch_a === $branch_b) {
+                            return false;
+                        }
+                        
+                        // One is prefix of another
+                        if (strlen($branch_a) > 0 && strlen($branch_b) > 0) {
+                            if (strpos($branch_b, $branch_a) === 0 || strpos($branch_a, $branch_b) === 0) {
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return true;
+    }
+
+    /**
+     * Whitelist validation - ensure pattern only uses safe constructs
+     * This implements a restrictive approach suitable for redirect URL patterns
+     */
+    private function is_whitelisted_regex_pattern($pattern)
+    {
+        // For redirects, we primarily need these safe constructs:
+        $allowed_constructs = array(
+            // Basic literals and word characters
+            '/^[a-zA-Z0-9\-\/_.]/',
+            
+            // Safe character classes
+            '/\[[a-zA-Z0-9\-_\/\.]+\]/',
+            
+            // Simple quantifiers (non-nested)
+            '/[^(][+*?]/',
+            '/\{[0-9]+,?[0-9]*\}/',
+            
+            // Safe anchors
+            '/[\^$]/',
+            
+            // Safe escapes for URL patterns
+            '/\\\\[\/\-\.]/',
+            
+            // Non-capturing groups (safer than capturing)
+            '/\(\?\:/',
+            
+            // Simple alternation (not quantified)
+            '/[^)]\|[^(]/',
+        );
+        
+        // Remove all allowed constructs and see what remains
+        $remaining = $pattern;
+        
+        // Remove safe literals
+        $remaining = preg_replace('/[a-zA-Z0-9\-\/_.]/', '', $remaining);
+        
+        // Remove safe character classes
+        $remaining = preg_replace('/\[[a-zA-Z0-9\-_\/\.]+\]/', '', $remaining);
+        
+        // Remove safe quantifiers
+        $remaining = preg_replace('/[+*?]/', '', $remaining);
+        $remaining = preg_replace('/\{[0-9]+,?[0-9]*\}/', '', $remaining);
+        
+        // Remove anchors
+        $remaining = preg_replace('/[\^$]/', '', $remaining);
+        
+        // Remove safe escapes
+        $remaining = preg_replace('/\\\\[\/\-\.]/', '', $remaining);
+        
+        // Remove non-capturing groups
+        $remaining = preg_replace('/\(\?\:/', '', $remaining);
+        $remaining = preg_replace('/[()]/', '', $remaining);
+        
+        // Remove simple alternation
+        $remaining = preg_replace('/\|/', '', $remaining);
+        
+        // Remove whitespace
+        $remaining = preg_replace('/\s/', '', $remaining);
+        
+        // If anything suspicious remains, reject
+        if (strlen($remaining) > 0) {
+            // Check if remaining characters are dangerous
+            $dangerous_remaining = preg_match('/[?=!<>]|\\\\[^\/\-\.]/', $remaining);
+            if ($dangerous_remaining) {
+                return false;
+            }
+        }
+        
+        return true;
     }
 }

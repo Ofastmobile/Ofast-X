@@ -25,7 +25,7 @@ class Ofast_X_Email_Template
         if ($style === 'custom') {
             $custom_html = get_option('ofast_email_custom_template', '');
             if (!empty($custom_html)) {
-                return str_replace('{{content}}', $content, $custom_html);
+                return str_replace('{{content}}', wp_kses_post($content), $custom_html);
             }
             // Fallback to modern if custom template is empty
             $style = 'modern';
@@ -139,7 +139,7 @@ class Ofast_X_Email_Template
                     <tr>
                         <td style="padding:32px; color:<?php echo esc_attr($text_color); ?>;">
                             <div style="font-size:<?php echo esc_attr($font_size); ?>px; line-height:1.7; color:#374151;">
-                                <?php echo $content; ?>
+                                <?php echo wp_kses_post($content); ?>
                             </div>
 
                             <?php if ($options['cta_button'] && !empty($options['cta_link'])): ?>

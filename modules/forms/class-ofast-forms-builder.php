@@ -45,7 +45,7 @@ class Ofast_X_Forms_Builder
         if (isset($_GET['id'])) {
             $this->form_id = absint($_GET['id']);
             $forms = Ofast_X_Forms::get_instance();
-            $this->form = $forms->get_form($this->form_id);
+            $this->form = $forms->get_form($this->form_id, 'admin');
         }
 
         // Handle save

@@ -51,9 +51,9 @@ class Ofast_X_Forms_Submissions
 
         // Get form
         $forms = Ofast_X_Forms::get_instance();
-        $form = $forms->get_form($form_id);
+        $form = $forms->get_form($form_id, 'submission');
 
-        if (!$form || !$form->active) {
+        if (!$form) {
             wp_send_json_error(array('message' => 'Form not found.'));
         }
 
@@ -433,7 +433,7 @@ class Ofast_X_Forms_Submissions
 
         // Get form for field names
         $forms = Ofast_X_Forms::get_instance();
-        $form = $forms->get_form($form_id);
+        $form = $forms->get_form($form_id, 'admin');
 
         // Build CSV
         $csv = fopen('php://temp', 'w');

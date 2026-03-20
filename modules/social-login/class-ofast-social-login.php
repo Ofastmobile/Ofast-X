@@ -83,6 +83,100 @@ class Ofast_X_Social_Login
     }
 
     /**
+     * Get encryption key from WordPress security constants
+     */
+    private function get_encryption_key()
+    {
+        // Use WordPress security keys as encryption source
+        $key_sources = array('SECURE_AUTH_KEY', 'AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY');
+        $combined_key = '';
+        
+        foreach ($key_sources as $constant) {
+            if (defined($constant)) {
+                $key_value = constant($constant);
+                if (!empty($key_value) && $key_value !== 'put your unique phrase here') {
+                    $combined_key .= $key_value;
+                }
+            }
+        }
+        
+        if (empty($combined_key)) {
+            // If no WordPress keys configured, use ABSPATH as fallback (not ideal but prevents plaintext storage)
+            $combined_key = ABSPATH . 'ofast_social_login';
+        }
+        
+        return hash('sha256', $combined_key, true);
+    }
+
+    /**
+     * Encrypt OAuth client secret for secure storage
+     */
+    private function encrypt_secret($plaintext)
+    {
+        if (empty($plaintext)) {
+            return '';
+        }
+
+        // Check if already encrypted
+        if (strpos($plaintext, '$OFAST_ENC$') === 0) {
+            return $plaintext;
+        }
+
+        // Use built-in encryption if available
+        if (function_exists('openssl_encrypt')) {
+            $key = $this->get_encryption_key();
+            $iv = openssl_random_pseudo_bytes(16);
+            
+            $encrypted = openssl_encrypt($plaintext, 'AES-256-CBC', $key, 0, $iv);
+            if ($encrypted !== false) {
+                return '$OFAST_ENC$' . base64_encode($iv . $encrypted);
+            }
+        }
+        
+        // If OpenSSL encryption fails, refuse to store plaintext
+        throw new Exception('Cannot securely encrypt OAuth client secret. Please ensure OpenSSL is available.');
+    }
+
+    /**
+     * Decrypt OAuth client secret from storage
+     */
+    private function decrypt_secret($encrypted)
+    {
+        if (empty($encrypted)) {
+            return '';
+        }
+
+        // Check if it's our encrypted format
+        if (strpos($encrypted, '$OFAST_ENC$') !== 0) {
+            // This is likely a legacy plaintext value - return as-is but log warning
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('OFAST Social Login: Found unencrypted OAuth secret. Please re-save settings to encrypt.');
+            }
+            return $encrypted;
+        }
+
+        // Decrypt our format
+        if (function_exists('openssl_decrypt')) {
+            $key = $this->get_encryption_key();
+            $data = base64_decode(substr($encrypted, 11)); // Remove '$OFAST_ENC$' prefix
+            
+            if ($data !== false && strlen($data) > 16) {
+                $iv = substr($data, 0, 16);
+                $encrypted_data = substr($data, 16);
+                
+                $decrypted = openssl_decrypt($encrypted_data, 'AES-256-CBC', $key, 0, $iv);
+                if ($decrypted !== false) {
+                    return $decrypted;
+                }
+            }
+        }
+        
+        // If decryption fails, return empty string to prevent OAuth from using corrupted data
+        error_log('OFAST Social Login: Failed to decrypt OAuth secret');
+        return '';
+    }
+
+    /**
      * Get provider settings
      */
     public function get_provider_settings($provider)
@@ -90,9 +184,19 @@ class Ofast_X_Social_Login
         $client_id = get_option("ofast_social_{$provider}_client_id", '');
         $client_secret = get_option("ofast_social_{$provider}_client_secret", '');
 
-        // Decrypt secret if encryption available
-        if (!empty($client_secret) && class_exists('Ofast_X_Security_Hardening')) {
-            $client_secret = Ofast_X_Security_Hardening::decrypt_option($client_secret);
+        // Always decrypt secret - use security hardening class if available, fallback to built-in encryption
+        if (!empty($client_secret)) {
+            if (class_exists('Ofast_X_Security_Hardening')) {
+                $decrypted = Ofast_X_Security_Hardening::decrypt_option($client_secret);
+                // If hardening class didn't decrypt it (returned same value), try our decryption
+                if ($decrypted === $client_secret) {
+                    $client_secret = $this->decrypt_secret($client_secret);
+                } else {
+                    $client_secret = $decrypted;
+                }
+            } else {
+                $client_secret = $this->decrypt_secret($client_secret);
+            }
         }
 
         return array(
@@ -101,6 +205,7 @@ class Ofast_X_Social_Login
             'client_secret' => $client_secret
         );
     }
+=======
 
     /**
      * Check if provider is configured
@@ -677,10 +782,14 @@ class Ofast_X_Social_Login
         }
         if (!empty($_POST['google_client_secret'])) {
             $secret = sanitize_text_field($_POST['google_client_secret']);
-            if (class_exists('Ofast_X_Security_Hardening')) {
-                $secret = Ofast_X_Security_Hardening::encrypt_option($secret);
+            try {
+                $encrypted_secret = $this->encrypt_secret($secret);
+                update_option('ofast_social_google_client_secret', $encrypted_secret);
+            } catch (Exception $e) {
+                add_settings_error('ofast_social_login', 'encryption_error', 
+                    'Failed to securely save Google client secret: ' . $e->getMessage(), 'error');
+                // Don't save the plaintext secret - keep existing value
             }
-            update_option('ofast_social_google_client_secret', $secret);
         }
 
         // Facebook settings
@@ -690,10 +799,14 @@ class Ofast_X_Social_Login
         }
         if (!empty($_POST['facebook_app_secret'])) {
             $secret = sanitize_text_field($_POST['facebook_app_secret']);
-            if (class_exists('Ofast_X_Security_Hardening')) {
-                $secret = Ofast_X_Security_Hardening::encrypt_option($secret);
+            try {
+                $encrypted_secret = $this->encrypt_secret($secret);
+                update_option('ofast_social_facebook_client_secret', $encrypted_secret);
+            } catch (Exception $e) {
+                add_settings_error('ofast_social_login', 'encryption_error', 
+                    'Failed to securely save Facebook client secret: ' . $e->getMessage(), 'error');
+                // Don't save the plaintext secret - keep existing value
             }
-            update_option('ofast_social_facebook_client_secret', $secret);
         }
 
         // Other settings

@@ -308,13 +308,18 @@ class Ofast_X_Security_Hardening
         }
 
         $key = hash('sha256', SECURE_AUTH_KEY);
-        $iv = openssl_random_pseudo_bytes(16);
-        if ($iv === false) {
-            // Fallback to deterministic IV if random source fails
-            $iv = substr(hash('sha256', AUTH_KEY), 0, 16);
+        
+        try {
+            $iv = random_bytes(16);
+        } catch (Exception $e) {
+            return false; // Fail securely if IV generation fails
         }
 
         $encrypted = openssl_encrypt($value, 'AES-256-CBC', $key, 0, $iv);
+        if ($encrypted === false) {
+            return false; // Fail securely if encryption fails
+        }
+        
         return base64_encode($iv . $encrypted);
     }
 
@@ -325,6 +330,11 @@ class Ofast_X_Security_Hardening
     {
         if (!defined('SECURE_AUTH_KEY') || empty(SECURE_AUTH_KEY)) {
             return $encrypted;
+        }
+        
+        // Handle case where encryption returned false
+        if ($encrypted === false) {
+            return false;
         }
 
         $key = hash('sha256', SECURE_AUTH_KEY);

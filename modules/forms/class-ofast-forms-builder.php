@@ -662,7 +662,7 @@ class Ofast_X_Forms_Builder
 
         $data = array(
             'id' => absint($_POST['form_id']),
-            'title' => $_POST['title'],
+            'title' => $_POST['title'] ?? '',
             'description' => $_POST['description'] ?? '',
             'fields' => $_POST['fields'] ?? array(),
             'settings' => $_POST['settings'] ?? array(),
@@ -670,6 +670,11 @@ class Ofast_X_Forms_Builder
         );
 
         $form_id = $forms->save_form($data);
+
+        if ($form_id === false) {
+            echo Ofast_X_Toast::render('Form could not be saved. Please check that the title is not empty and try again.', 'error');
+            return;
+        }
 
         if ($form_id && !$this->form_id) {
             wp_redirect(admin_url('admin.php?page=ofast-forms&tab=add-new&id=' . $form_id . '&saved=1'));

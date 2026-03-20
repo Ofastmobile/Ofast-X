@@ -12,6 +12,22 @@ if (!defined('ABSPATH')) {
 class Ofast_X_Forms_Validator
 {
     /**
+     * Default maximum input lengths for different field types
+     */
+    private $default_max_lengths = array(
+        'email' => 254,     // RFC 5321 maximum email length
+        'phone' => 50,      // Generous limit for international formats
+        'url' => 2048,      // Common browser URL limit
+        'number' => 50,     // Sufficient for most numeric inputs
+        'date' => 100,      // Sufficient for various date formats
+        'text' => 500,      // Current default for text fields
+        'textarea' => 10000, // Current limit for textarea
+        'select' => 200,    // Reasonable limit for option values
+        'radio' => 200,     // Reasonable limit for option values
+        'checkbox' => 200   // Per-option limit for checkboxes
+    );
+
+    /**
      * Validate submitted data against form fields
      * 
      * @param array $submitted The submitted field values
@@ -48,6 +64,11 @@ class Ofast_X_Forms_Validator
 
             // Skip validation if empty and not required
             if (empty($value)) {
+                continue;
+            }
+
+            // Validate input length before type-specific validation
+            if (!$this->validate_length($value, $type, $field_key, $errors)) {
                 continue;
             }
 
@@ -97,10 +118,6 @@ class Ofast_X_Forms_Validator
 
                 case 'textarea':
                     $value = sanitize_textarea_field($value);
-                    // Check length
-                    if (strlen($value) > 10000) {
-                        $errors[$field_key] = 'Text is too long (max 10,000 characters).';
-                    }
                     break;
 
                 case 'select':
@@ -129,10 +146,6 @@ class Ofast_X_Forms_Validator
 
                 default:
                     $value = sanitize_text_field($value);
-                    // Check length
-                    if (strlen($value) > 500) {
-                        $errors[$field_key] = 'Text is too long (max 500 characters).';
-                    }
                     break;
             }
 
@@ -147,6 +160,40 @@ class Ofast_X_Forms_Validator
             'errors' => $errors,
             'data' => $clean_data
         );
+    }
+
+    /**
+     * Validate input length for a field
+     * 
+     * @param mixed $value The input value to validate
+     * @param string $type The field type
+     * @param string $field_key The field key for error reporting
+     * @param array &$errors The errors array to update
+     * @return bool True if validation passed, false otherwise
+     */
+    private function validate_length($value, $type, $field_key, &$errors)
+    {
+        $max_length = $this->default_max_lengths[$type] ?? $this->default_max_lengths['text'];
+        
+        if (is_array($value)) {
+            // Handle checkbox arrays
+            $per_option_limit = $this->default_max_lengths['checkbox'];
+            foreach ($value as $option_value) {
+                if (mb_strlen($option_value, 'UTF-8') > $per_option_limit) {
+                    $errors[$field_key] = 'Option value is too long (max ' . $per_option_limit . ' characters).';
+                    return false;
+                }
+            }
+            return true;
+        }
+        
+        $length = mb_strlen($value, 'UTF-8');
+        if ($length > $max_length) {
+            $errors[$field_key] = 'Input is too long (max ' . number_format($max_length) . ' characters).';
+            return false;
+        }
+        
+        return true;
     }
 
     /**

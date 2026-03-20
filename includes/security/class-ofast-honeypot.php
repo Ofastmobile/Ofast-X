@@ -136,15 +136,13 @@ class Ofast_X_Honeypot
     {
         $field_name = self::get_field_name();
         $field_html = self::get_field_html();
-        // Escape for JavaScript
-        $field_html_js = addslashes($field_html);
         ?>
         <script>
         (function() {
             'use strict';
             
-            var honeypotHtml = '<?php echo $field_html_js; ?>';
-            var honeypotFieldName = '<?php echo esc_js($field_name); ?>';
+            var honeypotHtml = <?php echo wp_json_encode($field_html); ?>;
+            var honeypotFieldName = <?php echo wp_json_encode($field_name); ?>;
             
             // Form selectors to protect
             var formSelectors = [

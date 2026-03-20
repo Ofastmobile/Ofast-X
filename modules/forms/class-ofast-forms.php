@@ -74,25 +74,210 @@ class Ofast_X_Forms
     }
 
     /**
-     * Get form by ID
+     * Get form by ID with authorization checks
      */
-    public function get_form($form_id)
+    public function get_form($form_id, $context = 'public')
     {
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_forms';
 
+        // Validate form ID
+        $form_id = absint($form_id);
+        if ($form_id <= 0) {
+            return null;
+        }
+
+        // Retrieve form from database
         $form = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$table} WHERE id = %d",
-            absint($form_id)
+            $form_id
         ));
 
-        if ($form) {
+        if (!$form) {
+            return null;
+        }
+
+        // Perform authorization checks based on context
+        if (!$this->authorize_form_access($form_id, $form, $context)) {
+            return null;
+        }
+
+        // Decode JSON fields
+        if ($form->fields) {
             $form->fields = json_decode($form->fields, true) ?: array();
+        }
+        if ($form->settings) {
             $form->settings = json_decode($form->settings, true) ?: array();
+        }
+        if ($form->notifications) {
             $form->notifications = json_decode($form->notifications, true) ?: array();
         }
 
-        return $form;
+        // Filter sensitive data based on context
+        return $this->filter_form_data($form, $context);
+    }
+
+    /**
+     * Authorize access to a form based on context
+     */
+    private function authorize_form_access($form_id, $form, $context)
+    {
+        switch ($context) {
+            case 'admin':
+                // Admin context requires manage_options capability
+                if (!current_user_can('manage_options')) {
+                    return false;
+                }
+                break;
+
+            case 'public':
+            case 'shortcode':
+                // Public context only allows access to active forms
+                if (!$form || !$form->active) {
+                    return false;
+                }
+                break;
+
+            case 'submission':
+                // Submission context allows access to active forms
+                if (!$form || !$form->active) {
+                    return false;
+                }
+                break;
+
+            default:
+                // Unknown context defaults to most restrictive
+                return current_user_can('manage_options');
+        }
+
+        return true;
+    }
+
+    /**
+     * Filter form data based on access context
+     */
+    private function filter_form_data($form, $context)
+    {
+        switch ($context) {
+            case 'admin':
+                // Admin context gets full access to all data
+                return $form;
+
+            case 'public':
+            case 'shortcode':
+                // Public context gets limited data, no sensitive information
+                return $this->filter_public_form_data($form);
+
+            case 'submission':
+                // Submission context gets form fields and validation rules
+                return $this->filter_submission_form_data($form);
+
+            default:
+                // Default to most restrictive
+                return current_user_can('manage_options') ? $form : $this->filter_public_form_data($form);
+        }
+    }
+
+    /**
+     * Filter form data for public display
+     */
+    private function filter_public_form_data($form)
+    {
+        if (!$form) {
+            return null;
+        }
+
+        // Create a filtered copy with only safe public data
+        $filtered = new stdClass();
+        $filtered->id = $form->id;
+        $filtered->title = $form->title;
+        $filtered->description = $form->description ?? '';
+        $filtered->active = $form->active;
+        $filtered->fields = $this->filter_fields_for_public($form->fields ?? []);
+        
+        // Only include safe settings
+        $safe_settings = [];
+        if (!empty($form->settings)) {
+            $public_safe_keys = [
+                'success_message',
+                'submit_text',
+                'design'
+            ];
+            foreach ($public_safe_keys as $key) {
+                if (isset($form->settings[$key])) {
+                    $safe_settings[$key] = $form->settings[$key];
+                }
+            }
+        }
+        $filtered->settings = $safe_settings;
+
+        return $filtered;
+    }
+
+    /**
+     * Filter form data for submission processing
+     */
+    private function filter_submission_form_data($form)
+    {
+        if (!$form) {
+            return null;
+        }
+
+        // Start with public data
+        $filtered = $this->filter_public_form_data($form);
+        
+        // Add validation rules needed for processing submissions
+        if (!empty($form->fields)) {
+            foreach ($form->fields as $index => $field) {
+                if (isset($filtered->fields[$index])) {
+                    // Add validation properties that are needed server-side
+                    $validation_props = ['required', 'min', 'max', 'pattern'];
+                    foreach ($validation_props as $prop) {
+                        if (isset($field[$prop])) {
+                            $filtered->fields[$index][$prop] = $field[$prop];
+                        }
+                    }
+                }
+            }
+        }
+
+        return $filtered;
+    }
+
+    /**
+     * Filter individual fields for public access
+     */
+    private function filter_fields_for_public($fields)
+    {
+        if (!is_array($fields)) {
+            return [];
+        }
+
+        $filtered_fields = [];
+        $public_field_props = [
+            'type',
+            'label', 
+            'placeholder',
+            'options',
+            'width',
+            'css_classes'
+        ];
+
+        foreach ($fields as $index => $field) {
+            if (!is_array($field)) {
+                continue;
+            }
+
+            $filtered_field = [];
+            foreach ($public_field_props as $prop) {
+                if (isset($field[$prop])) {
+                    $filtered_field[$prop] = $field[$prop];
+                }
+            }
+            $filtered_fields[$index] = $filtered_field;
+        }
+
+        return $filtered_fields;
     }
 
     /**
@@ -200,8 +385,8 @@ class Ofast_X_Forms
             return '<p>Please specify a form ID.</p>';
         }
 
-        $form = $this->get_form($atts['id']);
-        if (!$form || !$form->active) {
+        $form = $this->get_form($atts['id'], 'shortcode');
+        if (!$form) {
             return '<p>Form not found.</p>';
         }
 

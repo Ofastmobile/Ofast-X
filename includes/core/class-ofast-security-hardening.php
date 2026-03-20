@@ -217,6 +217,88 @@ class Ofast_X_Security_Hardening
     }
 
     /**
+     * Send emergency key security alert
+     */
+    private function send_emergency_key_alert($event_type, $data)
+    {
+        // Rate limit notifications to prevent email flooding
+        $cooldown_key = 'ofast_emergency_alert_cooldown';
+        if ($event_type !== 'ip_blocked' && get_transient($cooldown_key)) {
+            return; // Skip notification if in cooldown period
+        }
+        set_transient($cooldown_key, true, 5 * MINUTE_IN_SECONDS);
+
+        $admin_email = get_option('admin_email');
+        $site_name = get_bloginfo('name');
+        $site_url = home_url();
+        
+        switch ($event_type) {
+            case 'failed_attempt':
+                $subject = "[SECURITY ALERT] {$site_name} - Emergency Key Failed Attempt";
+                $message = "=== EMERGENCY KEY FAILED ATTEMPT ===\n\n";
+                $message .= "Site: {$site_name} ({$site_url})\n";
+                $message .= "Time: " . current_time('mysql') . "\n";
+                $message .= "IP Address: {$data['ip']}\n";
+                $message .= "Attempt Count: {$data['attempts']}\n";
+                $message .= "Next lockout: " . human_time_diff(time(), time() + $data['lockout_duration']) . "\n\n";
+                $message .= "RECOMMENDED ACTIONS:\n";
+                $message .= "- Review the source IP for suspicious activity\n";
+                $message .= "- Consider blocking the IP if attacks persist\n";
+                $message .= "- Verify emergency key hasn't been compromised\n";
+                break;
+                
+            case 'rate_limit_exceeded':
+                $subject = "[CRITICAL SECURITY] {$site_name} - Emergency Key Rate Limit Exceeded";
+                $message = "=== EMERGENCY KEY RATE LIMIT EXCEEDED ===\n\n";
+                $message .= "Site: {$site_name} ({$site_url})\n";
+                $message .= "Time: " . current_time('mysql') . "\n";
+                $message .= "IP Address: {$data['ip']}\n";
+                $message .= "Total Attempts: {$data['attempts']}\n\n";
+                $message .= "An IP has exceeded the daily limit of 3 emergency key attempts.\n\n";
+                $message .= "IMMEDIATE ACTIONS REQUIRED:\n";
+                $message .= "- Investigate the source of these attempts\n";
+                $message .= "- Check if emergency key has been compromised\n";
+                $message .= "- Consider implementing additional access restrictions\n";
+                break;
+                
+            case 'ip_blocked':
+                $subject = "[CRITICAL SECURITY] {$site_name} - IP Blocked for Emergency Key Violations";
+                $message = "=== IP BLOCKED FOR EXCESSIVE VIOLATIONS ===\n\n";
+                $message .= "Site: {$site_name} ({$site_url})\n";
+                $message .= "Time: " . current_time('mysql') . "\n";
+                $message .= "Blocked IP: {$data['ip']}\n";
+                $message .= "Total Violations: {$data['violations']}\n";
+                $message .= "Block Duration: 7 days\n\n";
+                $message .= "This IP has been permanently blocked due to repeated rate limit violations.\n\n";
+                $message .= "CRITICAL ACTIONS REQUIRED:\n";
+                $message .= "1. Immediately rotate your emergency key\n";
+                $message .= "2. Review all recent admin access\n";
+                $message .= "3. Check server logs for additional suspicious activity\n";
+                $message .= "4. Consider implementing additional security measures\n";
+                break;
+                
+            case 'success':
+                $subject = "[SECURITY NOTICE] {$site_name} - Emergency Key Used Successfully";
+                $message = "=== EMERGENCY KEY AUTHENTICATION SUCCESSFUL ===\n\n";
+                $message .= "Site: {$site_name} ({$site_url})\n";
+                $message .= "Time: " . current_time('mysql') . "\n";
+                $message .= "IP Address: {$data['ip']}\n\n";
+                $message .= "An emergency key was successfully used to authenticate.\n\n";
+                $message .= "If this was expected (recovery scenario), no action needed.\n";
+                $message .= "If unexpected, immediately:\n";
+                $message .= "- Rotate the emergency key\n";
+                $message .= "- Audit recent administrative actions\n";
+                $message .= "- Review access logs\n";
+                break;
+                
+            default:
+                return;
+        }
+
+        wp_mail($admin_email, $subject, $message);
+    }
+
+    /**
      * Display security alerts in admin
      */
     public function display_security_alerts()
@@ -267,21 +349,62 @@ class Ofast_X_Security_Hardening
             $attempts = 0;
         }
 
-        // Max 3 emergency key attempts per hour
+        // Max 3 emergency key attempts per day (enhanced security)
         if ($attempts >= 3) {
+            // Check if this IP should be temporarily blocked for repeat violations
+            $violation_key = 'ofast_emergency_violations_' . md5($ip);
+            $violations = get_transient($violation_key);
+            if ($violations === false) {
+                $violations = 0;
+            }
+            $violations++;
+            set_transient($violation_key, $violations, 7 * DAY_IN_SECONDS);
+
+            // Block IP for extended period if repeat offender
+            if ($violations >= 3) {
+                set_transient('ofast_emergency_blocked_' . md5($ip), true, 7 * DAY_IN_SECONDS);
+                $this->send_emergency_key_alert('ip_blocked', array('ip' => $ip, 'violations' => $violations));
+            }
+
             $this->log_security_event('emergency_key_blocked', array(
                 'ip' => $ip,
-                'attempts' => $attempts
+                'attempts' => $attempts,
+                'violations' => $violations
             ));
+
+            // Send immediate admin notification
+            $this->send_emergency_key_alert('rate_limit_exceeded', array('ip' => $ip, 'attempts' => $attempts));
 
             return new WP_Error(
                 'ofast_emergency_rate_limit',
-                '<strong>' . esc_html__('Security:', 'ofast-x') . '</strong> ' . esc_html__('Too many emergency key attempts. Please wait 1 hour.', 'ofast-x')
+                '<strong>' . esc_html__('Security:', 'ofast-x') . '</strong> ' . esc_html__('Too many emergency key attempts. Please wait 24 hours.', 'ofast-x')
             );
         }
 
-        // Increment attempts
-        set_transient($key, $attempts + 1, HOUR_IN_SECONDS);
+        // Check if IP is temporarily blocked
+        $blocked_key = 'ofast_emergency_blocked_' . md5($ip);
+        if (get_transient($blocked_key)) {
+            $this->log_security_event('emergency_key_blocked_ip_attempt', array('ip' => $ip));
+            return new WP_Error(
+                'ofast_emergency_blocked',
+                '<strong>' . esc_html__('Security:', 'ofast-x') . '</strong> ' . esc_html__('IP temporarily blocked due to excessive attempts.', 'ofast-x')
+            );
+        }
+
+        // Increment attempts (24 hour window)
+        set_transient($key, $attempts + 1, DAY_IN_SECONDS);
+
+        // Progressive lockout - apply increasing delays after each failed attempt
+        $lockout_key = 'ofast_emergency_lockout_' . md5($ip);
+        $lockout_until = get_transient($lockout_key);
+        if ($lockout_until && time() < $lockout_until) {
+            $wait_time = human_time_diff(time(), $lockout_until);
+            return new WP_Error(
+                'ofast_emergency_lockout',
+                '<strong>' . esc_html__('Security:', 'ofast-x') . '</strong> ' . 
+                sprintf(esc_html__('Please wait %s before attempting again.', 'ofast-x'), $wait_time)
+            );
+        }
 
         // Verify the key
         $stored_key = get_option('ofast_admin_emergency_key', '');
@@ -289,10 +412,31 @@ class Ofast_X_Security_Hardening
 
         // Timing-safe comparison
         if (!hash_equals($stored_key, $provided_key)) {
+            // Apply progressive lockout (exponential backoff)
+            $lockout_duration = min(pow(2, $attempts) * 5 * MINUTE_IN_SECONDS, 2 * HOUR_IN_SECONDS);
+            set_transient($lockout_key, time() + $lockout_duration, $lockout_duration);
+
             $this->log_security_event('emergency_key_failed', array(
                 'ip' => $ip,
-                'attempts' => $attempts + 1
+                'attempts' => $attempts + 1,
+                'lockout_duration' => $lockout_duration
             ));
+
+            // Send admin notification for failed attempts
+            $this->send_emergency_key_alert('failed_attempt', array(
+                'ip' => $ip,
+                'attempts' => $attempts + 1,
+                'lockout_duration' => $lockout_duration
+            ));
+        } else {
+            // Success - clear attempt counters and lockout
+            delete_transient($key);
+            delete_transient($lockout_key);
+            
+            // Notify admin of successful emergency key use (this is notable)
+            $this->send_emergency_key_alert('success', array('ip' => $ip));
+            
+            $this->log_security_event('emergency_key_success', array('ip' => $ip));
         }
 
         return $user;

@@ -61,17 +61,55 @@ class Ofast_X_Turnstile
             return '';
         }
 
-        // Try to decrypt - if it fails, it might be stored plain (legacy)
-        if (class_exists('Ofast_X_Security_Hardening')) {
-            $decrypted = Ofast_X_Security_Hardening::decrypt_option($encrypted);
-            // Check if decryption returned valid data
-            if (!empty($decrypted) && strlen($decrypted) > 10) {
-                return $decrypted;
-            }
+        // Encryption class required for secure operation
+        if (!class_exists('Ofast_X_Security_Hardening')) {
+            return '';
         }
 
-        // Fallback: return as-is (legacy plain storage)
-        return $encrypted;
+        $decrypted = Ofast_X_Security_Hardening::decrypt_option($encrypted);
+        
+        // If decryption succeeded, return the decrypted value
+        if (!empty($decrypted) && $decrypted !== $encrypted) {
+            return $decrypted;
+        }
+
+        // Migration: Check if stored value looks like a legacy plaintext key
+        if ($this->is_legacy_plaintext_key($encrypted)) {
+            // Re-encrypt the legacy key
+            $this->migrate_legacy_key($encrypted);
+            // Return the plaintext value this one time
+            return $encrypted;
+        }
+
+        // If decryption failed and it's not legacy plaintext, return empty
+        // This forces re-entry of the secret key
+        return '';
+    }
+
+    /**
+     * Check if a value appears to be a legacy plaintext Turnstile secret key
+     */
+    private function is_legacy_plaintext_key($value)
+    {
+        // Turnstile secret keys typically start with "0x" and are 40+ chars
+        // This is a heuristic to detect legacy plaintext keys vs corrupted encrypted data
+        return (
+            strlen($value) >= 40 && 
+            strlen($value) <= 100 && 
+            strpos($value, '0x') === 0 &&
+            ctype_xdigit(substr($value, 2))
+        );
+    }
+
+    /**
+     * Migrate legacy plaintext key to encrypted storage
+     */
+    private function migrate_legacy_key($plaintext_key)
+    {
+        if (class_exists('Ofast_X_Security_Hardening')) {
+            $encrypted = Ofast_X_Security_Hardening::encrypt_option($plaintext_key);
+            update_option('ofast_turnstile_secret_key', $encrypted);
+        }
     }
 
     /**
@@ -82,17 +120,18 @@ class Ofast_X_Turnstile
         // Site key is public - no encryption needed
         update_option('ofast_turnstile_site_key', sanitize_text_field($site_key));
 
-        // Secret key should be encrypted
+        // Secret key must be encrypted - no plaintext fallback allowed
         if (class_exists('Ofast_X_Security_Hardening')) {
             $encrypted = Ofast_X_Security_Hardening::encrypt_option($secret_key);
             update_option('ofast_turnstile_secret_key', $encrypted);
         } else {
-            // Fallback: store plain (not recommended)
-            update_option('ofast_turnstile_secret_key', sanitize_text_field($secret_key));
+            // No fallback - security hardening class is required
+            return false;
         }
 
         // Reset instance to reload keys
         self::$instance = null;
+        return true;
     }
 
     /**

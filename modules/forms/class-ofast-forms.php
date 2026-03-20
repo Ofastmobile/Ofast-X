@@ -122,12 +122,36 @@ class Ofast_X_Forms
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_forms';
 
+        // Validate and sanitize title with length limit
+        $title = sanitize_text_field($data['title'] ?? '');
+        if (strlen($title) > 200) {
+            $title = substr($title, 0, 200);
+        }
+        if (empty($title)) {
+            return false;
+        }
+
+        // Validate and sanitize description with length limit
+        $description = sanitize_textarea_field($data['description'] ?? '');
+        if (strlen($description) > 1000) {
+            $description = substr($description, 0, 1000);
+        }
+
+        // Validate and sanitize fields array
+        $fields = $this->validate_and_sanitize_fields($data['fields'] ?? array());
+
+        // Validate and sanitize settings array
+        $settings = $this->validate_and_sanitize_settings($data['settings'] ?? array());
+
+        // Validate and sanitize notifications array
+        $notifications = $this->validate_and_sanitize_notifications($data['notifications'] ?? array());
+
         $form_data = array(
-            'title' => sanitize_text_field($data['title']),
-            'description' => sanitize_textarea_field($data['description'] ?? ''),
-            'fields' => wp_json_encode($data['fields'] ?? array()),
-            'settings' => wp_json_encode($data['settings'] ?? array()),
-            'notifications' => wp_json_encode($data['notifications'] ?? array()),
+            'title' => $title,
+            'description' => $description,
+            'fields' => wp_json_encode($fields),
+            'settings' => wp_json_encode($settings),
+            'notifications' => wp_json_encode($notifications),
             'active' => isset($data['active']) ? 1 : 0,
             'updated_at' => current_time('mysql')
         );
@@ -142,6 +166,194 @@ class Ofast_X_Forms
             $wpdb->insert($table, $form_data);
             return $wpdb->insert_id;
         }
+    }
+
+    /**
+     * Validate and sanitize fields array recursively
+     */
+    private function validate_and_sanitize_fields($fields)
+    {
+        if (!is_array($fields)) {
+            return array();
+        }
+
+        $allowed_field_types = array(
+            'text', 'email', 'phone', 'textarea', 'select', 
+            'radio', 'checkbox', 'number', 'date', 'url', 'hidden'
+        );
+
+        $allowed_widths = array('full', 'half');
+
+        $sanitized_fields = array();
+
+        foreach ($fields as $field) {
+            if (!is_array($field)) {
+                continue;
+            }
+
+            $sanitized_field = array();
+
+            // Validate and sanitize field type
+            $type = $field['type'] ?? 'text';
+            $sanitized_field['type'] = in_array($type, $allowed_field_types) ? $type : 'text';
+
+            // Validate and sanitize label with length limit
+            $label = sanitize_text_field($field['label'] ?? '');
+            if (strlen($label) > 100) {
+                $label = substr($label, 0, 100);
+            }
+            $sanitized_field['label'] = $label;
+
+            // Validate and sanitize placeholder with length limit
+            $placeholder = sanitize_text_field($field['placeholder'] ?? '');
+            if (strlen($placeholder) > 200) {
+                $placeholder = substr($placeholder, 0, 200);
+            }
+            $sanitized_field['placeholder'] = $placeholder;
+
+            // Validate and sanitize options with length limits
+            $options = sanitize_textarea_field($field['options'] ?? '');
+            if (strlen($options) > 2000) {
+                $options = substr($options, 0, 2000);
+            }
+            $sanitized_field['options'] = $options;
+
+            // Validate width
+            $width = $field['width'] ?? 'full';
+            $sanitized_field['width'] = in_array($width, $allowed_widths) ? $width : 'full';
+
+            // Validate required field (boolean)
+            $sanitized_field['required'] = !empty($field['required']);
+
+            $sanitized_fields[] = $sanitized_field;
+        }
+
+        // Limit number of fields to prevent abuse
+        return array_slice($sanitized_fields, 0, 50);
+    }
+
+    /**
+     * Validate and sanitize settings array recursively
+     */
+    private function validate_and_sanitize_settings($settings)
+    {
+        if (!is_array($settings)) {
+            return array();
+        }
+
+        $sanitized_settings = array();
+
+        // Sanitize success message with length limit
+        if (isset($settings['success_message'])) {
+            $success_message = sanitize_text_field($settings['success_message']);
+            if (strlen($success_message) > 300) {
+                $success_message = substr($success_message, 0, 300);
+            }
+            $sanitized_settings['success_message'] = $success_message;
+        }
+
+        // Sanitize redirect URL
+        if (isset($settings['redirect_url'])) {
+            $redirect_url = sanitize_url($settings['redirect_url']);
+            $sanitized_settings['redirect_url'] = $redirect_url;
+        }
+
+        // Sanitize submit button text with length limit
+        if (isset($settings['submit_text'])) {
+            $submit_text = sanitize_text_field($settings['submit_text']);
+            if (strlen($submit_text) > 50) {
+                $submit_text = substr($submit_text, 0, 50);
+            }
+            $sanitized_settings['submit_text'] = $submit_text;
+        }
+
+        // Sanitize design settings
+        if (isset($settings['design']) && is_array($settings['design'])) {
+            $sanitized_settings['design'] = $this->validate_and_sanitize_design_settings($settings['design']);
+        }
+
+        return $sanitized_settings;
+    }
+
+    /**
+     * Validate and sanitize design settings
+     */
+    private function validate_and_sanitize_design_settings($design)
+    {
+        if (!is_array($design)) {
+            return array();
+        }
+
+        $sanitized_design = array();
+
+        // Validate numeric values with reasonable limits
+        $numeric_fields = array(
+            'form_width' => array('min' => 200, 'max' => 1200, 'default' => 600),
+            'label_size' => array('min' => 10, 'max' => 24, 'default' => 14),
+            'btn_radius' => array('min' => 0, 'max' => 50, 'default' => 5),
+            'form_radius' => array('min' => 0, 'max' => 30, 'default' => 8)
+        );
+
+        foreach ($numeric_fields as $field => $limits) {
+            if (isset($design[$field])) {
+                $value = absint($design[$field]);
+                $value = max($limits['min'], min($limits['max'], $value));
+                $sanitized_design[$field] = $value;
+            }
+        }
+
+        // Validate color values
+        $color_fields = array('btn_bg', 'btn_text', 'btn_hover', 'form_bg', 'input_border', 'input_focus');
+        foreach ($color_fields as $field) {
+            if (isset($design[$field])) {
+                $color = sanitize_hex_color($design[$field]);
+                if ($color) {
+                    $sanitized_design[$field] = $color;
+                }
+            }
+            
+            // Also handle the text input versions
+            $text_field = $field . '_text';
+            if (isset($design[$text_field])) {
+                $color = sanitize_hex_color($design[$text_field]);
+                if ($color) {
+                    $sanitized_design[$text_field] = $color;
+                }
+            }
+        }
+
+        return $sanitized_design;
+    }
+
+    /**
+     * Validate and sanitize notifications array
+     */
+    private function validate_and_sanitize_notifications($notifications)
+    {
+        if (!is_array($notifications)) {
+            return array();
+        }
+
+        $sanitized_notifications = array();
+
+        foreach ($notifications as $key => $value) {
+            $sanitized_key = sanitize_key($key);
+            if (is_string($value)) {
+                // Sanitize string values with length limits
+                $sanitized_value = sanitize_text_field($value);
+                if (strlen($sanitized_value) > 500) {
+                    $sanitized_value = substr($sanitized_value, 0, 500);
+                }
+                $sanitized_notifications[$sanitized_key] = $sanitized_value;
+            } elseif (is_array($value)) {
+                // Recursively sanitize arrays
+                $sanitized_notifications[$sanitized_key] = $this->validate_and_sanitize_notifications($value);
+            } elseif (is_bool($value)) {
+                $sanitized_notifications[$sanitized_key] = $value;
+            }
+        }
+
+        return $sanitized_notifications;
     }
 
     /**

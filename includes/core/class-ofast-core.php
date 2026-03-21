@@ -161,6 +161,7 @@ class Ofast_X_Core
      */
     private function load_security()
     {
+        require_once OFAST_X_PLUGIN_DIR . 'includes/security/class-ofast-sanitizer.php';
         require_once OFAST_X_PLUGIN_DIR . 'includes/security/class-ofast-validator.php';
         require_once OFAST_X_PLUGIN_DIR . 'includes/security/class-ofast-rate-limiter.php';
     }

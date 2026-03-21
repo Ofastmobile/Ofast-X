@@ -469,7 +469,7 @@ class Ofast_X_Admin_Tweaks
         if (!empty($settings['enable_admin_design']) && isset($_POST['ofast_admin_design_css'])) {
             // wp_unslash removes WP's automatic slashes, preventing backslash accumulation
             $custom_css = wp_unslash($_POST['ofast_admin_design_css']);
-            $custom_css = wp_strip_all_tags($custom_css);
+            $custom_css = Ofast_X_Sanitizer::css($custom_css);
             update_option('ofast_admin_design_css', $custom_css);
         }
 

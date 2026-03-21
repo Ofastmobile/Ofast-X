@@ -541,9 +541,12 @@ class Ofast_X_Whos_Admin
                             </div>
                             <div class="ofast-card-body">
                                 <div class="ofast-field">
-                                    <label for="ofast_disable_plugin_updates" class="ofast-field-label">
-                                        <input type="checkbox" id="ofast_disable_plugin_updates" name="ofast_disable_plugin_updates" value="1" <?php checked(get_option('ofast_disable_plugin_updates', 0), 1); ?> />
-                                        <?php esc_html_e('Disable Plugin Updates for Specific Plugins', 'ofast-x'); ?>
+                                    <label for="ofast_disable_plugin_updates" class="ofast-toggle-label">
+                                        <span class="ofast-toggle-text"><?php esc_html_e('Disable Plugin Updates for Specific Plugins', 'ofast-x'); ?></span>
+                                        <div class="ofast-toggle-switch">
+                                            <input type="checkbox" id="ofast_disable_plugin_updates" name="ofast_disable_plugin_updates" value="1" <?php checked(get_option('ofast_disable_plugin_updates', 0), 1); ?> />
+                                            <span class="ofast-toggle-slider"></span>
+                                        </div>
                                     </label>
                                     <p class="ofast-field-hint">
                                         <?php esc_html_e('When enabled, updates for WPBakery Page Builder and Advanced Custom Fields Pro will be disabled.', 'ofast-x'); ?>
@@ -871,6 +874,58 @@ class Ofast_X_Whos_Admin
             }
             .ofast-tooltip:hover .dashicons {
                 color: #6366f1;
+            }
+
+            /* Toggle Switch */
+            .ofast-toggle-label {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                cursor: pointer;
+                user-select: none;
+            }
+            .ofast-toggle-text {
+                flex: 1;
+                font-weight: 500;
+                color: #1e293b;
+            }
+            .ofast-toggle-switch {
+                position: relative;
+                width: 50px;
+                height: 24px;
+            }
+            .ofast-toggle-switch input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+            .ofast-toggle-slider {
+                position: absolute;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: #ccc;
+                transition: 0.4s;
+                border-radius: 24px;
+            }
+            .ofast-toggle-slider:before {
+                position: absolute;
+                content: "";
+                height: 18px;
+                width: 18px;
+                left: 3px;
+                bottom: 3px;
+                background-color: white;
+                transition: 0.4s;
+                border-radius: 50%;
+            }
+            input:checked + .ofast-toggle-slider {
+                background-color: #6366f1;
+            }
+            input:checked + .ofast-toggle-slider:before {
+                transform: translateX(26px);
             }
         </style>
 

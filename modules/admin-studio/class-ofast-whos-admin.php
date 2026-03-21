@@ -531,7 +531,6 @@ class Ofast_X_Whos_Admin
                     <div class="ofast-tab-content<?php echo $default_tab === 'updates' ? ' active' : ''; ?>" data-tab-panel="updates">
                         <div class="ofast-tab-header">
                             <h2><?php esc_html_e('Updates', 'ofast-x'); ?></h2>
-                            <p><?php esc_html_e('This tab is ready for the additional White Label update settings you plan to add later.', 'ofast-x'); ?></p>
                         </div>
 
                         <div class="ofast-card ofast-main-card">

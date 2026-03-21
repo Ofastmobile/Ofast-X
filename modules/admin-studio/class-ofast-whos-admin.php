@@ -33,6 +33,11 @@ class Ofast_X_Whos_Admin
         // Override admin footer text (from Admin Footer module)
         add_filter('admin_footer_text', array($this, 'custom_footer_left'), 999);
         add_filter('update_footer', array($this, 'custom_footer_right'), 999);
+
+        // Disable plugin updates if enabled
+        if (get_option('ofast_disable_plugin_updates', 0)) {
+            add_filter('site_transient_update_plugins', array($this, 'disable_plugin_updates'));
+        }
     }
 
     /**
@@ -191,6 +196,9 @@ class Ofast_X_Whos_Admin
         );
         update_option('ofast_admin_footer_settings', $footer_settings);
 
+        // Save Updates Settings
+        update_option('ofast_disable_plugin_updates', isset($_POST['ofast_disable_plugin_updates']) ? 1 : 0);
+
         $active_tab = isset($_POST['white_label_active_tab']) ? sanitize_key(wp_unslash($_POST['white_label_active_tab'])) : 'designer_details';
         if (!in_array($active_tab, array('designer_details', 'footer', 'updates'), true)) {
             $active_tab = 'designer_details';
@@ -253,6 +261,26 @@ class Ofast_X_Whos_Admin
         }
 
         return $text;
+    }
+
+    /**
+     * Disable plugin updates for specific plugins
+     */
+    public function disable_plugin_updates($value)
+    {
+        $pluginsToDisable = [
+            'js_composer/js_composer.php',  // Wp Bakery
+            'advanced-custom-fields-pro/acf.php' // Advanced custom fields
+        ];
+
+        if (isset($value) && is_object($value)) {
+            foreach ($pluginsToDisable as $plugin) {
+                if (isset($value->response[$plugin])) {
+                    unset($value->response[$plugin]);
+                }
+            }
+        }
+        return $value;
     }
 
     /**
@@ -512,9 +540,15 @@ class Ofast_X_Whos_Admin
                                 <h2>Updates</h2>
                             </div>
                             <div class="ofast-card-body">
-                                <p class="ofast-field-hint" style="margin-top: 0;">
-                                    This section is intentionally empty for now so you can add your White Label update controls later without changing the page structure again.
-                                </p>
+                                <div class="ofast-field">
+                                    <label for="ofast_disable_plugin_updates" class="ofast-field-label">
+                                        <input type="checkbox" id="ofast_disable_plugin_updates" name="ofast_disable_plugin_updates" value="1" <?php checked(get_option('ofast_disable_plugin_updates', 0), 1); ?> />
+                                        <?php esc_html_e('Disable Plugin Updates for Specific Plugins', 'ofast-x'); ?>
+                                    </label>
+                                    <p class="ofast-field-hint">
+                                        <?php esc_html_e('When enabled, updates for WPBakery Page Builder and Advanced Custom Fields Pro will be disabled.', 'ofast-x'); ?>
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>

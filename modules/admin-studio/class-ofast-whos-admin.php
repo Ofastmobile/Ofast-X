@@ -349,9 +349,6 @@ class Ofast_X_Whos_Admin
                     </nav>
 
                     <div class="ofast-tab-content<?php echo $default_tab === 'designer_details' ? ' active' : ''; ?>" data-tab-panel="designer_details">
-                        <div class="ofast-tab-header">
-                            <h2><?php esc_html_e('Designer Details', 'ofast-x'); ?></h2>
-                        </div>
 
                         <div class="ofast-content-grid">
                             <div class="ofast-card ofast-main-card">
@@ -429,9 +426,6 @@ class Ofast_X_Whos_Admin
                     </div>
 
                     <div class="ofast-tab-content<?php echo $default_tab === 'footer' ? ' active' : ''; ?>" data-tab-panel="footer">
-                        <div class="ofast-tab-header">
-                            <h2><?php esc_html_e('Footer', 'ofast-x'); ?></h2>
-                        </div>
 
                         <div class="ofast-content-grid">
                             <div class="ofast-card ofast-main-card">
@@ -527,9 +521,6 @@ class Ofast_X_Whos_Admin
                     </div>
 
                     <div class="ofast-tab-content<?php echo $default_tab === 'updates' ? ' active' : ''; ?>" data-tab-panel="updates">
-                        <div class="ofast-tab-header">
-                            <h2><?php esc_html_e('Updates', 'ofast-x'); ?></h2>
-                        </div>
 
                         <div class="ofast-card ofast-main-card">
                             <div class="ofast-card-header">

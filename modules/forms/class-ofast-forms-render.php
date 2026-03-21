@@ -39,10 +39,10 @@ class Ofast_X_Forms_Render
 
         ob_start();
 ?>
-        <div class="ofast-form-wrapper" id="ofast-form-<?php echo $form_id; ?>" style="max-width: <?php echo $form_width; ?>px; margin: 0 auto;">
-            <form class="ofast-form" data-form-id="<?php echo $form_id; ?>" method="post" style="background: <?php echo $form_bg; ?>; padding: 30px; border-radius: <?php echo $form_radius; ?>px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                <?php wp_nonce_field('ofast_form_submit_' . $form_id, 'ofast_form_nonce'); ?>
-                <input type="hidden" name="form_id" value="<?php echo $form_id; ?>">
+        <div class="ofast-form-wrapper" id="ofast-form-<?php echo esc_attr($form_id); ?>" style="max-width: <?php echo $form_width; ?>px; margin: 0 auto;">
+            <form class="ofast-form" data-form-id="<?php echo esc_attr($form_id); ?>" method="post" style="background: <?php echo $form_bg; ?>; padding: 30px; border-radius: <?php echo $form_radius; ?>px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <?php wp_nonce_field('ofast_form_submit_' . sanitize_key($form_id), 'ofast_form_nonce'); ?>
+                <input type="hidden" name="form_id" value="<?php echo esc_attr($form_id); ?>">
                 <input type="hidden" name="ofast_label_size" value="<?php echo $label_size; ?>">
                 <input type="hidden" name="ofast_input_border" value="<?php echo $input_border; ?>">
                 <input type="hidden" name="ofast_input_focus" value="<?php echo $input_focus; ?>">
@@ -282,7 +282,7 @@ class Ofast_X_Forms_Render
 
             (function($) {
                 $(document).ready(function() {
-                    $('#ofast-form-<?php echo $form_id; ?> .ofast-form').on('submit', function(e) {
+                    $('#ofast-form-<?php echo esc_attr($form_id); ?> .ofast-form').on('submit', function(e) {
                         e.preventDefault();
 
                         var $form = $(this);

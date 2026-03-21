@@ -303,18 +303,31 @@ class Ofast_X_Security_Hardening
      */
     public static function encrypt_option($value)
     {
+        if (!is_string($value) || $value === '') {
+            return false;
+        }
+
         if (!defined('SECURE_AUTH_KEY') || empty(SECURE_AUTH_KEY)) {
-            return $value; // Fallback if no key
+            return false;
+        }
+
+        if (!function_exists('openssl_encrypt') || !function_exists('openssl_decrypt')) {
+            return false;
         }
 
         $key = hash('sha256', SECURE_AUTH_KEY);
-        $iv = openssl_random_pseudo_bytes(16);
-        if ($iv === false) {
-            // Fallback to deterministic IV if random source fails
-            $iv = substr(hash('sha256', AUTH_KEY), 0, 16);
+
+        try {
+            $iv = random_bytes(16);
+        } catch (Exception $e) {
+            return false;
         }
 
         $encrypted = openssl_encrypt($value, 'AES-256-CBC', $key, 0, $iv);
+        if ($encrypted === false) {
+            return false;
+        }
+
         return base64_encode($iv . $encrypted);
     }
 
@@ -323,36 +336,58 @@ class Ofast_X_Security_Hardening
      */
     public static function decrypt_option($encrypted)
     {
+        if (!is_string($encrypted) || $encrypted === '') {
+            return false;
+        }
+
         if (!defined('SECURE_AUTH_KEY') || empty(SECURE_AUTH_KEY)) {
-            return $encrypted;
+            return false;
+        }
+
+        if (!function_exists('openssl_decrypt')) {
+            return false;
         }
 
         $key = hash('sha256', SECURE_AUTH_KEY);
-        $decoded = base64_decode($encrypted);
+        $decoded = base64_decode($encrypted, true);
 
         if ($decoded === false) {
-            return $encrypted;
-        }
-        
-        if (strlen($decoded) < 16) {
-            // Backward compatibility: old format (deterministic IV, no prefix)
-            $legacy_iv = substr(hash('sha256', AUTH_KEY), 0, 16);
-            $legacy = openssl_decrypt($decoded, 'AES-256-CBC', $key, 0, $legacy_iv);
-            return $legacy !== false ? $legacy : $encrypted;
-        }
-        
-        $iv = substr($decoded, 0, 16);
-        $encrypted_data = substr($decoded, 16);
-
-        $decrypted = openssl_decrypt($encrypted_data, 'AES-256-CBC', $key, 0, $iv);
-        if ($decrypted === false) {
-            // Backward compatibility fallback
-            $legacy_iv = substr(hash('sha256', AUTH_KEY), 0, 16);
-            $legacy = openssl_decrypt($decoded, 'AES-256-CBC', $key, 0, $legacy_iv);
-            return $legacy !== false ? $legacy : $encrypted;
+            return false;
         }
 
-        return $decrypted;
+        if (strlen($decoded) >= 17) {
+            $iv = substr($decoded, 0, 16);
+            $encrypted_data = substr($decoded, 16);
+            $decrypted = openssl_decrypt($encrypted_data, 'AES-256-CBC', $key, 0, $iv);
+
+            if ($decrypted !== false) {
+                return $decrypted;
+            }
+        }
+
+        if (defined('AUTH_KEY') && !empty(AUTH_KEY)) {
+            $legacy_iv = substr(hash('sha256', AUTH_KEY), 0, 16);
+            $legacy = openssl_decrypt($decoded, 'AES-256-CBC', $key, 0, $legacy_iv);
+
+            if ($legacy !== false) {
+                return $legacy;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check whether a value looks like this plugin's encrypted option payload.
+     */
+    public static function looks_like_encrypted_option($value)
+    {
+        if (!is_string($value) || $value === '') {
+            return false;
+        }
+
+        $decoded = base64_decode($value, true);
+        return $decoded !== false && strlen($decoded) > 16;
     }
 
     /**

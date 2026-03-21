@@ -309,6 +309,7 @@ class Ofast_X_Spam_Protection
 
         // Handle POST Save
         if (isset($_POST['ofast_save_recaptcha']) && wp_verify_nonce($_POST['recaptcha_nonce'], 'ofast_recaptcha_save')) {
+            $secret_save_failed = false;
             update_option('ofast_spam_provider', sanitize_text_field($_POST['spam_provider']));
 
             // Save protection settings
@@ -329,35 +330,44 @@ class Ofast_X_Spam_Protection
 
             // Save Turnstile keys
             if (!empty($_POST['turnstile_site_key'])) {
-                update_option('ofast_turnstile_site_key', sanitize_text_field($_POST['turnstile_site_key']));
+                update_option('ofast_turnstile_site_key', sanitize_text_field(wp_unslash($_POST['turnstile_site_key'])));
             }
-            if (!empty($_POST['turnstile_secret_key']) && strpos($_POST['turnstile_secret_key'], '••') === false) {
-                $secret = $_POST['turnstile_secret_key'];
-                if (class_exists('Ofast_X_Security_Hardening')) {
-                    $secret = Ofast_X_Security_Hardening::encrypt_option($secret);
-                } else {
-                    $secret = sanitize_text_field($secret);
+
+            $turnstile_secret = sanitize_text_field(wp_unslash($_POST['turnstile_secret_key'] ?? ''));
+            if ($turnstile_secret !== '') {
+                $turnstile_site_key = sanitize_text_field(wp_unslash($_POST['turnstile_site_key'] ?? get_option('ofast_turnstile_site_key', '')));
+                $saved = class_exists('Ofast_X_Turnstile') ? Ofast_X_Turnstile::save_keys($turnstile_site_key, $turnstile_secret) : false;
+
+                if (!$saved) {
+                    $secret_save_failed = true;
                 }
-                update_option('ofast_turnstile_secret_key', $secret);
             }
 
             // Save reCAPTCHA keys
             if (!empty($_POST['recaptcha_site_key'])) {
-                update_option('ofast_recaptcha_site_key', sanitize_text_field($_POST['recaptcha_site_key']));
+                update_option('ofast_recaptcha_site_key', sanitize_text_field(wp_unslash($_POST['recaptcha_site_key'])));
             }
-            if (!empty($_POST['recaptcha_secret_key'])) {
-                $secret = sanitize_text_field($_POST['recaptcha_secret_key']);
+
+            $recaptcha_secret = sanitize_text_field(wp_unslash($_POST['recaptcha_secret_key'] ?? ''));
+            if ($recaptcha_secret !== '') {
                 if (class_exists('Ofast_X_Security_Hardening')) {
-                    $secret = Ofast_X_Security_Hardening::encrypt_option($secret);
+                    $encrypted = Ofast_X_Security_Hardening::encrypt_option($recaptcha_secret);
+                    if ($encrypted !== false) {
+                        update_option('ofast_recaptcha_secret_key', $encrypted);
+                    } else {
+                        $secret_save_failed = true;
+                    }
+                } else {
+                    $secret_save_failed = true;
                 }
-                update_option('ofast_recaptcha_secret_key', $secret);
             }
             if (isset($_POST['recaptcha_threshold'])) {
                 update_option('ofast_recaptcha_threshold', floatval($_POST['recaptcha_threshold']));
             }
 
             // Redirect with success flag
-            wp_redirect(add_query_arg('settings_saved', '1', wp_get_referer()));
+            $redirect_args = $secret_save_failed ? array('settings_error' => 'secret_save_failed') : array('settings_saved' => '1');
+            wp_redirect(add_query_arg($redirect_args, wp_get_referer()));
             exit;
         }
 
@@ -381,6 +391,8 @@ class Ofast_X_Spam_Protection
         // Show toast
         if (isset($_GET['settings_saved'])) {
             echo Ofast_X_Toast::render('Settings saved successfully!', 'success');
+        } elseif (isset($_GET['settings_error']) && $_GET['settings_error'] === 'secret_save_failed') {
+            echo Ofast_X_Toast::render('Other settings were saved, but one or more secret keys could not be stored securely. Check WordPress security keys/OpenSSL and re-enter the secret key.', 'error');
         }
 ?>
         <style>
@@ -862,7 +874,7 @@ class Ofast_X_Spam_Protection
             case 'recaptcha_v2':
             case 'recaptcha_v3':
                 $site_key = get_option('ofast_recaptcha_site_key', '');
-                $secret_key = get_option('ofast_recaptcha_secret_key', '');
+                $secret_key = $this->get_decrypted_recaptcha_secret();
                 return !empty($site_key) && !empty($secret_key);
 
             default:
@@ -947,16 +959,46 @@ class Ofast_X_Spam_Protection
      */
     private function get_decrypted_recaptcha_secret()
     {
-        $encrypted = get_option('ofast_recaptcha_secret_key', '');
-        if (empty($encrypted)) {
+        $stored_secret = get_option('ofast_recaptcha_secret_key', '');
+        if (empty($stored_secret)) {
             return '';
         }
 
         if (class_exists('Ofast_X_Security_Hardening')) {
-            return Ofast_X_Security_Hardening::decrypt_option($encrypted);
+            $decrypted = Ofast_X_Security_Hardening::decrypt_option($stored_secret);
+            if (!empty($decrypted)) {
+                return $decrypted;
+            }
+
+            if ($this->is_legacy_plaintext_recaptcha_secret($stored_secret)) {
+                $encrypted = Ofast_X_Security_Hardening::encrypt_option($stored_secret);
+                if ($encrypted !== false) {
+                    update_option('ofast_recaptcha_secret_key', $encrypted);
+                }
+
+                return $stored_secret;
+            }
+
+            return '';
         }
 
-        return $encrypted;
+        return '';
+    }
+
+    /**
+     * Detect legacy plaintext reCAPTCHA secrets so they can be migrated.
+     */
+    private function is_legacy_plaintext_recaptcha_secret($value)
+    {
+        if (!is_string($value) || $value === '') {
+            return false;
+        }
+
+        if (class_exists('Ofast_X_Security_Hardening') && Ofast_X_Security_Hardening::looks_like_encrypted_option($value)) {
+            return false;
+        }
+
+        return preg_match('/^[A-Za-z0-9_-]{20,120}$/', $value) === 1;
     }
 
     /**

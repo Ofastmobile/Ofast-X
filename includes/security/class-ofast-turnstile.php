@@ -56,22 +56,26 @@ class Ofast_X_Turnstile
      */
     private function get_decrypted_secret()
     {
-        $encrypted = get_option('ofast_turnstile_secret_key', '');
-        if (empty($encrypted)) {
+        $stored_secret = get_option('ofast_turnstile_secret_key', '');
+        if (empty($stored_secret)) {
             return '';
         }
 
-        // Try to decrypt - if it fails, it might be stored plain (legacy)
-        if (class_exists('Ofast_X_Security_Hardening')) {
-            $decrypted = Ofast_X_Security_Hardening::decrypt_option($encrypted);
-            // Check if decryption returned valid data
-            if (!empty($decrypted) && strlen($decrypted) > 10) {
-                return $decrypted;
-            }
+        if (!class_exists('Ofast_X_Security_Hardening')) {
+            return '';
         }
 
-        // Fallback: return as-is (legacy plain storage)
-        return $encrypted;
+        $decrypted = Ofast_X_Security_Hardening::decrypt_option($stored_secret);
+        if (!empty($decrypted)) {
+            return $decrypted;
+        }
+
+        if ($this->is_legacy_plaintext_key($stored_secret)) {
+            $this->migrate_legacy_key($stored_secret);
+            return $stored_secret;
+        }
+
+        return '';
     }
 
     /**
@@ -82,17 +86,52 @@ class Ofast_X_Turnstile
         // Site key is public - no encryption needed
         update_option('ofast_turnstile_site_key', sanitize_text_field($site_key));
 
-        // Secret key should be encrypted
-        if (class_exists('Ofast_X_Security_Hardening')) {
-            $encrypted = Ofast_X_Security_Hardening::encrypt_option($secret_key);
-            update_option('ofast_turnstile_secret_key', $encrypted);
-        } else {
-            // Fallback: store plain (not recommended)
-            update_option('ofast_turnstile_secret_key', sanitize_text_field($secret_key));
+        if (!class_exists('Ofast_X_Security_Hardening')) {
+            return false;
         }
+
+        $encrypted = Ofast_X_Security_Hardening::encrypt_option(sanitize_text_field($secret_key));
+        if ($encrypted === false) {
+            return false;
+        }
+
+        update_option('ofast_turnstile_secret_key', $encrypted);
 
         // Reset instance to reload keys
         self::$instance = null;
+        return true;
+    }
+
+    /**
+     * Detect legacy plaintext Turnstile keys so they can be migrated.
+     */
+    private function is_legacy_plaintext_key($value)
+    {
+        if (!is_string($value) || $value === '') {
+            return false;
+        }
+
+        if (class_exists('Ofast_X_Security_Hardening') && Ofast_X_Security_Hardening::looks_like_encrypted_option($value)) {
+            return false;
+        }
+
+        return preg_match('/^0x[a-fA-F0-9]{20,100}$/', $value) === 1;
+    }
+
+    /**
+     * Re-encrypt a legacy plaintext Turnstile key when possible.
+     */
+    private function migrate_legacy_key($plaintext_key)
+    {
+        if (!class_exists('Ofast_X_Security_Hardening')) {
+            return;
+        }
+
+        $encrypted = Ofast_X_Security_Hardening::encrypt_option($plaintext_key);
+        if ($encrypted !== false) {
+            update_option('ofast_turnstile_secret_key', $encrypted);
+            self::$instance = null;
+        }
     }
 
     /**
@@ -265,9 +304,9 @@ class Ofast_X_Turnstile
                 <td>
                     <input type="password"
                         name="turnstile_secret_key"
-                        value="<?php echo $has_keys ? '••••••••••••••••' : ''; ?>"
+                        value=""
                         class="regular-text"
-                        placeholder="<?php echo $has_keys ? 'Key saved (encrypted)' : '0x4AAAAAAA...'; ?>">
+                        placeholder="<?php echo $has_keys ? 'Leave blank to keep existing encrypted key' : '0x4AAAAAAA...'; ?>">
                     <p class="description">Secret key is stored encrypted. Leave unchanged to keep existing key.</p>
                 </td>
             </tr>

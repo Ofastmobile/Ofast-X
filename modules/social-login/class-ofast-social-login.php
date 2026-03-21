@@ -88,18 +88,64 @@ class Ofast_X_Social_Login
     public function get_provider_settings($provider)
     {
         $client_id = get_option("ofast_social_{$provider}_client_id", '');
-        $client_secret = get_option("ofast_social_{$provider}_client_secret", '');
-
-        // Decrypt secret if encryption available
-        if (!empty($client_secret) && class_exists('Ofast_X_Security_Hardening')) {
-            $client_secret = Ofast_X_Security_Hardening::decrypt_option($client_secret);
-        }
+        $client_secret = $this->get_provider_secret($provider);
 
         return array(
             'enabled' => get_option("ofast_social_{$provider}_enabled", false),
             'client_id' => $client_id,
             'client_secret' => $client_secret
         );
+    }
+
+    /**
+     * Get a provider secret and migrate plaintext legacy storage when possible.
+     */
+    private function get_provider_secret($provider)
+    {
+        $stored_secret = get_option("ofast_social_{$provider}_client_secret", '');
+        if ($stored_secret === '') {
+            return '';
+        }
+
+        if (!class_exists('Ofast_X_Security_Hardening')) {
+            return '';
+        }
+
+        $decrypted = Ofast_X_Security_Hardening::decrypt_option($stored_secret);
+        if (!empty($decrypted)) {
+            return $decrypted;
+        }
+
+        if ($this->is_legacy_plaintext_provider_secret($provider, $stored_secret)) {
+            $encrypted = Ofast_X_Security_Hardening::encrypt_option($stored_secret);
+            if ($encrypted !== false) {
+                update_option("ofast_social_{$provider}_client_secret", $encrypted);
+            }
+
+            return $stored_secret;
+        }
+
+        return '';
+    }
+
+    /**
+     * Detect legacy plaintext provider secrets so they can be migrated.
+     */
+    private function is_legacy_plaintext_provider_secret($provider, $value)
+    {
+        if (!is_string($value) || $value === '') {
+            return false;
+        }
+
+        if (class_exists('Ofast_X_Security_Hardening') && Ofast_X_Security_Hardening::looks_like_encrypted_option($value)) {
+            return false;
+        }
+
+        if ($provider === 'facebook') {
+            return preg_match('/^[A-Fa-f0-9]{32,64}$/', $value) === 1;
+        }
+
+        return preg_match('/^[A-Za-z0-9._-]{20,200}$/', $value) === 1;
     }
 
     /**
@@ -706,33 +752,49 @@ class Ofast_X_Social_Login
             return;
         }
 
+        $secret_save_failed = false;
+
         // Enable/disable
         update_option('ofast_social_login_enabled', isset($_POST['social_login_enabled']));
 
         // Google settings
         update_option('ofast_social_google_enabled', isset($_POST['google_enabled']));
         if (!empty($_POST['google_client_id'])) {
-            update_option('ofast_social_google_client_id', sanitize_text_field($_POST['google_client_id']));
+            update_option('ofast_social_google_client_id', sanitize_text_field(wp_unslash($_POST['google_client_id'])));
         }
-        if (!empty($_POST['google_client_secret'])) {
-            $secret = sanitize_text_field($_POST['google_client_secret']);
+
+        $google_secret = sanitize_text_field(wp_unslash($_POST['google_client_secret'] ?? ''));
+        if ($google_secret !== '') {
             if (class_exists('Ofast_X_Security_Hardening')) {
-                $secret = Ofast_X_Security_Hardening::encrypt_option($secret);
+                $secret = Ofast_X_Security_Hardening::encrypt_option($google_secret);
+                if ($secret !== false) {
+                    update_option('ofast_social_google_client_secret', $secret);
+                } else {
+                    $secret_save_failed = true;
+                }
+            } else {
+                $secret_save_failed = true;
             }
-            update_option('ofast_social_google_client_secret', $secret);
         }
 
         // Facebook settings
         update_option('ofast_social_facebook_enabled', isset($_POST['facebook_enabled']));
         if (!empty($_POST['facebook_app_id'])) {
-            update_option('ofast_social_facebook_client_id', sanitize_text_field($_POST['facebook_app_id']));
+            update_option('ofast_social_facebook_client_id', sanitize_text_field(wp_unslash($_POST['facebook_app_id'])));
         }
-        if (!empty($_POST['facebook_app_secret'])) {
-            $secret = sanitize_text_field($_POST['facebook_app_secret']);
+
+        $facebook_secret = sanitize_text_field(wp_unslash($_POST['facebook_app_secret'] ?? ''));
+        if ($facebook_secret !== '') {
             if (class_exists('Ofast_X_Security_Hardening')) {
-                $secret = Ofast_X_Security_Hardening::encrypt_option($secret);
+                $secret = Ofast_X_Security_Hardening::encrypt_option($facebook_secret);
+                if ($secret !== false) {
+                    update_option('ofast_social_facebook_client_secret', $secret);
+                } else {
+                    $secret_save_failed = true;
+                }
+            } else {
+                $secret_save_failed = true;
             }
-            update_option('ofast_social_facebook_client_secret', $secret);
         }
 
         // Other settings
@@ -741,7 +803,8 @@ class Ofast_X_Social_Login
         update_option('ofast_social_redirect_url', esc_url_raw($_POST['redirect_url'] ?? ''));
 
         // Redirect with success flag
-        wp_redirect(add_query_arg('settings_saved', '1', wp_get_referer()));
+        $redirect_args = $secret_save_failed ? array('settings_error' => 'secret_save_failed') : array('settings_saved' => '1');
+        wp_redirect(add_query_arg($redirect_args, wp_get_referer()));
         exit;
     }
 
@@ -761,6 +824,8 @@ class Ofast_X_Social_Login
         // Show toast if saved
         if (isset($_GET['settings_saved'])) {
             echo Ofast_X_Toast::render('Settings saved successfully!', 'success');
+        } elseif (isset($_GET['settings_error']) && $_GET['settings_error'] === 'secret_save_failed') {
+            echo Ofast_X_Toast::render('Other settings were saved, but one or more client secrets could not be stored securely. Check WordPress security keys/OpenSSL and re-enter the secret.', 'error');
         }
     ?>
         <!-- Critical Admin Styles (Inline to ensure loading) -->

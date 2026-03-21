@@ -217,6 +217,50 @@ class Ofast_X_Security_Hardening
     }
 
     /**
+     * Send emergency-key security alerts without flooding the admin inbox.
+     */
+    private function send_emergency_key_alert($event_type, $data)
+    {
+        $cooldown_key = 'ofast_emergency_alert_' . sanitize_key($event_type);
+        if ($event_type === 'rate_limit_exceeded' && get_transient($cooldown_key)) {
+            return;
+        }
+
+        if ($event_type === 'rate_limit_exceeded') {
+            set_transient($cooldown_key, true, HOUR_IN_SECONDS);
+        }
+
+        $admin_email = get_option('admin_email');
+        $site_name = get_bloginfo('name');
+        $site_url = home_url();
+
+        if ($event_type === 'success') {
+            $subject = "[SECURITY NOTICE] {$site_name} - Emergency Key Used";
+            $message = "=== EMERGENCY KEY USED ===\n\n";
+            $message .= "Site: {$site_name} ({$site_url})\n";
+            $message .= "Time: " . current_time('mysql') . "\n";
+            $message .= "IP Address: {$data['ip']}\n\n";
+            $message .= "If this was expected, no action is needed.\n";
+            $message .= "If unexpected, rotate the emergency key and review recent admin access.\n";
+        } elseif ($event_type === 'rate_limit_exceeded') {
+            $subject = "[SECURITY ALERT] {$site_name} - Emergency Key Rate Limit Hit";
+            $message = "=== EMERGENCY KEY RATE LIMIT HIT ===\n\n";
+            $message .= "Site: {$site_name} ({$site_url})\n";
+            $message .= "Time: " . current_time('mysql') . "\n";
+            $message .= "IP Address: {$data['ip']}\n";
+            $message .= "Attempts in the last hour: {$data['attempts']}\n\n";
+            $message .= "Recommended actions:\n";
+            $message .= "- Review the source IP for suspicious activity\n";
+            $message .= "- Rotate the emergency key if this was not expected\n";
+            $message .= "- Check recent authentication and server logs\n";
+        } else {
+            return;
+        }
+
+        wp_mail($admin_email, $subject, $message);
+    }
+
+    /**
      * Display security alerts in admin
      */
     public function display_security_alerts()
@@ -267,33 +311,63 @@ class Ofast_X_Security_Hardening
             $attempts = 0;
         }
 
-        // Max 3 emergency key attempts per hour
-        if ($attempts >= 3) {
-            $this->log_security_event('emergency_key_blocked', array(
-                'ip' => $ip,
-                'attempts' => $attempts
-            ));
-
+        $lockout_key = 'ofast_emergency_lockout_' . md5($ip);
+        $lockout_until = get_transient($lockout_key);
+        if ($lockout_until && time() < $lockout_until) {
+            $wait_time = human_time_diff(time(), $lockout_until);
             return new WP_Error(
-                'ofast_emergency_rate_limit',
-                '<strong>' . esc_html__('Security:', 'ofast-x') . '</strong> ' . esc_html__('Too many emergency key attempts. Please wait 1 hour.', 'ofast-x')
+                'ofast_emergency_lockout',
+                '<strong>' . esc_html__('Security:', 'ofast-x') . '</strong> ' .
+                sprintf(esc_html__('Please wait %s before trying the emergency key again.', 'ofast-x'), $wait_time)
             );
         }
-
-        // Increment attempts
-        set_transient($key, $attempts + 1, HOUR_IN_SECONDS);
 
         // Verify the key
         $stored_key = get_option('ofast_admin_emergency_key', '');
         $provided_key = sanitize_text_field($_GET['ofast_emergency']);
 
         // Timing-safe comparison
-        if (!hash_equals($stored_key, $provided_key)) {
+        if (!is_string($stored_key) || $stored_key === '' || !hash_equals($stored_key, $provided_key)) {
+            $attempts++;
+            set_transient($key, $attempts, HOUR_IN_SECONDS);
+
+            $lockout_duration = 0;
+            if ($attempts >= 2) {
+                $lockout_duration = min(($attempts - 1) * 5 * MINUTE_IN_SECONDS, 15 * MINUTE_IN_SECONDS);
+                set_transient($lockout_key, time() + $lockout_duration, $lockout_duration);
+            }
+
             $this->log_security_event('emergency_key_failed', array(
                 'ip' => $ip,
-                'attempts' => $attempts + 1
+                'attempts' => $attempts,
+                'lockout_duration' => $lockout_duration
             ));
+
+            if ($attempts >= 3) {
+                $this->log_security_event('emergency_key_blocked', array(
+                    'ip' => $ip,
+                    'attempts' => $attempts
+                ));
+
+                $this->send_emergency_key_alert('rate_limit_exceeded', array(
+                    'ip' => $ip,
+                    'attempts' => $attempts
+                ));
+
+                return new WP_Error(
+                    'ofast_emergency_rate_limit',
+                    '<strong>' . esc_html__('Security:', 'ofast-x') . '</strong> ' . esc_html__('Too many emergency key attempts. Please wait 1 hour.', 'ofast-x')
+                );
+            }
+
+            return $user;
         }
+
+        delete_transient($key);
+        delete_transient($lockout_key);
+
+        $this->log_security_event('emergency_key_success', array('ip' => $ip));
+        $this->send_emergency_key_alert('success', array('ip' => $ip));
 
         return $user;
     }

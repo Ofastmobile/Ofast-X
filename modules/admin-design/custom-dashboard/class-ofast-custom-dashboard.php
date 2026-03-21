@@ -80,7 +80,8 @@ class Ofast_X_Custom_Dashboard
         'ofast_form_submissions',
         'ofast_smtp_log',
         'ofast_newsletter_subscribers',
-        'ofast_forms'
+        'ofast_forms',
+        'wc_order_stats'
     );
 
     /**
@@ -193,12 +194,21 @@ class Ofast_X_Custom_Dashboard
         $recent_activity = $this->get_recent_activity();
         $update_count = count(get_plugin_updates());
         $form_count = $this->get_form_count();
-        $admin_count = count(get_users(array('role' => 'administrator')));
+        $user_counts = count_users();
+        $total_users = isset($user_counts['total_users']) ? (int) $user_counts['total_users'] : 0;
+        $admin_count = isset($user_counts['avail_roles']['administrator']) ? (int) $user_counts['avail_roles']['administrator'] : 0;
+        $submissions_url = admin_url('admin.php?page=ofast-forms&tab=submissions');
+        $users_url = admin_url('users.php');
+        $smtp_url = admin_url('admin.php?page=ofast-smtp&tab=log');
+        $updates_url = admin_url('update-core.php');
         
         // Smart Data
         $growth = $this->get_submission_growth();
         $smtp_pulse = $this->get_smtp_pulse();
         $leaders = $this->get_conversion_leaders();
+        $commerce_snapshot = $this->get_revenue_snapshot();
+        $revenue_report = $this->get_revenue_report();
+        $commerce_url = $this->get_revenue_analytics_url();
         ?>
         <div class="ofast-dashboard-takeover">
             <!-- Header -->
@@ -280,7 +290,7 @@ class Ofast_X_Custom_Dashboard
             <!-- Top Stats Row -->
             <div class="ofast-stats-grid">
                 <!-- Total Submissions -->
-                <div class="ofast-stat-card dark-card">
+                <a href="<?php echo esc_url($submissions_url); ?>" class="ofast-stat-card dark-card ofast-stat-card-link">
                     <div class="circle-progress" data-percent="<?php echo absint($growth['percent']); ?>" style="--c: #6366f1;">
                         <svg viewBox="0 0 36 36"><path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="<?php echo absint($growth['percent']); ?>, 100" /></svg>
                         <span><?php echo absint($growth['percent']); ?>%</span>
@@ -294,22 +304,23 @@ class Ofast_X_Custom_Dashboard
                             <span class="growth-label neutral">Stable</span>
                         <?php endif; ?>
                     </div>
-                </div>
+                </a>
 
-                <!-- Admin Users -->
-                <div class="ofast-stat-card dark-card">
-                    <div class="circle-progress" data-percent="65" style="--c: #3b82f6;">
-                         <svg viewBox="0 0 36 36"><path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="65, 100" /></svg>
-                        <span><?php esc_html_e('Active', 'ofast-x'); ?></span>
+                <!-- Total Users -->
+                <a href="<?php echo esc_url($users_url); ?>" class="ofast-stat-card dark-card ofast-stat-card-link">
+                    <div class="circle-progress" data-percent="<?php echo $total_users > 0 ? '100' : '0'; ?>" style="--c: #3b82f6;">
+                         <svg viewBox="0 0 36 36"><path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="<?php echo $total_users > 0 ? '100, 100' : '0, 100'; ?>" /></svg>
+                        <span><?php esc_html_e('Users', 'ofast-x'); ?></span>
                     </div>
                     <div class="stat-content">
-                        <h3><?php echo absint($admin_count); ?></h3>
-                        <p><?php esc_html_e('Administrators', 'ofast-x'); ?></p>
+                        <h3><?php echo absint($total_users); ?></h3>
+                        <p><?php esc_html_e('Total Users', 'ofast-x'); ?></p>
+                        <span class="growth-label neutral"><?php printf(esc_html__('%d administrators', 'ofast-x'), absint($admin_count)); ?></span>
                     </div>
-                </div>
+                </a>
 
                 <!-- SMTP Pulse -->
-                <div class="ofast-stat-card dark-card">
+                <a href="<?php echo esc_url($smtp_url); ?>" class="ofast-stat-card dark-card ofast-stat-card-link">
                     <div class="circle-progress" data-percent="<?php echo absint($smtp_pulse['percent']); ?>" style="--c: #10b981;">
                          <svg viewBox="0 0 36 36"><path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="<?php echo absint($smtp_pulse['percent']); ?>, 100" /></svg>
                         <span><?php echo absint($smtp_pulse['percent']); ?>%</span>
@@ -319,19 +330,33 @@ class Ofast_X_Custom_Dashboard
                         <p><?php esc_html_e('SMTP Reliability', 'ofast-x'); ?></p>
                         <span class="growth-label <?php echo $smtp_pulse['percent'] > 95 ? 'up' : 'down'; ?>"><?php echo absint($smtp_pulse['total']); ?> emails processed</span>
                     </div>
-                </div>
+                </a>
 
-                <!-- Updates -->
-                <div class="ofast-stat-card dark-card">
-                    <div class="circle-progress" data-percent="<?php echo $update_count > 0 ? '100' : '0'; ?>" style="--c: #f59e0b;">
-                         <svg viewBox="0 0 36 36"><path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="<?php echo $update_count > 0 ? '100, 100' : '0, 100'; ?>" /></svg>
-                        <span><?php echo absint($update_count); ?></span>
-                    </div>
-                    <div class="stat-content">
-                        <h3><?php esc_html_e('Updates', 'ofast-x'); ?></h3>
-                        <p><?php esc_html_e('Pending Updates', 'ofast-x'); ?></p>
-                    </div>
-                </div>
+                <?php if ($commerce_snapshot) : ?>
+                    <a href="<?php echo esc_url($commerce_url); ?>" class="ofast-stat-card dark-card ofast-stat-card-link">
+                        <div class="circle-progress" data-percent="<?php echo $commerce_snapshot['orders'] > 0 ? '100' : '0'; ?>" style="--c: #f59e0b;">
+                             <svg viewBox="0 0 36 36"><path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="<?php echo $commerce_snapshot['orders'] > 0 ? '100, 100' : '0, 100'; ?>" /></svg>
+                            <span><?php echo absint($commerce_snapshot['orders']); ?></span>
+                        </div>
+                        <div class="stat-content">
+                            <h3><?php echo wp_kses_post($commerce_snapshot['revenue_display']); ?></h3>
+                            <p><?php esc_html_e('Revenue (7 days)', 'ofast-x'); ?></p>
+                            <span class="growth-label neutral"><?php printf(esc_html__('%d paid orders', 'ofast-x'), absint($commerce_snapshot['orders'])); ?></span>
+                        </div>
+                    </a>
+                <?php else : ?>
+                    <!-- Updates -->
+                    <a href="<?php echo esc_url($updates_url); ?>" class="ofast-stat-card dark-card ofast-stat-card-link">
+                        <div class="circle-progress" data-percent="<?php echo $update_count > 0 ? '100' : '0'; ?>" style="--c: #f59e0b;">
+                             <svg viewBox="0 0 36 36"><path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="<?php echo $update_count > 0 ? '100, 100' : '0, 100'; ?>" /></svg>
+                            <span><?php echo absint($update_count); ?></span>
+                        </div>
+                        <div class="stat-content">
+                            <h3><?php esc_html_e('Updates', 'ofast-x'); ?></h3>
+                            <p><?php esc_html_e('Pending Updates', 'ofast-x'); ?></p>
+                        </div>
+                    </a>
+                <?php endif; ?>
             </div>
             
             <!-- Main Content Grid -->
@@ -397,6 +422,40 @@ class Ofast_X_Custom_Dashboard
                     </div>
                 </div>
             </div>
+
+            <?php if (false !== $revenue_report) : ?>
+                <div class="ofast-report-card dark-card">
+                    <div class="card-header">
+                        <h2><?php esc_html_e('Revenue Report', 'ofast-x'); ?></h2>
+                        <a href="<?php echo esc_url($commerce_url); ?>" class="see-all-link"><?php esc_html_e('Open Analytics', 'ofast-x'); ?></a>
+                    </div>
+
+                    <?php if (!empty($revenue_report)) : ?>
+                        <div class="ofast-report-table-wrap">
+                            <table class="ofast-report-table">
+                                <thead>
+                                    <tr>
+                                        <th><?php esc_html_e('Date', 'ofast-x'); ?></th>
+                                        <th><?php esc_html_e('Paid Orders', 'ofast-x'); ?></th>
+                                        <th><?php esc_html_e('Revenue', 'ofast-x'); ?></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($revenue_report as $row) : ?>
+                                        <tr>
+                                            <td><?php echo esc_html($row['date_label']); ?></td>
+                                            <td><?php echo absint($row['orders']); ?></td>
+                                            <td><?php echo wp_kses_post($row['revenue_display']); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else : ?>
+                        <p class="no-activity"><?php esc_html_e('No paid WooCommerce orders in the last 7 days.', 'ofast-x'); ?></p>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
             
             <!-- Ofast Widgets Area (Populated by JS) -->
             <div id="ofast-modern-widgets-placeholder" class="ofast-dashboard-grid sortable-grid">
@@ -584,6 +643,127 @@ class Ofast_X_Custom_Dashboard
             'trend' => $diff > 0 ? 'up' : ($diff < 0 ? 'down' : 'neutral'),
             'percent' => $percent
         );
+    }
+
+    /**
+     * Determine if current user can safely view WooCommerce analytics.
+     */
+    private function can_view_revenue_analytics() {
+        return class_exists('WooCommerce') && (current_user_can('manage_woocommerce') || current_user_can('view_woocommerce_reports'));
+    }
+
+    /**
+     * Determine if WooCommerce analytics data is available.
+     */
+    private function has_revenue_analytics_available() {
+        return $this->can_view_revenue_analytics() && $this->table_exists('wc_order_stats');
+    }
+
+    /**
+     * Get the WooCommerce revenue analytics page URL.
+     */
+    private function get_revenue_analytics_url() {
+        return admin_url('admin.php?page=wc-admin&path=/analytics/revenue');
+    }
+
+    /**
+     * Data Helper: 7-day WooCommerce revenue snapshot.
+     */
+    private function get_revenue_snapshot() {
+        global $wpdb;
+
+        if (!$this->has_revenue_analytics_available()) {
+            return false;
+        }
+
+        $table = $wpdb->prefix . 'wc_order_stats';
+        $paid_statuses = array('wc-processing', 'wc-completed', 'processing', 'completed');
+        $status_placeholders = implode(', ', array_fill(0, count($paid_statuses), '%s'));
+        $query_args = array_merge($paid_statuses, array(6));
+
+        // Table name is validated by table_exists(), safe to use directly.
+        $snapshot = $wpdb->get_row(
+            $wpdb->prepare(
+                "
+                SELECT
+                    COALESCE(SUM(total_sales), 0) AS revenue,
+                    COUNT(*) AS orders
+                FROM `{$table}`
+                WHERE parent_id = 0
+                    AND status IN ({$status_placeholders})
+                    AND COALESCE(date_paid, date_created) >= DATE_SUB(NOW(), INTERVAL %d DAY)
+                ",
+                ...$query_args
+            ),
+            ARRAY_A
+        );
+
+        if (empty($snapshot)) {
+            return false;
+        }
+
+        $revenue = isset($snapshot['revenue']) ? (float) $snapshot['revenue'] : 0.0;
+        $orders = isset($snapshot['orders']) ? (int) $snapshot['orders'] : 0;
+
+        return array(
+            'revenue' => $revenue,
+            'orders' => $orders,
+            'revenue_display' => function_exists('wc_price')
+                ? wc_price($revenue)
+                : number_format_i18n($revenue, 2),
+        );
+    }
+
+    /**
+     * Data Helper: Daily WooCommerce revenue rows for the last 7 days.
+     */
+    private function get_revenue_report() {
+        global $wpdb;
+
+        if (!$this->has_revenue_analytics_available()) {
+            return false;
+        }
+
+        $table = $wpdb->prefix . 'wc_order_stats';
+        $paid_statuses = array('wc-processing', 'wc-completed', 'processing', 'completed');
+        $status_placeholders = implode(', ', array_fill(0, count($paid_statuses), '%s'));
+        $query_args = array_merge($paid_statuses, array(6, 7));
+
+        // Table name is validated by table_exists(), safe to use directly.
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "
+                SELECT
+                    DATE(COALESCE(date_paid, date_created)) AS report_date,
+                    COUNT(*) AS orders,
+                    COALESCE(SUM(total_sales), 0) AS revenue
+                FROM `{$table}`
+                WHERE parent_id = 0
+                    AND status IN ({$status_placeholders})
+                    AND COALESCE(date_paid, date_created) >= DATE_SUB(NOW(), INTERVAL %d DAY)
+                GROUP BY DATE(COALESCE(date_paid, date_created))
+                ORDER BY report_date DESC
+                LIMIT %d
+                ",
+                ...$query_args
+            ),
+            ARRAY_A
+        );
+
+        if (empty($rows)) {
+            return array();
+        }
+
+        foreach ($rows as &$row) {
+            $row['date_label'] = date_i18n(get_option('date_format'), strtotime($row['report_date']));
+            $row['orders'] = (int) $row['orders'];
+            $row['revenue_display'] = function_exists('wc_price')
+                ? wc_price((float) $row['revenue'])
+                : number_format_i18n((float) $row['revenue'], 2);
+        }
+        unset($row);
+
+        return $rows;
     }
 
     /**

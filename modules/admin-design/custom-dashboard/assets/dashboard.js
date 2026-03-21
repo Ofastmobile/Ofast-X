@@ -5,13 +5,6 @@ jQuery(document).ready(function ($) {
     var $legacyDashboard = $('#dashboard-widgets-wrap');
     var $modernPlaceholder = $('#ofast-modern-widgets-placeholder');
 
-    // IDs of widgets we want to show in Modern Mode
-    var targetWidgets = [
-        '#ofast_admin_users_widget',
-        '#ofast_designer_details_widget',
-        '#ofast_snippets_widget'
-    ];
-
     // Store original parent to try and restore closer to home
     var $originalParent = $('#normal-sortables').length ? $('#normal-sortables') : $('#dashboard-widgets');
 
@@ -108,8 +101,125 @@ jQuery(document).ready(function ($) {
         });
     }
 
+    function getDashboardPostboxes() {
+        return $('#dashboard-widgets .postbox[id], #ofast-modern-widgets-placeholder .postbox[id]');
+    }
+
+    function cacheOriginalParents() {
+        getDashboardPostboxes().each(function () {
+            var $widget = $(this);
+
+            if ($widget.attr('data-ofast-original-parent')) {
+                return;
+            }
+
+            var $parent = $widget.parent();
+            if ($parent.length && $parent.attr('id')) {
+                $widget.attr('data-ofast-original-parent', '#' + $parent.attr('id'));
+            }
+        });
+    }
+
+    function restoreWidget($widget) {
+        var parentSelector = $widget.attr('data-ofast-original-parent');
+
+        if (parentSelector && $(parentSelector).length) {
+            $(parentSelector).append($widget);
+            return;
+        }
+
+        if ($originalParent.length) {
+            $originalParent.append($widget);
+        }
+    }
+
+    function getAllWidgetIds() {
+        var ids = [];
+
+        getDashboardPostboxes().each(function () {
+            var id = $(this).attr('id');
+
+            if (id) {
+                ids.push('#' + id);
+            }
+        });
+
+        return ids;
+    }
+
+    function getSelectedWidgetIds() {
+        var selected = [];
+
+        $('#screen-options-wrap input.hide-postbox-tog:checked').each(function () {
+            var widgetId = $(this).val();
+
+            if (widgetId) {
+                selected.push('#' + widgetId);
+            }
+        });
+
+        if (!selected.length) {
+            selected = getAllWidgetIds();
+        }
+
+        return selected.filter(function (id, index, arr) {
+            return arr.indexOf(id) === index && $(id).length > 0;
+        });
+    }
+
+    function getWidgetsToLoad() {
+        var savedOrder = JSON.parse(localStorage.getItem('ofast_widget_order') || '[]');
+        var selectedWidgets = getSelectedWidgetIds();
+        var widgetsToLoad = [];
+
+        savedOrder.forEach(function (id) {
+            if (selectedWidgets.indexOf(id) !== -1 && $(id).length > 0) {
+                widgetsToLoad.push(id);
+            }
+        });
+
+        selectedWidgets.forEach(function (id) {
+            if (widgetsToLoad.indexOf(id) === -1 && $(id).length > 0) {
+                widgetsToLoad.push(id);
+            }
+        });
+
+        return widgetsToLoad;
+    }
+
+    function renderModernWidgets() {
+        var widgetsToLoad;
+
+        cacheOriginalParents();
+        widgetsToLoad = getWidgetsToLoad();
+
+        getDashboardPostboxes().each(function () {
+            var $widget = $(this);
+            var widgetSelector = '#' + $widget.attr('id');
+
+            if (widgetsToLoad.indexOf(widgetSelector) === -1) {
+                restoreWidget($widget);
+            }
+        });
+
+        widgetsToLoad.forEach(function (id) {
+            var $widget = $(id);
+
+            if (!$widget.length) {
+                return;
+            }
+
+            $modernPlaceholder.append($widget);
+            $widget.show();
+            $widget.removeClass('closed');
+            $widget.find('.handlediv').attr('aria-expanded', 'true');
+        });
+    }
+
     function setMode(mode) {
         var $legacyDashboard = $('#dashboard-widgets-wrap');
+
+        cacheOriginalParents();
 
         if (mode === 'classic') {
             // Restore Classic
@@ -119,7 +229,7 @@ jQuery(document).ready(function ($) {
 
             // Move widgets back
             $modernPlaceholder.find('.postbox').each(function () {
-                $originalParent.append($(this));
+                restoreWidget($(this));
             });
 
             $toggleBtn.text('Switch to Classic Dashboard'); // Actually this button is hidden in classic
@@ -145,38 +255,8 @@ jQuery(document).ready(function ($) {
             $body.addClass('ofast-clean-dashboard ofast-dark-theme');
             $modernDashboard.show();
 
-            // LOAD WIDGETS
-            // Check for saved order
-            var savedOrder = JSON.parse(localStorage.getItem('ofast_widget_order') || '[]');
-            var widgetsToLoad = [];
-
-            if (savedOrder.length > 0) {
-                // Filter out any IDs that don't exist in DOM anymore, and add any new defaults that might be missing
-                widgetsToLoad = savedOrder.filter(function (id) {
-                    return $(id).length > 0;
-                });
-
-                // Add any missing defaults to the end
-                targetWidgets.forEach(function (id) {
-                    if (widgetsToLoad.indexOf(id) === -1 && $(id).length > 0) {
-                        widgetsToLoad.push(id);
-                    }
-                });
-            } else {
-                widgetsToLoad = targetWidgets;
-            }
-
-            // Move widgets to placeholder in order
-            widgetsToLoad.forEach(function (id) {
-                var $widget = $(id);
-                if ($widget.length) {
-                    $modernPlaceholder.append($widget);
-                    $widget.show();
-                    // Fix WP postbox toggles if they get stuck
-                    $widget.removeClass('closed');
-                    $widget.find('.handlediv').attr('aria-expanded', 'true');
-                }
-            });
+            // Load the widgets chosen through WordPress Screen Options.
+            renderModernWidgets();
 
             // Initialize Chart
             initChart();
@@ -229,6 +309,12 @@ jQuery(document).ready(function ($) {
         var newMode = $body.hasClass('ofast-clean-dashboard') ? 'classic' : 'modern';
         setMode(newMode);
         localStorage.setItem('ofast_dashboard_mode', newMode);
+    });
+
+    $(document).on('change', '#screen-options-wrap input.hide-postbox-tog', function () {
+        if ($body.hasClass('ofast-clean-dashboard')) {
+            renderModernWidgets();
+        }
     });
 
     // --- SMART SEARCH FUNCTIONALITY ---

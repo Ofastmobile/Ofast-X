@@ -61,14 +61,9 @@ class Ofast_X_Admin_Tweaks
             add_action('wp_before_admin_bar_render', array($this, 'remove_new_content_menu'));
         }
 
-        // Rename Howdy to Hello
-        if (!empty($settings['rename_howdy'])) {
-            add_filter('admin_bar_menu', array($this, 'rename_howdy'), PHP_INT_MAX);
-        }
-
-        // Hide Howdy completely
-        if (!empty($settings['hide_howdy'])) {
-            add_filter('admin_bar_menu', array($this, 'hide_howdy'), 200);
+        // Replace the default admin-bar greeting with a custom label.
+        if (!empty($settings['custom_greeting_enabled']) || !empty($settings['rename_howdy'])) {
+            add_filter('admin_bar_menu', array($this, 'customize_admin_greeting'), PHP_INT_MAX);
         }
 
         // Disable XML-RPC
@@ -216,33 +211,36 @@ class Ofast_X_Admin_Tweaks
     }
 
     /**
-     * Rename Howdy to Hello
+     * Replace the default "Howdy" label with a custom greeting.
      */
-    public function rename_howdy($wp_admin_bar)
+    public function customize_admin_greeting($wp_admin_bar)
     {
         $my_account = $wp_admin_bar->get_node('my-account');
         if ($my_account) {
-            $newtitle = str_replace('Howdy,', 'Hello,', $my_account->title);
-            $wp_admin_bar->add_node(array(
-                'id' => 'my-account',
-                'title' => $newtitle,
-            ));
-        }
-    }
+            $settings = get_option('ofast_admin_tweaks', array());
+            $custom_greeting = '';
 
-    /**
-     * Hide Howdy greeting completely
-     */
-    public function hide_howdy($wp_admin_bar)
-    {
-        $my_account = $wp_admin_bar->get_node('my-account');
-        if ($my_account) {
-            // Remove greeting label span; robust across locale/custom markup.
-            $newtitle = preg_replace('/<span[^>]*class=[\'"][^\'"]*ab-label[^\'"]*[\'"][^>]*>.*?<\/span>\s*/i', '', $my_account->title);
-            if (empty($newtitle) || $newtitle === $my_account->title) {
-                // Fallback for plain-text titles.
-                $newtitle = str_replace(array('Howdy,', __('Howdy,', 'default')), '', $my_account->title);
+            if (!empty($settings['custom_greeting_enabled'])) {
+                $custom_greeting = sanitize_text_field($settings['custom_greeting_text'] ?? '');
+            } elseif (!empty($settings['rename_howdy'])) {
+                // Backward compatibility for existing installs that enabled the old Hello toggle.
+                $custom_greeting = 'Hello';
             }
+
+            $custom_greeting = trim((string) $custom_greeting);
+            if ($custom_greeting === '') {
+                return;
+            }
+
+            $custom_greeting = rtrim($custom_greeting, " ,");
+
+            // Keep the username/avatar portion and replace only the greeting prefix.
+            if (preg_match('/(<span[^>]*class=["\'][^"\']*display-name[^"\']*["\'][^>]*>.*)$/i', $my_account->title, $matches)) {
+                $newtitle = esc_html($custom_greeting . ', ') . $matches[1];
+            } else {
+                $newtitle = preg_replace('/^\s*[^<]*?,\s*/u', esc_html($custom_greeting . ', '), $my_account->title, 1);
+            }
+
             $wp_admin_bar->add_node(array(
                 'id' => 'my-account',
                 'title' => $newtitle,
@@ -428,8 +426,10 @@ class Ofast_X_Admin_Tweaks
             'hide_admin_bar' => isset($_POST['ofast_hide_admin_bar']) ? 1 : 0,
             'remove_wp_logo' => isset($_POST['ofast_remove_wp_logo']) ? 1 : 0,
             'remove_new_content' => isset($_POST['ofast_remove_new_content']) ? 1 : 0,
-            'rename_howdy' => isset($_POST['ofast_rename_howdy']) ? 1 : 0,
-            'hide_howdy' => isset($_POST['ofast_hide_howdy']) ? 1 : 0,
+            'rename_howdy' => 0,
+            'hide_howdy' => 0,
+            'custom_greeting_enabled' => isset($_POST['ofast_custom_greeting_enabled']) ? 1 : 0,
+            'custom_greeting_text' => sanitize_text_field(wp_unslash($_POST['ofast_custom_greeting_text'] ?? '')),
             'hide_admin_bar_roles' => isset($_POST['ofast_hide_bar_roles']) ? array_map('sanitize_text_field', $_POST['ofast_hide_bar_roles']) : array(),
             'disable_xmlrpc' => isset($_POST['ofast_disable_xmlrpc']) ? 1 : 0,
             'obfuscate_author_slugs' => isset($_POST['ofast_obfuscate_author_slugs']) ? 1 : 0,
@@ -833,29 +833,32 @@ class Ofast_X_Admin_Tweaks
                                         </div>
                                     </div>
 
+                                    <?php
+                                    $custom_greeting_enabled = !empty($settings['custom_greeting_enabled']) || !empty($settings['rename_howdy']);
+                                    $custom_greeting_text = isset($settings['custom_greeting_text']) && $settings['custom_greeting_text'] !== ''
+                                        ? $settings['custom_greeting_text']
+                                        : (!empty($settings['rename_howdy']) ? 'Hello' : '');
+                                    ?>
                                     <div class="ofast-tweak-row">
                                         <div class="ofast-tweak-content">
-                                            <label for="ofast_rename_howdy">Rename "Howdy"</label>
-                                            <p class="description">Change "Howdy, Name" to "Hello, Name".</p>
-                                            </div>
+                                            <label for="ofast_custom_greeting_enabled">Custom Greeting</label>
+                                            <p class="description">Replace "Howdy" with your own greeting in the admin bar.</p>
+                                        </div>
                                         <div class="ofast-tweak-action">
                                             <label class="ofast-toggle">
-                                                <input type="checkbox" name="ofast_rename_howdy" id="ofast_rename_howdy" value="1" <?php checked(!empty($settings['rename_howdy'])); ?>>
+                                                <input type="checkbox" name="ofast_custom_greeting_enabled" id="ofast_custom_greeting_enabled" value="1" <?php checked($custom_greeting_enabled); ?>>
                                                 <span class="ofast-slider"></span>
                                             </label>
                                         </div>
                                     </div>
 
-                                    <div class="ofast-tweak-row">
+                                    <div class="ofast-tweak-row" id="ofast-custom-greeting-row" style="<?php echo $custom_greeting_enabled ? '' : 'display:none;'; ?>">
                                         <div class="ofast-tweak-content">
-                                            <label for="ofast_hide_howdy">Hide Greeting</label>
-                                            <p class="description">Remove the greeting entirely, showing only the username.</p>
+                                            <label for="ofast_custom_greeting_text">Greeting Text</label>
+                                            <p class="description">This will appear as "Your greeting, Name". Example: Welcome, Hi there, Good to see you.</p>
                                         </div>
                                         <div class="ofast-tweak-action">
-                                            <label class="ofast-toggle">
-                                                <input type="checkbox" name="ofast_hide_howdy" id="ofast_hide_howdy" value="1" <?php checked(!empty($settings['hide_howdy'])); ?>>
-                                                <span class="ofast-slider"></span>
-                                            </label>
+                                            <input type="text" name="ofast_custom_greeting_text" id="ofast_custom_greeting_text" value="<?php echo esc_attr($custom_greeting_text); ?>" placeholder="Welcome" style="min-width: 220px; max-width: 280px;">
                                         </div>
                                     </div>
 
@@ -952,8 +955,8 @@ class Ofast_X_Admin_Tweaks
 
                                     <div class="ofast-tweak-row">
                                         <div class="ofast-tweak-content">
-                                            <label for="ofast_enable_whos_admin">Who's Admin Widget</label>
-                                            <p class="description">Dashboard widget showing admin users.</p>
+                                            <label for="ofast_enable_whos_admin">White Label</label>
+                                            <p class="description">Designer details, footer branding, and white label tools.</p>
                                         </div>
                                         <div class="ofast-tweak-action">
                                             <label class="ofast-toggle">
@@ -1228,6 +1231,15 @@ class Ofast_X_Admin_Tweaks
                     $('#admin-design-settings').slideDown(300);
                 } else {
                     $('#admin-design-settings').slideUp(300);
+                }
+            });
+
+            // Toggle custom greeting input visibility
+            $('#ofast_custom_greeting_enabled').on('change', function() {
+                if ($(this).is(':checked')) {
+                    $('#ofast-custom-greeting-row').slideDown(200);
+                } else {
+                    $('#ofast-custom-greeting-row').slideUp(200);
                 }
             });
 

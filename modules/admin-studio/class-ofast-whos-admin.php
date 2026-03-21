@@ -21,6 +21,8 @@ class Ofast_X_Whos_Admin
         // NOTE: Module enabled check removed - core loader already verified this
         // before calling init(). See class-ofast-core.php is_module_enabled()
 
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
+
         // Add dashboard widgets
         add_action('wp_dashboard_setup', array($this, 'add_dashboard_widgets'));
 
@@ -31,6 +33,33 @@ class Ofast_X_Whos_Admin
         // Override admin footer text (from Admin Footer module)
         add_filter('admin_footer_text', array($this, 'custom_footer_left'), 999);
         add_filter('update_footer', array($this, 'custom_footer_right'), 999);
+    }
+
+    /**
+     * Enqueue reusable UI assets for the White Label page.
+     *
+     * @param string $hook Admin page hook.
+     */
+    public function enqueue_assets($hook)
+    {
+        if (strpos($hook, 'ofast-white-label') === false) {
+            return;
+        }
+
+        wp_enqueue_style(
+            'ofast-tabs',
+            OFAST_X_PLUGIN_URL . 'assets/css/ofast-tabs.css',
+            array(),
+            OFAST_X_VERSION
+        );
+
+        wp_enqueue_script(
+            'ofast-tabs',
+            OFAST_X_PLUGIN_URL . 'assets/js/ofast-tabs.js',
+            array('jquery'),
+            OFAST_X_VERSION,
+            true
+        );
     }
 
     /**
@@ -162,7 +191,15 @@ class Ofast_X_Whos_Admin
         );
         update_option('ofast_admin_footer_settings', $footer_settings);
 
-        wp_redirect(add_query_arg('settings_saved', '1', wp_get_referer()));
+        $active_tab = isset($_POST['white_label_active_tab']) ? sanitize_key(wp_unslash($_POST['white_label_active_tab'])) : 'designer_details';
+        if (!in_array($active_tab, array('designer_details', 'footer', 'updates'), true)) {
+            $active_tab = 'designer_details';
+        }
+
+        wp_redirect(add_query_arg(array(
+            'settings_saved' => '1',
+            'tab' => $active_tab,
+        ), wp_get_referer()));
         exit;
     }
 
@@ -239,6 +276,10 @@ class Ofast_X_Whos_Admin
         ));
         
         $saved = isset($_GET['settings_saved']);
+        $default_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'designer_details';
+        if (!in_array($default_tab, array('designer_details', 'footer', 'updates'), true)) {
+            $default_tab = 'designer_details';
+        }
 
 ?>
         <div class="wrap ofast-white-label-wrap">
@@ -250,7 +291,7 @@ class Ofast_X_Whos_Admin
                     </div>
                     <div class="ofast-header-text">
                         <h1>White Label</h1>
-                        <p>Customize your branding, designer information, and admin footer text</p>
+                        <p>Customize designer details, admin footer branding, and future white label settings</p>
                     </div>
                 </div>
             </div>
@@ -261,173 +302,220 @@ class Ofast_X_Whos_Admin
 
             <form method="post" action="" class="ofast-modern-form">
                 <?php wp_nonce_field('ofast_white_label_settings', '_wpnonce'); ?>
+                <input type="hidden" name="white_label_active_tab" value="<?php echo esc_attr($default_tab); ?>" class="ofast-active-tab">
 
-                <div class="ofast-content-grid">
-                    <!-- Designer Details Card -->
-                    <div class="ofast-card ofast-main-card">
-                        <div class="ofast-card-header">
-                            <span class="dashicons dashicons-admin-users"></span>
-                            <h2>Designer Details</h2>
-                        </div>
-                        <div class="ofast-card-body">
-                            <div class="ofast-form-group">
-                                <label for="designer_name">
-                                    <span class="dashicons dashicons-businessperson"></span>
-                                    Designer Name
-                                </label>
-                                <input type="text" name="designer_name" id="designer_name" 
-                                       value="<?php echo esc_attr($name); ?>" 
-                                       placeholder="John Doe or Acme Studios">
-                                <span class="ofast-field-hint">Your full name or company name</span>
-                            </div>
-
-                            <div class="ofast-form-group">
-                                <label for="designer_email">
-                                    <span class="dashicons dashicons-email"></span>
-                                    Email Address
-                                </label>
-                                <input type="email" name="designer_email" id="designer_email" 
-                                       value="<?php echo esc_attr($email); ?>" 
-                                       placeholder="hello@example.com">
-                                <span class="ofast-field-hint">Contact email for support inquiries</span>
-                            </div>
-
-                            <div class="ofast-form-group">
-                                <label for="designer_website">
-                                    <span class="dashicons dashicons-admin-site-alt3"></span>
-                                    Website URL
-                                </label>
-                                <input type="url" name="designer_website" id="designer_website" 
-                                       value="<?php echo esc_attr($website); ?>" 
-                                       placeholder="https://example.com">
-                                <span class="ofast-field-hint">Your portfolio or business website</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Preview Card -->
-                    <div class="ofast-card ofast-preview-card">
-                        <div class="ofast-card-header">
-                            <span class="dashicons dashicons-visibility"></span>
-                            <h2>Designer Preview</h2>
-                        </div>
-                        <div class="ofast-card-body">
-                            <div class="ofast-preview-widget">
-                                <div class="ofast-preview-item">
-                                    <span class="ofast-preview-label">Designer</span>
-                                    <span class="ofast-preview-value" id="preview-name"><?php echo esc_html($name ?: 'Your Name'); ?></span>
-                                </div>
-                                <div class="ofast-preview-item">
-                                    <span class="ofast-preview-label">Email</span>
-                                    <a href="mailto:<?php echo esc_attr($email); ?>" class="ofast-preview-value ofast-link" id="preview-email">
-                                        <?php echo esc_html($email ?: 'hello@example.com'); ?>
-                                    </a>
-                                </div>
-                                <div class="ofast-preview-item">
-                                    <span class="ofast-preview-label">Website</span>
-                                    <a href="<?php echo esc_url($website); ?>" target="_blank" class="ofast-preview-value ofast-link" id="preview-website">
-                                        <?php echo esc_html($website ?: 'https://example.com'); ?>
-                                    </a>
-                                </div>
-                            </div>
-                            <p class="ofast-preview-note">
-                                <span class="dashicons dashicons-info-outline"></span>
-                                This is how your details appear in the dashboard widget
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Admin Footer Section -->
-                <div class="ofast-content-grid" style="margin-top: 30px;">
-                    <div class="ofast-card ofast-main-card">
-                        <div class="ofast-card-header">
+                <div class="ofast-tabs-shell">
+                    <nav class="ofast-tabs-nav" aria-label="<?php esc_attr_e('White Label sections', 'ofast-x'); ?>">
+                        <button type="button" class="ofast-tab <?php echo $default_tab === 'designer_details' ? 'active' : ''; ?>" data-tab="designer_details">
+                            <span class="dashicons dashicons-businessperson"></span>
+                            <?php esc_html_e('Designer Details', 'ofast-x'); ?>
+                        </button>
+                        <button type="button" class="ofast-tab <?php echo $default_tab === 'footer' ? 'active' : ''; ?>" data-tab="footer">
                             <span class="dashicons dashicons-editor-kitchensink"></span>
-                            <h2>Admin Footer</h2>
+                            <?php esc_html_e('Footer', 'ofast-x'); ?>
+                        </button>
+                        <button type="button" class="ofast-tab <?php echo $default_tab === 'updates' ? 'active' : ''; ?>" data-tab="updates">
+                            <span class="dashicons dashicons-update"></span>
+                            <?php esc_html_e('Updates', 'ofast-x'); ?>
+                        </button>
+                    </nav>
+
+                    <div class="ofast-tab-content<?php echo $default_tab === 'designer_details' ? ' active' : ''; ?>" data-tab-panel="designer_details">
+                        <div class="ofast-tab-header">
+                            <h2><?php esc_html_e('Designer Details', 'ofast-x'); ?></h2>
+                            <p><?php esc_html_e('Manage the details shown in your White Label dashboard widget.', 'ofast-x'); ?></p>
                         </div>
-                        <div class="ofast-card-body">
-                            <div class="ofast-form-group">
-                                <label for="footer_left_text">
-                                    Left Footer Text
-                                    <span class="ofast-tooltip" title="Replaces 'Thank you for creating with WordPress.' HTML is allowed.">
+
+                        <div class="ofast-content-grid">
+                            <div class="ofast-card ofast-main-card">
+                                <div class="ofast-card-header">
+                                    <span class="dashicons dashicons-admin-users"></span>
+                                    <h2>Designer Details</h2>
+                                </div>
+                                <div class="ofast-card-body">
+                                    <div class="ofast-form-group">
+                                        <label for="designer_name">
+                                            <span class="dashicons dashicons-businessperson"></span>
+                                            Designer Name
+                                        </label>
+                                        <input type="text" name="designer_name" id="designer_name"
+                                            value="<?php echo esc_attr($name); ?>"
+                                            placeholder="John Doe or Acme Studios">
+                                        <span class="ofast-field-hint">Your full name or company name</span>
+                                    </div>
+
+                                    <div class="ofast-form-group">
+                                        <label for="designer_email">
+                                            <span class="dashicons dashicons-email"></span>
+                                            Email Address
+                                        </label>
+                                        <input type="email" name="designer_email" id="designer_email"
+                                            value="<?php echo esc_attr($email); ?>"
+                                            placeholder="hello@example.com">
+                                        <span class="ofast-field-hint">Contact email for support inquiries</span>
+                                    </div>
+
+                                    <div class="ofast-form-group">
+                                        <label for="designer_website">
+                                            <span class="dashicons dashicons-admin-site-alt3"></span>
+                                            Website URL
+                                        </label>
+                                        <input type="url" name="designer_website" id="designer_website"
+                                            value="<?php echo esc_attr($website); ?>"
+                                            placeholder="https://example.com">
+                                        <span class="ofast-field-hint">Your portfolio or business website</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="ofast-card ofast-preview-card">
+                                <div class="ofast-card-header">
+                                    <span class="dashicons dashicons-visibility"></span>
+                                    <h2>Designer Preview</h2>
+                                </div>
+                                <div class="ofast-card-body">
+                                    <div class="ofast-preview-widget">
+                                        <div class="ofast-preview-item">
+                                            <span class="ofast-preview-label">Designer</span>
+                                            <span class="ofast-preview-value" id="preview-name"><?php echo esc_html($name ?: 'Your Name'); ?></span>
+                                        </div>
+                                        <div class="ofast-preview-item">
+                                            <span class="ofast-preview-label">Email</span>
+                                            <a href="mailto:<?php echo esc_attr($email); ?>" class="ofast-preview-value ofast-link" id="preview-email">
+                                                <?php echo esc_html($email ?: 'hello@example.com'); ?>
+                                            </a>
+                                        </div>
+                                        <div class="ofast-preview-item">
+                                            <span class="ofast-preview-label">Website</span>
+                                            <a href="<?php echo esc_url($website); ?>" target="_blank" class="ofast-preview-value ofast-link" id="preview-website">
+                                                <?php echo esc_html($website ?: 'https://example.com'); ?>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <p class="ofast-preview-note">
                                         <span class="dashicons dashicons-info-outline"></span>
-                                    </span>
-                                </label>
-                                <textarea name="footer_left_text" id="footer_left_text" rows="3"
-                                    placeholder="e.g., Designed by Your Company | Contact: info@example.com"><?php echo esc_textarea($footer_settings['left_text'] ?? ''); ?></textarea>
-                                <span class="ofast-field-hint">
-                                    Available shortcuts: <code>{site_name}</code> <code>{year}</code> <code>{admin_email}</code>
-                                </span>
-                            </div>
-
-                            <div class="ofast-form-group">
-                                <label for="footer_right_text">
-                                    Right Footer Text
-                                    <span class="ofast-tooltip" title="Replaces the WordPress version number on the right side.">
-                                        <span class="dashicons dashicons-info-outline"></span>
-                                    </span>
-                                </label>
-                                <input type="text" name="footer_right_text" id="footer_right_text"
-                                    value="<?php echo esc_attr($footer_settings['right_text'] ?? ''); ?>"
-                                    placeholder="e.g., v1.0.0">
-                                <span class="ofast-field-hint">Custom text for the right footer area</span>
-                            </div>
-
-                            <div class="ofast-form-group">
-                                <label class="ofast-checkbox-label">
-                                    <input type="checkbox" name="hide_wp_version" value="1"
-                                        <?php checked(!empty($footer_settings['hide_wp_version'])); ?>>
-                                    <span class="ofast-checkbox-custom"></span>
-                                    <span class="ofast-checkbox-text">
-                                        Hide WordPress version number
-                                        <span class="ofast-security-badge">Security Recommended</span>
-                                    </span>
-                                </label>
-                            </div>
-
-                            <div class="ofast-form-group">
-                                <label class="ofast-checkbox-label">
-                                    <input type="checkbox" name="enable_dark_mode" value="1"
-                                        <?php checked(!empty($footer_settings['enable_dark_mode'])); ?>>
-                                    <span class="ofast-checkbox-custom"></span>
-                                    <span class="ofast-checkbox-text">
-                                        Enable Dark/Light Mode Toggle
-                                        <span class="ofast-security-badge" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">UI Feature</span>
-                                    </span>
-                                </label>
-                            </div>
-
-                            <div class="ofast-form-group">
-                                <label class="ofast-checkbox-label">
-                                    <input type="checkbox" name="enable_custom_dashboard" value="1"
-                                        <?php checked(!empty($footer_settings['enable_custom_dashboard'])); ?>>
-                                    <span class="ofast-checkbox-custom"></span>
-                                    <span class="ofast-checkbox-text">
-                                        Enable Custom Dashboard
-                                        <span class="ofast-security-badge" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">New Feature</span>
-                                    </span>
-                                </label>
+                                        This is how your details appear in the dashboard widget
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Footer Preview Card -->
-                    <div class="ofast-card ofast-preview-card">
-                        <div class="ofast-card-header">
-                            <span class="dashicons dashicons-visibility"></span>
-                            <h2>Footer Preview</h2>
+                    <div class="ofast-tab-content<?php echo $default_tab === 'footer' ? ' active' : ''; ?>" data-tab-panel="footer">
+                        <div class="ofast-tab-header">
+                            <h2><?php esc_html_e('Footer', 'ofast-x'); ?></h2>
+                            <p><?php esc_html_e('Control the admin footer text and related white label footer options.', 'ofast-x'); ?></p>
                         </div>
-                        <div class="ofast-card-body">
-                            <div class="ofast-preview-widget">
-                                <div class="ofast-preview-footer">
-                                    <span class="ofast-preview-left" id="preview-left"><?php echo !empty($footer_settings['left_text']) ? wp_kses_post($this->replace_shortcuts($footer_settings['left_text'])) : '<em>Thank you for creating with WordPress.</em>'; ?></span>
-                                    <span class="ofast-preview-right" id="preview-right"><?php echo !empty($footer_settings['right_text']) ? esc_html($footer_settings['right_text']) : (!empty($footer_settings['hide_wp_version']) ? '' : '<em>Version X.X</em>'); ?></span>
+
+                        <div class="ofast-content-grid">
+                            <div class="ofast-card ofast-main-card">
+                                <div class="ofast-card-header">
+                                    <span class="dashicons dashicons-editor-kitchensink"></span>
+                                    <h2>Admin Footer</h2>
+                                </div>
+                                <div class="ofast-card-body">
+                                    <div class="ofast-form-group">
+                                        <label for="footer_left_text">
+                                            Left Footer Text
+                                            <span class="ofast-tooltip" title="Replaces 'Thank you for creating with WordPress.' HTML is allowed.">
+                                                <span class="dashicons dashicons-info-outline"></span>
+                                            </span>
+                                        </label>
+                                        <textarea name="footer_left_text" id="footer_left_text" rows="3"
+                                            placeholder="e.g., Designed by Your Company | Contact: info@example.com"><?php echo esc_textarea($footer_settings['left_text'] ?? ''); ?></textarea>
+                                        <span class="ofast-field-hint">
+                                            Available shortcuts: <code>{site_name}</code> <code>{year}</code> <code>{admin_email}</code>
+                                        </span>
+                                    </div>
+
+                                    <div class="ofast-form-group">
+                                        <label for="footer_right_text">
+                                            Right Footer Text
+                                            <span class="ofast-tooltip" title="Replaces the WordPress version number on the right side.">
+                                                <span class="dashicons dashicons-info-outline"></span>
+                                            </span>
+                                        </label>
+                                        <input type="text" name="footer_right_text" id="footer_right_text"
+                                            value="<?php echo esc_attr($footer_settings['right_text'] ?? ''); ?>"
+                                            placeholder="e.g., v1.0.0">
+                                        <span class="ofast-field-hint">Custom text for the right footer area</span>
+                                    </div>
+
+                                    <div class="ofast-form-group">
+                                        <label class="ofast-checkbox-label">
+                                            <input type="checkbox" name="hide_wp_version" value="1"
+                                                <?php checked(!empty($footer_settings['hide_wp_version'])); ?>>
+                                            <span class="ofast-checkbox-custom"></span>
+                                            <span class="ofast-checkbox-text">
+                                                Hide WordPress version number
+                                                <span class="ofast-security-badge">Security Recommended</span>
+                                            </span>
+                                        </label>
+                                    </div>
+
+                                    <div class="ofast-form-group">
+                                        <label class="ofast-checkbox-label">
+                                            <input type="checkbox" name="enable_dark_mode" value="1"
+                                                <?php checked(!empty($footer_settings['enable_dark_mode'])); ?>>
+                                            <span class="ofast-checkbox-custom"></span>
+                                            <span class="ofast-checkbox-text">
+                                                Enable Dark/Light Mode Toggle
+                                                <span class="ofast-security-badge" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">UI Feature</span>
+                                            </span>
+                                        </label>
+                                    </div>
+
+                                    <div class="ofast-form-group">
+                                        <label class="ofast-checkbox-label">
+                                            <input type="checkbox" name="enable_custom_dashboard" value="1"
+                                                <?php checked(!empty($footer_settings['enable_custom_dashboard'])); ?>>
+                                            <span class="ofast-checkbox-custom"></span>
+                                            <span class="ofast-checkbox-text">
+                                                Enable Custom Dashboard
+                                                <span class="ofast-security-badge" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">New Feature</span>
+                                            </span>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
-                            <p class="ofast-preview-note">
-                                <span class="dashicons dashicons-info-outline"></span>
-                                This is how your footer appears in the admin area
-                            </p>
+
+                            <div class="ofast-card ofast-preview-card">
+                                <div class="ofast-card-header">
+                                    <span class="dashicons dashicons-visibility"></span>
+                                    <h2>Footer Preview</h2>
+                                </div>
+                                <div class="ofast-card-body">
+                                    <div class="ofast-preview-widget">
+                                        <div class="ofast-preview-footer">
+                                            <span class="ofast-preview-left" id="preview-left"><?php echo !empty($footer_settings['left_text']) ? wp_kses_post($this->replace_shortcuts($footer_settings['left_text'])) : '<em>Thank you for creating with WordPress.</em>'; ?></span>
+                                            <span class="ofast-preview-right" id="preview-right"><?php echo !empty($footer_settings['right_text']) ? esc_html($footer_settings['right_text']) : (!empty($footer_settings['hide_wp_version']) ? '' : '<em>Version X.X</em>'); ?></span>
+                                        </div>
+                                    </div>
+                                    <p class="ofast-preview-note">
+                                        <span class="dashicons dashicons-info-outline"></span>
+                                        This is how your footer appears in the admin area
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ofast-tab-content<?php echo $default_tab === 'updates' ? ' active' : ''; ?>" data-tab-panel="updates">
+                        <div class="ofast-tab-header">
+                            <h2><?php esc_html_e('Updates', 'ofast-x'); ?></h2>
+                            <p><?php esc_html_e('This tab is ready for the additional White Label update settings you plan to add later.', 'ofast-x'); ?></p>
+                        </div>
+
+                        <div class="ofast-card ofast-main-card">
+                            <div class="ofast-card-header">
+                                <span class="dashicons dashicons-update"></span>
+                                <h2>Updates</h2>
+                            </div>
+                            <div class="ofast-card-body">
+                                <p class="ofast-field-hint" style="margin-top: 0;">
+                                    This section is intentionally empty for now so you can add your White Label update controls later without changing the page structure again.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>

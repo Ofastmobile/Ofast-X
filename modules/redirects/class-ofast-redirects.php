@@ -661,8 +661,13 @@ class Ofast_X_Redirects
         // Detect import sources
         $import_sources = $this->detect_import_sources();
         $regex_strict = get_option('ofast_redirects_regex_strict', 0);
+        $regex_rule_help = __('Use "Use Regular Expression" to save this redirect as a regex rule. The regex badge in the table only appears for redirects saved with that option.', 'ofast-x');
+        $regex_strict_help = __('This is a global setting. It stays on until you turn it off, and it only tightens regex validation. It does not convert a redirect into a regex rule by itself.', 'ofast-x');
 
         settings_errors('ofast_redirects');
+        if (class_exists('Ofast_X_Dropdown')) {
+            echo Ofast_X_Dropdown::render_assets();
+        }
 ?>
         <div class="wrap ofast-redirects-page">
             <!-- Header -->
@@ -711,7 +716,7 @@ class Ofast_X_Redirects
                                 <tr>
                                     <th><label for="redirect_type"><?php esc_html_e('Redirect Type', 'ofast-x'); ?></label></th>
                                     <td>
-                                        <select name="redirect_type" id="redirect_type">
+                                        <select name="redirect_type" id="redirect_type" class="ofast-dropdown-native">
                                             <option value="301" <?php selected($edit_redirect ? $edit_redirect->type : '', '301'); ?>><?php esc_html_e('301 - Permanent', 'ofast-x'); ?></option>
                                             <option value="302" <?php selected($edit_redirect ? $edit_redirect->type : '', '302'); ?>><?php esc_html_e('302 - Temporary', 'ofast-x'); ?></option>
                                             <option value="307" <?php selected($edit_redirect ? $edit_redirect->type : '', '307'); ?>><?php esc_html_e('307 - Temporary (Preserve Method)', 'ofast-x'); ?></option>
@@ -732,9 +737,10 @@ class Ofast_X_Redirects
                                 <tr>
                                     <th><?php esc_html_e('Options', 'ofast-x'); ?></th>
                                     <td>
-                                        <label style="display: block; margin-bottom: 10px;">
+                                        <label class="ofast-help-label" style="display: block; margin-bottom: 10px;">
                                             <input type="checkbox" name="is_regex" value="1" <?php checked($edit_redirect ? $edit_redirect->is_regex : false); ?>>
                                             <?php esc_html_e('Use Regular Expression', 'ofast-x'); ?>
+                                            <span class="ofast-help-tooltip" tabindex="0" data-tooltip="<?php echo esc_attr($regex_rule_help); ?>" aria-label="<?php echo esc_attr($regex_rule_help); ?>">?</span>
                                         </label>
                                         <label style="display: block;">
                                             <input type="checkbox" name="active" value="1" <?php checked($edit_redirect ? $edit_redirect->active : false); ?>>
@@ -748,15 +754,15 @@ class Ofast_X_Redirects
                                         <label class="ofast-toggle">
                                             <input type="checkbox" name="redirects_regex_strict" value="1" <?php checked($regex_strict, 1); ?>>
                                             <span class="ofast-toggle-slider"></span>
-                                            <span class="ofast-toggle-text"><?php esc_html_e('Enable strict regex validation (advanced)', 'ofast-x'); ?></span>
+                                            <span class="ofast-toggle-text"><?php esc_html_e('Global strict regex validation (advanced)', 'ofast-x'); ?></span>
+                                            <span class="ofast-help-tooltip" tabindex="0" data-tooltip="<?php echo esc_attr($regex_strict_help); ?>" aria-label="<?php echo esc_attr($regex_strict_help); ?>">?</span>
                                         </label>
-                                        <p class="description"><?php esc_html_e('Strict mode blocks complex patterns to reduce ReDoS risk but may reject valid regex.', 'ofast-x'); ?></p>
                                     </td>
                                 </tr>
                             </table>
 
                             <p class="submit" style="margin-bottom: 0; padding-bottom: 0;">
-                                <button type="submit" name="ofast_save_redirect" class="button button-primary button-large">
+                                <button type="submit" name="ofast_save_redirect" class="button button-primary button-large ofast-redirect-primary-action">
                                     <?php echo $editing ? esc_html__('Update Redirect', 'ofast-x') : esc_html__('Add Redirect', 'ofast-x'); ?>
                                 </button>
                                 <?php if ($editing): ?>
@@ -838,7 +844,7 @@ class Ofast_X_Redirects
                                         <td>
                                             <code style="font-size: 12px;"><?php echo esc_html($redirect->source_url); ?></code>
                                             <?php if ($redirect->is_regex): ?>
-                                                <span style="background: #fef3cd; color: #856404; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 5px;">regex</span>
+                                                <span class="ofast-redirect-regex-badge">regex</span>
                                             <?php endif; ?>
                                         </td>
                                         <td style="word-break: break-all; font-size: 12px;"><?php echo esc_html($redirect->target_url); ?></td>
@@ -854,7 +860,7 @@ class Ofast_X_Redirects
                                         <td>
                                             <button class="button button-small ofast-redirect-toggle <?php echo $redirect->active ? 'button-primary' : ''; ?>"
                                                 data-id="<?php echo esc_attr($redirect->id); ?>" data-active="<?php echo esc_attr($redirect->active); ?>"
-                                                style="min-width: 50px; font-size: 11px;">
+                                                style="min-width: 50px;">
                                                 <?php echo $redirect->active ? esc_html__('ON', 'ofast-x') : esc_html__('OFF', 'ofast-x'); ?>
                                             </button>
                                         </td>

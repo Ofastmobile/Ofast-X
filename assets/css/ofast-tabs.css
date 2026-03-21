@@ -3,16 +3,30 @@
  * Reusable horizontal tabs for consolidated modules
  */
 
+:root {
+    --ofast-primary: #6366f1;
+}
+
 /* Tab Container */
 .ofast-tabs-nav {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 8px;
     margin-bottom: 25px;
-    padding: 8px;
-    background: #f1f5f9;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.82);
     border-radius: 12px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid rgba(226, 232, 240, 0.6);
+    position: sticky;
+    top: 47px;
+    z-index: 100;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
 }
 
 /* Individual Tab */
@@ -30,6 +44,8 @@
     text-decoration: none;
     cursor: pointer;
     transition: all 0.2s ease;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .ofast-tab:hover {
@@ -46,9 +62,9 @@
 /* Active Tab */
 .ofast-tab.active,
 .ofast-tab.active:hover {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--ofast-primary);
     color: #fff;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
 }
 
 /* Tab Icon */
@@ -85,6 +101,7 @@
 
 .ofast-tab-content.active {
     display: block !important;
+    animation: ofastFadeIn 0.3s ease;
 }
 
 /* Tab Panel Header */
@@ -105,15 +122,27 @@
     font-size: 14px;
 }
 
+@keyframes ofastFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* Mobile Responsive - Keep tabs inline */
 @media (max-width: 782px) {
     .ofast-tabs-nav {
         flex-direction: row;
         flex-wrap: nowrap;
-        overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         gap: 4px;
         padding: 6px;
+        top: 32px;
     }
 
     .ofast-tab {

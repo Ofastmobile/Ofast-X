@@ -351,7 +351,6 @@ class Ofast_X_Whos_Admin
                     <div class="ofast-tab-content<?php echo $default_tab === 'designer_details' ? ' active' : ''; ?>" data-tab-panel="designer_details">
                         <div class="ofast-tab-header">
                             <h2><?php esc_html_e('Designer Details', 'ofast-x'); ?></h2>
-                            <p><?php esc_html_e('Manage the details shown in your White Label dashboard widget.', 'ofast-x'); ?></p>
                         </div>
 
                         <div class="ofast-content-grid">
@@ -432,7 +431,6 @@ class Ofast_X_Whos_Admin
                     <div class="ofast-tab-content<?php echo $default_tab === 'footer' ? ' active' : ''; ?>" data-tab-panel="footer">
                         <div class="ofast-tab-header">
                             <h2><?php esc_html_e('Footer', 'ofast-x'); ?></h2>
-                            <p><?php esc_html_e('Control the admin footer text and related white label footer options.', 'ofast-x'); ?></p>
                         </div>
 
                         <div class="ofast-content-grid">

@@ -505,7 +505,8 @@ class Ofast_X_SMTP
 
         // SECURITY: Require proper WordPress security keys to be configured
         if (!self::validate_encryption_keys()) {
-            throw new Exception('SMTP credentials cannot be stored: WordPress security keys (SECURE_AUTH_KEY, AUTH_KEY) must be properly configured in wp-config.php for secure credential storage.');
+            $key_diagnostics = self::get_key_validation_details();
+            throw new Exception('SMTP credentials cannot be stored: ' . $key_diagnostics['message']);
         }
 
         $key = hash('sha256', SECURE_AUTH_KEY);
@@ -619,6 +620,124 @@ class Ofast_X_SMTP
     }
 
     /**
+     * Get detailed validation information for SMTP credential encryption keys.
+     */
+    public static function get_key_validation_details()
+    {
+        $required_keys = array('SECURE_AUTH_KEY', 'AUTH_KEY');
+        $issues = array();
+        $recommendations = array();
+
+        if (!extension_loaded('openssl')) {
+            return array(
+                'valid' => false,
+                'message' => 'OpenSSL is not available on this server, so SMTP credentials cannot be encrypted securely.',
+                'suggestion' => 'Ask your hosting provider to enable the OpenSSL PHP extension before saving SMTP passwords.'
+            );
+        }
+
+        foreach ($required_keys as $key_name) {
+            if (!defined($key_name)) {
+                $issues[] = $key_name . ' is not defined in wp-config.php';
+                continue;
+            }
+
+            $key_value = constant($key_name);
+
+            if (empty($key_value)) {
+                $issues[] = $key_name . ' is empty';
+                continue;
+            }
+
+            if ($key_value === 'put your unique phrase here' || strpos($key_value, 'your unique phrase') !== false) {
+                $issues[] = $key_name . ' is still using the default placeholder value';
+                continue;
+            }
+
+            if (strlen($key_value) < 32) {
+                $issues[] = $key_name . ' is too short for secure SMTP credential storage';
+                continue;
+            }
+
+            if (strlen($key_value) < 64) {
+                $recommendations[] = $key_name . ' works, but a 64+ character random salt is recommended';
+            }
+
+            if (self::has_weak_key_patterns($key_value)) {
+                $recommendations[] = $key_name . ' looks predictable; consider refreshing your WordPress salts';
+            }
+        }
+
+        if (!empty($issues)) {
+            return array(
+                'valid' => false,
+                'message' => 'WordPress security keys have issues: ' . implode(', ', $issues) . '.',
+                'suggestion' => 'Generate fresh salts from https://api.wordpress.org/secret-key/1.1/salt/, update wp-config.php, then re-save your SMTP password.'
+            );
+        }
+
+        $message = 'WordPress security keys are configured for SMTP credential encryption.';
+        if (!empty($recommendations)) {
+            $message .= ' ' . implode('. ', $recommendations) . '.';
+        }
+
+        return array(
+            'valid' => true,
+            'message' => $message,
+            'suggestion' => empty($recommendations) ? '' : 'For stronger protection, replace your salts in wp-config.php with a fresh set from https://api.wordpress.org/secret-key/1.1/salt/.'
+        );
+    }
+
+    /**
+     * Detect obviously weak or predictable key patterns.
+     */
+    private static function has_weak_key_patterns($key)
+    {
+        $key_length = strlen($key);
+        if ($key_length < 8) {
+            return true;
+        }
+
+        $char_counts = array_count_values(str_split($key));
+        foreach ($char_counts as $count) {
+            if ($count > ($key_length * 0.25)) {
+                return true;
+            }
+        }
+
+        $weak_patterns = array(
+            '/(.)\1{4,}/',
+            '/password/i',
+            '/123456/',
+            '/qwerty/i',
+            '/admin/i'
+        );
+
+        foreach ($weak_patterns as $pattern) {
+            if (preg_match($pattern, $key)) {
+                return true;
+            }
+        }
+
+        $sequences = array(
+            'abcdefghijklmnopqrstuvwxyz',
+            'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+            '0123456789'
+        );
+
+        foreach ($sequences as $sequence) {
+            for ($i = 0; $i <= strlen($sequence) - 6; $i++) {
+                $chunk = substr($sequence, $i, 6);
+                if (strpos($key, $chunk) !== false || strpos($key, strrev($chunk)) !== false) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Detect legacy insecure storage (base64 only, no proper encryption)
      * SECURITY FIX: Identify credentials stored with weak base64 encoding
      */
@@ -670,11 +789,12 @@ class Ofast_X_SMTP
         }
         
         // Check if encryption keys are properly configured
-        if (!self::validate_encryption_keys()) {
+        $key_validation = self::get_key_validation_details();
+        if (!$key_validation['valid']) {
             return array(
-                'status' => 'keys_missing',
-                'message' => 'WordPress security keys are not properly configured. SMTP credentials cannot be securely stored.',
-                'action_required' => 'Configure SECURE_AUTH_KEY and AUTH_KEY in wp-config.php'
+                'status' => 'keys_invalid',
+                'message' => $key_validation['message'],
+                'action_required' => $key_validation['suggestion']
             );
         }
         

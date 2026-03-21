@@ -45,7 +45,7 @@ class Ofast_X_Forms_Builder
         if (isset($_GET['id'])) {
             $this->form_id = absint($_GET['id']);
             $forms = Ofast_X_Forms::get_instance();
-            $this->form = $forms->get_form($this->form_id);
+            $this->form = $forms->get_form($this->form_id, 'admin');
         }
 
         // Handle save
@@ -661,15 +661,20 @@ class Ofast_X_Forms_Builder
         $forms = Ofast_X_Forms::get_instance();
 
         $data = array(
-            'id' => absint($_POST['form_id']),
-            'title' => $_POST['title'],
-            'description' => $_POST['description'] ?? '',
-            'fields' => $_POST['fields'] ?? array(),
-            'settings' => $_POST['settings'] ?? array(),
+            'id' => absint($_POST['form_id'] ?? 0),
+            'title' => wp_unslash($_POST['title'] ?? ''),
+            'description' => wp_unslash($_POST['description'] ?? ''),
+            'fields' => wp_unslash($_POST['fields'] ?? array()),
+            'settings' => wp_unslash($_POST['settings'] ?? array()),
             'active' => isset($_POST['active'])
         );
 
         $form_id = $forms->save_form($data);
+
+        if ($form_id === false) {
+            echo Ofast_X_Toast::render('Form could not be saved. Please add a title and try again.', 'error');
+            return;
+        }
 
         if ($form_id && !$this->form_id) {
             wp_redirect(admin_url('admin.php?page=ofast-forms&tab=add-new&id=' . $form_id . '&saved=1'));

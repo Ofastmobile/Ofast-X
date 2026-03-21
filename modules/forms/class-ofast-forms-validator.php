@@ -12,6 +12,22 @@ if (!defined('ABSPATH')) {
 class Ofast_X_Forms_Validator
 {
     /**
+     * Default maximum lengths by field type.
+     */
+    private $default_max_lengths = array(
+        'email' => 254,
+        'phone' => 50,
+        'url' => 2048,
+        'number' => 50,
+        'date' => 100,
+        'text' => 500,
+        'textarea' => 10000,
+        'select' => 200,
+        'radio' => 200,
+        'checkbox' => 200,
+    );
+
+    /**
      * Validate submitted data against form fields
      * 
      * @param array $submitted The submitted field values
@@ -48,6 +64,10 @@ class Ofast_X_Forms_Validator
 
             // Skip validation if empty and not required
             if (empty($value)) {
+                continue;
+            }
+
+            if (!$this->validate_length($value, $type, $field_key, $errors)) {
                 continue;
             }
 
@@ -97,10 +117,6 @@ class Ofast_X_Forms_Validator
 
                 case 'textarea':
                     $value = sanitize_textarea_field($value);
-                    // Check length
-                    if (strlen($value) > 10000) {
-                        $errors[$field_key] = 'Text is too long (max 10,000 characters).';
-                    }
                     break;
 
                 case 'select':
@@ -129,10 +145,6 @@ class Ofast_X_Forms_Validator
 
                 default:
                     $value = sanitize_text_field($value);
-                    // Check length
-                    if (strlen($value) > 500) {
-                        $errors[$field_key] = 'Text is too long (max 500 characters).';
-                    }
                     break;
             }
 
@@ -147,6 +159,40 @@ class Ofast_X_Forms_Validator
             'errors' => $errors,
             'data' => $clean_data
         );
+    }
+
+    /**
+     * Enforce field length limits before type-specific validation runs.
+     */
+    private function validate_length($value, $type, $field_key, &$errors)
+    {
+        $max_length = $this->default_max_lengths[$type] ?? $this->default_max_lengths['text'];
+
+        if (is_array($value)) {
+            foreach ($value as $option_value) {
+                if ($this->string_length((string) $option_value) > $this->default_max_lengths['checkbox']) {
+                    $errors[$field_key] = 'Option value is too long (max ' . $this->default_max_lengths['checkbox'] . ' characters).';
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        if ($this->string_length((string) $value) > $max_length) {
+            $errors[$field_key] = 'Input is too long (max ' . number_format($max_length) . ' characters).';
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Measure string length with an mbstring fallback.
+     */
+    private function string_length($value)
+    {
+        return function_exists('mb_strlen') ? mb_strlen($value, 'UTF-8') : strlen($value);
     }
 
     /**

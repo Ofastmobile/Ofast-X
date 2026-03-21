@@ -74,25 +74,32 @@ class Ofast_X_Forms
     }
 
     /**
-     * Get form by ID
+     * Get form by ID with context-aware access control.
      */
-    public function get_form($form_id)
+    public function get_form($form_id, $context = 'public')
     {
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_forms';
 
-        $form = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$table} WHERE id = %d",
-            absint($form_id)
-        ));
-
-        if ($form) {
-            $form->fields = json_decode($form->fields, true) ?: array();
-            $form->settings = json_decode($form->settings, true) ?: array();
-            $form->notifications = json_decode($form->notifications, true) ?: array();
+        $form_id = absint($form_id);
+        if ($form_id <= 0) {
+            return null;
         }
 
-        return $form;
+        $form = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$table} WHERE id = %d",
+            $form_id
+        ));
+
+        if (!$form || !$this->authorize_form_access($form, $context)) {
+            return null;
+        }
+
+        $form->fields = json_decode($form->fields, true) ?: array();
+        $form->settings = json_decode($form->settings, true) ?: array();
+        $form->notifications = json_decode($form->notifications, true) ?: array();
+
+        return $this->filter_form_data($form, $context);
     }
 
     /**
@@ -122,12 +129,27 @@ class Ofast_X_Forms
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_forms';
 
+        $title = sanitize_text_field($data['title'] ?? '');
+        $title = $this->truncate_string($title, 200);
+
+        if ($title === '') {
+            return false;
+        }
+
+        $description = sanitize_textarea_field($data['description'] ?? '');
+        $description = $this->truncate_string($description, 1000);
+        $fields = $this->validate_and_sanitize_fields($data['fields'] ?? array());
+        $settings = $this->validate_and_sanitize_settings($data['settings'] ?? array());
+        $notifications = $this->validate_and_sanitize_notifications(
+            $data['notifications'] ?? $this->get_existing_notifications($data['id'] ?? 0)
+        );
+
         $form_data = array(
-            'title' => sanitize_text_field($data['title']),
-            'description' => sanitize_textarea_field($data['description'] ?? ''),
-            'fields' => wp_json_encode($data['fields'] ?? array()),
-            'settings' => wp_json_encode($data['settings'] ?? array()),
-            'notifications' => wp_json_encode($data['notifications'] ?? array()),
+            'title' => $title,
+            'description' => $description,
+            'fields' => wp_json_encode($fields),
+            'settings' => wp_json_encode($settings),
+            'notifications' => wp_json_encode($notifications),
             'active' => isset($data['active']) ? 1 : 0,
             'updated_at' => current_time('mysql')
         );
@@ -142,6 +164,300 @@ class Ofast_X_Forms
             $wpdb->insert($table, $form_data);
             return $wpdb->insert_id;
         }
+    }
+
+    /**
+     * Check whether the requested form is accessible in the current context.
+     */
+    private function authorize_form_access($form, $context)
+    {
+        if (!$form) {
+            return false;
+        }
+
+        switch ($context) {
+            case 'admin':
+                return current_user_can('manage_options');
+
+            case 'submission':
+            case 'public':
+            case 'shortcode':
+                return !empty($form->active);
+
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Reduce the form payload based on where it is being used.
+     */
+    private function filter_form_data($form, $context)
+    {
+        switch ($context) {
+            case 'admin':
+                return $form;
+
+            case 'submission':
+                return $this->filter_submission_form_data($form);
+
+            case 'public':
+            case 'shortcode':
+            default:
+                return $this->filter_public_form_data($form);
+        }
+    }
+
+    /**
+     * Keep only the form data needed for frontend rendering.
+     */
+    private function filter_public_form_data($form)
+    {
+        $filtered = new stdClass();
+        $filtered->id = $form->id;
+        $filtered->title = $form->title;
+        $filtered->description = $form->description ?? '';
+        $filtered->active = $form->active;
+        $filtered->fields = $this->filter_fields_for_public($form->fields ?? array());
+
+        $filtered->settings = array();
+        foreach (array('submit_text', 'design') as $key) {
+            if (isset($form->settings[$key])) {
+                $filtered->settings[$key] = $form->settings[$key];
+            }
+        }
+
+        return $filtered;
+    }
+
+    /**
+     * Keep only the form data needed to validate and process submissions.
+     */
+    private function filter_submission_form_data($form)
+    {
+        $filtered = $this->filter_public_form_data($form);
+
+        if (!empty($form->settings['success_message'])) {
+            $filtered->settings['success_message'] = $form->settings['success_message'];
+        }
+
+        if (!empty($form->settings['redirect_url'])) {
+            $filtered->settings['redirect_url'] = $form->settings['redirect_url'];
+        }
+
+        return $filtered;
+    }
+
+    /**
+     * Keep only field properties that the frontend renderer and validator need.
+     */
+    private function filter_fields_for_public($fields)
+    {
+        if (!is_array($fields)) {
+            return array();
+        }
+
+        $filtered_fields = array();
+        $allowed_props = array('type', 'label', 'placeholder', 'options', 'width', 'required');
+
+        foreach ($fields as $field) {
+            if (!is_array($field)) {
+                continue;
+            }
+
+            $filtered_field = array();
+            foreach ($allowed_props as $prop) {
+                if (array_key_exists($prop, $field)) {
+                    $filtered_field[$prop] = $field[$prop];
+                }
+            }
+
+            if (!empty($filtered_field)) {
+                $filtered_fields[] = $filtered_field;
+            }
+        }
+
+        return $filtered_fields;
+    }
+
+    /**
+     * Sanitize field configuration from the admin builder.
+     */
+    private function validate_and_sanitize_fields($fields)
+    {
+        if (!is_array($fields)) {
+            return array();
+        }
+
+        $allowed_field_types = array('text', 'email', 'phone', 'textarea', 'select', 'radio', 'checkbox', 'number', 'date', 'url', 'hidden');
+        $allowed_widths = array('full', 'half');
+        $sanitized_fields = array();
+
+        foreach ($fields as $field) {
+            if (!is_array($field)) {
+                continue;
+            }
+
+            $type = sanitize_key($field['type'] ?? 'text');
+            if (!in_array($type, $allowed_field_types, true)) {
+                $type = 'text';
+            }
+
+            $width = sanitize_key($field['width'] ?? 'full');
+            if (!in_array($width, $allowed_widths, true)) {
+                $width = 'full';
+            }
+
+            $sanitized_fields[] = array(
+                'type' => $type,
+                'label' => $this->truncate_string(sanitize_text_field($field['label'] ?? ''), 100),
+                'placeholder' => $this->truncate_string(sanitize_text_field($field['placeholder'] ?? ''), 200),
+                'options' => $this->truncate_string(sanitize_textarea_field($field['options'] ?? ''), 2000),
+                'width' => $width,
+                'required' => !empty($field['required']),
+            );
+        }
+
+        return array_slice($sanitized_fields, 0, 50);
+    }
+
+    /**
+     * Sanitize form settings used by the frontend.
+     */
+    private function validate_and_sanitize_settings($settings)
+    {
+        if (!is_array($settings)) {
+            return array();
+        }
+
+        $sanitized_settings = array();
+
+        if (isset($settings['success_message'])) {
+            $sanitized_settings['success_message'] = $this->truncate_string(sanitize_text_field($settings['success_message']), 300);
+        }
+
+        if (isset($settings['redirect_url'])) {
+            $sanitized_settings['redirect_url'] = esc_url_raw($settings['redirect_url']);
+        }
+
+        if (isset($settings['submit_text'])) {
+            $sanitized_settings['submit_text'] = $this->truncate_string(sanitize_text_field($settings['submit_text']), 50);
+        }
+
+        if (!empty($settings['design']) && is_array($settings['design'])) {
+            $sanitized_settings['design'] = $this->validate_and_sanitize_design_settings($settings['design']);
+        }
+
+        return $sanitized_settings;
+    }
+
+    /**
+     * Sanitize design-related numeric and color values.
+     */
+    private function validate_and_sanitize_design_settings($design)
+    {
+        $sanitized_design = array();
+        $numeric_fields = array(
+            'form_width' => array('min' => 200, 'max' => 1200, 'default' => 600),
+            'label_size' => array('min' => 10, 'max' => 24, 'default' => 14),
+            'btn_radius' => array('min' => 0, 'max' => 50, 'default' => 5),
+            'form_radius' => array('min' => 0, 'max' => 30, 'default' => 8),
+        );
+        $color_fields = array('btn_bg', 'btn_text', 'btn_hover', 'form_bg', 'input_border', 'input_focus');
+
+        foreach ($numeric_fields as $field => $limits) {
+            if (isset($design[$field])) {
+                $value = absint($design[$field]);
+                $sanitized_design[$field] = max($limits['min'], min($limits['max'], $value));
+            }
+        }
+
+        foreach ($color_fields as $field) {
+            if (isset($design[$field])) {
+                $color = sanitize_hex_color($design[$field]);
+                if ($color) {
+                    $sanitized_design[$field] = $color;
+                }
+            }
+
+            $text_variant = $field . '_text';
+            if (isset($design[$text_variant])) {
+                $color = sanitize_hex_color($design[$text_variant]);
+                if ($color) {
+                    $sanitized_design[$text_variant] = $color;
+                }
+            }
+        }
+
+        return $sanitized_design;
+    }
+
+    /**
+     * Sanitize nested notification settings without dropping existing data on edit.
+     */
+    private function validate_and_sanitize_notifications($notifications)
+    {
+        if (!is_array($notifications)) {
+            return array();
+        }
+
+        $sanitized_notifications = array();
+
+        foreach ($notifications as $key => $value) {
+            $sanitized_key = sanitize_key($key);
+
+            if ($sanitized_key === '') {
+                continue;
+            }
+
+            if (is_array($value)) {
+                $sanitized_notifications[$sanitized_key] = $this->validate_and_sanitize_notifications($value);
+            } elseif (is_bool($value)) {
+                $sanitized_notifications[$sanitized_key] = $value;
+            } elseif (is_scalar($value)) {
+                $sanitized_notifications[$sanitized_key] = $this->truncate_string(sanitize_text_field((string) $value), 500);
+            }
+        }
+
+        return $sanitized_notifications;
+    }
+
+    /**
+     * Preserve stored notifications when the builder does not submit them.
+     */
+    private function get_existing_notifications($form_id)
+    {
+        $form_id = absint($form_id);
+        if ($form_id <= 0) {
+            return array();
+        }
+
+        $existing_form = $this->get_form($form_id, 'admin');
+        if (!$existing_form || empty($existing_form->notifications) || !is_array($existing_form->notifications)) {
+            return array();
+        }
+
+        return $existing_form->notifications;
+    }
+
+    /**
+     * Return a string length with an mbstring fallback.
+     */
+    private function string_length($value)
+    {
+        return function_exists('mb_strlen') ? mb_strlen($value, 'UTF-8') : strlen($value);
+    }
+
+    /**
+     * Truncate text safely with an mbstring fallback.
+     */
+    private function truncate_string($value, $max_length)
+    {
+        if ($this->string_length($value) <= $max_length) {
+            return $value;
+        }
+
+        return function_exists('mb_substr') ? mb_substr($value, 0, $max_length, 'UTF-8') : substr($value, 0, $max_length);
     }
 
     /**
@@ -200,8 +516,8 @@ class Ofast_X_Forms
             return '<p>Please specify a form ID.</p>';
         }
 
-        $form = $this->get_form($atts['id']);
-        if (!$form || !$form->active) {
+        $form = $this->get_form($atts['id'], 'shortcode');
+        if (!$form) {
             return '<p>Form not found.</p>';
         }
 
@@ -223,7 +539,12 @@ class Ofast_X_Forms
             wp_send_json_error('Unauthorized');
         }
 
-        $form_id = $this->save_form($_POST);
+        $form_id = $this->save_form(wp_unslash($_POST));
+
+        if ($form_id === false) {
+            wp_send_json_error(array('message' => 'Form title is required.'));
+        }
+
         wp_send_json_success(array('form_id' => $form_id));
     }
 

@@ -74,12 +74,30 @@ class Ofast_X_Custom_Dashboard
     }
 
     /**
+     * Whitelist of valid table suffixes (without prefix)
+     */
+    private $valid_table_suffixes = array(
+        'ofast_form_submissions',
+        'ofast_smtp_log',
+        'ofast_newsletter_subscribers',
+        'ofast_forms'
+    );
+
+    /**
      * Helper: Check if table exists
+     * Uses prepared statement and validates table name against whitelist
      */
     private function table_exists($table) {
         global $wpdb;
+        
+        // Validate table name against whitelist
+        if (!in_array($table, $this->valid_table_suffixes, true)) {
+            return false;
+        }
+        
         $full_table = $wpdb->prefix . $table;
-        return $wpdb->get_var("SHOW TABLES LIKE '$full_table'") === $full_table;
+        // Use prepared statement to prevent SQL injection
+        return $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $full_table)) === $full_table;
     }
 
     /**
@@ -405,12 +423,14 @@ class Ofast_X_Custom_Dashboard
 
         // 1. Submissions
         if ($this->table_exists('ofast_form_submissions')) {
-            $sub_results = $wpdb->get_results("
+            $table = $wpdb->prefix . 'ofast_form_submissions';
+            // Table name is validated by table_exists(), safe to use directly
+            $sub_results = $wpdb->get_results($wpdb->prepare("
                 SELECT DATE(submitted_at) as date, COUNT(*) as count 
-                FROM {$wpdb->prefix}ofast_form_submissions 
-                WHERE submitted_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) 
+                FROM `{$table}` 
+                WHERE submitted_at >= DATE_SUB(CURDATE(), INTERVAL %d DAY) 
                 GROUP BY DATE(submitted_at)
-            ");
+            ", 6));
             foreach ($sub_results as $row) {
                 $idx = array_search(date('M j', strtotime($row->date)), $labels);
                 if ($idx !== false) $submissions[$idx] = (int) $row->count;
@@ -419,12 +439,14 @@ class Ofast_X_Custom_Dashboard
 
         // 2. SMTP Volume
         if ($this->table_exists('ofast_smtp_log')) {
-            $smtp_results = $wpdb->get_results("
+            $table = $wpdb->prefix . 'ofast_smtp_log';
+            // Table name is validated by table_exists(), safe to use directly
+            $smtp_results = $wpdb->get_results($wpdb->prepare("
                 SELECT DATE(sent_at) as date, COUNT(*) as count 
-                FROM {$wpdb->prefix}ofast_smtp_log 
-                WHERE sent_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) 
+                FROM `{$table}` 
+                WHERE sent_at >= DATE_SUB(CURDATE(), INTERVAL %d DAY) 
                 GROUP BY DATE(sent_at)
-            ");
+            ", 6));
             foreach ($smtp_results as $row) {
                 $idx = array_search(date('M j', strtotime($row->date)), $labels);
                 if ($idx !== false) $smtp[$idx] = (int) $row->count;
@@ -433,12 +455,14 @@ class Ofast_X_Custom_Dashboard
 
         // 3. Newsletter
         if ($this->table_exists('ofast_newsletter_subscribers')) {
-            $news_results = $wpdb->get_results("
+            $table = $wpdb->prefix . 'ofast_newsletter_subscribers';
+            // Table name is validated by table_exists(), safe to use directly
+            $news_results = $wpdb->get_results($wpdb->prepare("
                 SELECT DATE(subscribed_at) as date, COUNT(*) as count 
-                FROM {$wpdb->prefix}ofast_newsletter_subscribers 
-                WHERE subscribed_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) 
+                FROM `{$table}` 
+                WHERE subscribed_at >= DATE_SUB(CURDATE(), INTERVAL %d DAY) 
                 GROUP BY DATE(subscribed_at)
-            ");
+            ", 6));
             foreach ($news_results as $row) {
                 $idx = array_search(date('M j', strtotime($row->date)), $labels);
                 if ($idx !== false) $newsletter[$idx] = (int) $row->count;
@@ -472,7 +496,8 @@ class Ofast_X_Custom_Dashboard
         
         $table = $wpdb->prefix . 'ofast_form_submissions';
         
-        return $wpdb->get_results("SELECT * FROM $table ORDER BY submitted_at DESC LIMIT 5");
+        // Table name is validated by table_exists(), safe to use directly
+        return $wpdb->get_results($wpdb->prepare("SELECT * FROM `{$table}` ORDER BY submitted_at DESC LIMIT %d", 5));
     }
 
     /**
@@ -484,7 +509,8 @@ class Ofast_X_Custom_Dashboard
             return 0;
         }
         $table = $wpdb->prefix . 'ofast_form_submissions';
-        return $wpdb->get_var("SELECT COUNT(*) FROM $table");
+        // Table name is validated by table_exists(), safe to use directly
+        return $wpdb->get_var("SELECT COUNT(*) FROM `{$table}`");
     }
 
     /**
@@ -497,14 +523,15 @@ class Ofast_X_Custom_Dashboard
         $table_sub = $wpdb->prefix . 'ofast_form_submissions';
         $table_forms = $wpdb->prefix . 'ofast_forms';
 
-        return $wpdb->get_results("
+        // Table names are validated by table_exists(), safe to use directly
+        return $wpdb->get_results($wpdb->prepare("
             SELECT f.title, COUNT(s.id) as count 
-            FROM $table_forms f
-            JOIN $table_sub s ON f.id = s.form_id
+            FROM `{$table_forms}` f
+            JOIN `{$table_sub}` s ON f.id = s.form_id
             GROUP BY f.id
             ORDER BY count DESC
-            LIMIT 3
-        ");
+            LIMIT %d
+        ", 3));
     }
 
     /**
@@ -517,10 +544,11 @@ class Ofast_X_Custom_Dashboard
         }
 
         $table = $wpdb->prefix . 'ofast_smtp_log';
-        $total = $wpdb->get_var("SELECT COUNT(*) FROM $table");
+        // Table name is validated by table_exists(), safe to use directly
+        $total = $wpdb->get_var("SELECT COUNT(*) FROM `{$table}`");
         if ($total == 0) return array('status' => 'Ready', 'percent' => 100, 'total' => 0);
 
-        $success = $wpdb->get_var("SELECT COUNT(*) FROM $table WHERE status = 'success'");
+        $success = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `{$table}` WHERE status = %s", 'success'));
         $percent = ($success / $total) * 100;
 
         return array(
@@ -539,8 +567,9 @@ class Ofast_X_Custom_Dashboard
 
         $table = $wpdb->prefix . 'ofast_form_submissions';
         
-        $today = $wpdb->get_var("SELECT COUNT(*) FROM $table WHERE DATE(submitted_at) = CURDATE()");
-        $yesterday = $wpdb->get_var("SELECT COUNT(*) FROM $table WHERE DATE(submitted_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)");
+        // Table name is validated by table_exists(), safe to use directly
+        $today = $wpdb->get_var("SELECT COUNT(*) FROM `{$table}` WHERE DATE(submitted_at) = CURDATE()");
+        $yesterday = $wpdb->get_var("SELECT COUNT(*) FROM `{$table}` WHERE DATE(submitted_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)");
 
         if ($yesterday == 0) {
             $percent = $today > 0 ? 100 : 0;

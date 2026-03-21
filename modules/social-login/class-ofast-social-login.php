@@ -108,6 +108,9 @@ class Ofast_X_Social_Login
         }
 
         if (!class_exists('Ofast_X_Security_Hardening')) {
+            Ofast_X_Logger::warning(
+                sprintf('Ofast_X_Security_Hardening class not found. Cannot decrypt social login secret for provider: %s', $provider)
+            );
             return '';
         }
 
@@ -120,9 +123,13 @@ class Ofast_X_Social_Login
             $encrypted = Ofast_X_Security_Hardening::encrypt_option($stored_secret);
             if ($encrypted !== false) {
                 update_option("ofast_social_{$provider}_client_secret", $encrypted);
+                return $stored_secret;
+            } else {
+                Ofast_X_Logger::warning(
+                    sprintf('Failed to encrypt legacy social login secret for provider: %s. Encryption failed.', $provider)
+                );
+                return '';
             }
-
-            return $stored_secret;
         }
 
         return '';

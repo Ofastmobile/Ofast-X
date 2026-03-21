@@ -974,9 +974,15 @@ class Ofast_X_Spam_Protection
                 $encrypted = Ofast_X_Security_Hardening::encrypt_option($stored_secret);
                 if ($encrypted !== false) {
                     update_option('ofast_recaptcha_secret_key', $encrypted);
+                    return $stored_secret;
+                } else {
+                    Ofast_X_Logger::warning(
+                        'Failed to encrypt legacy reCAPTCHA secret. Migration failed.',
+                        array('redacted_secret' => substr($stored_secret, 0, 10) . '...')
+                    );
+                    update_option('ofast_recaptcha_migration_failed', true);
+                    return '';
                 }
-
-                return $stored_secret;
             }
 
             return '';

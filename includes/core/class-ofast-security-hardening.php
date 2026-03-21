@@ -354,9 +354,11 @@ class Ofast_X_Security_Hardening
                     'attempts' => $attempts
                 ));
 
+                $lockout_minutes = min(($attempts - 1) * 5, 15);
+
                 return new WP_Error(
                     'ofast_emergency_rate_limit',
-                    '<strong>' . esc_html__('Security:', 'ofast-x') . '</strong> ' . esc_html__('Too many emergency key attempts. Please wait 1 hour.', 'ofast-x')
+                    '<strong>' . esc_html__('Security:', 'ofast-x') . '</strong> ' . sprintf(esc_html__('Too many emergency key attempts. Please wait %d minutes.', 'ofast-x'), $lockout_minutes)
                 );
             }
 

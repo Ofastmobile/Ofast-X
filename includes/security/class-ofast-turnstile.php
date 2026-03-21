@@ -130,7 +130,6 @@ class Ofast_X_Turnstile
         $encrypted = Ofast_X_Security_Hardening::encrypt_option($plaintext_key);
         if ($encrypted !== false) {
             update_option('ofast_turnstile_secret_key', $encrypted);
-            self::$instance = null;
         }
     }
 

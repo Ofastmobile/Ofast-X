@@ -768,49 +768,75 @@ class Ofast_X_Whos_Admin
                     <div class="ofast-tab-content<?php echo $default_tab === 'updates' ? ' active' : ''; ?>"
                         data-tab-panel="updates">
 
-                        <div class="ofast-card ofast-main-card" style="margin-bottom: 20px;">
-                            <div class="ofast-card-header">
-                                <span class="dashicons dashicons-admin-generic"></span>
-                                <h2><?php esc_html_e('Features', 'ofast-x'); ?></h2>
-                            </div>
-                            <div class="ofast-card-body">
-                                <div class="ofast-form-group">
-                                    <label class="ofast-checkbox-label">
-                                        <input type="checkbox" name="enable_dark_mode" value="1" <?php checked(!empty($footer_settings['enable_dark_mode'])); ?>>
-                                        <span class="ofast-checkbox-custom"></span>
-                                        <span class="ofast-checkbox-text">
-                                            Enable Dark/Light Mode Toggle
-                                            <span class="ofast-security-badge"
-                                                style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">UI
-                                                Feature</span>
-                                        </span>
-                                    </label>
-                                </div>
-
-                                <div class="ofast-form-group">
-                                    <label class="ofast-checkbox-label">
-                                        <input type="checkbox" name="enable_custom_dashboard" value="1" <?php checked(!empty($footer_settings['enable_custom_dashboard'])); ?>>
-                                        <span class="ofast-checkbox-custom"></span>
-                                        <span class="ofast-checkbox-text">
-                                            Enable Custom Dashboard
-                                            <span class="ofast-security-badge"
-                                                style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">New
-                                                Feature</span>
-                                        </span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="ofast-card ofast-main-card">
-                            <div class="ofast-card-header" id="ofast-updates-header" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
+                        <div class="ofast-subtab-layout">
+                            <!-- Left: vertical sub-tab nav -->
+                            <nav class="ofast-subtab-nav">
+                                <button type="button" class="ofast-subtab active" data-subtab="features">
+                                    <span class="dashicons dashicons-admin-generic"></span>
+                                    <?php esc_html_e('Features', 'ofast-x'); ?>
+                                </button>
+                                <button type="button" class="ofast-subtab" data-subtab="updates">
                                     <span class="dashicons dashicons-update"></span>
-                                    <h2 style="margin: 0;">Updates</h2>
+                                    <?php esc_html_e('Plugin Update', 'ofast-x'); ?>
+                                </button>
+                                <button type="button" class="ofast-subtab" data-subtab="page-protection">
+                                    <span class="dashicons dashicons-lock"></span>
+                                    <?php esc_html_e('Page Protection', 'ofast-x'); ?>
+                                </button>
+                                <button type="button" class="ofast-subtab" data-subtab="menu-editor">
+                                    <span class="dashicons dashicons-menu-alt3"></span>
+                                    <?php esc_html_e('Menu Editor', 'ofast-x'); ?>
+                                </button>
+                            </nav>
+
+                            <!-- Right: sub-tab content panels -->
+                            <div class="ofast-subtab-panels">
+
+                                <!-- Features Panel -->
+                                <div class="ofast-subtab-panel active" data-subtab-panel="features">
+                                    <div class="ofast-card ofast-main-card">
+                                        <div class="ofast-card-header">
+                                            <span class="dashicons dashicons-admin-generic"></span>
+                                            <h2><?php esc_html_e('Features', 'ofast-x'); ?></h2>
+                                        </div>
+                                        <div class="ofast-card-body">
+                                            <div class="ofast-form-group">
+                                                <label class="ofast-checkbox-label">
+                                                    <input type="checkbox" name="enable_dark_mode" value="1" <?php checked(!empty($footer_settings['enable_dark_mode'])); ?>>
+                                                    <span class="ofast-checkbox-custom"></span>
+                                                    <span class="ofast-checkbox-text">
+                                                        Enable Dark/Light Mode Toggle
+                                                        <span class="ofast-security-badge"
+                                                            style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">UI
+                                                            Feature</span>
+                                                    </span>
+                                                </label>
+                                            </div>
+
+                                            <div class="ofast-form-group">
+                                                <label class="ofast-checkbox-label">
+                                                    <input type="checkbox" name="enable_custom_dashboard" value="1" <?php checked(!empty($footer_settings['enable_custom_dashboard'])); ?>>
+                                                    <span class="ofast-checkbox-custom"></span>
+                                                    <span class="ofast-checkbox-text">
+                                                        Enable Custom Dashboard
+                                                        <span class="ofast-security-badge"
+                                                            style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">New
+                                                            Feature</span>
+                                                    </span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <span class="dashicons <?php echo get_option('ofast_disable_plugin_updates', 0) ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'; ?>" id="ofast-updates-arrow" style="font-size: 20px; color: #64748b; transition: transform 0.2s;"></span>
-                            </div>
-                            <div class="ofast-card-body" id="ofast-updates-body" style="<?php echo get_option('ofast_disable_plugin_updates', 0) ? '' : 'display: none;'; ?>">
+
+                                <!-- Plugin Update Panel -->
+                                <div class="ofast-subtab-panel" data-subtab-panel="updates">
+                                    <div class="ofast-card ofast-main-card">
+                                        <div class="ofast-card-header">
+                                            <span class="dashicons dashicons-update"></span>
+                                            <h2><?php esc_html_e('Plugin Update', 'ofast-x'); ?></h2>
+                                        </div>
+                                        <div class="ofast-card-body">
                                 <div class="ofast-field">
                                     <label for="ofast_disable_plugin_updates" class="ofast-toggle-label">
                                         <span
@@ -885,6 +911,10 @@ class Ofast_X_Whos_Admin
                                 </div>
                             </div>
                         </div>
+                                </div>
+
+                                <!-- Page Protection Panel -->
+                                <div class="ofast-subtab-panel" data-subtab-panel="page-protection">
 
                         <?php
                         // Page Protection Settings
@@ -1025,31 +1055,38 @@ class Ofast_X_Whos_Admin
                                                     </div>
                                                 </label>
                                             <?php endforeach; ?>
-                                        </div>
-                                    </div>
+                                        </div><!-- .ofast-plugin-list -->
+                                    </div><!-- .ofast-protected-pages-section -->
+                                </div><!-- #ofast-page-protection-settings -->
+                            </div><!-- .ofast-card-body -->
+                        </div><!-- .ofast-card -->
+                                </div><!-- .ofast-subtab-panel page-protection -->
+
+                                <!-- Menu Editor Panel -->
+                                <div class="ofast-subtab-panel" data-subtab-panel="menu-editor">
+                                    <?php
+                                    // Embedded Menu Editor
+                                    if ($this->menu_editor) {
+                                        $this->menu_editor->render_embedded();
+                                    }
+                                    ?>
                                 </div>
-                            </div>
-                    </div>
 
-                        <?php
-                        // Embedded Menu Editor (no gap between sections)
-                        if ($this->menu_editor) {
-                            $this->menu_editor->render_embedded();
-                        }
-                        ?>
+                            </div><!-- .ofast-subtab-panels -->
+                        </div><!-- .ofast-subtab-layout -->
 
                     </div>
-                </div>
 
-                <div class="ofast-form-actions" style="margin-top: 30px; display: flex; gap: 12px; align-items: center;">
-                    <button type="submit" name="ofast_white_label_save" class="ofast-btn-primary">
-                        Save Settings
-                    </button>
-                    <button type="submit" name="ofast_white_label_reset" class="ofast-btn-primary"
-                        style="background: #dc3545; border-color: #dc3545;"
-                        onclick="return confirm('Reset ALL White Label settings to defaults? This will clear designer details, footer, updates, page protection password, and menu editor settings.');">
-                        Reset All to Default
-                    </button>
+                    <div class="ofast-form-actions" style="margin-top: 30px; display: flex; gap: 12px; align-items: center;">
+                        <button type="submit" name="ofast_white_label_save" class="ofast-btn-primary">
+                            Save Settings
+                        </button>
+                        <button type="submit" name="ofast_white_label_reset" class="ofast-btn-primary"
+                            style="background: #dc3545; border-color: #dc3545;"
+                            onclick="return confirm('Reset ALL White Label settings to defaults? This will clear designer details, footer, updates, page protection password, and menu editor settings.');">
+                            Reset All to Default
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -1684,6 +1721,105 @@ class Ofast_X_Whos_Admin
                 color: #94a3b8;
                 margin-top: 6px;
             }
+
+            /* ===== Vertical Sub-Tab Layout (Updates tab) ===== */
+            .ofast-subtab-layout {
+                display: block;
+            }
+
+            .ofast-subtab-nav {
+                display: none;
+            }
+
+            /* Mobile/tablet: show all panels stacked */
+            .ofast-subtab-panel {
+                display: block !important;
+                margin-bottom: 20px;
+            }
+
+            /* Desktop: side-by-side layout */
+            @media (min-width: 1024px) {
+                .ofast-subtab-layout {
+                    display: flex;
+                    gap: 24px;
+                    align-items: flex-start;
+                }
+
+                .ofast-subtab-nav {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                    width: 240px;
+                    flex-shrink: 0;
+                    position: sticky;
+                    top: 52px;
+                    background: #fff;
+                    border-radius: 12px;
+                    padding: 8px;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+                    border: 1px solid #e2e8f0;
+                }
+
+                .ofast-subtab {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 10px 14px;
+                    border: none;
+                    background: transparent;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 13px;
+                    font-weight: 500;
+                    color: #64748b;
+                    text-align: left;
+                    transition: all 0.2s ease;
+                    white-space: nowrap;
+                }
+
+                .ofast-subtab:hover {
+                    background: #f1f5f9;
+                    color: #334155;
+                }
+
+                .ofast-subtab.active {
+                    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+                    color: #fff;
+                    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+                }
+
+                .ofast-subtab .dashicons {
+                    font-size: 18px;
+                    width: 18px;
+                    height: 18px;
+                    line-height: 18px;
+                }
+
+                .ofast-subtab-panels {
+                    flex: 1;
+                    min-width: 0;
+                }
+
+                /* Desktop: only show active panel */
+                .ofast-subtab-panel {
+                    display: none !important;
+                }
+
+                .ofast-subtab-panel.active {
+                    display: block !important;
+                }
+            }
+
+            /* Make tables inside sub-tab panels horizontally scrollable */
+            .ofast-subtab-panel .ofast-table-wrap,
+            .ofast-subtab-panel table {
+                width: 100%;
+            }
+
+            .ofast-subtab-panel .ofast-table-scroll {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
         </style>
 
         <script>
@@ -1707,7 +1843,8 @@ class Ofast_X_Whos_Admin
                     $('#preview-left').html(text);
                 });
                 $('#footer_right_text').on('input', function () {
-                    var text = $(this).val() || '<?php echo empty($footer_settings['hide_wp_version']) ? '<em>Version X.X</em>' : ''; ?>';
+                    var defaultRight = <?php echo json_encode(empty($footer_settings['hide_wp_version']) ? '<em>Version X.X</em>' : ''); ?>;
+                    var text = $(this).val() || defaultRight;
                     $('#preview-right').html(text || '<em>Version X.X</em>');
                 });
                 $('input[name="hide_wp_version"]').on('change', function () {
@@ -1717,7 +1854,7 @@ class Ofast_X_Whos_Admin
                         $('#preview-right').html('<em>Version X.X</em>');
                     }
                 });
-                // Toggle plugin selector visibility + card body collapse
+                // Toggle plugin selector visibility
                 $('#ofast_disable_plugin_updates').on('change', function () {
                     if ($(this).is(':checked')) {
                         $('#ofast-plugin-selector').slideDown(200);
@@ -1726,11 +1863,20 @@ class Ofast_X_Whos_Admin
                     }
                 });
 
-                // Header arrow toggle for Updates card body
-                $('#ofast-updates-header').on('click', function (e) {
+                // Sub-tab switching for Updates tab
+                $('.ofast-subtab-nav .ofast-subtab').on('click', function () {
+                    var target = $(this).data('subtab');
+                    $('.ofast-subtab-nav .ofast-subtab').removeClass('active');
+                    $(this).addClass('active');
+                    $('.ofast-subtab-panel').removeClass('active');
+                    $('.ofast-subtab-panel[data-subtab-panel="' + target + '"]').addClass('active');
+                });
+
+                // Header arrow toggle for Menu Editor card body
+                $('#ofast-menu-editor-header').on('click', function (e) {
                     if ($(e.target).closest('.ofast-toggle, .ofast-toggle-switch, input').length) return;
-                    var $body = $('#ofast-updates-body');
-                    var $arrow = $('#ofast-updates-arrow');
+                    var $body = $('#ofast-menu-editor-body');
+                    var $arrow = $('#ofast-menu-editor-arrow');
                     $body.slideToggle(200, function () {
                         if ($body.is(':visible')) {
                             $arrow.removeClass('dashicons-arrow-down-alt2').addClass('dashicons-arrow-up-alt2');
@@ -1756,7 +1902,7 @@ class Ofast_X_Whos_Admin
                 }
                 $('.ofast-plugin-item input').on('change', updateSelectedCount);
 
-                // Select all / Deselect all
+                // Select all / deselect all
                 $('#ofast-select-all').on('click', function () {
                     $('.ofast-plugin-item:not(.ofast-hidden) input').prop('checked', true);
                     updateSelectedCount();
@@ -1765,42 +1911,14 @@ class Ofast_X_Whos_Admin
                     $('.ofast-plugin-item:not(.ofast-hidden) input').prop('checked', false);
                     updateSelectedCount();
                 });
-                // Toggle page protection settings visibility + card body collapse
+
+                // Toggle page protection settings visibility
                 $('#ofast_page_protection_enabled').on('change', function () {
                     if ($(this).is(':checked')) {
                         $('#ofast-page-protection-settings').slideDown(200);
                     } else {
                         $('#ofast-page-protection-settings').slideUp(200);
                     }
-                });
-
-                // Header arrow toggle for Page Protection card body
-                $('#ofast-page-protection-header').on('click', function (e) {
-                    // Don't toggle if clicking the checkbox toggle inside
-                    if ($(e.target).closest('.ofast-toggle, .ofast-toggle-switch, input').length) return;
-                    var $body = $('#ofast-page-protection-body');
-                    var $arrow = $('#ofast-page-protection-arrow');
-                    $body.slideToggle(200, function () {
-                        if ($body.is(':visible')) {
-                            $arrow.removeClass('dashicons-arrow-down-alt2').addClass('dashicons-arrow-up-alt2');
-                        } else {
-                            $arrow.removeClass('dashicons-arrow-up-alt2').addClass('dashicons-arrow-down-alt2');
-                        }
-                    });
-                });
-
-                // Header arrow toggle for Menu Editor card body
-                $('#ofast-menu-editor-header').on('click', function (e) {
-                    if ($(e.target).closest('.ofast-toggle, .ofast-toggle-switch, input').length) return;
-                    var $body = $('#ofast-menu-editor-body');
-                    var $arrow = $('#ofast-menu-editor-arrow');
-                    $body.slideToggle(200, function () {
-                        if ($body.is(':visible')) {
-                            $arrow.removeClass('dashicons-arrow-down-alt2').addClass('dashicons-arrow-up-alt2');
-                        } else {
-                            $arrow.removeClass('dashicons-arrow-up-alt2').addClass('dashicons-arrow-down-alt2');
-                        }
-                    });
                 });
 
                 // Page search filter

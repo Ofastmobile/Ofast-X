@@ -352,3 +352,83 @@
         position: static !important;
     }
 }
+
+/* Role Picker */
+.ofast-role-picker {
+    position: relative;
+}
+.ofast-role-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+.ofast-role-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    background: #eef2ff;
+    color: #4f46e5;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+.ofast-role-picker-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 1px dashed #cbd5e1 !important;
+    border-radius: 4px !important;
+    background: #fff !important;
+    cursor: pointer;
+    padding: 0 !important;
+    transition: all 0.2s ease;
+}
+.ofast-role-picker-btn:hover {
+    border-color: #6366f1 !important;
+    background: #eef2ff !important;
+}
+.ofast-role-picker-btn .dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    color: #94a3b8;
+}
+.ofast-role-picker-btn:hover .dashicons {
+    color: #6366f1;
+}
+.ofast-role-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    min-width: 180px;
+    padding: 6px 0;
+    margin-top: 4px;
+}
+.ofast-role-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #374151;
+    transition: background 0.15s;
+}
+.ofast-role-option:hover {
+    background: #f1f5f9;
+}
+.ofast-role-option input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #6366f1;
+    margin: 0;
+}

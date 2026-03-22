@@ -68,5 +68,37 @@
             // Update icon in menu name column
             wrapper.closest('tr').find('td:eq(1) .dashicons').attr('class', 'dashicons ' + iconClass);
         });
+
+        // Role picker toggle
+        $(document).on('click', '.ofast-role-picker-btn', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var dropdown = $(this).closest('.ofast-role-picker').find('.ofast-role-dropdown');
+            $('.ofast-role-dropdown').not(dropdown).hide();
+            dropdown.toggle();
+        });
+
+        // Close role dropdown when clicking outside
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('.ofast-role-picker').length) {
+                $('.ofast-role-dropdown').hide();
+            }
+        });
+
+        // Update role tags when checkboxes change
+        $(document).on('change', '.ofast-role-option input', function () {
+            var picker = $(this).closest('.ofast-role-picker');
+            var tagsContainer = picker.find('.ofast-role-tags');
+            var addBtn = tagsContainer.find('.ofast-role-picker-btn');
+
+            // Remove existing tags
+            tagsContainer.find('.ofast-role-tag').remove();
+
+            // Add tags for checked roles
+            picker.find('.ofast-role-option input:checked').each(function () {
+                var roleName = $(this).siblings('span').text();
+                addBtn.before('<span class="ofast-role-tag">' + roleName + '</span>');
+            });
+        });
     });
 })(jQuery);

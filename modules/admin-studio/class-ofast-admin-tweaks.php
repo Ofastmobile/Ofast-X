@@ -438,7 +438,7 @@ class Ofast_X_Admin_Tweaks
             // Admin Modules
             'enable_user_roles' => isset($_POST['ofast_enable_user_roles']) ? 1 : 0,
             'enable_whos_admin' => isset($_POST['ofast_enable_whos_admin']) ? 1 : 0,
-            'enable_menu_editor' => isset($_POST['ofast_enable_menu_editor']) ? 1 : 0,
+            'enable_menu_editor' => isset($_POST['ofast_enable_menu_editor']) ? 1 : 0, // kept for backward compat with existing saved settings
             'enable_content_ordering' => isset($_POST['ofast_enable_content_ordering']) ? 1 : 0,
             'enable_admin_url' => isset($_POST['ofast_enable_admin_url']) ? 1 : 0,
             'enable_admin_design' => isset($_POST['ofast_enable_admin_design']) ? 1 : 0,
@@ -966,18 +966,7 @@ class Ofast_X_Admin_Tweaks
                                         </div>
                                     </div>
 
-                                    <div class="ofast-tweak-row">
-                                        <div class="ofast-tweak-content">
-                                            <label for="ofast_enable_menu_editor">Admin Menu Editor</label>
-                                            <p class="description">Reorder and rename admin menu items.</p>
-                                        </div>
-                                        <div class="ofast-tweak-action">
-                                            <label class="ofast-toggle">
-                                                <input type="checkbox" name="ofast_enable_menu_editor" id="ofast_enable_menu_editor" value="1" <?php checked(!empty($settings['enable_menu_editor'])); ?>>
-                                                <span class="ofast-slider"></span>
-                                            </label>
-                                        </div>
-                                    </div>
+
 
                                     <div class="ofast-tweak-row">
                                         <div class="ofast-tweak-content">

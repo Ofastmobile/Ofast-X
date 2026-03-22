@@ -99,9 +99,7 @@ class Ofast_X_Core
             $this->load_duplicate_content();
         }
 
-        if ($this->is_admin_tweak_enabled('enable_menu_editor')) {
-            $this->load_menu_editor();
-        }
+
 
 
         if ($this->is_module_enabled('redirects')) {
@@ -225,13 +223,20 @@ class Ofast_X_Core
         $whos_admin->init();
         $this->modules['whos-admin'] = $whos_admin;
 
-        // 2. Load Admin Footer (handles Dark Mode toggle)
+        // 2. Load Menu Editor (embedded in White Label Updates tab)
+        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-menu-editor.php';
+        $menu_editor = new Ofast_X_Menu_Editor();
+        $menu_editor->init();
+        $this->modules['menu-editor'] = $menu_editor;
+        $whos_admin->set_menu_editor($menu_editor);
+
+        // 3. Load Admin Footer (handles Dark Mode toggle)
         require_once OFAST_X_PLUGIN_DIR . 'modules/admin-footer/class-ofast-admin-footer.php';
         $admin_footer = new Ofast_X_Admin_Footer();
         $admin_footer->init();
         $this->modules['admin-footer'] = $admin_footer;
 
-        // 3. Load Custom Dashboard
+        // 4. Load Custom Dashboard
         require_once OFAST_X_PLUGIN_DIR . 'modules/admin-design/custom-dashboard/class-ofast-custom-dashboard.php';
         $custom_dashboard = new Ofast_X_Custom_Dashboard();
         $custom_dashboard->init();
@@ -291,18 +296,7 @@ class Ofast_X_Core
         $this->modules['duplicate-content'] = $duplicate;
     }
 
-    /**
-     * Load Menu Editor Module
-     */
-    private function load_menu_editor()
-    {
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-menu-editor.php';
 
-        $menu_editor = new Ofast_X_Menu_Editor();
-        $menu_editor->init();
-
-        $this->modules['menu-editor'] = $menu_editor;
-    }
 
     /**
      * Check if module is enabled

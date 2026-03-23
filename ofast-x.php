@@ -57,10 +57,9 @@ function ofast_x_init_plugin()
 {
     // Load core classes
     require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-core.php';
-    require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-loader.php';
 
     // Load security hardening (early load for headers)
-    require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-security-hardening.php';
+    require_once OFAST_X_PLUGIN_DIR . 'includes/security/class-ofast-security-hardening.php';
 
     // Load Toast Notification system
     require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-toast.php';
@@ -124,7 +123,7 @@ add_action('plugins_loaded', 'ofast_x_load_textdomain');
  */
 function ofast_x_plugin_action_links($links)
 {
-    $settings_link = '<a href="' . admin_url('admin.php?page=ofast-settings') . '">Settings</a>';
+    $settings_link = '<a href="' . admin_url('admin.php?page=ofast-dashboard') . '">Settings</a>';
     array_unshift($links, $settings_link);
     return $links;
 }

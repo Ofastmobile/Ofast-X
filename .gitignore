@@ -1,0 +1,30 @@
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Development / Internal files
+prompt.pmd
+error.txt
+archive/
+reports/
+admin/
+
+# Node
+node_modules/
+package-lock.json
+
+# Logs
+*.log
+debug.log
+
+# Build artifacts
+*.zip
+*.tar.gz

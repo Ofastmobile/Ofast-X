@@ -41,7 +41,6 @@ $tables = array(
     $wpdb->prefix . 'ofast_form_submissions',
     $wpdb->prefix . 'ofast_redirects',
     $wpdb->prefix . 'ofast_redirect_logs',
-    $wpdb->prefix . 'ofast_notification_log',
 );
 
 foreach ($tables as $table) {
@@ -105,15 +104,6 @@ $options = array(
     'ofast_login_logo',
     'ofast_login_background',
     'ofast_login_settings',
-
-    // Notification Channels options
-    'ofast_notification_channels',
-    'ofast_notification_discord_webhook',
-    'ofast_notification_slack_webhook',
-    'ofast_notification_telegram_bot_token',
-    'ofast_notification_telegram_chat_id',
-    'ofast_notification_google_sheets_id',
-    'ofast_notification_google_sheets_credentials',
 
     // Debug options
     'ofast_debug_mode',

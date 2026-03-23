@@ -83,8 +83,6 @@ class Ofast_X_Core
             $this->load_snippets();
         }
 
-
-
         if ($this->is_admin_tweak_enabled('enable_user_roles')) {
             $this->load_user_roles();
         }
@@ -93,14 +91,9 @@ class Ofast_X_Core
             $this->load_admin_url();
         }
 
-
-
         if ($this->is_module_enabled('duplicate-content')) {
             $this->load_duplicate_content();
         }
-
-
-
 
         if ($this->is_module_enabled('redirects')) {
             $this->load_redirects();
@@ -402,23 +395,23 @@ class Ofast_X_Core
             return;
         }
 
-        $css_file = OFAST_X_PLUGIN_DIR . 'admin/css/ofast-admin.css';
+        $css_file = OFAST_X_PLUGIN_DIR . 'assets/css/ofast-admin.css';
         $version = (defined('WP_DEBUG') && WP_DEBUG) ? filemtime($css_file) : OFAST_X_VERSION;
         
         wp_enqueue_style(
             'ofast-x-admin',
-            OFAST_X_PLUGIN_URL . 'admin/css/ofast-admin.css',
+            OFAST_X_PLUGIN_URL . 'assets/css/ofast-admin.css',
             array(),
             $version
         );
 
         // Responsive CSS for mobile-friendly admin pages
-        $responsive_file = OFAST_X_PLUGIN_DIR . 'admin/css/ofast-admin-responsive.css';
+        $responsive_file = OFAST_X_PLUGIN_DIR . 'assets/css/ofast-admin-responsive.css';
         $responsive_version = (defined('WP_DEBUG') && WP_DEBUG) ? filemtime($responsive_file) : OFAST_X_VERSION;
         
         wp_enqueue_style(
             'ofast-x-admin-responsive',
-            OFAST_X_PLUGIN_URL . 'admin/css/ofast-admin-responsive.css',
+            OFAST_X_PLUGIN_URL . 'assets/css/ofast-admin-responsive.css',
             array('ofast-x-admin'),
             $responsive_version
         );

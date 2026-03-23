@@ -576,14 +576,14 @@ class Ofast_X_Whos_Admin
 
             <!-- Strip toast query params so they don't persist on refresh -->
             <script>
-            (function() {
-                var url = new URL(window.location);
-                if (url.searchParams.has('settings_saved') || url.searchParams.has('settings_reset')) {
-                    url.searchParams.delete('settings_saved');
-                    url.searchParams.delete('settings_reset');
-                    window.history.replaceState({}, '', url.toString());
-                }
-            })();
+                (function () {
+                    var url = new URL(window.location);
+                    if (url.searchParams.has('settings_saved') || url.searchParams.has('settings_reset')) {
+                        url.searchParams.delete('settings_saved');
+                        url.searchParams.delete('settings_reset');
+                        window.history.replaceState({}, '', url.toString());
+                    }
+                })();
             </script>
 
             <form method="post" action="" class="ofast-modern-form">
@@ -687,6 +687,17 @@ class Ofast_X_Whos_Admin
                                 </div>
                             </div>
                         </div>
+
+                        <div class="ofast-form-actions"
+                            style="margin-top: 30px; display: flex; gap: 12px; align-items: center;">
+                            <button type="submit" name="ofast_white_label_save" class="ofast-btn-primary">
+                                Save Settings
+                            </button>
+                            <button type="submit" name="ofast_white_label_reset" class="ofast-btn-reset"
+                                onclick="return confirm('Reset ALL White Label settings to defaults?');">
+                                Reset to Default
+                            </button>
+                        </div>
                     </div>
 
                     <div class="ofast-tab-content<?php echo $default_tab === 'footer' ? ' active' : ''; ?>"
@@ -763,6 +774,17 @@ class Ofast_X_Whos_Admin
                                 </div>
                             </div>
                         </div>
+
+                        <div class="ofast-form-actions"
+                            style="margin-top: 30px; display: flex; gap: 12px; align-items: center;">
+                            <button type="submit" name="ofast_white_label_save" class="ofast-btn-primary">
+                                Save Settings
+                            </button>
+                            <button type="submit" name="ofast_white_label_reset" class="ofast-btn-reset"
+                                onclick="return confirm('Reset ALL White Label settings to defaults?');">
+                                Reset to Default
+                            </button>
+                        </div>
                     </div>
 
                     <div class="ofast-tab-content<?php echo $default_tab === 'updates' ? ' active' : ''; ?>"
@@ -787,6 +809,19 @@ class Ofast_X_Whos_Admin
                                     <span class="dashicons dashicons-menu-alt3"></span>
                                     <?php esc_html_e('Menu Editor', 'ofast-x'); ?>
                                 </button>
+
+                                <div class="ofast-subtab-nav-actions"
+                                    style="margin-top: auto; padding-top: 16px; border-top: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 8px;">
+                                    <button type="submit" name="ofast_white_label_save" class="ofast-btn-primary"
+                                        style="width: 100%; justify-content: center;">
+                                        Save Settings
+                                    </button>
+                                    <button type="submit" name="ofast_white_label_reset" class="ofast-btn-reset"
+                                        style="width: 100%; justify-content: center;"
+                                        onclick="return confirm('Reset ALL White Label settings to defaults?');">
+                                        Reset to Default
+                                    </button>
+                                </div>
                             </nav>
 
                             <!-- Right: sub-tab content panels -->
@@ -837,229 +872,236 @@ class Ofast_X_Whos_Admin
                                             <h2><?php esc_html_e('Plugin Update', 'ofast-x'); ?></h2>
                                         </div>
                                         <div class="ofast-card-body">
-                                <div class="ofast-field">
-                                    <label for="ofast_disable_plugin_updates" class="ofast-toggle-label">
-                                        <span
-                                            class="ofast-toggle-text"><?php esc_html_e('Disable Plugin Updates for Specific Plugins', 'ofast-x'); ?></span>
-                                        <div class="ofast-toggle-switch">
-                                            <input type="checkbox" id="ofast_disable_plugin_updates"
-                                                name="ofast_disable_plugin_updates" value="1" <?php checked(get_option('ofast_disable_plugin_updates', 0), 1); ?> />
-                                            <span class="ofast-toggle-slider"></span>
-                                        </div>
-                                    </label>
-                                    <p class="ofast-field-hint">
-                                        <?php esc_html_e('When enabled, WordPress update checks will be suppressed for the plugins you select below.', 'ofast-x'); ?>
-                                    </p>
-                                </div>
-
-                                <?php
-                                $is_updates_enabled = get_option('ofast_disable_plugin_updates', 0);
-                                $disabled_plugins_list = get_option('ofast_disabled_plugins_list', array());
-                                if (!is_array($disabled_plugins_list)) {
-                                    $disabled_plugins_list = array();
-                                }
-
-                                // Get all installed plugins
-                                if (!function_exists('get_plugins')) {
-                                    require_once ABSPATH . 'wp-admin/includes/plugin.php';
-                                }
-                                $all_plugins = get_plugins();
-                                ?>
-
-                                <div id="ofast-plugin-selector" class="ofast-plugin-selector"
-                                    style="<?php echo $is_updates_enabled ? '' : 'display:none;'; ?>">
-                                    <div class="ofast-plugin-search-wrap">
-                                        <span class="dashicons dashicons-search"></span>
-                                        <input type="text" id="ofast-plugin-search" class="ofast-plugin-search"
-                                            placeholder="<?php esc_attr_e('Search plugins...', 'ofast-x'); ?>" />
-                                    </div>
-
-                                    <div class="ofast-plugin-select-actions">
-                                        <button type="button" class="ofast-select-all-btn"
-                                            id="ofast-select-all"><?php esc_html_e('Select All', 'ofast-x'); ?></button>
-                                        <button type="button" class="ofast-select-all-btn"
-                                            id="ofast-deselect-all"><?php esc_html_e('Deselect All', 'ofast-x'); ?></button>
-                                        <span class="ofast-selected-count"><span
-                                                id="ofast-selected-num"><?php echo count($disabled_plugins_list); ?></span>
-                                            <?php esc_html_e('selected', 'ofast-x'); ?></span>
-                                    </div>
-
-                                    <div class="ofast-plugin-list">
-                                        <?php foreach ($all_plugins as $plugin_file => $plugin_data): ?>
-                                            <label class="ofast-plugin-item"
-                                                data-plugin-name="<?php echo esc_attr(strtolower($plugin_data['Name'])); ?>">
-                                                <input type="checkbox" name="ofast_disabled_plugins[]"
-                                                    value="<?php echo esc_attr($plugin_file); ?>" <?php checked(in_array($plugin_file, $disabled_plugins_list)); ?> />
-                                                <span class="ofast-plugin-checkbox-custom"></span>
-                                                <div class="ofast-plugin-info">
+                                            <div class="ofast-field">
+                                                <label for="ofast_disable_plugin_updates" class="ofast-toggle-label">
                                                     <span
-                                                        class="ofast-plugin-name"><?php echo esc_html($plugin_data['Name']); ?></span>
-                                                    <span class="ofast-plugin-meta">
-                                                        <?php if (!empty($plugin_data['Version'])): ?>
-                                                            <span
-                                                                class="ofast-plugin-version">v<?php echo esc_html($plugin_data['Version']); ?></span>
-                                                        <?php endif; ?>
-                                                        <?php if (!empty($plugin_data['AuthorName'])): ?>
-                                                            <span
-                                                                class="ofast-plugin-author"><?php echo esc_html($plugin_data['AuthorName']); ?></span>
-                                                        <?php endif; ?>
-                                                    </span>
+                                                        class="ofast-toggle-text"><?php esc_html_e('Disable Plugin Updates for Specific Plugins', 'ofast-x'); ?></span>
+                                                    <div class="ofast-toggle-switch">
+                                                        <input type="checkbox" id="ofast_disable_plugin_updates"
+                                                            name="ofast_disable_plugin_updates" value="1" <?php checked(get_option('ofast_disable_plugin_updates', 0), 1); ?> />
+                                                        <span class="ofast-toggle-slider"></span>
+                                                    </div>
+                                                </label>
+                                                <p class="ofast-field-hint">
+                                                    <?php esc_html_e('When enabled, WordPress update checks will be suppressed for the plugins you select below.', 'ofast-x'); ?>
+                                                </p>
+                                            </div>
+
+                                            <?php
+                                            $is_updates_enabled = get_option('ofast_disable_plugin_updates', 0);
+                                            $disabled_plugins_list = get_option('ofast_disabled_plugins_list', array());
+                                            if (!is_array($disabled_plugins_list)) {
+                                                $disabled_plugins_list = array();
+                                            }
+
+                                            // Get all installed plugins
+                                            if (!function_exists('get_plugins')) {
+                                                require_once ABSPATH . 'wp-admin/includes/plugin.php';
+                                            }
+                                            $all_plugins = get_plugins();
+                                            ?>
+
+                                            <div id="ofast-plugin-selector" class="ofast-plugin-selector"
+                                                style="<?php echo $is_updates_enabled ? '' : 'display:none;'; ?>">
+                                                <div class="ofast-plugin-search-wrap">
+                                                    <span class="dashicons dashicons-search"></span>
+                                                    <input type="text" id="ofast-plugin-search" class="ofast-plugin-search"
+                                                        placeholder="<?php esc_attr_e('Search plugins...', 'ofast-x'); ?>" />
                                                 </div>
-                                            </label>
-                                        <?php endforeach; ?>
+
+                                                <div class="ofast-plugin-select-actions">
+                                                    <button type="button" class="ofast-select-all-btn"
+                                                        id="ofast-select-all"><?php esc_html_e('Select All', 'ofast-x'); ?></button>
+                                                    <button type="button" class="ofast-select-all-btn"
+                                                        id="ofast-deselect-all"><?php esc_html_e('Deselect All', 'ofast-x'); ?></button>
+                                                    <span class="ofast-selected-count"><span
+                                                            id="ofast-selected-num"><?php echo count($disabled_plugins_list); ?></span>
+                                                        <?php esc_html_e('selected', 'ofast-x'); ?></span>
+                                                </div>
+
+                                                <div class="ofast-plugin-list">
+                                                    <?php foreach ($all_plugins as $plugin_file => $plugin_data): ?>
+                                                        <label class="ofast-plugin-item"
+                                                            data-plugin-name="<?php echo esc_attr(strtolower($plugin_data['Name'])); ?>">
+                                                            <input type="checkbox" name="ofast_disabled_plugins[]"
+                                                                value="<?php echo esc_attr($plugin_file); ?>" <?php checked(in_array($plugin_file, $disabled_plugins_list)); ?> />
+                                                            <span class="ofast-plugin-checkbox-custom"></span>
+                                                            <div class="ofast-plugin-info">
+                                                                <span
+                                                                    class="ofast-plugin-name"><?php echo esc_html($plugin_data['Name']); ?></span>
+                                                                <span class="ofast-plugin-meta">
+                                                                    <?php if (!empty($plugin_data['Version'])): ?>
+                                                                        <span
+                                                                            class="ofast-plugin-version">v<?php echo esc_html($plugin_data['Version']); ?></span>
+                                                                    <?php endif; ?>
+                                                                    <?php if (!empty($plugin_data['AuthorName'])): ?>
+                                                                        <span
+                                                                            class="ofast-plugin-author"><?php echo esc_html($plugin_data['AuthorName']); ?></span>
+                                                                    <?php endif; ?>
+                                                                </span>
+                                                            </div>
+                                                        </label>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
                                 </div>
 
                                 <!-- Page Protection Panel -->
                                 <div class="ofast-subtab-panel" data-subtab-panel="page-protection">
 
-                        <?php
-                        // Page Protection Settings
-                        $page_protection_enabled = get_option('ofast_page_protection_enabled', 0);
-                        $super_admin_username = get_option('ofast_super_admin_username', wp_get_current_user()->user_login);
-                        $protected_pages_list = get_option('ofast_protected_pages_list', array());
-                        if (!is_array($protected_pages_list)) {
-                            $protected_pages_list = array();
-                        }
-                        $has_password_set = (bool) get_option('ofast_protection_password', '');
-
-                        // Common admin pages
-                        $available_pages = array(
-                            'themes.php' => __('Appearance', 'ofast-x'),
-                            'plugins.php' => __('Plugins', 'ofast-x'),
-                            'users.php' => __('Users', 'ofast-x'),
-                            'options-general.php' => __('Settings', 'ofast-x'),
-                            'tools.php' => __('Tools', 'ofast-x'),
-                            'edit.php' => __('Posts', 'ofast-x'),
-                            'upload.php' => __('Media', 'ofast-x'),
-                            'edit.php?post_type=page' => __('Pages', 'ofast-x'),
-                            'edit-comments.php' => __('Comments', 'ofast-x'),
-                            'profile.php' => __('Profile', 'ofast-x'),
-                        );
-
-                        // Add registered admin pages dynamically
-                        global $menu;
-                        if (!empty($menu)) {
-                            foreach ($menu as $m) {
-                                if (!empty($m[2]) && !isset($available_pages[$m[2]]) && !empty($m[0])) {
-                                    $label = wp_strip_all_tags($m[0]);
-                                    if (!empty($label)) {
-                                        $available_pages[$m[2]] = $label;
+                                    <?php
+                                    // Page Protection Settings
+                                    $page_protection_enabled = get_option('ofast_page_protection_enabled', 0);
+                                    $super_admin_username = get_option('ofast_super_admin_username', wp_get_current_user()->user_login);
+                                    $protected_pages_list = get_option('ofast_protected_pages_list', array());
+                                    if (!is_array($protected_pages_list)) {
+                                        $protected_pages_list = array();
                                     }
-                                }
-                            }
-                        }
-                        ?>
+                                    $has_password_set = (bool) get_option('ofast_protection_password', '');
 
-                        <div class="ofast-card ofast-main-card" style="margin-top: 20px; margin-bottom: 20px;">
-                            <div class="ofast-card-header" id="ofast-page-protection-header" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <span class="dashicons dashicons-lock"></span>
-                                    <h2 style="margin: 0;"><?php esc_html_e('Page Protection', 'ofast-x'); ?></h2>
-                                </div>
-                                <span class="dashicons <?php echo $page_protection_enabled ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'; ?>" id="ofast-page-protection-arrow" style="font-size: 20px; color: #64748b; transition: transform 0.2s;"></span>
-                            </div>
-                            <div class="ofast-card-body" id="ofast-page-protection-body" style="<?php echo $page_protection_enabled ? '' : 'display: none;'; ?>">
-                                <div class="ofast-field">
-                                    <label for="ofast_page_protection_enabled" class="ofast-toggle-label">
-                                        <span
-                                            class="ofast-toggle-text"><?php esc_html_e('Password-Protect Admin Pages', 'ofast-x'); ?></span>
-                                        <div class="ofast-toggle-switch">
-                                            <input type="checkbox" id="ofast_page_protection_enabled"
-                                                name="ofast_page_protection_enabled" value="1" <?php checked($page_protection_enabled, 1); ?> />
-                                            <span class="ofast-toggle-slider"></span>
-                                        </div>
-                                    </label>
-                                    <p class="ofast-field-hint">
-                                        <?php esc_html_e('When enabled, non-super-admin users must enter a password to access the selected pages.', 'ofast-x'); ?>
-                                    </p>
-                                </div>
+                                    // Common admin pages
+                                    $available_pages = array(
+                                        'themes.php' => __('Appearance', 'ofast-x'),
+                                        'plugins.php' => __('Plugins', 'ofast-x'),
+                                        'users.php' => __('Users', 'ofast-x'),
+                                        'options-general.php' => __('Settings', 'ofast-x'),
+                                        'tools.php' => __('Tools', 'ofast-x'),
+                                        'edit.php' => __('Posts', 'ofast-x'),
+                                        'upload.php' => __('Media', 'ofast-x'),
+                                        'edit.php?post_type=page' => __('Pages', 'ofast-x'),
+                                        'edit-comments.php' => __('Comments', 'ofast-x'),
+                                        'profile.php' => __('Profile', 'ofast-x'),
+                                    );
 
-                                <div id="ofast-page-protection-settings" class="ofast-page-protection-settings"
-                                    style="<?php echo $page_protection_enabled ? '' : 'display:none;'; ?>">
+                                    // Add registered admin pages dynamically
+                                    global $menu;
+                                    if (!empty($menu)) {
+                                        foreach ($menu as $m) {
+                                            if (!empty($m[2]) && !isset($available_pages[$m[2]]) && !empty($m[0])) {
+                                                $label = wp_strip_all_tags($m[0]);
+                                                if (!empty($label)) {
+                                                    $available_pages[$m[2]] = $label;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ?>
 
-                                    <div class="ofast-protection-fields">
-                                        <div class="ofast-form-group">
-                                            <label for="ofast_super_admin_username">
-                                                <span class="dashicons dashicons-admin-users"></span>
-                                                <?php esc_html_e('Super Admin Username', 'ofast-x'); ?>
-                                            </label>
-                                            <input type="text" id="ofast_super_admin_username" name="ofast_super_admin_username"
-                                                value="<?php echo esc_attr($super_admin_username); ?>"
-                                                placeholder="<?php esc_attr_e('e.g. admin', 'ofast-x'); ?>">
-                                            <span class="ofast-field-hint">
-                                                <?php esc_html_e('This user will bypass protection and always have full access.', 'ofast-x'); ?>
-                                            </span>
-                                        </div>
-
-                                        <div class="ofast-form-group">
-                                            <label for="ofast_protection_password">
+                                    <div class="ofast-card ofast-main-card" style="margin-top: 20px; margin-bottom: 20px;">
+                                        <div class="ofast-card-header" id="ofast-page-protection-header"
+                                            style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                                            <div style="display: flex; align-items: center; gap: 8px;">
                                                 <span class="dashicons dashicons-lock"></span>
-                                                <?php esc_html_e('Protection Password', 'ofast-x'); ?>
-                                            </label>
-                                            <input type="password" id="ofast_protection_password"
-                                                name="ofast_protection_password" value=""
-                                                placeholder="<?php echo $has_password_set ? esc_attr__('••••••• (leave blank to keep current)', 'ofast-x') : esc_attr__('Set a password', 'ofast-x'); ?>">
-                                            <span class="ofast-field-hint">
-                                                <?php if ($has_password_set): ?>
-                                                    <span style="color: #10b981;">✓
-                                                        <?php esc_html_e('Password is set.', 'ofast-x'); ?></span>
-                                                    <?php esc_html_e('Leave blank to keep current password.', 'ofast-x'); ?>
-                                                <?php else: ?>
-                                                    <span style="color: #ef4444;">✗
-                                                        <?php esc_html_e('No password set. Feature will not work until a password is configured.', 'ofast-x'); ?></span>
-                                                <?php endif; ?>
-                                            </span>
+                                                <h2 style="margin: 0;"><?php esc_html_e('Page Protection', 'ofast-x'); ?></h2>
+                                            </div>
+                                            <span
+                                                class="dashicons <?php echo $page_protection_enabled ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'; ?>"
+                                                id="ofast-page-protection-arrow"
+                                                style="font-size: 20px; color: #64748b; transition: transform 0.2s;"></span>
                                         </div>
-                                    </div>
-
-                                    <div class="ofast-protected-pages-section">
-                                        <h4 style="margin: 20px 0 10px; font-weight: 600; color: #1e293b;">
-                                            <span class="dashicons dashicons-shield"
-                                                style="color: #6366f1; margin-right: 4px;"></span>
-                                            <?php esc_html_e('Protected Pages', 'ofast-x'); ?>
-                                        </h4>
-
-                                        <div class="ofast-plugin-search-wrap">
-                                            <span class="dashicons dashicons-search"></span>
-                                            <input type="text" id="ofast-page-search" class="ofast-plugin-search"
-                                                placeholder="<?php esc_attr_e('Search pages...', 'ofast-x'); ?>" />
-                                        </div>
-
-                                        <div class="ofast-plugin-select-actions">
-                                            <button type="button" class="ofast-select-all-btn"
-                                                id="ofast-page-select-all"><?php esc_html_e('Select All', 'ofast-x'); ?></button>
-                                            <button type="button" class="ofast-select-all-btn"
-                                                id="ofast-page-deselect-all"><?php esc_html_e('Deselect All', 'ofast-x'); ?></button>
-                                            <span class="ofast-selected-count"><span
-                                                    id="ofast-page-selected-num"><?php echo count($protected_pages_list); ?></span>
-                                                <?php esc_html_e('selected', 'ofast-x'); ?></span>
-                                        </div>
-
-                                        <div class="ofast-plugin-list">
-                                            <?php foreach ($available_pages as $page_slug => $page_label): ?>
-                                                <label class="ofast-plugin-item ofast-page-item"
-                                                    data-plugin-name="<?php echo esc_attr(strtolower($page_label)); ?>">
-                                                    <input type="checkbox" name="ofast_protected_pages[]"
-                                                        value="<?php echo esc_attr($page_slug); ?>" <?php checked(in_array($page_slug, $protected_pages_list)); ?> />
-                                                    <span class="ofast-plugin-checkbox-custom"></span>
-                                                    <div class="ofast-plugin-info">
-                                                        <span class="ofast-plugin-name"><?php echo esc_html($page_label); ?></span>
-                                                        <span class="ofast-plugin-meta">
-                                                            <span
-                                                                class="ofast-plugin-version"><?php echo esc_html($page_slug); ?></span>
-                                                        </span>
+                                        <div class="ofast-card-body" id="ofast-page-protection-body"
+                                            style="<?php echo $page_protection_enabled ? '' : 'display: none;'; ?>">
+                                            <div class="ofast-field">
+                                                <label for="ofast_page_protection_enabled" class="ofast-toggle-label">
+                                                    <span
+                                                        class="ofast-toggle-text"><?php esc_html_e('Password-Protect Admin Pages', 'ofast-x'); ?></span>
+                                                    <div class="ofast-toggle-switch">
+                                                        <input type="checkbox" id="ofast_page_protection_enabled"
+                                                            name="ofast_page_protection_enabled" value="1" <?php checked($page_protection_enabled, 1); ?> />
+                                                        <span class="ofast-toggle-slider"></span>
                                                     </div>
                                                 </label>
-                                            <?php endforeach; ?>
-                                        </div><!-- .ofast-plugin-list -->
-                                    </div><!-- .ofast-protected-pages-section -->
-                                </div><!-- #ofast-page-protection-settings -->
-                            </div><!-- .ofast-card-body -->
-                        </div><!-- .ofast-card -->
+                                                <p class="ofast-field-hint">
+                                                    <?php esc_html_e('When enabled, non-super-admin users must enter a password to access the selected pages.', 'ofast-x'); ?>
+                                                </p>
+                                            </div>
+
+                                            <div id="ofast-page-protection-settings" class="ofast-page-protection-settings"
+                                                style="<?php echo $page_protection_enabled ? '' : 'display:none;'; ?>">
+
+                                                <div class="ofast-protection-fields">
+                                                    <div class="ofast-form-group">
+                                                        <label for="ofast_super_admin_username">
+                                                            <span class="dashicons dashicons-admin-users"></span>
+                                                            <?php esc_html_e('Super Admin Username', 'ofast-x'); ?>
+                                                        </label>
+                                                        <input type="text" id="ofast_super_admin_username"
+                                                            name="ofast_super_admin_username"
+                                                            value="<?php echo esc_attr($super_admin_username); ?>"
+                                                            placeholder="<?php esc_attr_e('e.g. admin', 'ofast-x'); ?>">
+                                                        <span class="ofast-field-hint">
+                                                            <?php esc_html_e('This user will bypass protection and always have full access.', 'ofast-x'); ?>
+                                                        </span>
+                                                    </div>
+
+                                                    <div class="ofast-form-group">
+                                                        <label for="ofast_protection_password">
+                                                            <span class="dashicons dashicons-lock"></span>
+                                                            <?php esc_html_e('Protection Password', 'ofast-x'); ?>
+                                                        </label>
+                                                        <input type="password" id="ofast_protection_password"
+                                                            name="ofast_protection_password" value=""
+                                                            placeholder="<?php echo $has_password_set ? esc_attr__('••••••• (leave blank to keep current)', 'ofast-x') : esc_attr__('Set a password', 'ofast-x'); ?>">
+                                                        <span class="ofast-field-hint">
+                                                            <?php if ($has_password_set): ?>
+                                                                <span style="color: #10b981;">✓
+                                                                    <?php esc_html_e('Password is set.', 'ofast-x'); ?></span>
+                                                                <?php esc_html_e('Leave blank to keep current password.', 'ofast-x'); ?>
+                                                            <?php else: ?>
+                                                                <span style="color: #ef4444;">✗
+                                                                    <?php esc_html_e('No password set. Feature will not work until a password is configured.', 'ofast-x'); ?></span>
+                                                            <?php endif; ?>
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div class="ofast-protected-pages-section">
+                                                    <h4 style="margin: 20px 0 10px; font-weight: 600; color: #1e293b;">
+                                                        <span class="dashicons dashicons-shield"
+                                                            style="color: #6366f1; margin-right: 4px;"></span>
+                                                        <?php esc_html_e('Protected Pages', 'ofast-x'); ?>
+                                                    </h4>
+
+                                                    <div class="ofast-plugin-search-wrap">
+                                                        <span class="dashicons dashicons-search"></span>
+                                                        <input type="text" id="ofast-page-search" class="ofast-plugin-search"
+                                                            placeholder="<?php esc_attr_e('Search pages...', 'ofast-x'); ?>" />
+                                                    </div>
+
+                                                    <div class="ofast-plugin-select-actions">
+                                                        <button type="button" class="ofast-select-all-btn"
+                                                            id="ofast-page-select-all"><?php esc_html_e('Select All', 'ofast-x'); ?></button>
+                                                        <button type="button" class="ofast-select-all-btn"
+                                                            id="ofast-page-deselect-all"><?php esc_html_e('Deselect All', 'ofast-x'); ?></button>
+                                                        <span class="ofast-selected-count"><span
+                                                                id="ofast-page-selected-num"><?php echo count($protected_pages_list); ?></span>
+                                                            <?php esc_html_e('selected', 'ofast-x'); ?></span>
+                                                    </div>
+
+                                                    <div class="ofast-plugin-list">
+                                                        <?php foreach ($available_pages as $page_slug => $page_label): ?>
+                                                            <label class="ofast-plugin-item ofast-page-item"
+                                                                data-plugin-name="<?php echo esc_attr(strtolower($page_label)); ?>">
+                                                                <input type="checkbox" name="ofast_protected_pages[]"
+                                                                    value="<?php echo esc_attr($page_slug); ?>" <?php checked(in_array($page_slug, $protected_pages_list)); ?> />
+                                                                <span class="ofast-plugin-checkbox-custom"></span>
+                                                                <div class="ofast-plugin-info">
+                                                                    <span
+                                                                        class="ofast-plugin-name"><?php echo esc_html($page_label); ?></span>
+                                                                    <span class="ofast-plugin-meta">
+                                                                        <span
+                                                                            class="ofast-plugin-version"><?php echo esc_html($page_slug); ?></span>
+                                                                    </span>
+                                                                </div>
+                                                            </label>
+                                                        <?php endforeach; ?>
+                                                    </div><!-- .ofast-plugin-list -->
+                                                </div><!-- .ofast-protected-pages-section -->
+                                            </div><!-- #ofast-page-protection-settings -->
+                                        </div><!-- .ofast-card-body -->
+                                    </div><!-- .ofast-card -->
                                 </div><!-- .ofast-subtab-panel page-protection -->
 
                                 <!-- Menu Editor Panel -->
@@ -1077,16 +1119,7 @@ class Ofast_X_Whos_Admin
 
                     </div>
 
-                    <div class="ofast-form-actions" style="margin-top: 30px; display: flex; gap: 12px; align-items: center;">
-                        <button type="submit" name="ofast_white_label_save" class="ofast-btn-primary">
-                            Save Settings
-                        </button>
-                        <button type="submit" name="ofast_white_label_reset" class="ofast-btn-primary"
-                            style="background: #dc3545; border-color: #dc3545;"
-                            onclick="return confirm('Reset ALL White Label settings to defaults? This will clear designer details, footer, updates, page protection password, and menu editor settings.');">
-                            Reset All to Default
-                        </button>
-                    </div>
+
                 </div>
             </form>
         </div>
@@ -1340,6 +1373,26 @@ class Ofast_X_Whos_Admin
                 font-size: 18px;
                 width: 18px;
                 height: 18px;
+            }
+
+            .ofast-btn-reset {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                padding: 12px 24px;
+                background: #fff;
+                color: #ef4444;
+                border: 1px solid #fecaca;
+                border-radius: 10px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .ofast-btn-reset:hover {
+                background: #fef2f2;
+                border-color: #ef4444;
             }
 
             /* Preview Card */
@@ -1783,9 +1836,10 @@ class Ofast_X_Whos_Admin
                 }
 
                 .ofast-subtab.active {
-                    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-                    color: #fff;
-                    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+                    background: #eef2ff;
+                    color: #6366f1;
+                    border: 1px solid #c7d2fe;
+                    font-weight: 600;
                 }
 
                 .ofast-subtab .dashicons {

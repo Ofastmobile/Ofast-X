@@ -5,7 +5,7 @@
  * Plugin URI: https://ofastshop.com/ofast-x
  * Description: All-in-One WordPress plugin with Email System, SMTP Configuration, Dashboard Customization, Newsletter, Contact Forms, Code Snippets, Redirects, and more.
  * Version: 1.0.0
- * Author: Olabode Oluwaseun (Ofastshop Digitals)
+ * Author: Ofastshop Digitals
  * Author URI: https://ofastshop.com
  * Text Domain: ofast-x
  * Domain Path: /languages

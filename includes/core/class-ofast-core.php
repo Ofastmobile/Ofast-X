@@ -91,10 +91,6 @@ class Ofast_X_Core
             $this->load_admin_url();
         }
 
-        if ($this->is_module_enabled('duplicate-content')) {
-            $this->load_duplicate_content();
-        }
-
         if ($this->is_module_enabled('redirects')) {
             $this->load_redirects();
         }
@@ -158,6 +154,130 @@ class Ofast_X_Core
     }
 
     /**
+     * Check if module is enabled
+     * PERFORMANCE: Uses static cache to avoid repeated DB queries
+     */
+    private function is_module_enabled($module_slug)
+    {
+        // Use cached value if available (eliminates 20+ DB reads per request)
+        if (self::$enabled_modules_cache === null) {
+            self::$enabled_modules_cache = get_option('ofastx_modules_enabled', false);
+            
+            // First time - save defaults to database
+            if (self::$enabled_modules_cache === false) {
+                self::$enabled_modules_cache = array(
+                    'email' => true,
+                    'debug' => true,
+                    'smtp' => true,
+                    'admin-tweaks' => true,
+                );
+                update_option('ofastx_modules_enabled', self::$enabled_modules_cache);
+            }
+        }
+
+        // Return whether this specific module is enabled
+        return isset(self::$enabled_modules_cache[$module_slug]) && self::$enabled_modules_cache[$module_slug];
+    }
+
+    /**
+     * Check if an Admin Tweaks sub-module is enabled
+     * PERFORMANCE: Uses static cache for ofast_admin_tweaks option
+     */
+    private function is_admin_tweak_enabled($tweak_key)
+    {
+        static $admin_tweaks = null;
+        
+        if ($admin_tweaks === null) {
+            $admin_tweaks = get_option('ofast_admin_tweaks', array());
+        }
+        
+        return !empty($admin_tweaks[$tweak_key]);
+    }
+    
+    /**
+     * Get a cached option value
+     * PERFORMANCE: Caches option values to avoid repeated DB queries
+     * 
+     * @param string $key Option key
+     * @param mixed $default Default value if option doesn't exist
+     * @return mixed Option value
+     */
+    public static function get_cached_option($key, $default = '')
+    {
+        if (!isset(self::$options_cache[$key])) {
+            self::$options_cache[$key] = get_option($key, $default);
+        }
+        return self::$options_cache[$key];
+    }
+    
+    /**
+     * Clear options cache (call when options are updated)
+     * 
+     * @param string|null $key Specific key to clear, or null to clear all
+     */
+    public static function clear_options_cache($key = null)
+    {
+        if ($key === null) {
+            self::$options_cache = array();
+            self::$enabled_modules_cache = null;
+        } else {
+            unset(self::$options_cache[$key]);
+            if ($key === 'ofastx_modules_enabled') {
+                self::$enabled_modules_cache = null;
+            }
+        }
+    }
+
+    /**
+     * Define the locale for internationalization
+     */
+    private function set_locale()
+    {
+        // Translation ready - handled by main file
+    }
+
+    /**
+     * Register all admin hooks
+     */
+    private function define_admin_hooks()
+    {
+        // Add admin styles
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_styles'));
+    }
+
+    /**
+     * Enqueue admin styles
+     */
+    public function enqueue_admin_styles($hook)
+    {
+        // Only load on plugin pages for performance
+        if (strpos($hook, 'ofast') === false && strpos($hook, 'toplevel_page_ofast') === false) {
+            return;
+        }
+
+        $css_file = OFAST_X_PLUGIN_DIR . 'assets/css/ofast-admin.css';
+        $version = (defined('WP_DEBUG') && WP_DEBUG) ? filemtime($css_file) : OFAST_X_VERSION;
+        
+        wp_enqueue_style(
+            'ofast-x-admin',
+            OFAST_X_PLUGIN_URL . 'assets/css/ofast-admin.css',
+            array(),
+            $version
+        );
+
+        // Responsive CSS for mobile-friendly admin pages
+        $responsive_file = OFAST_X_PLUGIN_DIR . 'assets/css/ofast-admin-responsive.css';
+        $responsive_version = (defined('WP_DEBUG') && WP_DEBUG) ? filemtime($responsive_file) : OFAST_X_VERSION;
+        
+        wp_enqueue_style(
+            'ofast-x-admin-responsive',
+            OFAST_X_PLUGIN_URL . 'assets/css/ofast-admin-responsive.css',
+            array('ofast-x-admin'),
+            $responsive_version
+        );
+    }
+
+    /**
      * Load Email Module
      */
     private function load_email_module()
@@ -173,9 +293,6 @@ class Ofast_X_Core
             $email_controller->init();
 
             $this->modules['email'] = $email_controller;
-            
-            // Queue System - ARCHIVED for future release
-            // See: blueprint/future_modules/email_queue/
         }
     }
 
@@ -272,149 +389,6 @@ class Ofast_X_Core
         $admin_url->init();
 
         $this->modules['admin-url'] = $admin_url;
-    }
-
-
-
-    /**
-     * Load Content Duplicator Module
-     */
-    private function load_duplicate_content()
-    {
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-duplicate-content.php';
-
-        $duplicate = new Ofast_X_Duplicate_Content();
-        $duplicate->init();
-
-        $this->modules['duplicate-content'] = $duplicate;
-    }
-
-
-
-    /**
-     * Check if module is enabled
-     * PERFORMANCE: Uses static cache to avoid repeated DB queries
-     */
-    private function is_module_enabled($module_slug)
-    {
-        // Use cached value if available (eliminates 20+ DB reads per request)
-        if (self::$enabled_modules_cache === null) {
-            self::$enabled_modules_cache = get_option('ofastx_modules_enabled', false);
-            
-            // First time - save defaults to database
-            if (self::$enabled_modules_cache === false) {
-                self::$enabled_modules_cache = array(
-                    'email' => true,
-                    'debug' => true,
-                    'smtp' => true,
-                    'admin-tweaks' => true,
-                );
-                update_option('ofastx_modules_enabled', self::$enabled_modules_cache);
-            }
-        }
-
-        // Return whether this specific module is enabled
-        return isset(self::$enabled_modules_cache[$module_slug]) && self::$enabled_modules_cache[$module_slug];
-    }
-
-    /**
-     * Check if an Admin Tweaks sub-module is enabled
-     * PERFORMANCE: Uses static cache for ofast_admin_tweaks option
-     */
-    private function is_admin_tweak_enabled($tweak_key)
-    {
-        static $admin_tweaks = null;
-        
-        if ($admin_tweaks === null) {
-            $admin_tweaks = get_option('ofast_admin_tweaks', array());
-        }
-        
-        return !empty($admin_tweaks[$tweak_key]);
-    }
-    
-    /**
-     * Get a cached option value
-     * PERFORMANCE: Caches option values to avoid repeated DB queries
-     * 
-     * @param string $key Option key
-     * @param mixed $default Default value if option doesn't exist
-     * @return mixed Option value
-     */
-    public static function get_cached_option($key, $default = '')
-    {
-        if (!isset(self::$options_cache[$key])) {
-            self::$options_cache[$key] = get_option($key, $default);
-        }
-        return self::$options_cache[$key];
-    }
-    
-    /**
-     * Clear options cache (call when options are updated)
-     * 
-     * @param string|null $key Specific key to clear, or null to clear all
-     */
-    public static function clear_options_cache($key = null)
-    {
-        if ($key === null) {
-            self::$options_cache = array();
-            self::$enabled_modules_cache = null;
-        } else {
-            unset(self::$options_cache[$key]);
-            if ($key === 'ofastx_modules_enabled') {
-                self::$enabled_modules_cache = null;
-            }
-        }
-    }
-
-    /**
-     * Define the locale for internationalization
-     */
-    private function set_locale()
-    {
-        // Translation ready - handled by main file
-    }
-
-    /**
-     * Register all admin hooks
-     */
-    private function define_admin_hooks()
-    {
-        // Add admin styles
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_styles'));
-    }
-
-
-
-    /**
-     * Enqueue admin styles
-     */
-    public function enqueue_admin_styles($hook)
-    {
-        // Only load on plugin pages for performance
-        if (strpos($hook, 'ofast') === false && strpos($hook, 'toplevel_page_ofast') === false) {
-            return;
-        }
-
-        $css_file = OFAST_X_PLUGIN_DIR . 'assets/css/ofast-admin.css';
-        $version = (defined('WP_DEBUG') && WP_DEBUG) ? filemtime($css_file) : OFAST_X_VERSION;
-        
-        wp_enqueue_style(
-            'ofast-x-admin',
-            OFAST_X_PLUGIN_URL . 'assets/css/ofast-admin.css',
-            array(),
-            $version
-        );
-
-        // Responsive CSS for mobile-friendly admin pages
-        $responsive_file = OFAST_X_PLUGIN_DIR . 'assets/css/ofast-admin-responsive.css';
-        $responsive_version = (defined('WP_DEBUG') && WP_DEBUG) ? filemtime($responsive_file) : OFAST_X_VERSION;
-        
-        wp_enqueue_style(
-            'ofast-x-admin-responsive',
-            OFAST_X_PLUGIN_URL . 'assets/css/ofast-admin-responsive.css',
-            array('ofast-x-admin'),
-            $responsive_version
-        );
     }
 
     /**

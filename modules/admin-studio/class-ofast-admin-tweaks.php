@@ -104,8 +104,6 @@ class Ofast_X_Admin_Tweaks
         if (!empty($settings['enable_content_duplicator'])) {
             add_filter('post_row_actions', array($this, 'add_duplicate_link'), 10, 2);
             add_filter('page_row_actions', array($this, 'add_duplicate_link'), 10, 2);
-            // WooCommerce Products Support
-            add_filter('post_row_actions', array($this, 'add_product_duplicate_link'), 10, 2);
             
             add_action('admin_action_ofast_duplicate_post', array($this, 'duplicate_post'));
             add_action('admin_notices', array($this, 'show_duplicate_notice'));
@@ -748,7 +746,7 @@ class Ofast_X_Admin_Tweaks
                                     <div class="ofast-tweak-row">
                                         <div class="ofast-tweak-content">
                                             <label for="ofast_enable_content_duplicator">Content Duplicator</label>
-                                            <p class="description">Add a "Duplicate" link to row actions for posts and pages.</p>
+                                            <p class="description">Duplicate posts, pages, and WooCommerce products with one click.</p>
                                         </div>
                                         <div class="ofast-tweak-action">
                                             <label class="ofast-toggle">
@@ -1522,16 +1520,6 @@ class Ofast_X_Admin_Tweaks
         return $actions;
     }
 
-    /**
-     * Specific handler for WooCommerce product row actions filter if needed
-     * acts as alias for add_duplicate_link but checks post type inside
-     */
-    public function add_product_duplicate_link($actions, $post) {
-         if ($post->post_type === 'product') {
-             return $this->add_duplicate_link($actions, $post);
-         }
-         return $actions;
-    }
 
     /**
      * Duplicate post handler

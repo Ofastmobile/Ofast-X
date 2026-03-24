@@ -54,12 +54,7 @@ class Ofast_X_Activator
         // Log deactivation
         self::log_deactivation();
     }
-    
-    // private static function create_tables() {
-    //     global $wpdb;
-    //     $charset_collate = $wpdb->get_charset_collate();
-    //     // We'll add table creation later...
-    // }
+
     /**
      * Create database tables
      */
@@ -87,27 +82,7 @@ class Ofast_X_Activator
         ) {$charset_collate};";
         dbDelta($sql_email_logs);
 
-        // 2. Newsletter Subscribers Table
-        $table_subscribers = $wpdb->prefix . 'ofast_newsletter_subscribers';
-        $sql_subscribers = "CREATE TABLE IF NOT EXISTS {$table_subscribers} (
-            id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-            email VARCHAR(255) NOT NULL,
-            name VARCHAR(255),
-            status ENUM('pending', 'confirmed', 'unsubscribed') DEFAULT 'pending',
-            whatsapp_opted_in TINYINT(1) DEFAULT 0,
-            whatsapp_number VARCHAR(20),
-            subscribed_at DATETIME,
-            confirmed_at DATETIME,
-            unsubscribed_at DATETIME,
-            ip_address VARCHAR(45),
-            user_agent TEXT,
-            PRIMARY KEY (id),
-            UNIQUE KEY email (email),
-            KEY idx_status (status)
-        ) {$charset_collate};";
-        dbDelta($sql_subscribers);
-
-        // 3. Code Snippets Table
+        // 2. Code Snippets Table
         $table_snippets = $wpdb->prefix . 'ofast_snippets';
         $sql_snippets = "CREATE TABLE IF NOT EXISTS {$table_snippets} (
             id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -138,7 +113,7 @@ class Ofast_X_Activator
         ) {$charset_collate};";
         dbDelta($sql_snippets);
 
-        // 4. Contact Forms Table
+        // 3. Contact Forms Table
         $table_forms = $wpdb->prefix . 'ofast_forms';
         $sql_forms = "CREATE TABLE IF NOT EXISTS {$table_forms} (
             id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -155,7 +130,7 @@ class Ofast_X_Activator
         ) {$charset_collate};";
         dbDelta($sql_forms);
 
-        // 5. Form Submissions Table
+        // 4. Form Submissions Table
         $table_submissions = $wpdb->prefix . 'ofast_form_submissions';
         $sql_submissions = "CREATE TABLE IF NOT EXISTS {$table_submissions} (
             id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -174,7 +149,7 @@ class Ofast_X_Activator
         ) {$charset_collate};";
         dbDelta($sql_submissions);
 
-        // 6. Rate Limits Table (for more robust rate limiting than transients)
+        // 5. Rate Limits Table (for more robust rate limiting than transients)
         $table_rate_limits = $wpdb->prefix . 'ofast_rate_limits';
         $sql_rate_limits = "CREATE TABLE IF NOT EXISTS {$table_rate_limits} (
             id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -188,7 +163,7 @@ class Ofast_X_Activator
         ) {$charset_collate};";
         dbDelta($sql_rate_limits);
 
-        // 7. Redirects Table
+        // 6. Redirects Table
         $table_redirects = $wpdb->prefix . 'ofast_redirects';
         $sql_redirects = "CREATE TABLE IF NOT EXISTS {$table_redirects} (
             id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -257,8 +232,21 @@ class Ofast_X_Activator
         ) {$charset_collate};";
         dbDelta($sql_email_drafts);
 
-        // Log database creation
-        // Ofast_X_Logger::info('Database tables created successfully');
+        // 10. SMTP Log Table
+        $table_smtp_log = $wpdb->prefix . 'ofast_smtp_log';
+        $sql_smtp_log = "CREATE TABLE IF NOT EXISTS {$table_smtp_log} (
+            id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            recipient VARCHAR(255) NOT NULL,
+            subject VARCHAR(255) NOT NULL,
+            headers TEXT,
+            status ENUM('sent', 'failed') DEFAULT 'sent',
+            error_message TEXT,
+            sent_at DATETIME NOT NULL,
+            PRIMARY KEY (id),
+            KEY idx_sent_at (sent_at),
+            KEY idx_status (status)
+        ) {$charset_collate};";
+        dbDelta($sql_smtp_log);
     }
 
     /**
@@ -273,7 +261,6 @@ class Ofast_X_Activator
                 'email' => true,              // Active
                 'debug' => true,              // Active
                 'smtp' => false,              // Coming soon
-                'newsletter' => false,        // Coming soon
                 'contact' => false,           // Coming soon
                 'seo' => false,               // Coming soon
                 'analytics' => false,         // Coming soon
@@ -315,8 +302,6 @@ class Ofast_X_Activator
         if ($timestamp) {
             wp_unschedule_event($timestamp, 'ofastx_daily_license_check');
         }
-
-        // Ofast_X_Logger::info('Scheduled events cleared');
     }
 
     /**
@@ -324,7 +309,6 @@ class Ofast_X_Activator
      */
     private static function log_activation()
     {
-        // Simple activation log
         error_log('Ofast X Plugin Activated - Version: ' . OFAST_X_VERSION);
     }
 
@@ -333,7 +317,6 @@ class Ofast_X_Activator
      */
     private static function log_deactivation()
     {
-        // Simple deactivation log
         error_log('Ofast X Plugin Deactivated');
     }
 

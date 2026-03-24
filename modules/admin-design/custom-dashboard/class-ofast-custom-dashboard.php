@@ -79,7 +79,6 @@ class Ofast_X_Custom_Dashboard
     private $valid_table_suffixes = array(
         'ofast_form_submissions',
         'ofast_smtp_log',
-        'ofast_newsletter_subscribers',
         'ofast_forms',
         'wc_order_stats'
     );
@@ -368,7 +367,6 @@ class Ofast_X_Custom_Dashboard
                         <div class="chart-legend">
                              <span class="legend-item"><span class="dot" style="background:#6366f1"></span> Submissions</span>
                              <span class="legend-item"><span class="dot" style="background:#10b981"></span> Emails Sent</span>
-                             <span class="legend-item"><span class="dot" style="background:#a855f7"></span> Subscribers</span>
                         </div>
                     </div>
                     <div class="chart-wrapper">
@@ -474,7 +472,6 @@ class Ofast_X_Custom_Dashboard
         $labels = array();
         $submissions = array_fill(0, 7, 0);
         $smtp = array_fill(0, 7, 0);
-        $newsletter = array_fill(0, 7, 0);
 
         for ($i = 6; $i >= 0; $i--) {
             $labels[] = date('M j', strtotime("-$i days"));
@@ -483,7 +480,6 @@ class Ofast_X_Custom_Dashboard
         // 1. Submissions
         if ($this->table_exists('ofast_form_submissions')) {
             $table = $wpdb->prefix . 'ofast_form_submissions';
-            // Table name is validated by table_exists(), safe to use directly
             $sub_results = $wpdb->get_results($wpdb->prepare("
                 SELECT DATE(submitted_at) as date, COUNT(*) as count 
                 FROM `{$table}` 
@@ -499,7 +495,6 @@ class Ofast_X_Custom_Dashboard
         // 2. SMTP Volume
         if ($this->table_exists('ofast_smtp_log')) {
             $table = $wpdb->prefix . 'ofast_smtp_log';
-            // Table name is validated by table_exists(), safe to use directly
             $smtp_results = $wpdb->get_results($wpdb->prepare("
                 SELECT DATE(sent_at) as date, COUNT(*) as count 
                 FROM `{$table}` 
@@ -512,27 +507,10 @@ class Ofast_X_Custom_Dashboard
             }
         }
 
-        // 3. Newsletter
-        if ($this->table_exists('ofast_newsletter_subscribers')) {
-            $table = $wpdb->prefix . 'ofast_newsletter_subscribers';
-            // Table name is validated by table_exists(), safe to use directly
-            $news_results = $wpdb->get_results($wpdb->prepare("
-                SELECT DATE(subscribed_at) as date, COUNT(*) as count 
-                FROM `{$table}` 
-                WHERE subscribed_at >= DATE_SUB(CURDATE(), INTERVAL %d DAY) 
-                GROUP BY DATE(subscribed_at)
-            ", 6));
-            foreach ($news_results as $row) {
-                $idx = array_search(date('M j', strtotime($row->date)), $labels);
-                if ($idx !== false) $newsletter[$idx] = (int) $row->count;
-            }
-        }
-
         return array(
             'labels' => $labels,
             'submissions' => $submissions,
             'smtp' => $smtp,
-            'newsletter' => $newsletter
         );
     }
 
@@ -540,7 +518,6 @@ class Ofast_X_Custom_Dashboard
      * Data Helper: Top Forms
      */
     private function get_top_forms() {
-        // ... simplified for now
         return array();
     }
 

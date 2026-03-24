@@ -120,7 +120,6 @@ class Ofast_X_Settings
             'email' => true,
             'debug' => true,
             'smtp' => true,
-            'newsletter' => false,
         );
         update_option('ofastx_modules_enabled', $default_modules);
 

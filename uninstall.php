@@ -32,15 +32,19 @@ global $wpdb;
  */
 $tables = array(
     $wpdb->prefix . 'ofast_email_logs',
-    $wpdb->prefix . 'ofast_email_drafts',  // Email drafts
-    $wpdb->prefix . 'ofast_smtp_log',  // SMTP module log table (was missing)
-    $wpdb->prefix . 'ofast_newsletter_subscribers',
+    $wpdb->prefix . 'ofast_email_drafts',
+    $wpdb->prefix . 'ofast_email_queue',
+    $wpdb->prefix . 'ofast_smtp_log',
     $wpdb->prefix . 'ofast_snippets',
     $wpdb->prefix . 'ofast_snippet_revisions',
     $wpdb->prefix . 'ofast_forms',
     $wpdb->prefix . 'ofast_form_submissions',
     $wpdb->prefix . 'ofast_redirects',
     $wpdb->prefix . 'ofast_redirect_logs',
+    $wpdb->prefix . 'ofast_rate_limits',
+    $wpdb->prefix . 'ofast_notification_log',       // Legacy - safe to drop
+    $wpdb->prefix . 'ofast_newsletter_subscribers',  // Legacy - safe to drop
+    $wpdb->prefix . 'ofast_newsletter_forms',        // Legacy - safe to drop
 );
 
 foreach ($tables as $table) {

@@ -90,6 +90,45 @@ class Ofast_X_Email
     }
 
     /**
+     * Get sanitized email headers (centralized, CRLF-safe)
+     * All email sending should use this method for headers.
+     *
+     * @param string $reply_to_override Optional override for Reply-To address
+     * @return array Sanitized email headers
+     */
+    public static function get_safe_email_headers($reply_to_override = '')
+    {
+        // Get and sanitize From name — strip any CRLF characters to prevent header injection
+        $from_name = get_option('ofast_email_from_name', get_bloginfo('name'));
+        $from_name = preg_replace('/[\r\n]/', '', sanitize_text_field($from_name));
+        if (empty($from_name)) {
+            $from_name = get_bloginfo('name');
+        }
+
+        // Get and validate From email
+        $from_email = sanitize_email(get_option('ofast_email_reply_to', get_option('admin_email')));
+        if (!is_email($from_email)) {
+            $from_email = get_option('admin_email');
+        }
+
+        // Get and validate Reply-To
+        if (!empty($reply_to_override)) {
+            $reply_to = sanitize_email($reply_to_override);
+        } else {
+            $reply_to = sanitize_email(get_option('ofast_email_reply_to', get_option('admin_email')));
+        }
+        if (!is_email($reply_to)) {
+            $reply_to = $from_email;
+        }
+
+        return array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . $from_name . ' <' . $from_email . '>',
+            'Reply-To: ' . $reply_to
+        );
+    }
+
+    /**
      * Process scheduled email batch (called by WordPress cron)
      * 
      * @param array $args Contains subject, body, user_ids
@@ -106,12 +145,8 @@ class Ofast_X_Email
             return 0;
         }
 
-        // Get headers
-        $headers = array(
-            'Content-Type: text/html; charset=UTF-8',
-            'From: ' . get_option('ofast_email_from_name', get_bloginfo('name')) . ' <' . get_option('ofast_email_reply_to', get_option('admin_email')) . '>',
-            'Reply-To: ' . get_option('ofast_email_reply_to', get_option('admin_email'))
-        );
+        // Get sanitized headers
+        $headers = self::get_safe_email_headers();
 
         // Get users
         $users = get_users(array(

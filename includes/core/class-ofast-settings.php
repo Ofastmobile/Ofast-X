@@ -854,9 +854,9 @@ class Ofast_X_Settings
                 'description' => 'Custom contact form builder with submission storage and admin review',
                 'category' => 'communication',
             ),
-            'bulk-sms-channel' => array(
-                'name' => 'Bulk SMS Channel',
-                'description' => 'Placeholder for bulk SMS integrations (coming soon)',
+            'sms-channel' => array(
+                'name' => 'SMS Channel',
+                'description' => 'Multi-provider SMS sending via Twilio, Africa\'s Talking, Termii, or SmartSMSSolutions',
                 'category' => 'communication',
             ),
             

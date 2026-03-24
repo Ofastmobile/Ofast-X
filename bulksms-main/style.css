@@ -1,0 +1,60 @@
+body{
+    font-family: Arial, sans-serif;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: #f4f4f4;
+}
+
+form {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 80%; /* Set the desired width */
+            max-width: 400px; /* Set a maximum width for responsiveness */
+            transform: scale(1.2); /* Zoom the form */
+            transform-origin: center center;
+            transition: transform 0.3s ease;
+            box-sizing: border-box; /* Ensure padding and border are included in the total width */
+        }
+
+        form:hover {
+            transform: scale(1.3); /* Zoom the form on hover */
+        }
+
+        label, input, textarea {
+            width: 100%;
+            box-sizing: border-box; /* Ensure padding and border are included in the total width */
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+            .success{
+            font-size: 2em;
+            color: green;
+            }
+            .error{
+            font-size: 2em;
+            color: red;
+            }
+          h1 {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        p {
+            margin: 0;
+            text-align: center;
+        }

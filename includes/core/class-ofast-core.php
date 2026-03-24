@@ -119,6 +119,11 @@ class Ofast_X_Core
         if ($this->is_module_enabled('login-redesign')) {
             $this->load_login_redesign();
         }
+
+        // Load SMS Channel module
+        if ($this->is_module_enabled('sms-channel')) {
+            $this->load_sms_channel();
+        }
     }
 
     /**
@@ -447,5 +452,16 @@ class Ofast_X_Core
             $login_redesign->init();
             $this->modules['login-redesign'] = $login_redesign;
         }
+    }
+
+    /**
+     * Load SMS Channel Module
+     */
+    private function load_sms_channel()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/sms/class-ofast-sms.php';
+        $sms = Ofast_X_SMS::get_instance();
+        $sms->init();
+        $this->modules['sms-channel'] = $sms;
     }
 }

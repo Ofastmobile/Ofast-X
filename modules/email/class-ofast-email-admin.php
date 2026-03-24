@@ -694,10 +694,7 @@ class Ofast_X_Email_Admin
             require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-template.php';
             $html = Ofast_X_Email_Template::get_template($test_content);
             
-            $headers = array(
-                'Content-Type: text/html; charset=UTF-8',
-                'From: ' . get_option('ofast_email_from_name', get_bloginfo('name')) . ' <' . get_option('ofast_email_reply_to', $admin_email) . '>'
-            );
+            $headers = Ofast_X_Email::get_safe_email_headers();
             
             $sent = wp_mail($admin_email, sprintf(__('[%s] Test Email - Template Preview', 'ofast-x'), get_bloginfo('name')), $html, $headers);
             
@@ -2177,15 +2174,11 @@ class Ofast_X_Email_Admin
      */
 
     /**
-     * Helper: Get email headers (FIX #2)
+     * Helper: Get email headers — delegates to centralized secure method
      */
     private function get_email_headers()
     {
-        return [
-            'Content-Type: text/html; charset=UTF-8',
-            'From: ' . get_option('ofast_email_from_name', 'Ofastshop Digitals') . ' <' . get_option('ofast_email_reply_to', 'support@ofastshop.com') . '>',
-            'Reply-To: ' . get_option('ofast_email_reply_to', 'support@ofastshop.com')
-        ];
+        return Ofast_X_Email::get_safe_email_headers();
     }
 
     /**
@@ -2412,10 +2405,7 @@ class Ofast_X_Email_Admin
             require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-template.php';
             $html = Ofast_X_Email_Template::get_template($test_content);
             
-            $headers = array(
-                'Content-Type: text/html; charset=UTF-8',
-                'From: ' . get_option('ofast_email_from_name', get_bloginfo('name')) . ' <' . get_option('ofast_email_reply_to', $admin_email) . '>'
-            );
+            $headers = Ofast_X_Email::get_safe_email_headers();
             
             $sent = wp_mail($admin_email, sprintf(__('[%s] Test Email - Template Preview', 'ofast-x'), get_bloginfo('name')), $html, $headers);
             

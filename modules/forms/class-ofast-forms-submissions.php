@@ -154,17 +154,9 @@ class Ofast_X_Forms_Submissions
             $email_html = $body;
         }
 
-        // Email headers
-        $headers = array(
-            'Content-Type: text/html; charset=UTF-8',
-            'From: ' . $site_name . ' <' . $admin_email . '>',
-        );
-
-        // Find submitter email from form data (look for email-type field)
+        // Email headers — use centralized secure headers
         $submitter_email = $this->find_submitter_email($submission_data);
-        if ($submitter_email) {
-            $headers[] = 'Reply-To: ' . $submitter_email;
-        }
+        $headers = Ofast_X_Email::get_safe_email_headers($submitter_email ?: '');
 
         // 1. Send admin notification
         $subject = sprintf('[%s] New %s Submission', $site_name, $form_title);
@@ -181,10 +173,7 @@ class Ofast_X_Forms_Submissions
             }
 
             $confirm_subject = sprintf('Thank you for contacting %s', $site_name);
-            $confirm_headers = array(
-                'Content-Type: text/html; charset=UTF-8',
-                'From: ' . $site_name . ' <' . $admin_email . '>',
-            );
+            $confirm_headers = Ofast_X_Email::get_safe_email_headers();
             wp_mail($submitter_email, $confirm_subject, $confirm_html, $confirm_headers);
         }
     }

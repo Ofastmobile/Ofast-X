@@ -595,20 +595,17 @@ class Ofast_X_Forms
 
     /**
      * Enqueue frontend scripts
+     * CSS/JS is inline within class-ofast-forms-render.php
+     * This only passes the AJAX URL needed by the inline form submission script
      */
     public function enqueue_frontend_scripts()
     {
-        wp_enqueue_style('ofast-forms-frontend', OFAST_X_PLUGIN_URL . 'modules/forms/css/forms-frontend.css', array(), OFAST_X_VERSION);
-        wp_enqueue_script('ofast-forms-frontend', OFAST_X_PLUGIN_URL . 'modules/forms/js/forms-frontend.js', array('jquery'), OFAST_X_VERSION, true);
-
-        wp_localize_script('ofast-forms-frontend', 'ofastForms', array(
+        wp_enqueue_script('jquery');
+        wp_add_inline_script('jquery', 'var ofastForms = ' . wp_json_encode(array(
             'ajaxurl' => admin_url('admin-ajax.php')
-        ));
+        )) . ';');
     }
 
-    /**
-     * Render forms list page
-     */
     /**
      * Render main page with tabs
      */

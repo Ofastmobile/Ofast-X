@@ -255,16 +255,6 @@ class Ofast_X_Core
             return;
         }
 
-        $css_file = OFAST_X_PLUGIN_DIR . 'assets/css/ofast-admin.css';
-        $version = (defined('WP_DEBUG') && WP_DEBUG) ? filemtime($css_file) : OFAST_X_VERSION;
-        
-        wp_enqueue_style(
-            'ofast-x-admin',
-            OFAST_X_PLUGIN_URL . 'assets/css/ofast-admin.css',
-            array(),
-            $version
-        );
-
         // Responsive CSS for mobile-friendly admin pages
         $responsive_file = OFAST_X_PLUGIN_DIR . 'assets/css/ofast-admin-responsive.css';
         $responsive_version = (defined('WP_DEBUG') && WP_DEBUG) ? filemtime($responsive_file) : OFAST_X_VERSION;
@@ -272,7 +262,7 @@ class Ofast_X_Core
         wp_enqueue_style(
             'ofast-x-admin-responsive',
             OFAST_X_PLUGIN_URL . 'assets/css/ofast-admin-responsive.css',
-            array('ofast-x-admin'),
+            array(),
             $responsive_version
         );
     }

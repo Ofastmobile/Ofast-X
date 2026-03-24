@@ -232,11 +232,21 @@ class Ofast_X_Forms_Builder
 
                         <div class="ofast-card sidebar-box">
                             <h3>Spam Protection</h3>
-                            <?php if (class_exists('Ofast_X_Turnstile') && Ofast_X_Turnstile::get_instance()->is_configured()): ?>
-                                <p style="color:green;">Turnstile is enabled</p>
-                            <?php else: ?>
-                                <p style="color:orange;">Turnstile not configured. <a href="<?php echo admin_url('admin.php?page=ofast-settings'); ?>">Configure now</a></p>
-                            <?php endif; ?>
+                            <?php
+                            if (class_exists('Ofast_X_Spam_Protection')) {
+                                $spam = new Ofast_X_Spam_Protection();
+                                $provider = $spam->get_active_provider();
+                                $labels = array('turnstile' => 'Turnstile', 'math_captcha' => 'Math CAPTCHA', 'recaptcha_v2' => 'reCAPTCHA v2', 'recaptcha_v3' => 'reCAPTCHA v3');
+                                $label = $labels[$provider] ?? ucfirst($provider);
+                                if ($spam->is_configured()) {
+                                    echo '<p style="color:green;">' . esc_html($label) . ' is active</p>';
+                                } else {
+                                    echo '<p style="color:orange;">' . esc_html($label) . ' not configured. <a href="' . admin_url('admin.php?page=ofast-spam-protection') . '">Configure now</a></p>';
+                                }
+                            } else {
+                                echo '<p style="color:orange;">Spam protection module not loaded.</p>';
+                            }
+                            ?>
                         </div>
 
                         <div class="ofast-card sidebar-box">

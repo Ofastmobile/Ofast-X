@@ -59,14 +59,21 @@ class Ofast_X_Forms_Render
                 </div>
 
                 <?php
-                // Add Turnstile if configured
-                if (class_exists('Ofast_X_Turnstile')) {
-                    $turnstile = Ofast_X_Turnstile::get_instance();
-                    if ($turnstile->is_configured()) {
-                        echo '<div class="ofast-form-field ofast-turnstile-field">';
-                        echo $turnstile->render_widget('form-' . $form_id);
+                // Add active spam protection widget (Turnstile, Math CAPTCHA, or reCAPTCHA)
+                if (class_exists('Ofast_X_Spam_Protection')) {
+                    $spam = new Ofast_X_Spam_Protection();
+                    if ($spam->is_configured()) {
+                        $provider = $spam->get_active_provider();
+                        echo '<div class="ofast-form-field ofast-spam-protection-field">';
+
+                        if ($provider === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
+                            echo Ofast_X_Turnstile::get_instance()->render_widget('form-' . $form_id);
+                            echo Ofast_X_Turnstile::render_script();
+                        } elseif ($provider === 'math_captcha' && class_exists('Ofast_X_Math_Captcha')) {
+                            echo Ofast_X_Math_Captcha::get_instance()->render_widget('form-' . $form_id);
+                        }
+
                         echo '</div>';
-                        echo Ofast_X_Turnstile::render_script();
                     }
                 }
                 ?>

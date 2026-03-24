@@ -13,9 +13,10 @@ desktop.ini
 # Development / Internal files
 prompt.pmd
 error.txt
-archive/
 reports/
-admin/
+
+# Vendor (parked/archived modules)
+vendor/
 
 # Node
 node_modules/

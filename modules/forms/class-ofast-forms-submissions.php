@@ -57,12 +57,23 @@ class Ofast_X_Forms_Submissions
             wp_send_json_error(array('message' => 'Form not found.'));
         }
 
-        // Verify Turnstile if configured
-        if (class_exists('Ofast_X_Turnstile')) {
-            $turnstile = Ofast_X_Turnstile::get_instance();
-            if ($turnstile->is_configured()) {
-                $token = $_POST['cf-turnstile-response'] ?? '';
-                if (!$turnstile->verify($token)) {
+        // Verify active spam protection (Turnstile, Math CAPTCHA, or reCAPTCHA)
+        if (class_exists('Ofast_X_Spam_Protection')) {
+            $spam = new Ofast_X_Spam_Protection();
+            if ($spam->is_configured()) {
+                $provider = $spam->get_active_provider();
+
+                // Get the appropriate token based on active provider
+                $token = '';
+                if ($provider === 'turnstile') {
+                    $token = sanitize_text_field($_POST['cf-turnstile-response'] ?? '');
+                } elseif (in_array($provider, array('recaptcha_v2', 'recaptcha_v3'), true)) {
+                    $token = sanitize_text_field($_POST['g-recaptcha-response'] ?? '');
+                }
+                // Math CAPTCHA reads its own POST field internally
+
+                $result = $spam->verify($token);
+                if (!$result['success']) {
                     wp_send_json_error(array('message' => 'Spam protection verification failed. Please try again.'));
                 }
             }
@@ -89,6 +100,9 @@ class Ofast_X_Forms_Submissions
             wp_send_json_error(array('message' => 'Failed to save submission. Please try again.'));
         }
 
+        // Send notification emails (non-blocking — failures don't affect user response)
+        $this->send_notification_emails($form_id, $submission_data);
+
         // Get response
         $settings = $form->settings;
         $redirect_url = !empty($settings['redirect_url']) ? $settings['redirect_url'] : '';
@@ -99,6 +113,139 @@ class Ofast_X_Forms_Submissions
         } else {
             wp_send_json_success(array('message' => $success_message));
         }
+    }
+
+    /**
+     * Send notification emails after form submission
+     * Sends to: (1) Admin email, (2) Submitter confirmation if email field exists
+     */
+    private function send_notification_emails($form_id, $submission_data)
+    {
+        // Get full form with notification settings
+        $forms = Ofast_X_Forms::get_instance();
+        $form = $forms->get_form($form_id, 'admin');
+
+        if (!$form) {
+            return;
+        }
+
+        $form_title = sanitize_text_field($form->title ?? 'Contact Form');
+        $site_name = get_bloginfo('name');
+        $admin_email = get_option('admin_email');
+
+        // Check notification settings — allow admin to configure recipient
+        $notifications = $form->notifications ?? array();
+        $notify_email = !empty($notifications['email']['to'])
+            ? sanitize_email($notifications['email']['to'])
+            : $admin_email;
+
+        // Validate recipient email
+        if (!is_email($notify_email)) {
+            $notify_email = $admin_email;
+        }
+
+        // Build email body from submission data
+        $body = $this->build_email_body($form_title, $submission_data, $site_name);
+
+        // Wrap in email template if available
+        if (class_exists('Ofast_X_Email_Template')) {
+            $email_html = Ofast_X_Email_Template::get_template($body);
+        } else {
+            $email_html = $body;
+        }
+
+        // Email headers
+        $headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . $site_name . ' <' . $admin_email . '>',
+        );
+
+        // Find submitter email from form data (look for email-type field)
+        $submitter_email = $this->find_submitter_email($submission_data);
+        if ($submitter_email) {
+            $headers[] = 'Reply-To: ' . $submitter_email;
+        }
+
+        // 1. Send admin notification
+        $subject = sprintf('[%s] New %s Submission', $site_name, $form_title);
+        wp_mail($notify_email, $subject, $email_html, $headers);
+
+        // 2. Send confirmation to submitter (if email field exists and auto-reply is not disabled)
+        $auto_reply_disabled = !empty($notifications['email']['disable_auto_reply']);
+        if ($submitter_email && !$auto_reply_disabled) {
+            $confirm_body = $this->build_confirmation_body($form_title, $site_name);
+            if (class_exists('Ofast_X_Email_Template')) {
+                $confirm_html = Ofast_X_Email_Template::get_template($confirm_body);
+            } else {
+                $confirm_html = $confirm_body;
+            }
+
+            $confirm_subject = sprintf('Thank you for contacting %s', $site_name);
+            $confirm_headers = array(
+                'Content-Type: text/html; charset=UTF-8',
+                'From: ' . $site_name . ' <' . $admin_email . '>',
+            );
+            wp_mail($submitter_email, $confirm_subject, $confirm_html, $confirm_headers);
+        }
+    }
+
+    /**
+     * Build HTML email body from form submission data
+     */
+    private function build_email_body($form_title, $data, $site_name)
+    {
+        $html = '<h2 style="color:#1e293b;margin:0 0 20px;">New ' . esc_html($form_title) . ' Submission</h2>';
+        $html .= '<table style="width:100%;border-collapse:collapse;margin:10px 0;">';
+
+        foreach ($data as $label => $value) {
+            if (is_array($value)) {
+                $value = implode(', ', $value);
+            }
+            $html .= '<tr>';
+            $html .= '<td style="padding:12px 16px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;color:#374151;width:35%;">' . esc_html($label) . '</td>';
+            $html .= '<td style="padding:12px 16px;border:1px solid #e2e8f0;color:#475569;">' . nl2br(esc_html($value)) . '</td>';
+            $html .= '</tr>';
+        }
+
+        $html .= '</table>';
+        $html .= '<p style="color:#9ca3af;font-size:13px;margin:20px 0 0;">Submitted on ' . esc_html(current_time('F j, Y \a\t g:i a')) . ' from ' . esc_html($site_name) . '</p>';
+
+        return $html;
+    }
+
+    /**
+     * Build confirmation email body for submitter
+     */
+    private function build_confirmation_body($form_title, $site_name)
+    {
+        $html = '<h2 style="color:#1e293b;margin:0 0 15px;">Thank You!</h2>';
+        $html .= '<p style="color:#475569;font-size:15px;line-height:1.6;">We have received your <strong>' . esc_html($form_title) . '</strong> submission and will get back to you as soon as possible.</p>';
+        $html .= '<p style="color:#9ca3af;font-size:13px;margin-top:25px;">— ' . esc_html($site_name) . '</p>';
+
+        return $html;
+    }
+
+    /**
+     * Find submitter's email from form data
+     * Looks for fields labeled 'email' or containing email values
+     */
+    private function find_submitter_email($data)
+    {
+        // First pass: look for a field explicitly labeled 'email'
+        foreach ($data as $label => $value) {
+            if (is_string($value) && stripos($label, 'email') !== false && is_email($value)) {
+                return sanitize_email($value);
+            }
+        }
+
+        // Second pass: look for any value that looks like an email
+        foreach ($data as $value) {
+            if (is_string($value) && is_email($value)) {
+                return sanitize_email($value);
+            }
+        }
+
+        return false;
     }
 
     /**

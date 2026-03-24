@@ -58,6 +58,9 @@ function ofast_x_init_plugin()
     // Load core classes
     require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-core.php';
 
+    // Load Logger utility (used by spam-protection, social-login)
+    require_once OFAST_X_PLUGIN_DIR . 'includes/utilities/class-ofast-logger.php';
+
     // Load security hardening (early load for headers)
     require_once OFAST_X_PLUGIN_DIR . 'includes/security/class-ofast-security-hardening.php';
 

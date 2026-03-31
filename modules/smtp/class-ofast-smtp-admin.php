@@ -49,8 +49,9 @@ class Ofast_X_SMTP_Admin
                 position: sticky;
                 top: 47px;
                 z-index: 100;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
             }
+
             @media (max-width: 782px) {
                 .ofast-tabs-nav {
                     position: sticky;
@@ -59,6 +60,7 @@ class Ofast_X_SMTP_Admin
                     -webkit-overflow-scrolling: touch;
                 }
             }
+
             .ofast-tab {
                 display: inline-flex;
                 align-items: center;
@@ -76,24 +78,33 @@ class Ofast_X_SMTP_Admin
                 flex-shrink: 0;
                 white-space: nowrap;
             }
+
             .ofast-tab:hover {
                 background: #fff;
                 color: #1e293b;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             }
+
             .ofast-tab.active {
                 background: linear-gradient(135deg, #6366f1 0%, #764ba2 100%);
                 color: #fff;
                 box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
             }
+
             .ofast-tab .dashicons {
                 font-size: 16px;
                 width: 16px;
                 height: 16px;
                 line-height: 16px;
             }
-            .ofast-tab-content { display: none; }
-            .ofast-tab-content.active { display: block; }
+
+            .ofast-tab-content {
+                display: none;
+            }
+
+            .ofast-tab-content.active {
+                display: block;
+            }
 
             /* Layout helpers used by dashboard cards/chart */
             .ofast-grid-3 {
@@ -101,29 +112,36 @@ class Ofast_X_SMTP_Admin
                 grid-template-columns: repeat(3, minmax(0, 1fr));
                 gap: 15px;
             }
+
             .ofast-grid-4 {
                 display: grid;
                 grid-template-columns: repeat(4, minmax(0, 1fr));
                 gap: 15px;
             }
+
             .ofast-flex-layout {
                 display: grid;
                 grid-template-columns: repeat(2, minmax(0, 1fr));
                 gap: 15px;
                 align-items: stretch;
             }
+
             .ofast-main {
                 min-width: 0;
             }
+
             @media (max-width: 1200px) {
                 .ofast-grid-4 {
                     grid-template-columns: repeat(2, minmax(0, 1fr));
                 }
+
                 .ofast-flex-layout {
                     grid-template-columns: 1fr;
                 }
             }
+
             @media (max-width: 782px) {
+
                 .ofast-grid-3,
                 .ofast-grid-4,
                 .ofast-flex-layout {
@@ -165,7 +183,7 @@ class Ofast_X_SMTP_Admin
         ?>
         <div class="wrap">
             <h1>SMTP</h1>
-            
+
             <!-- Modern Tabs Navigation (sticky on scroll) -->
             <nav class="ofast-tabs-nav" id="smtp-tabs-nav">
                 <a href="#" class="ofast-tab <?php echo $default_tab === 'dashboard' ? 'active' : ''; ?>" data-tab="dashboard">
@@ -183,54 +201,57 @@ class Ofast_X_SMTP_Admin
             </nav>
 
             <!-- Tab Content Panels -->
-            <div id="smtp-tab-dashboard" class="ofast-tab-content<?php echo $default_tab === 'dashboard' ? ' active' : ''; ?>" style="<?php echo $default_tab !== 'dashboard' ? 'display:none;' : ''; ?>">
+            <div id="smtp-tab-dashboard" class="ofast-tab-content<?php echo $default_tab === 'dashboard' ? ' active' : ''; ?>"
+                style="<?php echo $default_tab !== 'dashboard' ? 'display:none;' : ''; ?>">
                 <?php $this->render_dashboard_page_content(); ?>
             </div>
 
-            <div id="smtp-tab-log" class="ofast-tab-content<?php echo $default_tab === 'log' ? ' active' : ''; ?>" style="<?php echo $default_tab !== 'log' ? 'display:none;' : ''; ?>">
+            <div id="smtp-tab-log" class="ofast-tab-content<?php echo $default_tab === 'log' ? ' active' : ''; ?>"
+                style="<?php echo $default_tab !== 'log' ? 'display:none;' : ''; ?>">
                 <?php $this->render_log_page_content(); ?>
             </div>
 
-            <div id="smtp-tab-settings" class="ofast-tab-content<?php echo $default_tab === 'settings' ? ' active' : ''; ?>" style="<?php echo $default_tab !== 'settings' ? 'display:none;' : ''; ?>">
+            <div id="smtp-tab-settings" class="ofast-tab-content<?php echo $default_tab === 'settings' ? ' active' : ''; ?>"
+                style="<?php echo $default_tab !== 'settings' ? 'display:none;' : ''; ?>">
                 <?php $this->render_settings_page_content(); ?>
             </div>
         </div>
 
         <script>
-        jQuery(document).ready(function($) {
-            // Tab switching without page reload
-            $('#smtp-tabs-nav .ofast-tab').on('click', function(e) {
-                e.preventDefault();
-                
-                var tabId = $(this).data('tab');
-                
-                // Update active tab
-                $('#smtp-tabs-nav .ofast-tab').removeClass('active');
-                $(this).addClass('active');
-                
-                // Show/hide content with active class
-                $('.ofast-tab-content').removeClass('active').hide();
-                $('#smtp-tab-' + tabId).addClass('active').show();
-                
-                // Update URL without reload (for bookmarking)
-                if (history.pushState) {
-                    var url = new URL(window.location);
-                    url.searchParams.set('tab', tabId);
-                    history.pushState({tab: tabId}, '', url);
-                }
-            });
-            
-            // Handle browser back/forward
-            window.addEventListener('popstate', function(e) {
-                if (e.state && e.state.tab) {
-                    var tabId = e.state.tab;
+            jQuery(document).ready(function ($) {
+                // Tab switching without page reload
+                $('#smtp-tabs-nav .ofast-tab').on('click', function (e) {
+                    e.preventDefault();
+
+                    var tabId = $(this).data('tab');
+
+                    // Update active tab
                     $('#smtp-tabs-nav .ofast-tab').removeClass('active');
-                    $('#smtp-tabs-nav .ofast-tab[data-tab="' + tabId + '"]').addClass('active');
+                    $(this).addClass('active');
+
+                    // Show/hide content with active class
                     $('.ofast-tab-content').removeClass('active').hide();
                     $('#smtp-tab-' + tabId).addClass('active').show();
-                }
+
+                    // Update URL without reload (for bookmarking)
+                    if (history.pushState) {
+                        var url = new URL(window.location);
+                        url.searchParams.set('tab', tabId);
+                        history.pushState({ tab: tabId }, '', url);
+                    }
+                });
+
+                // Handle browser back/forward
+                window.addEventListener('popstate', function (e) {
+                    if (e.state && e.state.tab) {
+                        var tabId = e.state.tab;
+                        $('#smtp-tabs-nav .ofast-tab').removeClass('active');
+                        $('#smtp-tabs-nav .ofast-tab[data-tab="' + tabId + '"]').addClass('active');
+                        $('.ofast-tab-content').removeClass('active').hide();
+                        $('#smtp-tab-' + tabId).addClass('active').show();
+                    }
+                });
             });
-        });
         </script>
         <?php
     }
@@ -253,7 +274,7 @@ class Ofast_X_SMTP_Admin
         $from_email = get_option('ofast_smtp_from_email', '');
 
         $presets = Ofast_X_SMTP::get_provider_presets();
-        
+
         // Determine if mailer is active
         $is_active = $enabled && ($mailer_type === 'default' || (!empty($host) && !empty($username)));
         $mailer_name = $mailer_type === 'default' ? 'PHP Mail (Default)' : ($presets[$provider]['name'] ?? 'Custom SMTP');
@@ -299,7 +320,8 @@ class Ofast_X_SMTP_Admin
 
         <!-- Connection Status -->
         <div class="ofast-grid-3" style="margin: 25px 0;">
-            <div style="background: <?php echo $is_active ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #6b7280, #4b5563)'; ?>; padding: 25px; border-radius: 12px; color: #fff; text-align: center;">
+            <div
+                style="background: <?php echo $is_active ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #6b7280, #4b5563)'; ?>; padding: 25px; border-radius: 12px; color: #fff; text-align: center;">
                 <div style="font-size: 28px; margin-bottom: 5px;">
                     <?php echo $is_active ? '✓' : '✗'; ?>
                 </div>
@@ -310,7 +332,8 @@ class Ofast_X_SMTP_Admin
                     <?php echo $is_active ? esc_html($mailer_name) : 'Not Configured'; ?>
                 </div>
             </div>
-            <div style="background: linear-gradient(135deg, #6366f1, #4f46e5); padding: 25px; border-radius: 12px; color: #fff; text-align: center;">
+            <div
+                style="background: linear-gradient(135deg, #6366f1, #4f46e5); padding: 25px; border-radius: 12px; color: #fff; text-align: center;">
                 <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Provider</div>
                 <div style="font-size: 18px; font-weight: 600;">
                     <?php echo $mailer_type === 'default' ? 'Server Mail' : ($host ? esc_html($host) : 'Not Set'); ?>
@@ -319,7 +342,8 @@ class Ofast_X_SMTP_Admin
                     <?php echo $mailer_type === 'default' ? 'PHP mail() function' : 'Port ' . esc_html(get_option('ofast_smtp_port', 587)) . ' / ' . strtoupper(esc_html($encryption)); ?>
                 </div>
             </div>
-            <div style="background: linear-gradient(135deg, #3b82f6, #2563eb); padding: 25px; border-radius: 12px; color: #fff; text-align: center;">
+            <div
+                style="background: linear-gradient(135deg, #3b82f6, #2563eb); padding: 25px; border-radius: 12px; color: #fff; text-align: center;">
                 <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">From Address</div>
                 <div style="font-size: 16px; font-weight: 600; word-break: break-all;">
                     <?php echo $from_email ? esc_html($from_email) : 'Not Set'; ?>
@@ -329,20 +353,28 @@ class Ofast_X_SMTP_Admin
 
         <!-- Stats Cards -->
         <div class="ofast-grid-4" style="margin: 25px 0;">
-            <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                <div style="font-size: 36px; font-weight: 700; color: #6366f1;"><?php echo number_format($stats['total']); ?></div>
+            <div
+                style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 36px; font-weight: 700; color: #6366f1;"><?php echo number_format($stats['total']); ?>
+                </div>
                 <div style="color: #6b7280; font-size: 14px; margin-top: 5px;">Total Emails</div>
             </div>
-            <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                <div style="font-size: 36px; font-weight: 700; color: #10b981;"><?php echo number_format($stats['success']); ?></div>
+            <div
+                style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 36px; font-weight: 700; color: #10b981;"><?php echo number_format($stats['success']); ?>
+                </div>
                 <div style="color: #6b7280; font-size: 14px; margin-top: 5px;">Successful</div>
             </div>
-            <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                <div style="font-size: 36px; font-weight: 700; color: #ef4444;"><?php echo number_format($stats['failed']); ?></div>
+            <div
+                style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 36px; font-weight: 700; color: #ef4444;"><?php echo number_format($stats['failed']); ?>
+                </div>
                 <div style="color: #6b7280; font-size: 14px; margin-top: 5px;">Failed</div>
             </div>
-            <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                <div style="font-size: 36px; font-weight: 700; color: <?php echo $stats['rate'] >= 90 ? '#10b981' : ($stats['rate'] >= 70 ? '#f59e0b' : '#ef4444'); ?>;">
+            <div
+                style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div
+                    style="font-size: 36px; font-weight: 700; color: <?php echo $stats['rate'] >= 90 ? '#10b981' : ($stats['rate'] >= 70 ? '#f59e0b' : '#ef4444'); ?>;">
                     <?php echo $stats['rate']; ?>%
                 </div>
                 <div style="color: #6b7280; font-size: 14px; margin-top: 5px;">Success Rate</div>
@@ -351,7 +383,8 @@ class Ofast_X_SMTP_Admin
 
         <!-- Weekly Chart & Recent -->
         <div class="ofast-flex-layout" style="margin: 25px 0;">
-            <div class="ofast-main" style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; flex-direction: column;">
+            <div class="ofast-main"
+                style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; flex-direction: column;">
                 <h3 style="margin: 0; font-size: 16px; color: #374151;">Emails Last 7 Days</h3>
                 <div style="flex: 1;"></div>
                 <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;">
@@ -362,15 +395,18 @@ class Ofast_X_SMTP_Admin
                         $bar_height = max(5, $bar_height);
                         ?>
                         <div style="flex: 1; text-align: center;">
-                            <div style="background: linear-gradient(to top, #6366f1, #818cf8); height: <?php echo $bar_height; ?>px; border-radius: 4px 4px 0 0; min-height: 5px;" title="<?php echo $day['count']; ?> emails"></div>
-                            <div style="font-size: 11px; color: #6b7280; margin-top: 8px;"><?php echo esc_html($day['day']); ?></div>
+                            <div style="background: linear-gradient(to top, #6366f1, #818cf8); height: <?php echo $bar_height; ?>px; border-radius: 4px 4px 0 0; min-height: 5px;"
+                                title="<?php echo $day['count']; ?> emails"></div>
+                            <div style="font-size: 11px; color: #6b7280; margin-top: 8px;"><?php echo esc_html($day['day']); ?>
+                            </div>
                             <div style="font-size: 12px; font-weight: 600; color: #374151;"><?php echo $day['count']; ?></div>
                         </div>
                     <?php endforeach; ?>
                 </div>
             </div>
 
-            <div class="ofast-main" style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div class="ofast-main"
+                style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                 <h3 style="margin: 0 0 20px 0; font-size: 16px; color: #374151;">Recent Emails</h3>
                 <?php if (empty($recent_emails)): ?>
                     <p style="color: #6b7280; text-align: center; padding: 30px 0;">No emails sent yet.</p>
@@ -379,7 +415,8 @@ class Ofast_X_SMTP_Admin
                         <?php foreach ($recent_emails as $email): ?>
                             <div style="display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #f3f4f6;">
                                 <div style="flex: 1; min-width: 0;">
-                                    <div style="font-size: 13px; font-weight: 500; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    <div
+                                        style="font-size: 13px; font-weight: 500; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                         <?php echo esc_html($email->subject); ?>
                                     </div>
                                     <div style="font-size: 12px; color: #6b7280;">
@@ -388,9 +425,11 @@ class Ofast_X_SMTP_Admin
                                 </div>
                                 <div style="margin-left: 10px;">
                                     <?php if ($email->status === 'success'): ?>
-                                        <span style="background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 3px; font-size: 10px;">✓</span>
+                                        <span
+                                            style="background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 3px; font-size: 10px;">✓</span>
                                     <?php else: ?>
-                                        <span style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 3px; font-size: 10px;">✗</span>
+                                        <span
+                                            style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 3px; font-size: 10px;">✗</span>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -404,8 +443,10 @@ class Ofast_X_SMTP_Admin
         <div style="background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb;">
             <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #374151;">Quick Actions</h3>
             <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <a href="<?php echo admin_url('admin.php?page=ofast-smtp&tab=settings'); ?>" class="button button-primary button-large">Configure SMTP</a>
-                <a href="<?php echo admin_url('admin.php?page=ofast-smtp&tab=log'); ?>" class="button button-secondary button-large">View All Logs</a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-smtp&tab=settings'); ?>"
+                    class="button button-primary button-large">Configure SMTP</a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-smtp&tab=log'); ?>"
+                    class="button button-secondary button-large">View All Logs</a>
             </div>
         </div>
         <?php
@@ -475,7 +516,8 @@ class Ofast_X_SMTP_Admin
                 <div style="color: #6b7280;">Total Emails</div>
             </div>
             <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; text-align: center;">
-                <div style="font-size: 32px; font-weight: bold; color: #10b981;"><?php echo esc_html($stats['success']); ?></div>
+                <div style="font-size: 32px; font-weight: bold; color: #10b981;"><?php echo esc_html($stats['success']); ?>
+                </div>
                 <div style="color: #6b7280;">Successful</div>
             </div>
             <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; text-align: center;">
@@ -490,7 +532,8 @@ class Ofast_X_SMTP_Admin
 
         <!-- Actions -->
         <div style="display: flex; gap: 15px; align-items: center; margin: 20px 0; flex-wrap: wrap;">
-            <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-smtp&tab=log&export_csv=1'), 'export_smtp_logs'); ?>" class="button button-secondary">Export CSV</a>
+            <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-smtp&tab=log&export_csv=1'), 'export_smtp_logs'); ?>"
+                class="button button-secondary">Export CSV</a>
             <form method="post" style="display: flex; gap: 10px; align-items: center; margin: 0;">
                 <?php wp_nonce_field('clear_smtp_logs'); ?>
                 <span style="color: #6b7280;">Clear logs older than</span>
@@ -500,7 +543,8 @@ class Ofast_X_SMTP_Admin
                     <option value="60">60 days</option>
                     <option value="90">90 days</option>
                 </select>
-                <button type="submit" name="clear_logs" class="button" onclick="return confirm('Are you sure?');">Clear Old Logs</button>
+                <button type="submit" name="clear_logs" class="button" onclick="return confirm('Are you sure?');">Clear Old
+                    Logs</button>
             </form>
         </div>
 
@@ -519,7 +563,9 @@ class Ofast_X_SMTP_Admin
                 </thead>
                 <tbody>
                     <?php if (empty($logs)): ?>
-                        <tr><td colspan="6" style="text-align: center; padding: 40px; color: #6b7280;">No emails logged yet.</td></tr>
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 40px; color: #6b7280;">No emails logged yet.</td>
+                        </tr>
                     <?php else: ?>
                         <?php foreach ($logs as $log): ?>
                             <?php $status = strtolower((string) $log->status); ?>
@@ -529,22 +575,32 @@ class Ofast_X_SMTP_Admin
                                 <td><?php echo esc_html($log->subject); ?></td>
                                 <td>
                                     <?php if (in_array($status, array('success', 'sent'), true)): ?>
-                                        <span style="background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 3px; font-size: 11px;">SUCCESS</span>
+                                        <span
+                                            style="background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 3px; font-size: 11px;">SUCCESS</span>
                                     <?php elseif ($status === 'failed'): ?>
-                                        <span style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 3px; font-size: 11px;">FAILED</span>
+                                        <span
+                                            style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 3px; font-size: 11px;">FAILED</span>
+                                    <?php elseif ($status === 'rate_limited'): ?>
+                                        <span
+                                            style="background: #ffedd5; color: #9a3412; padding: 2px 8px; border-radius: 3px; font-size: 11px;">RATE
+                                            LIMITED</span>
                                     <?php else: ?>
-                                        <span style="background: #e0f2fe; color: #0f4c81; padding: 2px 8px; border-radius: 3px; font-size: 11px;">PENDING</span>
+                                        <span
+                                            style="background: #e0f2fe; color: #0f4c81; padding: 2px 8px; border-radius: 3px; font-size: 11px;">PENDING</span>
                                     <?php endif; ?>
                                 </td>
                                 <td><?php echo esc_html($log->sent_at); ?></td>
                                 <td>
                                     <?php if (!empty($log->body)): ?>
-                                        <button type="button" class="button button-small preview-email" data-id="<?php echo esc_attr($log->id); ?>" data-content="<?php echo esc_attr(base64_encode($log->body)); ?>">Preview</button>
+                                        <button type="button" class="button button-small preview-email"
+                                            data-id="<?php echo esc_attr($log->id); ?>"
+                                            data-content="<?php echo esc_attr(base64_encode($log->body)); ?>">Preview</button>
                                     <?php else: ?>
                                         <span style="color: #6b7280; font-style: italic;">No content stored</span>
                                     <?php endif; ?>
                                     <?php if ($status === 'failed' && !empty($log->body)): ?>
-                                        <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-smtp&tab=log&resend=' . $log->id), 'resend_email'); ?>" class="button button-small">Resend</a>
+                                        <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-smtp&tab=log&resend=' . $log->id), 'resend_email'); ?>"
+                                            class="button button-small">Resend</a>
                                     <?php elseif ($status === 'failed'): ?>
                                         <span style="color: #6b7280; font-style: italic; margin-left: 8px;">Resend unavailable</span>
                                     <?php endif; ?>
@@ -559,7 +615,7 @@ class Ofast_X_SMTP_Admin
         <?php
         $total_pages = ceil($total / $per_page);
         if ($total_pages > 1):
-        ?>
+            ?>
             <div class="tablenav bottom">
                 <div class="tablenav-pages">
                     <?php echo paginate_links(array('base' => add_query_arg('paged', '%#%'), 'format' => '', 'prev_text' => '&laquo;', 'next_text' => '&raquo;', 'total' => $total_pages, 'current' => $current_page)); ?>
@@ -568,31 +624,37 @@ class Ofast_X_SMTP_Admin
         <?php endif; ?>
 
         <!-- Preview Modal -->
-        <div id="email-preview-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100000;">
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border-radius: 8px; width: 90%; max-width: 700px; max-height: 80vh; overflow: hidden;">
-                <div style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+        <div id="email-preview-modal"
+            style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100000;">
+            <div
+                style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border-radius: 8px; width: 90%; max-width: 700px; max-height: 80vh; overflow: hidden;">
+                <div
+                    style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
                     <h3 style="margin: 0;">Email Preview</h3>
-                    <button type="button" id="close-preview" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+                    <button type="button" id="close-preview"
+                        style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
                 </div>
-                
+
                 <?php if (get_option('ofast_smtp_log_body_content', false)): ?>
-                <div style="padding: 10px 20px; background: #fffbeb; border-bottom: 1px solid #f59e0b; color: #92400e; font-size: 13px;">
-                    <strong>🔒 Security Notice:</strong> Sensitive patterns (passwords, tokens, API keys) have been automatically filtered from this preview.
-                </div>
+                    <div
+                        style="padding: 10px 20px; background: #fffbeb; border-bottom: 1px solid #f59e0b; color: #92400e; font-size: 13px;">
+                        <strong>🔒 Security Notice:</strong> Sensitive patterns (passwords, tokens, API keys) have been
+                        automatically filtered from this preview.
+                    </div>
                 <?php endif; ?>
-                
+
                 <iframe id="email-preview-frame" sandbox style="width: 100%; height: 60vh; border: none;"></iframe>
             </div>
         </div>
 
         <script>
-            jQuery(document).ready(function($) {
-                $('.preview-email').on('click', function() {
+            jQuery(document).ready(function ($) {
+                $('.preview-email').on('click', function () {
                     var content = atob($(this).data('content'));
                     document.getElementById('email-preview-frame').srcdoc = content;
                     $('#email-preview-modal').fadeIn(200);
                 });
-                $('#close-preview, #email-preview-modal').on('click', function(e) {
+                $('#close-preview, #email-preview-modal').on('click', function (e) {
                     if (e.target === this || $(this).attr('id') === 'close-preview') {
                         $('#email-preview-modal').fadeOut(200);
                     }
@@ -628,7 +690,8 @@ class Ofast_X_SMTP_Admin
                 <tr>
                     <th>Enable SMTP</th>
                     <td>
-                        <label><input type="checkbox" name="smtp_enabled" value="1" <?php checked($enabled); ?>> Use SMTP for all WordPress emails</label>
+                        <label><input type="checkbox" name="smtp_enabled" value="1" <?php checked($enabled); ?>> Use SMTP for
+                            all WordPress emails</label>
                         <p class="description">When enabled, all emails will be sent through your configured mailer.</p>
                     </td>
                 </tr>
@@ -636,10 +699,12 @@ class Ofast_X_SMTP_Admin
                     <th>Mailer Type</th>
                     <td>
                         <select name="smtp_mailer_type" id="smtp_mailer_type">
-                            <option value="default" <?php selected($mailer_type, 'default'); ?>>PHP Mail (Default) - No credentials needed</option>
+                            <option value="default" <?php selected($mailer_type, 'default'); ?>>PHP Mail (Default) - No
+                                credentials needed</option>
                             <option value="smtp" <?php selected($mailer_type, 'smtp'); ?>>Other SMTP - Custom server</option>
                         </select>
-                        <p class="description" id="mailer_note" style="margin-top: 10px; padding: 10px; background: #f0f6fc; border-radius: 5px;">
+                        <p class="description" id="mailer_note"
+                            style="margin-top: 10px; padding: 10px; background: #f0f6fc; border-radius: 5px;">
                             <?php if ($mailer_type === 'default'): ?>
                                 Uses your server's built-in mail function. Only From Email/Name needed. Best for most hosts.
                             <?php else: ?>
@@ -658,10 +723,13 @@ class Ofast_X_SMTP_Admin
                         <td>
                             <select name="smtp_provider" id="smtp_provider">
                                 <?php foreach ($presets as $key => $preset): ?>
-                                    <option value="<?php echo esc_attr($key); ?>" <?php selected($provider, $key); ?>><?php echo esc_html($preset['name']); ?></option>
+                                    <option value="<?php echo esc_attr($key); ?>" <?php selected($provider, $key); ?>>
+                                        <?php echo esc_html($preset['name']); ?>
+                                    </option>
                                 <?php endforeach; ?>
                             </select>
-                            <p class="description" id="provider_note" style="margin-top: 10px; padding: 10px; background: #f0f6fc; border-radius: 5px;">
+                            <p class="description" id="provider_note"
+                                style="margin-top: 10px; padding: 10px; background: #f0f6fc; border-radius: 5px;">
                                 <?php echo esc_html($presets[$provider]['note'] ?? ''); ?>
                             </p>
                         </td>
@@ -672,20 +740,24 @@ class Ofast_X_SMTP_Admin
                 <table class="form-table">
                     <tr>
                         <th><label for="smtp_host">SMTP Host *</label></th>
-                        <td><input type="text" name="smtp_host" id="smtp_host" value="<?php echo esc_attr($host); ?>" class="regular-text" placeholder="smtp.example.com"></td>
+                        <td><input type="text" name="smtp_host" id="smtp_host" value="<?php echo esc_attr($host); ?>"
+                                class="regular-text" placeholder="smtp.example.com"></td>
                     </tr>
                     <tr>
                         <th><label for="smtp_port">SMTP Port *</label></th>
                         <td>
-                            <input type="number" name="smtp_port" id="smtp_port" value="<?php echo esc_attr($port); ?>" style="width: 100px;">
+                            <input type="number" name="smtp_port" id="smtp_port" value="<?php echo esc_attr($port); ?>"
+                                style="width: 100px;">
                             <span class="description">Common: 587 (TLS), 465 (SSL), 25 (None)</span>
                         </td>
                     </tr>
                     <tr>
                         <th>Encryption</th>
                         <td>
-                            <label><input type="radio" name="smtp_encryption" value="tls" <?php checked($encryption, 'tls'); ?>> TLS (Recommended)</label><br>
-                            <label><input type="radio" name="smtp_encryption" value="ssl" <?php checked($encryption, 'ssl'); ?>> SSL</label><br>
+                            <label><input type="radio" name="smtp_encryption" value="tls" <?php checked($encryption, 'tls'); ?>>
+                                TLS (Recommended)</label><br>
+                            <label><input type="radio" name="smtp_encryption" value="ssl" <?php checked($encryption, 'ssl'); ?>>
+                                SSL</label><br>
                             <label><input type="radio" name="smtp_encryption" value="none" <?php checked($encryption, 'none'); ?>> None</label>
                         </td>
                     </tr>
@@ -695,13 +767,18 @@ class Ofast_X_SMTP_Admin
                 <table class="form-table">
                     <tr>
                         <th><label for="smtp_username">Username *</label></th>
-                        <td><input type="text" name="smtp_username" id="smtp_username" value="<?php echo esc_attr($username); ?>" class="regular-text" placeholder="your@email.com or apikey"></td>
+                        <td><input type="text" name="smtp_username" id="smtp_username"
+                                value="<?php echo esc_attr($username); ?>" class="regular-text"
+                                placeholder="your@email.com or apikey"></td>
                     </tr>
                     <tr>
                         <th><label for="smtp_password">Password *</label></th>
                         <td>
-                            <input type="password" name="smtp_password" id="smtp_password" value="<?php echo $password ? '••••••••' : ''; ?>" class="regular-text" placeholder="Enter password or API key">
-                            <button type="button" class="button button-small" onclick="this.previousElementSibling.type = this.previousElementSibling.type === 'password' ? 'text' : 'password'">Show/Hide</button>
+                            <input type="password" name="smtp_password" id="smtp_password"
+                                value="<?php echo $password ? '••••••••' : ''; ?>" class="regular-text"
+                                placeholder="Enter password or API key">
+                            <button type="button" class="button button-small"
+                                onclick="this.previousElementSibling.type = this.previousElementSibling.type === 'password' ? 'text' : 'password'">Show/Hide</button>
                             <p class="description">For Gmail/Zoho: Use an App Password, not your login password</p>
                         </td>
                     </tr>
@@ -713,13 +790,16 @@ class Ofast_X_SMTP_Admin
                 <tr>
                     <th><label for="smtp_from_email">From Email *</label></th>
                     <td>
-                        <input type="email" name="smtp_from_email" id="smtp_from_email" value="<?php echo esc_attr($from_email); ?>" class="regular-text" placeholder="noreply@yoursite.com">
+                        <input type="email" name="smtp_from_email" id="smtp_from_email"
+                            value="<?php echo esc_attr($from_email); ?>" class="regular-text"
+                            placeholder="noreply@yoursite.com">
                         <p class="description">The email address shown as sender</p>
                     </td>
                 </tr>
                 <tr>
                     <th><label for="smtp_from_name">From Name</label></th>
-                    <td><input type="text" name="smtp_from_name" id="smtp_from_name" value="<?php echo esc_attr($from_name); ?>" class="regular-text" placeholder="Your Website Name"></td>
+                    <td><input type="text" name="smtp_from_name" id="smtp_from_name" value="<?php echo esc_attr($from_name); ?>"
+                            class="regular-text" placeholder="Your Website Name"></td>
                 </tr>
             </table>
 
@@ -728,12 +808,15 @@ class Ofast_X_SMTP_Admin
                 <table class="form-table">
                     <tr>
                         <th>Enable Rate Limiting</th>
-                        <td><label><input type="checkbox" name="rate_limit_enabled" value="1" <?php checked(get_option('ofast_smtp_rate_limit_enabled', true)); ?>> Limit emails per minute</label></td>
+                        <td><label><input type="checkbox" name="rate_limit_enabled" value="1" <?php checked(get_option('ofast_smtp_rate_limit_enabled', true)); ?>> Limit emails per
+                                minute</label></td>
                     </tr>
                     <tr>
                         <th><label for="rate_limit">Max Emails/Minute</label></th>
                         <td>
-                            <input type="number" name="rate_limit" id="rate_limit" value="<?php echo esc_attr(get_option('ofast_smtp_rate_limit', 60)); ?>" min="1" max="500" style="width: 80px;">
+                            <input type="number" name="rate_limit" id="rate_limit"
+                                value="<?php echo esc_attr(get_option('ofast_smtp_rate_limit', 60)); ?>" min="1" max="500"
+                                style="width: 80px;">
                             <span class="description">Recommended: 30-60 for shared hosting</span>
                         </td>
                     </tr>
@@ -744,10 +827,12 @@ class Ofast_X_SMTP_Admin
             <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 30px 0;">
                 <h3 style="margin-top: 0;">Test Connection</h3>
                 <p>Send a test email to verify your settings are correct.</p>
-                <button type="button" id="test-smtp-btn" class="button button-secondary">Send Test Email to <?php echo esc_html(get_option('admin_email')); ?></button>
+                <button type="button" id="test-smtp-btn" class="button button-secondary">Send Test Email to
+                    <?php echo esc_html(get_option('admin_email')); ?></button>
                 <span id="test-result" style="margin-left: 15px;"></span>
                 <div id="test-details" style="margin-top: 15px; display: none;">
-                    <pre style="background: #1e293b; color: #10b981; padding: 15px; border-radius: 5px; overflow-x: auto;"></pre>
+                    <pre
+                        style="background: #1e293b; color: #10b981; padding: 15px; border-radius: 5px; overflow-x: auto;"></pre>
                 </div>
             </div>
 
@@ -755,10 +840,11 @@ class Ofast_X_SMTP_Admin
             <div style="background: #fffbeb; border: 1px solid #f59e0b; border-radius: 8px; padding: 20px; margin: 30px 0;">
                 <h3 style="margin-top: 0; color: #92400e;">🔒 Email Logging Security</h3>
                 <p style="color: #92400e;">
-                    <strong>Security Notice:</strong> Email logs may contain sensitive information like passwords, tokens, and personal data.
+                    <strong>Security Notice:</strong> Email logs may contain sensitive information like passwords, tokens, and
+                    personal data.
                     Configure logging level based on your security requirements.
                 </p>
-                
+
                 <table class="form-table">
                     <tr>
                         <th>Log Email Content</th>
@@ -769,15 +855,18 @@ class Ofast_X_SMTP_Admin
                                 Store filtered email content in logs
                             </label>
                             <p class="description" style="color: #92400e;">
-                                <strong>Recommended: Leave unchecked</strong> - Only metadata (to, subject, status, timestamp) will be logged for security.<br>
-                                When enabled, sensitive patterns (passwords, tokens, API keys) are automatically filtered before storage.
+                                <strong>Recommended: Leave unchecked</strong> - Only metadata (to, subject, status, timestamp)
+                                will be logged for security.<br>
+                                When enabled, sensitive patterns (passwords, tokens, API keys) are automatically filtered before
+                                storage.
                             </p>
                         </td>
                     </tr>
                     <tr>
                         <th>Log Retention (Days)</th>
                         <td>
-                            <input type="number" name="log_retention_days" value="<?php echo esc_attr($log_retention_days); ?>" min="0" max="3650" style="width: 90px;">
+                            <input type="number" name="log_retention_days" value="<?php echo esc_attr($log_retention_days); ?>"
+                                min="0" max="3650" style="width: 90px;">
                             <p class="description" style="color: #92400e;">
                                 Set to <strong>0</strong> to keep logs forever. Default is 90 days.
                             </p>
@@ -787,7 +876,8 @@ class Ofast_X_SMTP_Admin
             </div>
 
             <p class="submit">
-                <button type="submit" name="ofast_smtp_save" class="button button-primary button-large">Save SMTP Settings</button>
+                <button type="submit" name="ofast_smtp_save" class="button button-primary button-large">Save SMTP
+                    Settings</button>
             </p>
         </form>
 
@@ -859,19 +949,20 @@ class Ofast_X_SMTP_Admin
                         <li>Use: Host: email-smtp.[region].amazonaws.com, Port: 587, TLS</li>
                         <li>Username/Password: Generated SMTP credentials (NOT IAM keys)</li>
                     </ol>
-                    <p style="color: #f59e0b;"><strong>Note:</strong> New accounts start in sandbox mode (verify recipients first).</p>
+                    <p style="color: #f59e0b;"><strong>Note:</strong> New accounts start in sandbox mode (verify recipients
+                        first).</p>
                 </div>
             </details>
         </div>
 
         <script>
-            jQuery(document).ready(function($) {
-                $('#smtp_mailer_type').on('change', function() {
+            jQuery(document).ready(function ($) {
+                $('#smtp_mailer_type').on('change', function () {
                     var isSmtp = $(this).val() === 'smtp';
                     $('#smtp-credentials-section').toggle(isSmtp);
                     $('#rate-limit-section').toggle(isSmtp);
-                    $('#mailer_note').text(isSmtp 
-                        ? 'Requires SMTP server credentials. Better deliverability with providers like SendGrid, Mailgun.' 
+                    $('#mailer_note').text(isSmtp
+                        ? 'Requires SMTP server credentials. Better deliverability with providers like SendGrid, Mailgun.'
                         : 'Uses your server\'s built-in mail function. Only From Email/Name needed. Best for most hosts.');
                 });
             });
@@ -934,7 +1025,7 @@ class Ofast_X_SMTP_Admin
             if (!Ofast_X_SMTP::validate_encryption_keys()) {
                 $key_diagnostics = Ofast_X_SMTP::get_key_validation_details();
                 error_log('OFAST SMTP Security Warning: Attempted to save credentials with invalid encryption keys: ' . $key_diagnostics['message']);
-                add_action('admin_notices', function() use ($key_diagnostics) {
+                add_action('admin_notices', function () use ($key_diagnostics) {
                     echo '<div class="notice notice-error is-dismissible">';
                     echo '<p><strong>SMTP Configuration Error:</strong> ' . esc_html($key_diagnostics['message']) . '</p>';
                     if (!empty($key_diagnostics['suggestion'])) {
@@ -966,7 +1057,7 @@ class Ofast_X_SMTP_Admin
             } catch (Exception $e) {
                 // SECURITY FIX: Handle encryption failures securely
                 error_log('OFAST SMTP Security Error: ' . $e->getMessage());
-                add_action('admin_notices', function() use ($e) {
+                add_action('admin_notices', function () use ($e) {
                     printf('<div class="notice notice-error is-dismissible"><p><strong>SMTP Configuration Error:</strong> %s</p></div>', esc_html($e->getMessage()));
                 });
                 return; // Stop processing if credentials cannot be stored securely
@@ -985,7 +1076,7 @@ class Ofast_X_SMTP_Admin
         $retention_days = intval($_POST['log_retention_days'] ?? 90);
         $retention_days = max(0, min(3650, $retention_days));
         update_option('ofast_smtp_log_retention_days', $retention_days);
-        
+
         // Notify listeners when body logging is enabled (for optional auditing).
         if ($log_body_content) {
             do_action('ofast_smtp_body_logging_enabled', get_current_user_id(), current_time('mysql'));
@@ -1098,6 +1189,7 @@ class Ofast_X_SMTP_Admin
         return $value;
     }
 
+
     /**
      * Clear old logs
      */
@@ -1121,9 +1213,77 @@ class Ofast_X_SMTP_Admin
      */
     private function create_log_table()
     {
-        Ofast_X_SMTP::ensure_log_table_schema();
+        // Trigger table creation by calling the SMTP singleton
+        // The ensure_log_table method runs via log_outgoing_email, 
+        // but for admin pages we need the table to exist for queries.
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'ofast_smtp_log';
+
+        if (get_transient('ofast_smtp_log_table_exists')) {
+            return;
+        }
+
+        $table_exists = $wpdb->get_var($wpdb->prepare(
+            "SHOW TABLES LIKE %s",
+            $table_name
+        ));
+
+        if ($table_exists !== $table_name) {
+            $charset = $wpdb->get_charset_collate();
+
+            $sql = "CREATE TABLE {$table_name} (
+                id bigint(20) NOT NULL AUTO_INCREMENT,
+                to_email varchar(255) NOT NULL,
+                subject varchar(255) NOT NULL,
+                body longtext NOT NULL,
+                headers text,
+                status varchar(20) DEFAULT 'pending',
+                error_message text,
+                sent_at datetime DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY status (status),
+                KEY sent_at (sent_at)
+            ) {$charset};";
+
+            require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+            dbDelta($sql);
+        }
+
+        set_transient('ofast_smtp_log_table_exists', true, DAY_IN_SECONDS);
+    }
+
+    /**
+     * Resend a previously logged email by ID.
+     */
+    private function resend_email($log_id)
+    {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'ofast_smtp_log';
+
+        $log = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$table_name} WHERE id = %d",
+            $log_id
+        ));
+
+        if (!$log) {
+            Ofast_X_Toast::add('Email log entry not found.', 'error');
+            return;
+        }
+
+        if (empty($log->to_email) || empty($log->subject)) {
+            Ofast_X_Toast::add('Cannot resend: email data is incomplete.', 'error');
+            return;
+        }
+
+        $headers = array('Content-Type: text/html; charset=UTF-8');
+        $body = !empty($log->body) ? $log->body : '';
+
+        $result = wp_mail($log->to_email, $log->subject, $body, $headers);
+
+        if ($result) {
+            Ofast_X_Toast::add('Email resent successfully to ' . esc_html($log->to_email), 'success');
+        } else {
+            Ofast_X_Toast::add('Failed to resend email. Check your SMTP configuration.', 'error');
+        }
     }
 }
-
-
-

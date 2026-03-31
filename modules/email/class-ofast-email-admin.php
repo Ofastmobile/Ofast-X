@@ -133,23 +133,26 @@ class Ofast_X_Email_Admin
                 margin-bottom: 25px;
                 margin-top: 20px;
             }
+
             .ofast-header-icon {
                 width: 56px;
                 height: 56px;
                 background: #fff;
                 border: 1px solid #e2e8f0;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
                 border-radius: 16px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
             }
+
             .ofast-header-icon .dashicons {
                 font-size: 28px;
                 width: 28px;
                 height: 28px;
                 color: #6366f1;
             }
+
             .ofast-header-content h1 {
                 margin: 0 0 5px 0;
                 font-size: 24px;
@@ -158,6 +161,7 @@ class Ofast_X_Email_Admin
                 display: block;
                 padding: 0;
             }
+
             .ofast-header-content p {
                 margin: 0;
                 color: #64748b;
@@ -179,13 +183,18 @@ class Ofast_X_Email_Admin
                 z-index: 99;
                 box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
                 overflow-x: auto;
-                -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-                -ms-overflow-style: none;  /* IE and Edge */
-                scrollbar-width: none;  /* Firefox */
+                -webkit-overflow-scrolling: touch;
+                /* Smooth scrolling on iOS */
+                -ms-overflow-style: none;
+                /* IE and Edge */
+                scrollbar-width: none;
+                /* Firefox */
             }
+
             .ofast-tabs-nav::-webkit-scrollbar {
                 display: none;
             }
+
             .ofast-tab {
                 display: inline-flex;
                 align-items: center;
@@ -202,15 +211,18 @@ class Ofast_X_Email_Admin
                 transition: all 0.2s ease;
                 white-space: nowrap;
             }
+
             .ofast-tab:hover {
                 background: #f1f5f9;
                 color: #1e293b;
             }
+
             .ofast-tab.active {
                 background: var(--ofast-primary);
                 color: #fff;
                 box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
             }
+
             .ofast-tab .dashicons {
                 font-size: 16px;
                 width: 16px;
@@ -219,11 +231,25 @@ class Ofast_X_Email_Admin
             }
 
             /* Tab Content Visibility */
-            .ofast-tab-content { display: none; }
-            .ofast-tab-content.active { display: block; animation: ofastFadeIn 0.3s ease; }
+            .ofast-tab-content {
+                display: none;
+            }
+
+            .ofast-tab-content.active {
+                display: block;
+                animation: ofastFadeIn 0.3s ease;
+            }
+
             @keyframes ofastFadeIn {
-                from { opacity: 0; transform: translateY(10px); }
-                to { opacity: 1; transform: translateY(0); }
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
             }
 
             /* Card Styling */
@@ -235,7 +261,10 @@ class Ofast_X_Email_Admin
                 border: 1px solid rgba(226, 232, 240, 0.6);
                 margin-bottom: 20px;
             }
-            .ofast-card h2 { margin-top: 0; }
+
+            .ofast-card h2 {
+                margin-top: 0;
+            }
 
             /* Two Column Layout (Send Page) */
             .ofast-email-form-layout {
@@ -243,37 +272,110 @@ class Ofast_X_Email_Admin
                 grid-template-columns: 1fr 320px;
                 gap: 30px;
             }
+
             @media screen and (max-width: 1024px) {
                 .ofast-email-form-layout {
                     grid-template-columns: 1fr;
                 }
             }
-            
+
             /* Form Styling */
-            .ofast-form-group { margin-bottom: 20px; }
-            .ofast-form-group label strong { display: block; margin-bottom: 8px; font-weight: 600; color: #1e293b; }
-            .ofast-form-group input[type="text"], .ofast-form-group input[type="datetime-local"], .ofast-form-group select {
-                border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 14px; transition: all 0.2s; width: 100%;
+            .ofast-form-group {
+                margin-bottom: 20px;
             }
-            .ofast-form-group input:focus, .ofast-form-group select:focus {
-                border-color: var(--ofast-primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); outline: none;
+
+            .ofast-form-group label strong {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: 600;
+                color: #1e293b;
             }
-            
+
+            .ofast-form-group input[type="text"],
+            .ofast-form-group input[type="datetime-local"],
+            .ofast-form-group select {
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                padding: 10px 14px;
+                font-size: 14px;
+                transition: all 0.2s;
+                width: 100%;
+            }
+
+            .ofast-form-group input:focus,
+            .ofast-form-group select:focus {
+                border-color: var(--ofast-primary);
+                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+                outline: none;
+            }
+
             /* Placeholders box */
-            .ofast-placeholders-box { background: #f8fafc; padding: 15px; border-left: 4px solid #6366f1; border-radius: 0 8px 8px 0; margin-bottom: 20px; }
-            .ofast-placeholders-box strong { color: #1e293b; }
-            .ofast-placeholders-box code { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+            .ofast-placeholders-box {
+                background: #f8fafc;
+                padding: 15px;
+                border-left: 4px solid #6366f1;
+                border-radius: 0 8px 8px 0;
+                margin-bottom: 20px;
+            }
+
+            .ofast-placeholders-box strong {
+                color: #1e293b;
+            }
+
+            .ofast-placeholders-box code {
+                background: #e2e8f0;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 12px;
+            }
 
             /* Roles grid */
-            .ofast-roles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
-            .ofast-role-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f8fafc; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
-            .ofast-role-item:hover { background: #eff6ff; }
-            .ofast-role-item input[type="checkbox"] { margin: 0; }
+            .ofast-roles-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                gap: 8px;
+            }
+
+            .ofast-role-item {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 12px;
+                background: #f8fafc;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+
+            .ofast-role-item:hover {
+                background: #eff6ff;
+            }
+
+            .ofast-role-item input[type="checkbox"] {
+                margin: 0;
+            }
 
             /* Sidebar card */
-            .ofast-sidebar-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 15px; }
-            .ofast-sidebar-card h4 { margin: 0 0 15px 0; font-size: 14px; font-weight: 600; color: #1e293b; }
-            .ofast-sidebar-card .description { font-size: 12px; color: #64748b; margin-top: 8px; }
+            .ofast-sidebar-card {
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                padding: 20px;
+                margin-bottom: 15px;
+            }
+
+            .ofast-sidebar-card h4 {
+                margin: 0 0 15px 0;
+                font-size: 14px;
+                font-weight: 600;
+                color: #1e293b;
+            }
+
+            .ofast-sidebar-card .description {
+                font-size: 12px;
+                color: #64748b;
+                margin-top: 8px;
+            }
 
             /* Button Override */
             .button.button-primary {
@@ -287,22 +389,52 @@ class Ofast_X_Email_Admin
                 border-radius: 8px !important;
                 font-size: 14px !important;
             }
+
             .button.button-primary:hover {
                 background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
                 transform: translateY(-2px);
                 box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
             }
-            .button.button-primary:active { transform: translateY(0); }
-            .button.button-secondary { border-radius: 8px !important; padding: 10px 20px !important; height: auto !important; }
-            .button.button-small { border-radius: 6px !important; }
+
+            .button.button-primary:active {
+                transform: translateY(0);
+            }
+
+            .button.button-secondary {
+                border-radius: 8px !important;
+                padding: 10px 20px !important;
+                height: auto !important;
+            }
+
+            .button.button-small {
+                border-radius: 6px !important;
+            }
 
             /* Notice styling */
-            .ofast-draft-notice { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-            .ofast-draft-notice .dashicons { color: #6366f1; }
+            .ofast-draft-notice {
+                background: #eff6ff;
+                border: 1px solid #bfdbfe;
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin-bottom: 20px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .ofast-draft-notice .dashicons {
+                color: #6366f1;
+            }
 
             /* WP Editor override */
-            .ofast-card .wp-editor-container { border-radius: 8px; border: 1px solid #e2e8f0; }
-            .ofast-card .mce-panel { border-radius: 8px 8px 0 0; }
+            .ofast-card .wp-editor-container {
+                border-radius: 8px;
+                border: 1px solid #e2e8f0;
+            }
+
+            .ofast-card .mce-panel {
+                border-radius: 8px 8px 0 0;
+            }
         </style>
 
         <div class="wrap">
@@ -325,7 +457,7 @@ class Ofast_X_Email_Admin
                 <a href="#" class="ofast-tab <?php echo $active_tab === 'drafts' ? 'active' : ''; ?>" data-tab="drafts">
                     <span class="dashicons dashicons-edit"></span> Drafts
                 </a>
-<!-- Queue tab archived for future release -->
+                <!-- Queue tab archived for future release -->
                 <a href="#" class="ofast-tab <?php echo $active_tab === 'history' ? 'active' : ''; ?>" data-tab="history">
                     <span class="dashicons dashicons-clock"></span> History
                 </a>
@@ -344,7 +476,7 @@ class Ofast_X_Email_Admin
                 <?php $this->render_tab_drafts(); ?>
             </div>
 
-<!-- Queue Tab - Archived for future release -->
+            <!-- Queue Tab - Archived for future release -->
 
             <!-- History Tab -->
             <div id="tab-history" class="ofast-tab-content<?php echo $active_tab === 'history' ? ' active' : ''; ?>">
@@ -358,20 +490,20 @@ class Ofast_X_Email_Admin
         </div>
 
         <script>
-            jQuery(document).ready(function($) {
+            jQuery(document).ready(function ($) {
                 // Tab Switching
-                $('.ofast-tabs-nav .ofast-tab').on('click', function(e) {
+                $('.ofast-tabs-nav .ofast-tab').on('click', function (e) {
                     e.preventDefault();
                     var target = $(this).data('tab');
-                    
+
                     // Update tab classes
                     $('.ofast-tabs-nav .ofast-tab').removeClass('active');
                     $(this).addClass('active');
-                    
+
                     // Update content visibility
                     $('.ofast-tab-content').removeClass('active');
                     $('#tab-' + target).addClass('active');
-                    
+
                     // Update URL without page reload
                     var url = new URL(window.location);
                     url.searchParams.set('tab', target);
@@ -379,7 +511,7 @@ class Ofast_X_Email_Admin
                 });
 
                 // Handle browser back/forward buttons
-                window.onpopstate = function() {
+                window.onpopstate = function () {
                     var urlParams = new URLSearchParams(window.location.search);
                     var tab = urlParams.get('tab') || 'send';
                     $('.ofast-tabs-nav .ofast-tab[data-tab="' + tab + '"]').click();
@@ -429,16 +561,16 @@ class Ofast_X_Email_Admin
         if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['draft_id'])) {
             if (isset($_GET['_wpnonce']) && wp_verify_nonce($_GET['_wpnonce'], 'delete_draft_' . $_GET['draft_id'])) {
                 $draft_id = intval($_GET['draft_id']);
-                
+
                 // Explicit ownership verification before deletion
                 $draft = $wpdb->get_row($wpdb->prepare(
                     "SELECT id, admin_id FROM $table WHERE id = %d",
                     $draft_id
                 ));
-                
+
                 if (!$draft) {
                     echo Ofast_X_Toast::render('Draft not found.', 'error', true);
-                } elseif ((int)$draft->admin_id !== $current_user_id) {
+                } elseif ((int) $draft->admin_id !== $current_user_id) {
                     // Log unauthorized access attempt
                     error_log(sprintf(
                         'SECURITY: User %d attempted unauthorized deletion of draft %d (owned by user %d)',
@@ -459,16 +591,16 @@ class Ofast_X_Email_Admin
         if (isset($_GET['action']) && $_GET['action'] === 'send' && isset($_GET['draft_id'])) {
             if (isset($_GET['_wpnonce']) && wp_verify_nonce($_GET['_wpnonce'], 'send_draft_' . $_GET['draft_id'])) {
                 $draft_id = intval($_GET['draft_id']);
-                
+
                 // Explicit ownership verification before accessing draft
                 $draft = $wpdb->get_row($wpdb->prepare(
                     "SELECT * FROM $table WHERE id = %d",
                     $draft_id
                 ));
-                
+
                 if (!$draft) {
                     echo Ofast_X_Toast::render('Draft not found.', 'error', true);
-                } elseif ((int)$draft->admin_id !== $current_user_id) {
+                } elseif ((int) $draft->admin_id !== $current_user_id) {
                     // Log unauthorized access attempt
                     error_log(sprintf(
                         'SECURITY: User %d attempted unauthorized send of draft %d (owned by user %d)',
@@ -502,22 +634,28 @@ class Ofast_X_Email_Admin
         ?>
         <style>
             .ofast-card table a {
-                color: #6366f1; /* Default to primary for actions */
+                color: #6366f1;
+                /* Default to primary for actions */
                 text-decoration: none;
             }
+
             /* Subject link should be black */
             .ofast-card table td strong a {
-                color: #1e293b; /* Slate-800 for a softer "black" */
+                color: #1e293b;
+                /* Slate-800 for a softer "black" */
             }
+
             .ofast-card table td strong a:hover {
-                color: #6366f1; /* Primary on hover */
+                color: #6366f1;
+                /* Primary on hover */
                 text-decoration: underline;
             }
-            
+
             .ofast-card table a:hover {
                 color: #4f46e5;
                 text-decoration: underline;
             }
+
             .ofast-draft-action {
                 text-decoration: none;
                 margin-right: 15px;
@@ -528,15 +666,18 @@ class Ofast_X_Email_Admin
                 color: #6366f1;
                 cursor: pointer;
             }
+
             .ofast-draft-action:hover {
                 text-decoration: underline;
                 color: #4f46e5;
             }
+
             /* Ensure delete stays red and overrides general link color */
             .ofast-draft-action.delete,
             .ofast-card table a.ofast-draft-action.delete {
                 color: #b32d2e;
             }
+
             .ofast-draft-action.delete:hover,
             .ofast-card table a.ofast-draft-action.delete:hover {
                 color: #b32d2e;
@@ -544,44 +685,53 @@ class Ofast_X_Email_Admin
         </style>
         <div class="ofast-card">
             <?php if (empty($drafts)): ?>
-                <div class="notice notice-info inline" style="margin: 0;"><p>No drafts yet. <a href="<?php echo admin_url('admin.php?page=ofast-emailer'); ?>">Create an email</a> and save it as draft.</p></div>
+                <div class="notice notice-info inline" style="margin: 0;">
+                    <p>No drafts yet. <a href="<?php echo admin_url('admin.php?page=ofast-emailer'); ?>">Create an email</a> and
+                        save it as draft.</p>
+                </div>
             <?php else: ?>
                 <div style="overflow-x:auto;">
                     <table class="widefat fixed striped">
-                    <thead>
-                        <tr>
-                            <th style="width:30%">Subject</th>
-                            <th style="width:20%">Recipients</th>
-                            <th style="width:20%">Last Modified</th>
-                            <th style="width:30%">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    <?php foreach ($drafts as $draft): 
-                        $roles = json_decode($draft->roles, true) ?: array();
-                        $user_ids = json_decode($draft->user_ids, true) ?: array();
-                        $recipients = array();
-                        if (!empty($roles)) $recipients[] = count($roles) . ' role(s)';
-                        if (!empty($user_ids)) $recipients[] = count($user_ids) . ' user(s)';
-                        $recipients_text = !empty($recipients) ? implode(', ', $recipients) : 'Admin only';
-                        
-                        $edit_url = admin_url('admin.php?page=ofast-emailer&draft_id=' . $draft->id);
-                        $send_url = wp_nonce_url(admin_url('admin.php?page=ofast-emailer&tab=drafts&action=send&draft_id=' . $draft->id), 'send_draft_' . $draft->id);
-                        $delete_url = wp_nonce_url(admin_url('admin.php?page=ofast-emailer&tab=drafts&action=delete&draft_id=' . $draft->id), 'delete_draft_' . $draft->id);
-                    ?>
-                        <tr>
-                            <td><strong><a href="<?php echo $edit_url; ?>"><?php echo esc_html($draft->subject ?: '(No Subject)'); ?></a></strong></td>
-                            <td><?php echo esc_html($recipients_text); ?></td>
-                            <td><?php echo esc_html($draft->updated_at); ?></td>
-                            <td>
-                                <a href="<?php echo $edit_url; ?>" class="ofast-draft-action">Edit</a>
-                                <a href="<?php echo $send_url; ?>" class="ofast-draft-action" onclick="return confirm('Load this draft to send?');">Send</a>
-                                <a href="<?php echo $delete_url; ?>" class="ofast-draft-action delete" onclick="return confirm('Delete this draft permanently?');">Delete</a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
+                        <thead>
+                            <tr>
+                                <th style="width:30%">Subject</th>
+                                <th style="width:20%">Recipients</th>
+                                <th style="width:20%">Last Modified</th>
+                                <th style="width:30%">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($drafts as $draft):
+                                $roles = json_decode($draft->roles, true) ?: array();
+                                $user_ids = json_decode($draft->user_ids, true) ?: array();
+                                $recipients = array();
+                                if (!empty($roles))
+                                    $recipients[] = count($roles) . ' role(s)';
+                                if (!empty($user_ids))
+                                    $recipients[] = count($user_ids) . ' user(s)';
+                                $recipients_text = !empty($recipients) ? implode(', ', $recipients) : 'Admin only';
+
+                                $edit_url = admin_url('admin.php?page=ofast-emailer&draft_id=' . $draft->id);
+                                $send_url = wp_nonce_url(admin_url('admin.php?page=ofast-emailer&tab=drafts&action=send&draft_id=' . $draft->id), 'send_draft_' . $draft->id);
+                                $delete_url = wp_nonce_url(admin_url('admin.php?page=ofast-emailer&tab=drafts&action=delete&draft_id=' . $draft->id), 'delete_draft_' . $draft->id);
+                                ?>
+                                <tr>
+                                    <td><strong><a
+                                                href="<?php echo $edit_url; ?>"><?php echo esc_html($draft->subject ?: '(No Subject)'); ?></a></strong>
+                                    </td>
+                                    <td><?php echo esc_html($recipients_text); ?></td>
+                                    <td><?php echo esc_html($draft->updated_at); ?></td>
+                                    <td>
+                                        <a href="<?php echo $edit_url; ?>" class="ofast-draft-action">Edit</a>
+                                        <a href="<?php echo $send_url; ?>" class="ofast-draft-action"
+                                            onclick="return confirm('Load this draft to send?');">Send</a>
+                                        <a href="<?php echo $delete_url; ?>" class="ofast-draft-action delete"
+                                            onclick="return confirm('Delete this draft permanently?');">Delete</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
             <?php endif; ?>
         </div>
@@ -602,7 +752,7 @@ class Ofast_X_Email_Admin
         <div class="ofast-card">
             <h2>Email History</h2>
             <p>View sent emails and preview their content. Showing the last 100 entries.</p>
-            
+
             <?php if (empty($logs)): ?>
                 <p>No emails have been logged yet.</p>
             <?php else: ?>
@@ -619,56 +769,63 @@ class Ofast_X_Email_Admin
                             </tr>
                         </thead>
                         <tbody>
-                        <?php foreach ($logs as $log): ?>
-                            <tr>
-                                <td><?php echo esc_html($log->id); ?></td>
-                                <td><?php echo esc_html($log->subject); ?></td>
-                                <td><?php echo esc_html($log->sent_at); ?></td>
-                                <td><?php echo esc_html($log->recipient_count); ?></td>
-                                <td>
-                                    <span style="padding: 2px 8px; border-radius: 4px; font-size: 11px; background: <?php echo $log->status === 'sent' ? '#dcfce7' : '#fee2e2'; ?>; color: <?php echo $log->status === 'sent' ? '#166534' : '#991b1b'; ?>;">
-                                        <?php echo esc_html(ucfirst($log->status)); ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <?php if (!empty($log->body)): ?>
-                                        <button type="button" class="button button-small preview-log-btn" data-body="<?php echo esc_attr($log->body); ?>" data-subject="<?php echo esc_attr($log->subject); ?>">Preview</button>
-                                    <?php else: ?>
-                                        <span style="color: #9ca3af;">No preview</span>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
+                            <?php foreach ($logs as $log): ?>
+                                <tr>
+                                    <td><?php echo esc_html($log->id); ?></td>
+                                    <td><?php echo esc_html($log->subject); ?></td>
+                                    <td><?php echo esc_html($log->sent_at); ?></td>
+                                    <td><?php echo esc_html($log->recipient_count); ?></td>
+                                    <td>
+                                        <span
+                                            style="padding: 2px 8px; border-radius: 4px; font-size: 11px; background: <?php echo $log->status === 'sent' ? '#dcfce7' : '#fee2e2'; ?>; color: <?php echo $log->status === 'sent' ? '#166534' : '#991b1b'; ?>;">
+                                            <?php echo esc_html(ucfirst($log->status)); ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <?php if (!empty($log->body)): ?>
+                                            <button type="button" class="button button-small preview-log-btn"
+                                                data-body="<?php echo esc_attr($log->body); ?>"
+                                                data-subject="<?php echo esc_attr($log->subject); ?>">Preview</button>
+                                        <?php else: ?>
+                                            <span style="color: #9ca3af;">No preview</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
             <?php endif; ?>
         </div>
-        
+
         <!-- Preview Modal -->
-        <div id="history-preview-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:10000; padding:50px;">
-            <div style="background:#fff; max-width:800px; margin:0 auto; border-radius:12px; padding:20px; max-height:80vh; overflow:auto;">
+        <div id="history-preview-modal"
+            style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:10000; padding:50px;">
+            <div
+                style="background:#fff; max-width:800px; margin:0 auto; border-radius:12px; padding:20px; max-height:80vh; overflow:auto;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <h3 id="modal-subject" style="margin:0;">Preview</h3>
                     <button type="button" id="close-history-modal" class="button">Close</button>
                 </div>
-                <iframe id="modal-content" sandbox style="width:100%; height:500px; border:1px solid #e5e7eb; border-radius:8px;"></iframe>
+                <iframe id="modal-content" sandbox
+                    style="width:100%; height:500px; border:1px solid #e5e7eb; border-radius:8px;"></iframe>
             </div>
         </div>
-        
+
         <script>
-        jQuery(document).ready(function($) {
-            $('.preview-log-btn').on('click', function() {
-                var body = $(this).data('body');
-                var subject = $(this).data('subject');
-                $('#modal-subject').text(subject);
-                $('#modal-content').attr('srcdoc', body);
-                $('#history-preview-modal').fadeIn();
+            jQuery(document).ready(function ($) {
+                $('.preview-log-btn').on('click', function () {
+                    var body = $(this).attr('data-body');
+                    var subject = $(this).attr('data-subject');
+                    $('#modal-subject').text(subject);
+                    $('#modal-content').attr('srcdoc', body);
+                    $('#history-preview-modal').fadeIn();
+                });
+                $('#close-history-modal').on('click', function () {
+                    $('#history-preview-modal').fadeOut();
+                    $('#modal-content').attr('srcdoc', '');
+                });
             });
-            $('#close-history-modal').on('click', function() {
-                $('#history-preview-modal').fadeOut();
-            });
-        });
         </script>
         <?php
     }
@@ -690,14 +847,14 @@ class Ofast_X_Email_Admin
             $test_content = '<p>This is a <strong>test email</strong> from ' . esc_html(get_bloginfo('name')) . '.</p>
                 <p>If you can see this email with your logo, colors, and branding - your email template is working correctly!</p>
                 <p>You can now send beautiful emails to your users.</p>';
-            
+
             require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-template.php';
             $html = Ofast_X_Email_Template::get_template($test_content);
-            
+
             $headers = Ofast_X_Email::get_safe_email_headers();
-            
+
             $sent = wp_mail($admin_email, sprintf(__('[%s] Test Email - Template Preview', 'ofast-x'), get_bloginfo('name')), $html, $headers);
-            
+
             if ($sent) {
                 echo Ofast_X_Toast::render('Test email sent to ' . esc_html($admin_email), 'success');
             } else {
@@ -731,7 +888,7 @@ class Ofast_X_Email_Admin
         $logo_width = get_option('ofast_email_logo_width', '120');
         $logo_height = get_option('ofast_email_logo_height', '0');
 
-    ?>
+        ?>
         <style>
             .ofast-template-layout {
                 display: flex;
@@ -784,33 +941,46 @@ class Ofast_X_Email_Admin
                     <div class="ofast-card" style="padding: 20px; margin-bottom: 20px;">
                         <h3 style="margin: 0 0 15px 0; font-size: 16px;">Template Style</h3>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;" id="ofast-style-selector">
-                            <label class="ofast-style-label" style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'modern' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'modern' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;">
-                                <input type="radio" name="template_style" value="modern" <?php checked($style, 'modern'); ?> style="display: none;">
+                            <label class="ofast-style-label"
+                                style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'modern' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'modern' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;">
+                                <input type="radio" name="template_style" value="modern" <?php checked($style, 'modern'); ?>
+                                    style="display: none;">
                                 <div style="font-weight: 600;">Modern</div>
                                 <small style="color: #64748b;">Gradient header</small>
                             </label>
-                            <label class="ofast-style-label" style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'classic' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'classic' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;">
-                                <input type="radio" name="template_style" value="classic" <?php checked($style, 'classic'); ?> style="display: none;">
+                            <label class="ofast-style-label"
+                                style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'classic' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'classic' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;">
+                                <input type="radio" name="template_style" value="classic" <?php checked($style, 'classic'); ?>
+                                    style="display: none;">
                                 <div style="font-weight: 600;">Classic</div>
                                 <small style="color: #64748b;">Solid header</small>
                             </label>
-                            <label class="ofast-style-label" style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'minimal' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'minimal' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;">
-                                <input type="radio" name="template_style" value="minimal" <?php checked($style, 'minimal'); ?> style="display: none;">
+                            <label class="ofast-style-label"
+                                style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'minimal' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'minimal' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;">
+                                <input type="radio" name="template_style" value="minimal" <?php checked($style, 'minimal'); ?>
+                                    style="display: none;">
                                 <div style="font-weight: 600;">Minimal</div>
                                 <small style="color: #64748b;">Clean, no header</small>
                             </label>
-                            <label class="ofast-style-label" style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'custom' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'custom' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;">
-                                <input type="radio" name="template_style" value="custom" <?php checked($style, 'custom'); ?> style="display: none;">
+                            <label class="ofast-style-label"
+                                style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'custom' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'custom' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;">
+                                <input type="radio" name="template_style" value="custom" <?php checked($style, 'custom'); ?>
+                                    style="display: none;">
                                 <div style="font-weight: 600;">Custom</div>
                                 <small style="color: #64748b;">Your own HTML</small>
                             </label>
                         </div>
 
                         <!-- Custom Template Editor -->
-                        <div id="ofast-custom-template-wrap" style="margin-top: 15px; display: <?php echo $style === 'custom' ? 'block' : 'none'; ?>;">
-                            <p class="description" style="margin: 0 0 10px;">Paste your custom HTML email template below. Use <code>{{content}}</code> as the placeholder where your email body will be inserted.</p>
-                            <textarea name="custom_template" id="ofast_custom_template" rows="14" style="width: 100%; font-family: monospace; font-size: 13px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; background: #1e293b; color: #e2e8f0; resize: vertical;"><?php echo esc_textarea(get_option('ofast_email_custom_template', '')); ?></textarea>
-                            <p class="description" style="margin: 8px 0 0; color: #94a3b8;">Tip: Include full HTML structure (&lt;html&gt;, &lt;body&gt;, etc.) for best results. The <code>{{content}}</code> tag will be replaced with the email message.</p>
+                        <div id="ofast-custom-template-wrap"
+                            style="margin-top: 15px; display: <?php echo $style === 'custom' ? 'block' : 'none'; ?>;">
+                            <p class="description" style="margin: 0 0 10px;">Paste your custom HTML email template below. Use
+                                <code>{{content}}</code> as the placeholder where your email body will be inserted.</p>
+                            <textarea name="custom_template" id="ofast_custom_template" rows="14"
+                                style="width: 100%; font-family: monospace; font-size: 13px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; background: #1e293b; color: #e2e8f0; resize: vertical;"><?php echo esc_textarea(get_option('ofast_email_custom_template', '')); ?></textarea>
+                            <p class="description" style="margin: 8px 0 0; color: #94a3b8;">Tip: Include full HTML structure
+                                (&lt;html&gt;, &lt;body&gt;, etc.) for best results. The <code>{{content}}</code> tag will be
+                                replaced with the email message.</p>
                         </div>
                     </div>
 
@@ -820,19 +990,23 @@ class Ofast_X_Email_Admin
                         <table class="form-table" style="margin: 0;">
                             <tr>
                                 <th style="width: 100px; padding: 10px 0;">Primary</th>
-                                <td style="padding: 10px 0;"><input type="text" name="primary_color" value="<?php echo esc_attr($primary); ?>" class="ofast-color-picker"></td>
+                                <td style="padding: 10px 0;"><input type="text" name="primary_color"
+                                        value="<?php echo esc_attr($primary); ?>" class="ofast-color-picker"></td>
                             </tr>
                             <tr>
                                 <th style="padding: 10px 0;">Accent</th>
-                                <td style="padding: 10px 0;"><input type="text" name="accent_color" value="<?php echo esc_attr($accent); ?>" class="ofast-color-picker"></td>
+                                <td style="padding: 10px 0;"><input type="text" name="accent_color"
+                                        value="<?php echo esc_attr($accent); ?>" class="ofast-color-picker"></td>
                             </tr>
                             <tr>
                                 <th style="padding: 10px 0;">Background</th>
-                                <td style="padding: 10px 0;"><input type="text" name="bg_color" value="<?php echo esc_attr($bg); ?>" class="ofast-color-picker"></td>
+                                <td style="padding: 10px 0;"><input type="text" name="bg_color"
+                                        value="<?php echo esc_attr($bg); ?>" class="ofast-color-picker"></td>
                             </tr>
                             <tr>
                                 <th style="padding: 10px 0;">Text</th>
-                                <td style="padding: 10px 0;"><input type="text" name="text_color" value="<?php echo esc_attr($text); ?>" class="ofast-color-picker"></td>
+                                <td style="padding: 10px 0;"><input type="text" name="text_color"
+                                        value="<?php echo esc_attr($text); ?>" class="ofast-color-picker"></td>
                             </tr>
                         </table>
                     </div>
@@ -845,13 +1019,15 @@ class Ofast_X_Email_Admin
                                 <th style="width: 100px; padding: 10px 0;">Font</th>
                                 <td style="padding: 10px 0;">
                                     <select name="font_family" id="font_family" style="width: 100%;">
-                                        <option value="system" <?php selected($font_family, 'system'); ?>>System Default</option>
+                                        <option value="system" <?php selected($font_family, 'system'); ?>>System Default
+                                        </option>
                                         <option value="inter" <?php selected($font_family, 'inter'); ?>>Inter</option>
                                         <option value="roboto" <?php selected($font_family, 'roboto'); ?>>Roboto</option>
                                         <option value="opensans" <?php selected($font_family, 'opensans'); ?>>Open Sans</option>
                                         <option value="lato" <?php selected($font_family, 'lato'); ?>>Lato</option>
                                         <option value="poppins" <?php selected($font_family, 'poppins'); ?>>Poppins</option>
-                                        <option value="georgia" <?php selected($font_family, 'georgia'); ?>>Georgia (Serif)</option>
+                                        <option value="georgia" <?php selected($font_family, 'georgia'); ?>>Georgia (Serif)
+                                        </option>
                                     </select>
                                 </td>
                             </tr>
@@ -877,33 +1053,44 @@ class Ofast_X_Email_Admin
                             <tr>
                                 <th style="width: 100px; padding: 10px 0;">Logo</th>
                                 <td style="padding: 10px 0;">
-                                    <input type="text" name="logo_url" id="logo_url" value="<?php echo esc_url($logo); ?>" style="width: 100%; margin-bottom: 5px;" placeholder="https://">
+                                    <input type="text" name="logo_url" id="logo_url" value="<?php echo esc_url($logo); ?>"
+                                        style="width: 100%; margin-bottom: 5px;" placeholder="https://">
                                     <button type="button" class="button" id="upload_logo_btn">Upload Image</button>
                                 </td>
                             </tr>
                             <tr>
                                 <th style="padding: 10px 0;">Logo Size</th>
                                 <td style="padding: 10px 0; display: flex; gap: 10px; align-items: center;">
-                                    <label>W: <input type="number" name="logo_width" id="logo_width" value="<?php echo esc_attr($logo_width); ?>" style="width: 60px;" min="30" max="300"> px</label>
-                                    <label>H: <input type="number" name="logo_height" id="logo_height" value="<?php echo esc_attr($logo_height); ?>" style="width: 60px;" min="0" max="200" placeholder="auto"> px</label>
+                                    <label>W: <input type="number" name="logo_width" id="logo_width"
+                                            value="<?php echo esc_attr($logo_width); ?>" style="width: 60px;" min="30"
+                                            max="300"> px</label>
+                                    <label>H: <input type="number" name="logo_height" id="logo_height"
+                                            value="<?php echo esc_attr($logo_height); ?>" style="width: 60px;" min="0" max="200"
+                                            placeholder="auto"> px</label>
                                     <small style="color: #64748b;">(0 = auto)</small>
                                 </td>
                             </tr>
                             <tr>
                                 <th style="padding: 10px 0;">Company</th>
-                                <td style="padding: 10px 0;"><input type="text" name="company_name" value="<?php echo esc_attr($company); ?>" style="width: 100%;"></td>
+                                <td style="padding: 10px 0;"><input type="text" name="company_name"
+                                        value="<?php echo esc_attr($company); ?>" style="width: 100%;"></td>
                             </tr>
                             <tr>
                                 <th style="padding: 10px 0;">Tagline</th>
-                                <td style="padding: 10px 0;"><input type="text" name="tagline" value="<?php echo esc_attr($tagline); ?>" style="width: 100%;"></td>
+                                <td style="padding: 10px 0;"><input type="text" name="tagline"
+                                        value="<?php echo esc_attr($tagline); ?>" style="width: 100%;"></td>
                             </tr>
                             <tr>
                                 <th style="padding: 10px 0;">From Name</th>
-                                <td style="padding: 10px 0;"><input type="text" name="from_name" value="<?php echo esc_attr($from_name); ?>" style="width: 100%;" placeholder="Sender name for emails"></td>
+                                <td style="padding: 10px 0;"><input type="text" name="from_name"
+                                        value="<?php echo esc_attr($from_name); ?>" style="width: 100%;"
+                                        placeholder="Sender name for emails"></td>
                             </tr>
                             <tr>
                                 <th style="padding: 10px 0;">Reply-to</th>
-                                <td style="padding: 10px 0;"><input type="email" name="reply_to" value="<?php echo esc_attr($reply_to); ?>" style="width: 100%;" placeholder="email@example.com"></td>
+                                <td style="padding: 10px 0;"><input type="email" name="reply_to"
+                                        value="<?php echo esc_attr($reply_to); ?>" style="width: 100%;"
+                                        placeholder="email@example.com"></td>
                             </tr>
                         </table>
                     </div>
@@ -937,7 +1124,8 @@ class Ofast_X_Email_Admin
                     <!-- Apply To -->
                     <div class="ofast-card" style="padding: 20px; margin-bottom: 20px;">
                         <h3 style="margin: 0 0 15px 0; font-size: 16px;">Apply Template To</h3>
-                        <p style="margin: 0 0 10px 0; font-size: 12px; color: #64748b;">Select which email types should use this template:</p>
+                        <p style="margin: 0 0 10px 0; font-size: 12px; color: #64748b;">Select which email types should use this
+                            template:</p>
                         <?php
                         $email_types = array(
                             'emailer' => 'Ofast Emailer (campaigns)',
@@ -946,7 +1134,7 @@ class Ofast_X_Email_Admin
                             'all_wp' => 'All WordPress Emails'
                         );
                         foreach ($email_types as $key => $label) {
-                            $checked = in_array($key, (array)$apply_to) ? 'checked' : '';
+                            $checked = in_array($key, (array) $apply_to) ? 'checked' : '';
                             echo '<label style="display: block; margin-bottom: 6px;">';
                             echo '<input type="checkbox" name="apply_to[]" value="' . $key . '" ' . $checked . '> ' . esc_html($label);
                             echo '</label>';
@@ -956,12 +1144,19 @@ class Ofast_X_Email_Admin
 
                     <!-- Bulk Email Settings - Coming Soon -->
                     <!-- Queue system archived to: blueprint/future_modules/email_queue/ -->
-                    
+
                     <div style="margin-top: 30px; display: flex; gap: 12px; flex-wrap: wrap;">
-                    <button type="submit" name="ofast_save_template" class="button button-primary button-large ofast-template-btn" style="flex: 1;"><span class="dashicons dashicons-saved"></span> Save Changes</button>
-                    <button type="submit" name="ofast_send_test_template" class="button button-secondary button-large ofast-template-btn" style="flex: 1;"><span class="dashicons dashicons-email"></span> Send Test</button>
-                    <button type="submit" name="ofast_reset_template" class="button button-large ofast-template-btn ofast-reset-btn" style="flex: 1;" onclick="return confirm('Reset all template settings details?');"><span class="dashicons dashicons-image-rotate"></span> Reset</button>
-                </div>
+                        <button type="submit" name="ofast_save_template"
+                            class="button button-primary button-large ofast-template-btn" style="flex: 1;"><span
+                                class="dashicons dashicons-saved"></span> Save Changes</button>
+                        <button type="submit" name="ofast_send_test_template"
+                            class="button button-secondary button-large ofast-template-btn" style="flex: 1;"><span
+                                class="dashicons dashicons-email"></span> Send Test</button>
+                        <button type="submit" name="ofast_reset_template"
+                            class="button button-large ofast-template-btn ofast-reset-btn" style="flex: 1;"
+                            onclick="return confirm('Reset all template settings details?');"><span
+                                class="dashicons dashicons-image-rotate"></span> Reset</button>
+                    </div>
 
                 </form>
             </div>
@@ -969,26 +1164,28 @@ class Ofast_X_Email_Admin
             <!-- Right Column: Live Preview -->
             <div class="ofast-template-preview">
                 <div class="ofast-card" style="padding: 0; overflow: hidden; height: 100%;">
-                    <div style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                    <div
+                        style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
                         <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #64748b;">Live Preview</h3>
                         <span class="dashicons dashicons-desktop" style="color: #64748b;"></span>
                     </div>
-                    <iframe id="template-preview" sandbox style="width: 100%; height: 800px; border: none; display: block;"></iframe>
+                    <iframe id="template-preview" sandbox
+                        style="width: 100%; height: 800px; border: none; display: block;"></iframe>
                 </div>
             </div>
         </div>
 
         <script>
-            jQuery(document).ready(function($) {
+            jQuery(document).ready(function ($) {
                 // Color Picker
                 $('.ofast-color-picker').wpColorPicker({
-                    change: function(event, ui) {
+                    change: function (event, ui) {
                         setTimeout(updatePreview, 10);
                     }
                 });
 
                 // Style selector active toggle
-                $('input[name="template_style"]').on('change', function() {
+                $('input[name="template_style"]').on('change', function () {
                     $('.ofast-style-label').css({ 'border-color': '#e2e8f0', 'background': '#fff' });
                     $(this).closest('.ofast-style-label').css({ 'border-color': '#6366f1', 'background': '#eff6ff' });
                     // Toggle custom template editor
@@ -1000,18 +1197,18 @@ class Ofast_X_Email_Admin
                 });
 
                 // Media Uploader
-                $('#upload_logo_btn').click(function(e) {
+                $('#upload_logo_btn').click(function (e) {
                     e.preventDefault();
-                    var image = wp.media({ 
+                    var image = wp.media({
                         title: 'Upload Logo',
                         multiple: false
                     }).open()
-                    .on('select', function(e){
-                        var uploaded_image = image.state().get('selection').first();
-                        var image_url = uploaded_image.toJSON().url;
-                        $('#logo_url').val(image_url);
-                        updatePreview();
-                    });
+                        .on('select', function (e) {
+                            var uploaded_image = image.state().get('selection').first();
+                            var image_url = uploaded_image.toJSON().url;
+                            $('#logo_url').val(image_url);
+                            updatePreview();
+                        });
                 });
 
                 // Live Preview Updates
@@ -1038,7 +1235,7 @@ class Ofast_X_Email_Admin
                     if (font === 'inter') fontStack = '"Inter", sans-serif';
                     if (font === 'roboto') fontStack = '"Roboto", sans-serif';
                     if (font === 'opensans') fontStack = '"Open Sans", sans-serif';
-                    
+
                     var headerBg = (style === 'classic') ? primary : 'linear-gradient(135deg, ' + primary + ', ' + accent + ')';
                     if (style === 'minimal') headerBg = 'transparent';
 
@@ -1060,17 +1257,35 @@ class Ofast_X_Email_Admin
                         'youtube': 'YouTube',
                         'whatsapp': 'WhatsApp'
                     };
-                    $('input[name^="social["]').each(function() {
+                    $('input[name^="social["]').each(function () {
                         var platform = $(this).attr('name').match(/social\[(\w+)\]/)[1];
                         var url = $(this).val();
                         if (url) socialLinks[platform] = url;
                     });
 
+                    // Escape helpers (prevent XSS in preview)
+                    function escapeHtml(value) {
+                        if (!value) return '';
+                        var div = document.createElement('div');
+                        div.appendChild(document.createTextNode(value));
+                        return div.innerHTML;
+                    }
+                    function escapeAttribute(value) {
+                        return escapeHtml(value)
+                            .replace(/"/g, '&quot;')
+                            .replace(/'/g, '&#39;');
+                    }
+
+                    // Safe escaped values
+                    var safeLogo = escapeAttribute(logo);
+                    var safeCompany = escapeHtml(company);
+                    var safeTagline = escapeHtml(tagline);
+
                     // Build table-based HTML with inline styles
                     var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Email Preview</title></head>';
                     html += '<body style="margin:0; padding:0; background-color:' + bgColor + '; font-family:' + fontStack + '; font-size:' + fontSize + 'px;">';
                     html += '<table width="100%" cellpadding="0" cellspacing="0" style="background-color:' + bgColor + '; padding:30px 0;"><tr><td align="center">';
-                    
+
                     // Main card
                     html += '<table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; max-width:100%; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">';
 
@@ -1097,7 +1312,7 @@ class Ofast_X_Email_Admin
                     if (showFooter) {
                         html += '<tr><td style="padding:0 32px;"><hr style="border:none; border-top:1px solid #e5e7eb;"></td></tr>';
                         html += '<tr><td style="padding:24px 32px; text-align:center; font-size:13px; color:#6b7280;">';
-                        
+
                         // Company/tagline
                         if (company || tagline) {
                             html += '<p style="margin:0 0 12px;">';
@@ -1167,7 +1382,7 @@ class Ofast_X_Email_Admin
 
             global $wpdb;
             $table = $wpdb->prefix . 'ofast_email_drafts';
-            
+
             $subject = sanitize_text_field(wp_unslash($_POST['subject'] ?? ''));
             $body = wp_kses_post(wp_unslash($_POST['message'] ?? ''));
             $selected_roles = isset($_POST['roles']) && is_array($_POST['roles']) ? array_map('sanitize_text_field', $_POST['roles']) : array();
@@ -1189,10 +1404,10 @@ class Ofast_X_Email_Admin
                     "SELECT id, admin_id FROM $table WHERE id = %d",
                     $draft_id
                 ));
-                
+
                 if (!$existing_draft) {
                     $result_message = Ofast_X_Toast::render('Draft not found.', 'error', true);
-                } elseif ((int)$existing_draft->admin_id !== get_current_user_id()) {
+                } elseif ((int) $existing_draft->admin_id !== get_current_user_id()) {
                     // Log unauthorized access attempt
                     error_log(sprintf(
                         'SECURITY: User %d attempted unauthorized update of draft %d (owned by user %d)',
@@ -1233,124 +1448,124 @@ class Ofast_X_Email_Admin
                     set_transient('ofast_submit_' . $submit_token, true, 60);
                 }
 
-            // SECURITY: Rate limiting - max 10 bulk sends per hour per admin
-            $rate_limit_key = 'ofast_email_rate_' . get_current_user_id();
-            $send_count = get_transient($rate_limit_key) ?: 0;
-            if ($send_count >= 10) {
-                $result_message = Ofast_X_Toast::render('Rate limit exceeded. Maximum 10 bulk sends per hour.', 'error', true);
-            } else {
-                // Increment rate limiter
-                set_transient($rate_limit_key, $send_count + 1, HOUR_IN_SECONDS);
-
-                $subject = sanitize_text_field(wp_unslash($_POST['subject']));
-                $body = wp_kses_post(wp_unslash($_POST['message']));
-
-                // SECURITY: Sanitize roles array
-                $selected_roles = array();
-                if (!empty($_POST['roles']) && is_array($_POST['roles'])) {
-                    foreach ($_POST['roles'] as $role) {
-                        $clean_role = sanitize_key($role);
-                        if (wp_roles()->is_role($clean_role)) {
-                            $selected_roles[] = $clean_role;
-                        }
-                    }
-                }
-
-                $send_test = isset($_POST['test_email']);
-                $schedule_time = sanitize_text_field($_POST['schedule_time'] ?? '');
-                $timestamp = $schedule_time ? strtotime($schedule_time) : time();
-
-                // FIX #7: Get checked user IDs from checkboxes with validation
-                $checked_user_ids = array();
-                if (!empty($_POST['checked_users']) && is_array($_POST['checked_users'])) {
-                    foreach ($_POST['checked_users'] as $id) {
-                        if (is_numeric($id) && $id > 0) {
-                            $checked_user_ids[] = intval($id);
-                        }
-                    }
-                }
-
-                // Parse user ID ranges (with security limits)
-                $input_ids = preg_split('/\s*,\s*/', sanitize_text_field($_POST['user_ids'] ?? ''));
-                $range_user_ids = [];
-                foreach ($input_ids as $entry) {
-                    if (strpos($entry, '-') !== false) {
-                        [$start, $end] = array_map('intval', explode('-', $entry));
-                        // SECURITY: Limit range to 1000 to prevent memory exhaustion
-                        if ($end - $start > 1000) {
-                            $end = $start + 1000;
-                        }
-                        if ($start > 0 && $end > 0) {
-                            $range_user_ids = array_merge($range_user_ids, range($start, $end));
-                        }
-                    } elseif (is_numeric($entry) && intval($entry) > 0) {
-                        $range_user_ids[] = intval($entry);
-                    }
-                }
-
-                // Merge all user IDs
-                $selected_user_ids = array_unique(array_merge($range_user_ids, $checked_user_ids));
-
-                if ($send_test) {
-                    $user = wp_get_current_user();
-                    $message = $this->replace_placeholders($body, $user);
-                    $headers = $this->get_email_headers();
-                    wp_mail($user->user_email, $subject, $this->get_email_template($message), $headers);
-                    $result_message = Ofast_X_Toast::render('Test email sent to ' . esc_html($user->user_email), 'success', true);
+                // SECURITY: Rate limiting - max 10 bulk sends per hour per admin
+                $rate_limit_key = 'ofast_email_rate_' . get_current_user_id();
+                $send_count = get_transient($rate_limit_key) ?: 0;
+                if ($send_count >= 10) {
+                    $result_message = Ofast_X_Toast::render('Rate limit exceeded. Maximum 10 bulk sends per hour.', 'error', true);
                 } else {
-                    // Merge user IDs + roles
-                    $total_ids = $selected_user_ids;
-                    if (!empty($selected_roles)) {
-                        $role_ids = get_users(['role__in' => $selected_roles, 'fields' => 'ID']);
-                        $total_ids = array_unique(array_merge($total_ids, $role_ids));
+                    // Increment rate limiter
+                    set_transient($rate_limit_key, $send_count + 1, HOUR_IN_SECONDS);
+
+                    $subject = sanitize_text_field(wp_unslash($_POST['subject']));
+                    $body = wp_kses_post(wp_unslash($_POST['message']));
+
+                    // SECURITY: Sanitize roles array
+                    $selected_roles = array();
+                    if (!empty($_POST['roles']) && is_array($_POST['roles'])) {
+                        foreach ($_POST['roles'] as $role) {
+                            $clean_role = sanitize_key($role);
+                            if (wp_roles()->is_role($clean_role)) {
+                                $selected_roles[] = $clean_role;
+                            }
+                        }
                     }
 
-                    // FALLBACK: If no recipients selected, send only to current admin
-                    if (empty($total_ids)) {
-                        $current_user = wp_get_current_user();
-                        $total_ids = array($current_user->ID);
-                        error_log('Ofast-X Email: No recipients selected, defaulting to admin: ' . $current_user->user_email);
+                    $send_test = isset($_POST['test_email']);
+                    $schedule_time = sanitize_text_field($_POST['schedule_time'] ?? '');
+                    $timestamp = $schedule_time ? strtotime($schedule_time) : time();
+
+                    // FIX #7: Get checked user IDs from checkboxes with validation
+                    $checked_user_ids = array();
+                    if (!empty($_POST['checked_users']) && is_array($_POST['checked_users'])) {
+                        foreach ($_POST['checked_users'] as $id) {
+                            if (is_numeric($id) && $id > 0) {
+                                $checked_user_ids[] = intval($id);
+                            }
+                        }
                     }
 
-                    // SECURITY: Max recipient limit to prevent server overload
-                    $max_recipients = apply_filters('ofast_email_max_recipients', 5000);
-                    if (count($total_ids) > $max_recipients) {
-                        $total_ids = array_slice($total_ids, 0, $max_recipients);
-                        $result_message = Ofast_X_Toast::render('Recipient list limited to ' . $max_recipients . ' users.', 'warning', true);
+                    // Parse user ID ranges (with security limits)
+                    $input_ids = preg_split('/\s*,\s*/', sanitize_text_field($_POST['user_ids'] ?? ''));
+                    $range_user_ids = [];
+                    foreach ($input_ids as $entry) {
+                        if (strpos($entry, '-') !== false) {
+                            [$start, $end] = array_map('intval', explode('-', $entry));
+                            // SECURITY: Limit range to 1000 to prevent memory exhaustion
+                            if ($end - $start > 1000) {
+                                $end = $start + 1000;
+                            }
+                            if ($start > 0 && $end > 0) {
+                                $range_user_ids = array_merge($range_user_ids, range($start, $end));
+                            }
+                        } elseif (is_numeric($entry) && intval($entry) > 0) {
+                            $range_user_ids[] = intval($entry);
+                        }
                     }
 
-                    // Send all emails immediately
-                    // Note: For 100+ recipients, consider using third-party SMTP (SendGrid, Mailgun) 
-                    // which have their own queues built into their servers
-                    $sent = 0;
-                    $headers = $this->get_email_headers();
-                    $sample_body = '';
-                    $total_count = count($total_ids);
-                    
-                    foreach (get_users(['include' => $total_ids]) as $user) {
+                    // Merge all user IDs
+                    $selected_user_ids = array_unique(array_merge($range_user_ids, $checked_user_ids));
+
+                    if ($send_test) {
+                        $user = wp_get_current_user();
                         $message = $this->replace_placeholders($body, $user);
-                        $full_body = $this->get_email_template($message);
-                        if (empty($sample_body)) {
-                            $sample_body = $full_body;
-                        }
-                        if (wp_mail($user->user_email, $subject, $full_body, $headers)) {
-                            $sent++;
-                        }
-                    }
-
-                    $this->log_email($subject, $sent, 'Immediate send', $sample_body);
-                    
-                    if ($total_count >= 50 && $sent == $total_count) {
-                        $result_message = Ofast_X_Toast::render(
-                            'Sent to all ' . $sent . ' users. For better reliability with large sends, consider using SMTP API (SendGrid, Mailgun, etc.)',
-                            'success',
-                            true
-                        );
+                        $headers = $this->get_email_headers();
+                        wp_mail($user->user_email, $subject, $this->get_email_template($message), $headers);
+                        $result_message = Ofast_X_Toast::render('Test email sent to ' . esc_html($user->user_email), 'success', true);
                     } else {
-                        $result_message = Ofast_X_Toast::render('Sent successfully to ' . $sent . ' user(s)', 'success', true);
+                        // Merge user IDs + roles
+                        $total_ids = $selected_user_ids;
+                        if (!empty($selected_roles)) {
+                            $role_ids = get_users(['role__in' => $selected_roles, 'fields' => 'ID']);
+                            $total_ids = array_unique(array_merge($total_ids, $role_ids));
+                        }
+
+                        // FALLBACK: If no recipients selected, send only to current admin
+                        if (empty($total_ids)) {
+                            $current_user = wp_get_current_user();
+                            $total_ids = array($current_user->ID);
+                            error_log('Ofast-X Email: No recipients selected, defaulting to admin: ' . $current_user->user_email);
+                        }
+
+                        // SECURITY: Max recipient limit to prevent server overload
+                        $max_recipients = apply_filters('ofast_email_max_recipients', 5000);
+                        if (count($total_ids) > $max_recipients) {
+                            $total_ids = array_slice($total_ids, 0, $max_recipients);
+                            $result_message = Ofast_X_Toast::render('Recipient list limited to ' . $max_recipients . ' users.', 'warning', true);
+                        }
+
+                        // Send all emails immediately
+                        // Note: For 100+ recipients, consider using third-party SMTP (SendGrid, Mailgun) 
+                        // which have their own queues built into their servers
+                        $sent = 0;
+                        $headers = $this->get_email_headers();
+                        $sample_body = '';
+                        $total_count = count($total_ids);
+
+                        foreach (get_users(['include' => $total_ids]) as $user) {
+                            $message = $this->replace_placeholders($body, $user);
+                            $full_body = $this->get_email_template($message);
+                            if (empty($sample_body)) {
+                                $sample_body = $full_body;
+                            }
+                            if (wp_mail($user->user_email, $subject, $full_body, $headers)) {
+                                $sent++;
+                            }
+                        }
+
+                        $this->log_email($subject, $sent, 'Immediate send', $sample_body);
+
+                        if ($total_count >= 50 && $sent == $total_count) {
+                            $result_message = Ofast_X_Toast::render(
+                                'Sent to all ' . $sent . ' users. For better reliability with large sends, consider using SMTP API (SendGrid, Mailgun, etc.)',
+                                'success',
+                                true
+                            );
+                        } else {
+                            $result_message = Ofast_X_Toast::render('Sent successfully to ' . $sent . ' user(s)', 'success', true);
+                        }
                     }
-                }
-            } // End rate limit else block
+                } // End rate limit else block
             } // End double-submit else block
         }
 
@@ -1369,17 +1584,17 @@ class Ofast_X_Email_Admin
         if ($draft_id > 0) {
             global $wpdb;
             $table = $wpdb->prefix . 'ofast_email_drafts';
-            
+
             // Explicit ownership verification before loading draft
             $draft_check = $wpdb->get_row($wpdb->prepare(
                 "SELECT * FROM $table WHERE id = %d",
                 $draft_id
             ));
-            
+
             if (!$draft_check) {
                 // Draft doesn't exist - could show error but for UX just show empty form
                 $draft = null;
-            } elseif ((int)$draft_check->admin_id !== get_current_user_id()) {
+            } elseif ((int) $draft_check->admin_id !== get_current_user_id()) {
                 // Log unauthorized access attempt
                 error_log(sprintf(
                     'SECURITY: User %d attempted unauthorized access to draft %d (owned by user %d)',
@@ -1393,7 +1608,7 @@ class Ofast_X_Email_Admin
                 $draft = $draft_check;
             }
         }
-        
+
         $draft_subject = $draft ? $draft->subject : '';
         $draft_body = $draft ? $draft->body : '';
         $draft_roles = $draft ? (json_decode($draft->roles, true) ?: array()) : array();
@@ -1420,23 +1635,26 @@ class Ofast_X_Email_Admin
                 margin-bottom: 30px;
                 margin-top: 20px;
             }
+
             .ofast-header-icon {
                 width: 56px;
                 height: 56px;
                 background: #fff;
                 border: 1px solid #e2e8f0;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
                 border-radius: 16px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
             }
+
             .ofast-header-icon .dashicons {
                 font-size: 28px;
                 width: 28px;
                 height: 28px;
                 color: #6366f1;
             }
+
             .ofast-header-content h1 {
                 margin: 0 0 5px 0;
                 font-size: 24px;
@@ -1445,6 +1663,7 @@ class Ofast_X_Email_Admin
                 display: block;
                 padding: 0;
             }
+
             .ofast-header-content p {
                 margin: 0;
                 color: #64748b;
@@ -1460,7 +1679,10 @@ class Ofast_X_Email_Admin
                 border: 1px solid rgba(226, 232, 240, 0.6);
                 margin-bottom: 20px;
             }
-            .ofast-card h2 { margin-top: 0; }
+
+            .ofast-card h2 {
+                margin-top: 0;
+            }
 
             /* Two Column Layout */
             .ofast-email-form-layout {
@@ -1468,24 +1690,29 @@ class Ofast_X_Email_Admin
                 grid-template-columns: 1fr 320px;
                 gap: 30px;
             }
+
             @media screen and (max-width: 1024px) {
                 .ofast-email-form-layout {
                     grid-template-columns: 1fr;
                 }
             }
+
             .ofast-form-main {}
+
             .ofast-form-sidebar {}
 
             /* Form Styling */
             .ofast-form-group {
                 margin-bottom: 20px;
             }
+
             .ofast-form-group label strong {
                 display: block;
                 margin-bottom: 8px;
                 font-weight: 600;
                 color: #1e293b;
             }
+
             .ofast-form-group input[type="text"],
             .ofast-form-group input[type="datetime-local"],
             .ofast-form-group select {
@@ -1496,6 +1723,7 @@ class Ofast_X_Email_Admin
                 transition: all 0.2s;
                 width: 100%;
             }
+
             .ofast-form-group input:focus,
             .ofast-form-group select:focus {
                 border-color: var(--ofast-primary);
@@ -1522,18 +1750,20 @@ class Ofast_X_Email_Admin
                 height: auto !important;
                 min-height: 36px !important;
             }
+
             .wrap select:hover,
             .ofast-card select:hover {
                 border-color: #6366f1 !important;
                 box-shadow: 0 1px 3px rgba(99, 102, 241, 0.15) !important;
             }
+
             .wrap select:focus,
             .ofast-card select:focus {
                 outline: none !important;
                 border-color: #6366f1 !important;
                 box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
             }
-            
+
             /* Placeholders box */
             .ofast-placeholders-box {
                 background: #f8fafc;
@@ -1542,9 +1772,11 @@ class Ofast_X_Email_Admin
                 border-radius: 8px;
                 margin-bottom: 20px;
             }
+
             .ofast-placeholders-box strong {
                 color: #1e293b;
             }
+
             .ofast-placeholders-box code {
                 background: #e2e8f0;
                 padding: 2px 6px;
@@ -1553,12 +1785,39 @@ class Ofast_X_Email_Admin
             }
 
             /* Checkbox Pills (matches Admin Studio style) */
-            .ofast-checkbox-pill { display: inline-flex; align-items: center; padding: 6px 12px; background: #f1f5f9; border-radius: 20px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
-            .ofast-checkbox-pill input { display: none; }
-            .ofast-checkbox-pill span { font-size: 13px; color: #475569; font-weight: 500; }
-            .ofast-checkbox-pill:hover { background: #e2e8f0; }
-            .ofast-checkbox-pill input:checked + span { color: #6366f1; }
-            .ofast-checkbox-pill:has(input:checked) { background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.2); }
+            .ofast-checkbox-pill {
+                display: inline-flex;
+                align-items: center;
+                padding: 6px 12px;
+                background: #f1f5f9;
+                border-radius: 20px;
+                cursor: pointer;
+                transition: all 0.2s;
+                border: 1px solid transparent;
+            }
+
+            .ofast-checkbox-pill input {
+                display: none;
+            }
+
+            .ofast-checkbox-pill span {
+                font-size: 13px;
+                color: #475569;
+                font-weight: 500;
+            }
+
+            .ofast-checkbox-pill:hover {
+                background: #e2e8f0;
+            }
+
+            .ofast-checkbox-pill input:checked+span {
+                color: #6366f1;
+            }
+
+            .ofast-checkbox-pill:has(input:checked) {
+                background: rgba(99, 102, 241, 0.1);
+                border-color: rgba(99, 102, 241, 0.2);
+            }
 
             /* Sidebar card */
             .ofast-sidebar-card {
@@ -1568,12 +1827,14 @@ class Ofast_X_Email_Admin
                 padding: 20px;
                 margin-bottom: 15px;
             }
+
             .ofast-sidebar-card h4 {
                 margin: 0 0 15px 0;
                 font-size: 14px;
                 font-weight: 600;
                 color: #1e293b;
             }
+
             .ofast-sidebar-card .description {
                 font-size: 12px;
                 color: #64748b;
@@ -1592,14 +1853,17 @@ class Ofast_X_Email_Admin
                 border-radius: 8px !important;
                 font-size: 14px !important;
             }
+
             .button.button-primary:hover {
                 background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
                 transform: translateY(-2px);
                 box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
             }
+
             .button.button-primary:active {
                 transform: translateY(0);
             }
+
             .button.button-secondary,
             .wp-media-buttons .button {
                 border-radius: 8px !important;
@@ -1612,18 +1876,22 @@ class Ofast_X_Email_Admin
                 display: inline-flex !important;
                 align-items: center !important;
             }
+
             .button.button-secondary:hover,
             .wp-media-buttons .button:hover {
                 background: #eff6ff !important;
                 border-color: #4f46e5 !important;
                 color: #4f46e5 !important;
             }
+
             .wp-media-buttons .dashicons {
                 color: #6366f1 !important;
             }
+
             .wp-media-buttons .button:hover .dashicons {
                 color: #4f46e5 !important;
             }
+
             .preview-log-btn {
                 color: #6366f1 !important;
                 border: 1px solid #6366f1 !important;
@@ -1631,6 +1899,7 @@ class Ofast_X_Email_Admin
                 border-radius: 4px !important;
                 transition: all 0.2s ease !important;
             }
+
             .preview-log-btn:hover {
                 background: #eff6ff !important;
                 border-color: #4f46e5 !important;
@@ -1651,21 +1920,25 @@ class Ofast_X_Email_Admin
                 transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
                 box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
             }
+
             .ofast-template-btn:hover {
                 transform: translateY(-1px);
                 box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             }
+
             .ofast-template-btn .dashicons {
                 font-size: 18px;
                 width: 18px;
                 height: 18px;
                 margin-top: 1px;
             }
+
             .ofast-reset-btn {
                 color: #ef4444 !important;
                 border: 1px solid #fee2e2 !important;
                 background: #fff !important;
             }
+
             .ofast-reset-btn:hover {
                 background: #fef2f2 !important;
                 border-color: #fca5a5 !important;
@@ -1683,6 +1956,7 @@ class Ofast_X_Email_Admin
                 align-items: center;
                 gap: 10px;
             }
+
             .ofast-draft-notice .dashicons {
                 color: #6366f1;
             }
@@ -1692,39 +1966,42 @@ class Ofast_X_Email_Admin
                 border-radius: 8px;
                 border: 1px solid #e2e8f0;
             }
+
             .ofast-card .mce-panel {
                 border-radius: 8px 8px 0 0;
             }
         </style>
 
-        <?php if (!$content_only): ?><div class="wrap"><?php endif; ?>
+        <?php if (!$content_only): ?>
+            <div class="wrap"><?php endif; ?>
             <?php echo $toast_html; ?>
-            
+
             <?php if (!$content_only): ?>
-            <!-- Header -->
-            <div class="ofast-header">
-                <div class="ofast-header-icon">
-                    <span class="dashicons dashicons-email-alt"></span>
+                <!-- Header -->
+                <div class="ofast-header">
+                    <div class="ofast-header-icon">
+                        <span class="dashicons dashicons-email-alt"></span>
+                    </div>
+                    <div class="ofast-header-content">
+                        <h1>Send Email</h1>
+                        <p>Compose and send emails to your users with personalized placeholders and scheduling options.</p>
+                    </div>
                 </div>
-                <div class="ofast-header-content">
-                    <h1>Send Email</h1>
-                    <p>Compose and send emails to your users with personalized placeholders and scheduling options.</p>
-                </div>
-            </div>
             <?php endif; ?>
 
             <form method="post" enctype="multipart/form-data" id="email-form">
                 <?php wp_nonce_field('ofast_send_email_action', 'ofast_email_nonce'); ?>
-                
+
                 <?php if ($draft_id > 0): ?>
                     <input type="hidden" name="draft_id" value="<?php echo esc_attr($draft_id); ?>">
                     <div class="ofast-draft-notice">
                         <span class="dashicons dashicons-edit"></span>
                         <span>Editing draft: <strong><?php echo esc_html($draft_subject ?: '(No subject)'); ?></strong></span>
-                        <a href="<?php echo admin_url('admin.php?page=ofast-emailer'); ?>" style="margin-left: auto;">Start fresh</a>
+                        <a href="<?php echo admin_url('admin.php?page=ofast-emailer'); ?>" style="margin-left: auto;">Start
+                            fresh</a>
                     </div>
                 <?php endif; ?>
-                
+
                 <input type="hidden" name="ofast_submit_token" value="<?php echo esc_attr(wp_generate_password(16, false)); ?>">
 
                 <div class="ofast-email-form-layout">
@@ -1734,13 +2011,14 @@ class Ofast_X_Email_Admin
                             <div class="ofast-form-group">
                                 <label>
                                     <strong>Email Subject</strong>
-                                    <input type="text" name="subject" required value="<?php echo esc_attr($draft_subject); ?>" placeholder="Enter email subject...">
+                                    <input type="text" name="subject" required value="<?php echo esc_attr($draft_subject); ?>"
+                                        placeholder="Enter email subject...">
                                 </label>
                             </div>
 
                             <div class="ofast-form-group">
                                 <label><strong>Message Body</strong></label>
-                                <?php 
+                                <?php
                                 wp_editor($draft_body, 'message', [
                                     'textarea_name' => 'message',
                                     'media_buttons' => true,
@@ -1751,7 +2029,7 @@ class Ofast_X_Email_Admin
 
                             <div class="ofast-placeholders-box">
                                 <strong>Available Placeholders:</strong><br>
-                                <code>{{user_id}}</code>, <code>{{username}}</code>, <code>{{user_display_name}}</code>, 
+                                <code>{{user_id}}</code>, <code>{{username}}</code>, <code>{{user_display_name}}</code>,
                                 <code>{{user_first_name}}</code>, <code>{{user_last_name}}</code>, <code>{{user_email}}</code>
                             </div>
 
@@ -1795,49 +2073,55 @@ class Ofast_X_Email_Admin
                                 <input type="checkbox" name="test_email">
                                 Send to me as test only
                             </label>
-                            
+
                             <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
-                                <button type="submit" name="send_email" class="button button-primary" style="width: 100%;">Send Email</button>
-                                <button type="button" id="preview-email-btn" class="button button-secondary" style="width: 100%;">Preview Email</button>
-                                <button type="submit" name="save_draft" class="button button-secondary" style="width: 100%;">Save as Draft</button>
+                                <button type="submit" name="send_email" class="button button-primary" style="width: 100%;">Send
+                                    Email</button>
+                                <button type="button" id="preview-email-btn" class="button button-secondary"
+                                    style="width: 100%;">Preview Email</button>
+                                <button type="submit" name="save_draft" class="button button-secondary"
+                                    style="width: 100%;">Save as Draft</button>
                             </div>
                         </div>
                     </div>
                 </div>
-            
-        <div class="ofast-card" style="margin-top: 30px;">
-            <h3 style="margin-top: 0; margin-bottom: 15px;">Select Users Manually (Optional)</h3>
 
-        <label>Search: <input type="text" id="user-search" style="margin-left:5px;"></label>
-        <label style="margin-left:20px;">Show 
-            <select id="rows-per-page">
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="50">50</option>
-                <option value="all">All</option>
-            </select> users per page
-        </label>
+                <div class="ofast-card" style="margin-top: 30px;">
+                    <h3 style="margin-top: 0; margin-bottom: 15px;">Select Users Manually (Optional)</h3>
 
-        <div style="overflow-x:auto; margin-top:15px; margin-bottom:10px;">
-            <table class="wp-list-table widefat striped" id="user-table">
-                <thead><tr>
-                    <th><input type="checkbox" id="check-all"></th>
-                    <th>S/N</th>
-                    <th>First Name</th>
-                    <th>Last Name</th>
-                    <th>Username</th>
-                    <th>Email</th>
-                    <th>User ID</th>
-                    <th>Role(s)</th>
-                </tr></thead>
-                <tbody><?php
+                    <label>Search: <input type="text" id="user-search" style="margin-left:5px;"></label>
+                    <label style="margin-left:20px;">Show
+                        <select id="rows-per-page">
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="all">All</option>
+                        </select> users per page
+                    </label>
 
-        $users = get_users();
-        $i = 1;
-        foreach ($users as $user) {
-            $userdata = get_userdata($user->ID);
-            $roles_list = ($userdata && isset($userdata->roles)) ? implode(', ', $userdata->roles) : '—';
-            echo '<tr class="user-row">
+                    <div style="overflow-x:auto; margin-top:15px; margin-bottom:10px;">
+                        <table class="wp-list-table widefat striped" id="user-table">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="check-all"></th>
+                                    <th>S/N</th>
+                                    <th>First Name</th>
+                                    <th>Last Name</th>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>User ID</th>
+                                    <th>Role(s)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+
+                                $users = get_users();
+                                $i = 1;
+                                foreach ($users as $user) {
+                                    $userdata = get_userdata($user->ID);
+                                    $roles_list = ($userdata && isset($userdata->roles)) ? implode(', ', $userdata->roles) : '—';
+                                    echo '<tr class="user-row">
                         <td><input type="checkbox" class="user-checkbox" name="checked_users[]" value="' . esc_attr($user->ID) . '"></td>
                         <td>' . $i++ . '</td>
                         <td class="search-text">' . esc_html($user->first_name) . '</td>
@@ -1847,13 +2131,13 @@ class Ofast_X_Email_Admin
                         <td class="search-text">' . esc_html($user->ID) . '</td>
                         <td class="search-text">' . esc_html($roles_list) . '</td>
                     </tr>';
-        }
-        echo '</tbody></table>';
-        echo '<div id="user-pagination" style="margin-top:10px;"></div>';
-        echo '</div>'; // End ofast-card
-
-        // FIX #6: Fixed search functionality
-        echo '<script>
+                                }
+                                echo '</tbody></table>';
+                                echo '<div id="user-pagination" style="margin-top:10px;"></div>';
+                                echo '</div>'; // End ofast-card
+                        
+                                // FIX #6: Fixed search functionality
+                                echo '<script>
                 jQuery(document).ready(function($) {
                     var allRows = $("#user-table tbody tr");
                     var visibleRows = allRows;
@@ -1913,8 +2197,8 @@ class Ofast_X_Email_Admin
                 });
                 </script>';
 
-        // Preview Modal HTML with Device Toggle
-        echo '<div id="email-preview-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:999999;overflow-y:auto;">
+                                // Preview Modal HTML with Device Toggle
+                                echo '<div id="email-preview-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:999999;overflow-y:auto;">
             <div style="position:relative;width:90%;max-width:900px;margin:20px auto;background:#1e293b;border-radius:12px;overflow:hidden;">
                 <div style="padding:12px 20px;background:#0f172a;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center;">
                     <div style="display:flex;gap:10px;align-items:center;">
@@ -1932,8 +2216,8 @@ class Ofast_X_Email_Admin
             </div>
         </div>';
 
-        // Preview Modal JavaScript
-        echo '<script>
+                                // Preview Modal JavaScript
+                                echo '<script>
         jQuery(document).ready(function($) {
             // Device toggle buttons
             $(".device-btn").click(function() {
@@ -2006,10 +2290,10 @@ class Ofast_X_Email_Admin
         });
         </script>';
 
-        echo '</div></form>';
-        if (!$content_only) {
-            echo '</div>';
-        }
+                                echo '</div></form>';
+                                if (!$content_only) {
+                                    echo '</div>';
+                                }
     }
 
     /**
@@ -2021,154 +2305,166 @@ class Ofast_X_Email_Admin
         $table = $wpdb->prefix . 'ofast_email_logs';
         $logs = $wpdb->get_results("SELECT * FROM $table ORDER BY sent_at DESC LIMIT 100");
 
-?>
-        <style>
-            /* Header Styles */
-            .ofast-header {
-                display: flex;
-                align-items: center;
-                gap: 20px;
-                background: #fff;
-                padding: 25px 30px;
-                border-radius: 12px;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-                margin-bottom: 30px;
-                margin-top: 20px;
-            }
-            .ofast-header-icon {
-                width: 56px;
-                height: 56px;
-                background: #fff;
-                border: 1px solid #e2e8f0;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-                border-radius: 16px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            .ofast-header-icon .dashicons {
-                font-size: 28px;
-                width: 28px;
-                height: 28px;
-                color: #6366f1;
-            }
-            .ofast-header-content h1 {
-                margin: 0 0 5px 0;
-                font-size: 24px;
-                font-weight: 700;
-                color: #1e293b;
-                display: block;
-                padding: 0;
-            }
-            .ofast-header-content p {
-                margin: 0;
-                color: #64748b;
-                font-size: 14px;
-            }
-            .ofast-card {
-                background: #fff;
-                border-radius: 16px;
-                padding: 30px;
-                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-                border: 1px solid rgba(226, 232, 240, 0.6);
-            }
-            .button.button-small {
-                border-radius: 6px !important;
-            }
-        </style>
-        <div class="wrap">
-            <!-- Header -->
-            <div class="ofast-header">
-                <div class="ofast-header-icon">
-                    <span class="dashicons dashicons-clock"></span>
-                </div>
-                <div class="ofast-header-content">
-                    <h1>Email History</h1>
-                    <p>View sent emails and preview their content. Showing the last 100 entries.</p>
-                </div>
-            </div>
+        ?>
+                                <style>
+                                    /* Header Styles */
+                                    .ofast-header {
+                                        display: flex;
+                                        align-items: center;
+                                        gap: 20px;
+                                        background: #fff;
+                                        padding: 25px 30px;
+                                        border-radius: 12px;
+                                        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                                        margin-bottom: 30px;
+                                        margin-top: 20px;
+                                    }
 
-            <div class="ofast-card">
-            <?php if (empty($logs)): ?>
-                <p>No emails have been logged yet.</p>
-            <?php else: ?>
-                <!-- Scrollable Table Container -->
-                <div style="overflow-x: auto; max-width: 100%;">
-                    <table class="widefat fixed striped" style="min-width: 800px;">
-                        <thead>
-                            <tr>
-                                <th style="width:5%;">ID</th>
-                                <th>Subject</th>
-                                <th style="width:15%;">Sent At</th>
-                                <th style="width:8%;">Recipients</th>
-                                <th style="width:10%;">Status</th>
-                                <th style="width:15%;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($logs as $log): ?>
-                                <tr>
-                                    <td><?php echo esc_html($log->id); ?></td>
-                                    <td><?php echo esc_html(wp_trim_words($log->subject, 12, '...')); ?></td>
-                                    <td><?php echo esc_html($log->sent_at); ?></td>
-                                    <td><?php echo esc_html($log->recipient_count); ?></td>
-                                    <td>
-                                        <?php
-                                        $status = $log->status ?? 'sent';
-                                        $status_class = $status === 'failed' ? 'color: #dc2626;' : ($status === 'scheduled' ? 'color: #f59e0b;' : 'color: #10b981;');
-                                        ?>
-                                        <span style="<?php echo $status_class; ?> font-weight: 500;">
-                                            <?php echo esc_html(ucfirst($status)); ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <?php if (!empty($log->body)): ?>
-                                            <button type="button" class="button button-small preview-email-btn"
-                                                data-content="<?php echo esc_attr(base64_encode($log->body)); ?>">
-                                                Preview
-                                            </button>
+                                    .ofast-header-icon {
+                                        width: 56px;
+                                        height: 56px;
+                                        background: #fff;
+                                        border: 1px solid #e2e8f0;
+                                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+                                        border-radius: 16px;
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                    }
+
+                                    .ofast-header-icon .dashicons {
+                                        font-size: 28px;
+                                        width: 28px;
+                                        height: 28px;
+                                        color: #6366f1;
+                                    }
+
+                                    .ofast-header-content h1 {
+                                        margin: 0 0 5px 0;
+                                        font-size: 24px;
+                                        font-weight: 700;
+                                        color: #1e293b;
+                                        display: block;
+                                        padding: 0;
+                                    }
+
+                                    .ofast-header-content p {
+                                        margin: 0;
+                                        color: #64748b;
+                                        font-size: 14px;
+                                    }
+
+                                    .ofast-card {
+                                        background: #fff;
+                                        border-radius: 16px;
+                                        padding: 30px;
+                                        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                                        border: 1px solid rgba(226, 232, 240, 0.6);
+                                    }
+
+                                    .button.button-small {
+                                        border-radius: 6px !important;
+                                    }
+                                </style>
+                                <div class="wrap">
+                                    <!-- Header -->
+                                    <div class="ofast-header">
+                                        <div class="ofast-header-icon">
+                                            <span class="dashicons dashicons-clock"></span>
+                                        </div>
+                                        <div class="ofast-header-content">
+                                            <h1>Email History</h1>
+                                            <p>View sent emails and preview their content. Showing the last 100 entries.</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="ofast-card">
+                                        <?php if (empty($logs)): ?>
+                                            <p>No emails have been logged yet.</p>
                                         <?php else: ?>
-                                            <span style="color: #9ca3af;">No preview</span>
+                                            <!-- Scrollable Table Container -->
+                                            <div style="overflow-x: auto; max-width: 100%;">
+                                                <table class="widefat fixed striped" style="min-width: 800px;">
+                                                    <thead>
+                                                        <tr>
+                                                            <th style="width:5%;">ID</th>
+                                                            <th>Subject</th>
+                                                            <th style="width:15%;">Sent At</th>
+                                                            <th style="width:8%;">Recipients</th>
+                                                            <th style="width:10%;">Status</th>
+                                                            <th style="width:15%;">Actions</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <?php foreach ($logs as $log): ?>
+                                                            <tr>
+                                                                <td><?php echo esc_html($log->id); ?></td>
+                                                                <td><?php echo esc_html(wp_trim_words($log->subject, 12, '...')); ?>
+                                                                </td>
+                                                                <td><?php echo esc_html($log->sent_at); ?></td>
+                                                                <td><?php echo esc_html($log->recipient_count); ?></td>
+                                                                <td>
+                                                                    <?php
+                                                                    $status = $log->status ?? 'sent';
+                                                                    $status_class = $status === 'failed' ? 'color: #dc2626;' : ($status === 'scheduled' ? 'color: #f59e0b;' : 'color: #10b981;');
+                                                                    ?>
+                                                                    <span style="<?php echo $status_class; ?> font-weight: 500;">
+                                                                        <?php echo esc_html(ucfirst($status)); ?>
+                                                                    </span>
+                                                                </td>
+                                                                <td>
+                                                                    <?php if (!empty($log->body)): ?>
+                                                                        <button type="button" class="button button-small preview-email-btn"
+                                                                            data-content="<?php echo esc_attr(base64_encode($log->body)); ?>">
+                                                                            Preview
+                                                                        </button>
+                                                                    <?php else: ?>
+                                                                        <span style="color: #9ca3af;">No preview</span>
+                                                                    <?php endif; ?>
+                                                                </td>
+                                                            </tr>
+                                                        <?php endforeach; ?>
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php endif; ?>
-        </div>
+                                    </div>
 
-        <!-- Email Preview Modal -->
-        <div id="emailer-preview-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100000;">
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border-radius: 8px; width: 90%; max-width: 700px; max-height: 80vh; overflow: hidden;">
-                <div style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="margin: 0;">Email Preview</h3>
-                    <button type="button" id="close-emailer-preview" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
-                </div>
-                <iframe id="emailer-preview-frame" sandbox style="width: 100%; height: 60vh; border: none;"></iframe>
-            </div>
-        </div>
+                                    <!-- Email Preview Modal -->
+                                    <div id="emailer-preview-modal"
+                                        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100000;">
+                                        <div
+                                            style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border-radius: 8px; width: 90%; max-width: 700px; max-height: 80vh; overflow: hidden;">
+                                            <div
+                                                style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                                                <h3 style="margin: 0;">Email Preview</h3>
+                                                <button type="button" id="close-emailer-preview"
+                                                    style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+                                            </div>
+                                            <iframe id="emailer-preview-frame" sandbox
+                                                style="width: 100%; height: 60vh; border: none;"></iframe>
+                                        </div>
+                                    </div>
 
-        <script>
-            jQuery(document).ready(function($) {
-                // Preview email
-                $('.preview-email-btn').on('click', function() {
-                    var content = atob($(this).data('content'));
-                    var iframe = document.getElementById('emailer-preview-frame');
-                    iframe.srcdoc = content;
-                    $('#emailer-preview-modal').fadeIn(200);
-                });
+                                    <script>
+                                        jQuery(document).ready(function ($) {
+                                            // Preview email
+                                            $('.preview-email-btn').on('click', function () {
+                                                var content = atob($(this).data('content'));
+                                                var iframe = document.getElementById('emailer-preview-frame');
+                                                iframe.srcdoc = content;
+                                                $('#emailer-preview-modal').fadeIn(200);
+                                            });
 
-                // Close modal
-                $('#close-emailer-preview, #emailer-preview-modal').on('click', function(e) {
-                    if (e.target === this || $(this).attr('id') === 'close-emailer-preview') {
-                        $('#emailer-preview-modal').fadeOut(200);
-                    }
-                });
-            });
-        </script>
-    <?php
+                                            // Close modal
+                                            $('#close-emailer-preview, #emailer-preview-modal').on('click', function (e) {
+                                                if (e.target === this || $(this).attr('id') === 'close-emailer-preview') {
+                                                    $('#emailer-preview-modal').fadeOut(200);
+                                                }
+                                            });
+                                        });
+                                    </script>
+                                    <?php
     }
 
     /**
@@ -2403,14 +2699,14 @@ class Ofast_X_Email_Admin
             $test_content = '<p>This is a <strong>test email</strong> from ' . esc_html(get_bloginfo('name')) . '.</p>
                 <p>If you can see this email with your logo, colors, and branding - your email template is working correctly!</p>
                 <p>You can now send beautiful emails to your users.</p>';
-            
+
             require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-template.php';
             $html = Ofast_X_Email_Template::get_template($test_content);
-            
+
             $headers = Ofast_X_Email::get_safe_email_headers();
-            
+
             $sent = wp_mail($admin_email, sprintf(__('[%s] Test Email - Template Preview', 'ofast-x'), get_bloginfo('name')), $html, $headers);
-            
+
             if ($sent) {
                 echo Ofast_X_Toast::render('Test email sent to ' . esc_html($admin_email), 'success');
             } else {
@@ -2448,502 +2744,562 @@ class Ofast_X_Email_Admin
         wp_enqueue_script('wp-color-picker');
         wp_enqueue_media();
 
-    ?>
-        <style>
-            /* Header Styles */
-            .ofast-header {
-                display: flex;
-                align-items: center;
-                gap: 20px;
-                background: #fff;
-                padding: 25px 30px;
-                border-radius: 12px;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-                margin-bottom: 30px;
-                margin-top: 20px;
-            }
-            .ofast-header-icon {
-                width: 56px;
-                height: 56px;
-                background: #fff;
-                border: 1px solid #e2e8f0;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-                border-radius: 16px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            .ofast-header-icon .dashicons {
-                font-size: 28px;
-                width: 28px;
-                height: 28px;
-                color: #6366f1;
-            }
-            .ofast-header-content h1 {
-                margin: 0 0 5px 0;
-                font-size: 24px;
-                font-weight: 700;
-                color: #1e293b;
-                display: block;
-                padding: 0;
-            }
-            .ofast-header-content p {
-                margin: 0;
-                color: #64748b;
-                font-size: 14px;
-            }
-        </style>
-        <div class="wrap">
-            <!-- Header -->
-            <div class="ofast-header">
-                <div class="ofast-header-icon">
-                    <span class="dashicons dashicons-layout"></span>
-                </div>
-                <div class="ofast-header-content">
-                    <h1>Email Templates</h1>
-                    <p>Design your email template with live preview. Changes apply to selected email types.</p>
-                </div>
-            </div>
+        ?>
+                                    <style>
+                                        /* Header Styles */
+                                        .ofast-header {
+                                            display: flex;
+                                            align-items: center;
+                                            gap: 20px;
+                                            background: #fff;
+                                            padding: 25px 30px;
+                                            border-radius: 12px;
+                                            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                                            margin-bottom: 30px;
+                                            margin-top: 20px;
+                                        }
 
-            <style>
-                .ofast-template-layout {
-                    display: flex;
-                    gap: 30px;
-                    margin-top: 20px;
-                }
+                                        .ofast-header-icon {
+                                            width: 56px;
+                                            height: 56px;
+                                            background: #fff;
+                                            border: 1px solid #e2e8f0;
+                                            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+                                            border-radius: 16px;
+                                            display: flex;
+                                            align-items: center;
+                                            justify-content: center;
+                                        }
 
-                .ofast-template-settings {
-                    flex: 0 0 380px;
-                }
+                                        .ofast-header-icon .dashicons {
+                                            font-size: 28px;
+                                            width: 28px;
+                                            height: 28px;
+                                            color: #6366f1;
+                                        }
 
-                .ofast-template-preview {
-                    flex: 1;
-                    min-width: 0;
-                    position: sticky;
-                    top: 32px;
-                    align-self: flex-start;
-                }
+                                        .ofast-header-content h1 {
+                                            margin: 0 0 5px 0;
+                                            font-size: 24px;
+                                            font-weight: 700;
+                                            color: #1e293b;
+                                            display: block;
+                                            padding: 0;
+                                        }
 
-                @media screen and (max-width: 1200px) {
-                    .ofast-template-layout {
-                        flex-direction: column;
-                    }
+                                        .ofast-header-content p {
+                                            margin: 0;
+                                            color: #64748b;
+                                            font-size: 14px;
+                                        }
+                                    </style>
+                                    <div class="wrap">
+                                        <!-- Header -->
+                                        <div class="ofast-header">
+                                            <div class="ofast-header-icon">
+                                                <span class="dashicons dashicons-layout"></span>
+                                            </div>
+                                            <div class="ofast-header-content">
+                                                <h1>Email Templates</h1>
+                                                <p>Design your email template with live preview. Changes apply to selected email
+                                                    types.</p>
+                                            </div>
+                                        </div>
 
-                    .ofast-template-settings {
-                        flex: 1;
-                        width: 100%;
-                    }
+                                        <style>
+                                            .ofast-template-layout {
+                                                display: flex;
+                                                gap: 30px;
+                                                margin-top: 20px;
+                                            }
 
-                    .ofast-template-preview {
-                        position: static;
-                        width: 100%;
-                        margin-top: 20px;
-                    }
+                                            .ofast-template-settings {
+                                                flex: 0 0 380px;
+                                            }
 
-                    .ofast-template-preview iframe {
-                        width: 100% !important;
-                        max-width: 100% !important;
-                        height: 400px;
-                    }
+                                            .ofast-template-preview {
+                                                flex: 1;
+                                                min-width: 0;
+                                                position: sticky;
+                                                top: 32px;
+                                                align-self: flex-start;
+                                            }
 
-                    .ofast-template-preview .postbox>div:last-child {
-                        overflow-x: auto;
-                    }
-                }
-            </style>
+                                            @media screen and (max-width: 1200px) {
+                                                .ofast-template-layout {
+                                                    flex-direction: column;
+                                                }
 
-            <div class="ofast-template-layout">
-                <!-- Left Column: Settings -->
-                <div class="ofast-template-settings">
-                    <form method="post">
-                        <?php wp_nonce_field('ofast_template_save'); ?>
+                                                .ofast-template-settings {
+                                                    flex: 1;
+                                                    width: 100%;
+                                                }
 
-                        <!-- Template Style -->
-                        <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
-                            <h3 style="margin: 0 0 15px 0; font-size: 14px;">Template Style</h3>
-                            <div style="display: flex; gap: 10px;">
-                                <label style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'modern' ? '#6366f1' : '#ddd'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'modern' ? '#f0f6fc' : '#fff'; ?>;">
-                                    <input type="radio" name="template_style" value="modern" <?php checked($style, 'modern'); ?> style="display: none;">
-                                    <div style="font-weight: 600;">Modern</div>
-                                    <small style="color: #666;">Gradient header</small>
-                                </label>
-                                <label style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'classic' ? '#6366f1' : '#ddd'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'classic' ? '#f0f6fc' : '#fff'; ?>;">
-                                    <input type="radio" name="template_style" value="classic" <?php checked($style, 'classic'); ?> style="display: none;">
-                                    <div style="font-weight: 600;">Classic</div>
-                                    <small style="color: #666;">Solid header</small>
-                                </label>
-                                <label style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'minimal' ? '#6366f1' : '#ddd'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'minimal' ? '#f0f6fc' : '#fff'; ?>;">
-                                    <input type="radio" name="template_style" value="minimal" <?php checked($style, 'minimal'); ?> style="display: none;">
-                                    <div style="font-weight: 600;">Minimal</div>
-                                    <small style="color: #666;">Clean, no header</small>
-                                </label>
-                            </div>
-                        </div>
+                                                .ofast-template-preview {
+                                                    position: static;
+                                                    width: 100%;
+                                                    margin-top: 20px;
+                                                }
 
-                        <!-- Colors -->
-                        <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
-                            <h3 style="margin: 0 0 15px 0; font-size: 14px;">Colors</h3>
-                            <table class="form-table" style="margin: 0;">
-                                <tr>
-                                    <th style="width: 100px;">Primary</th>
-                                    <td><input type="text" name="primary_color" value="<?php echo esc_attr($primary); ?>" class="ofast-color-picker"></td>
-                                </tr>
-                                <tr>
-                                    <th>Accent</th>
-                                    <td><input type="text" name="accent_color" value="<?php echo esc_attr($accent); ?>" class="ofast-color-picker"></td>
-                                </tr>
-                                <tr>
-                                    <th>Background</th>
-                                    <td><input type="text" name="bg_color" value="<?php echo esc_attr($bg); ?>" class="ofast-color-picker"></td>
-                                </tr>
-                                <tr>
-                                    <th>Text</th>
-                                    <td><input type="text" name="text_color" value="<?php echo esc_attr($text); ?>" class="ofast-color-picker"></td>
-                                </tr>
-                            </table>
-                        </div>
+                                                .ofast-template-preview iframe {
+                                                    width: 100% !important;
+                                                    max-width: 100% !important;
+                                                    height: 400px;
+                                                }
 
-                        <!-- Typography -->
-                        <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
-                            <h3 style="margin: 0 0 15px 0; font-size: 14px;">Typography</h3>
-                            <table class="form-table" style="margin: 0;">
-                                <tr>
-                                    <th style="width: 100px;">Font</th>
-                                    <td>
-                                        <select name="font_family" id="font_family" style="width: 100%;">
-                                            <option value="system" <?php selected($font_family, 'system'); ?>>System Default</option>
-                                            <option value="inter" <?php selected($font_family, 'inter'); ?>>Inter</option>
-                                            <option value="roboto" <?php selected($font_family, 'roboto'); ?>>Roboto</option>
-                                            <option value="opensans" <?php selected($font_family, 'opensans'); ?>>Open Sans</option>
-                                            <option value="lato" <?php selected($font_family, 'lato'); ?>>Lato</option>
-                                            <option value="poppins" <?php selected($font_family, 'poppins'); ?>>Poppins</option>
-                                            <option value="georgia" <?php selected($font_family, 'georgia'); ?>>Georgia (Serif)</option>
-                                        </select>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Size</th>
-                                    <td>
-                                        <select name="font_size" id="font_size" style="width: 100%;">
-                                            <option value="13" <?php selected($font_size, '13'); ?>>Small (13px)</option>
-                                            <option value="14" <?php selected($font_size, '14'); ?>>Medium (14px)</option>
-                                            <option value="15" <?php selected($font_size, '15'); ?>>Default (15px)</option>
-                                            <option value="16" <?php selected($font_size, '16'); ?>>Large (16px)</option>
-                                            <option value="17" <?php selected($font_size, '17'); ?>>Extra Large (17px)</option>
-                                        </select>
-                                    </td>
-                                </tr>
-                            </table>
-                        </div>
+                                                .ofast-template-preview .postbox>div:last-child {
+                                                    overflow-x: auto;
+                                                }
+                                            }
+                                        </style>
 
-                        <!-- Branding -->
-                        <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
-                            <h3 style="margin: 0 0 15px 0; font-size: 14px;">Branding</h3>
-                            <table class="form-table" style="margin: 0;">
-                                <tr>
-                                    <th style="width: 100px;">Logo</th>
-                                    <td>
-                                        <input type="text" name="logo_url" id="logo_url" value="<?php echo esc_url($logo); ?>" style="width: 200px;">
-                                        <button type="button" class="button" id="upload_logo_btn">Upload</button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Logo Size</th>
-                                    <td style="display: flex; gap: 10px; align-items: center;">
-                                        <label>W: <input type="number" name="logo_width" id="logo_width" value="<?php echo esc_attr($logo_width); ?>" style="width: 60px;" min="30" max="300"> px</label>
-                                        <label>H: <input type="number" name="logo_height" id="logo_height" value="<?php echo esc_attr($logo_height); ?>" style="width: 60px;" min="0" max="200" placeholder="auto"> px</label>
-                                        <small style="color: #666;">(0 = auto)</small>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Company</th>
-                                    <td><input type="text" name="company_name" value="<?php echo esc_attr($company); ?>" style="width: 100%;"></td>
-                                </tr>
-                                <tr>
-                                    <th>Tagline</th>
-                                    <td><input type="text" name="tagline" value="<?php echo esc_attr($tagline); ?>" style="width: 100%;"></td>
-                                </tr>
-                                <tr>
-                                    <th>From Name</th>
-                                    <td><input type="text" name="from_name" value="<?php echo esc_attr($from_name); ?>" style="width: 100%;" placeholder="Sender name for emails"></td>
-                                </tr>
-                                <tr>
-                                    <th>Reply-to</th>
-                                    <td><input type="email" name="reply_to" value="<?php echo esc_attr($reply_to); ?>" style="width: 100%;" placeholder="email@example.com"></td>
-                                </tr>
-                            </table>
-                        </div>
+                                        <div class="ofast-template-layout">
+                                            <!-- Left Column: Settings -->
+                                            <div class="ofast-template-settings">
+                                                <form method="post">
+                                                    <?php wp_nonce_field('ofast_template_save'); ?>
 
-                        <!-- Header/Footer -->
-                        <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
-                            <h3 style="margin: 0 0 15px 0; font-size: 14px;">Sections</h3>
-                            <label style="display: block; margin-bottom: 8px;">
-                                <input type="checkbox" name="show_header" value="1" <?php checked($show_header); ?>> Show Header
-                            </label>
-                            <label style="display: block;">
-                                <input type="checkbox" name="show_footer" value="1" <?php checked($show_footer); ?>> Show Footer
-                            </label>
-                        </div>
+                                                    <!-- Template Style -->
+                                                    <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
+                                                        <h3 style="margin: 0 0 15px 0; font-size: 14px;">Template Style</h3>
+                                                        <div style="display: flex; gap: 10px;">
+                                                            <label
+                                                                style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'modern' ? '#6366f1' : '#ddd'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'modern' ? '#f0f6fc' : '#fff'; ?>;">
+                                                                <input type="radio" name="template_style" value="modern" <?php checked($style, 'modern'); ?> style="display: none;">
+                                                                <div style="font-weight: 600;">Modern</div>
+                                                                <small style="color: #666;">Gradient header</small>
+                                                            </label>
+                                                            <label
+                                                                style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'classic' ? '#6366f1' : '#ddd'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'classic' ? '#f0f6fc' : '#fff'; ?>;">
+                                                                <input type="radio" name="template_style" value="classic" <?php checked($style, 'classic'); ?> style="display: none;">
+                                                                <div style="font-weight: 600;">Classic</div>
+                                                                <small style="color: #666;">Solid header</small>
+                                                            </label>
+                                                            <label
+                                                                style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'minimal' ? '#6366f1' : '#ddd'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'minimal' ? '#f0f6fc' : '#fff'; ?>;">
+                                                                <input type="radio" name="template_style" value="minimal" <?php checked($style, 'minimal'); ?> style="display: none;">
+                                                                <div style="font-weight: 600;">Minimal</div>
+                                                                <small style="color: #666;">Clean, no header</small>
+                                                            </label>
+                                                        </div>
+                                                    </div>
 
-                        <!-- Social Links -->
-                        <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
-                            <h3 style="margin: 0 0 15px 0; font-size: 14px;">Social Links</h3>
+                                                    <!-- Colors -->
+                                                    <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
+                                                        <h3 style="margin: 0 0 15px 0; font-size: 14px;">Colors</h3>
+                                                        <table class="form-table" style="margin: 0;">
+                                                            <tr>
+                                                                <th style="width: 100px;">Primary</th>
+                                                                <td><input type="text" name="primary_color"
+                                                                        value="<?php echo esc_attr($primary); ?>"
+                                                                        class="ofast-color-picker"></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Accent</th>
+                                                                <td><input type="text" name="accent_color"
+                                                                        value="<?php echo esc_attr($accent); ?>"
+                                                                        class="ofast-color-picker"></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Background</th>
+                                                                <td><input type="text" name="bg_color"
+                                                                        value="<?php echo esc_attr($bg); ?>"
+                                                                        class="ofast-color-picker"></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Text</th>
+                                                                <td><input type="text" name="text_color"
+                                                                        value="<?php echo esc_attr($text); ?>"
+                                                                        class="ofast-color-picker"></td>
+                                                            </tr>
+                                                        </table>
+                                                    </div>
+
+                                                    <!-- Typography -->
+                                                    <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
+                                                        <h3 style="margin: 0 0 15px 0; font-size: 14px;">Typography</h3>
+                                                        <table class="form-table" style="margin: 0;">
+                                                            <tr>
+                                                                <th style="width: 100px;">Font</th>
+                                                                <td>
+                                                                    <select name="font_family" id="font_family"
+                                                                        style="width: 100%;">
+                                                                        <option value="system" <?php selected($font_family, 'system'); ?>>System Default</option>
+                                                                        <option value="inter" <?php selected($font_family, 'inter'); ?>>Inter</option>
+                                                                        <option value="roboto" <?php selected($font_family, 'roboto'); ?>>Roboto</option>
+                                                                        <option value="opensans" <?php selected($font_family, 'opensans'); ?>>Open Sans</option>
+                                                                        <option value="lato" <?php selected($font_family, 'lato'); ?>>Lato</option>
+                                                                        <option value="poppins" <?php selected($font_family, 'poppins'); ?>>Poppins</option>
+                                                                        <option value="georgia" <?php selected($font_family, 'georgia'); ?>>Georgia (Serif)</option>
+                                                                    </select>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Size</th>
+                                                                <td>
+                                                                    <select name="font_size" id="font_size"
+                                                                        style="width: 100%;">
+                                                                        <option value="13" <?php selected($font_size, '13'); ?>>
+                                                                            Small (13px)</option>
+                                                                        <option value="14" <?php selected($font_size, '14'); ?>>
+                                                                            Medium (14px)</option>
+                                                                        <option value="15" <?php selected($font_size, '15'); ?>>
+                                                                            Default (15px)</option>
+                                                                        <option value="16" <?php selected($font_size, '16'); ?>>
+                                                                            Large (16px)</option>
+                                                                        <option value="17" <?php selected($font_size, '17'); ?>>
+                                                                            Extra Large (17px)</option>
+                                                                    </select>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </div>
+
+                                                    <!-- Branding -->
+                                                    <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
+                                                        <h3 style="margin: 0 0 15px 0; font-size: 14px;">Branding</h3>
+                                                        <table class="form-table" style="margin: 0;">
+                                                            <tr>
+                                                                <th style="width: 100px;">Logo</th>
+                                                                <td>
+                                                                    <input type="text" name="logo_url" id="logo_url"
+                                                                        value="<?php echo esc_url($logo); ?>"
+                                                                        style="width: 200px;">
+                                                                    <button type="button" class="button"
+                                                                        id="upload_logo_btn">Upload</button>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Logo Size</th>
+                                                                <td style="display: flex; gap: 10px; align-items: center;">
+                                                                    <label>W: <input type="number" name="logo_width"
+                                                                            id="logo_width"
+                                                                            value="<?php echo esc_attr($logo_width); ?>"
+                                                                            style="width: 60px;" min="30" max="300"> px</label>
+                                                                    <label>H: <input type="number" name="logo_height"
+                                                                            id="logo_height"
+                                                                            value="<?php echo esc_attr($logo_height); ?>"
+                                                                            style="width: 60px;" min="0" max="200"
+                                                                            placeholder="auto"> px</label>
+                                                                    <small style="color: #666;">(0 = auto)</small>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Company</th>
+                                                                <td><input type="text" name="company_name"
+                                                                        value="<?php echo esc_attr($company); ?>"
+                                                                        style="width: 100%;"></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Tagline</th>
+                                                                <td><input type="text" name="tagline"
+                                                                        value="<?php echo esc_attr($tagline); ?>"
+                                                                        style="width: 100%;"></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>From Name</th>
+                                                                <td><input type="text" name="from_name"
+                                                                        value="<?php echo esc_attr($from_name); ?>"
+                                                                        style="width: 100%;"
+                                                                        placeholder="Sender name for emails"></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Reply-to</th>
+                                                                <td><input type="email" name="reply_to"
+                                                                        value="<?php echo esc_attr($reply_to); ?>"
+                                                                        style="width: 100%;" placeholder="email@example.com">
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </div>
+
+                                                    <!-- Header/Footer -->
+                                                    <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
+                                                        <h3 style="margin: 0 0 15px 0; font-size: 14px;">Sections</h3>
+                                                        <label style="display: block; margin-bottom: 8px;">
+                                                            <input type="checkbox" name="show_header" value="1" <?php checked($show_header); ?>> Show Header
+                                                        </label>
+                                                        <label style="display: block;">
+                                                            <input type="checkbox" name="show_footer" value="1" <?php checked($show_footer); ?>> Show Footer
+                                                        </label>
+                                                    </div>
+
+                                                    <!-- Social Links -->
+                                                    <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
+                                                        <h3 style="margin: 0 0 15px 0; font-size: 14px;">Social Links</h3>
+                                                        <?php
+                                                        $platforms = array('facebook', 'x', 'youtube', 'whatsapp', 'instagram', 'linkedin');
+                                                        foreach ($platforms as $p) {
+                                                            $val = $social[$p] ?? '';
+                                                            echo '<div style="margin-bottom: 8px;"><label style="display: flex; align-items: center; gap: 8px;">';
+                                                            echo '<span style="width: 70px; text-transform: capitalize;">' . esc_html($p) . '</span>';
+                                                            echo '<input type="url" name="social[' . $p . ']" value="' . esc_url($val) . '" style="flex: 1;" placeholder="https://">';
+                                                            echo '</label></div>';
+                                                        }
+                                                        ?>
+                                                    </div>
+
+                                                    <!-- Apply To -->
+                                                    <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
+                                                        <h3 style="margin: 0 0 15px 0; font-size: 14px;">Apply Template To</h3>
+                                                        <p style="margin: 0 0 10px 0; font-size: 12px; color: #666;">Select
+                                                            which email types should use this template:</p>
+                                                        <?php
+                                                        $email_types = array(
+                                                            'emailer' => 'Ofast Emailer (campaigns)',
+                                                            'notifications' => 'WordPress Notifications',
+                                                            'woocommerce' => 'WooCommerce Emails',
+                                                            'all_wp' => 'All WordPress Emails'
+                                                        );
+                                                        foreach ($email_types as $key => $label) {
+                                                            $checked = in_array($key, (array) $apply_to) ? 'checked' : '';
+                                                            echo '<label style="display: block; margin-bottom: 6px;">';
+                                                            echo '<input type="checkbox" name="apply_to[]" value="' . $key . '" ' . $checked . '> ' . esc_html($label);
+                                                            echo '</label>';
+                                                        }
+                                                        ?>
+                                                    </div>
+
+                                                    <!-- Buttons -->
+                                                    <style>
+                                                        @media screen and (max-width: 480px) {
+                                                            .ofast-template-buttons {
+                                                                gap: 8px !important;
+                                                            }
+
+                                                            .ofast-template-buttons .button {
+                                                                font-size: 11px !important;
+                                                                padding: 4px 8px !important;
+                                                            }
+                                                        }
+                                                    </style>
+                                                    <div class="ofast-template-buttons" style="display: flex; gap: 10px;">
+                                                        <button type="submit" name="ofast_save_template"
+                                                            class="button button-primary">Save Template</button>
+                                                        <button type="submit" name="ofast_send_test_template"
+                                                            class="button button-primary">Send Test Email</button>
+                                                        <button type="submit" name="ofast_reset_template" class="button"
+                                                            onclick="return confirm('Reset all template settings to defaults?');">Reset
+                                                            to Default</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+
+                                            <!-- Right Column: Preview -->
+                                            <div
+                                                style="flex: 1; min-width: 0; position: sticky; top: 32px; align-self: flex-start;">
+                                                <div class="postbox" style="padding: 15px;">
+                                                    <div
+                                                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                                        <h3 style="margin: 0; font-size: 14px;">Live Preview</h3>
+                                                        <div style="display: flex; gap: 5px;">
+                                                            <button type="button" class="button device-btn active"
+                                                                data-width="600">Desktop</button>
+                                                            <button type="button" class="button device-btn"
+                                                                data-width="375">Mobile</button>
+                                                        </div>
+                                                    </div>
+                                                    <div
+                                                        style="background: #f1f5f9; padding: 10px; border-radius: 8px; display: flex; justify-content: center; max-width: 100%; overflow-x: auto;">
+                                                        <iframe id="template-preview" sandbox
+                                                            style="width: 600px; max-width: 100%; height: 500px; border: none; border-radius: 8px; background: #fff; transition: width 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></iframe>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <script>
+                                        jQuery(document).ready(function ($) {
+                                            // Initialize color pickers
+                                            $('.ofast-color-picker').wpColorPicker({
+                                                change: function () {
+                                                    setTimeout(updatePreview, 100);
+                                                }
+                                            });
+
+                                            // Template style change
+                                            $('input[name="template_style"]').on('change', function () {
+                                                $('input[name="template_style"]').each(function () {
+                                                    var $label = $(this).closest('label');
+                                                    if ($(this).is(':checked')) {
+                                                        $label.css({
+                                                            'border-color': '#6366f1',
+                                                            'background': '#f0f6fc'
+                                                        });
+                                                    } else {
+                                                        $label.css({
+                                                            'border-color': '#ddd',
+                                                            'background': '#fff'
+                                                        });
+                                                    }
+                                                });
+                                                updatePreview();
+                                            });
+
+                                            // Other inputs
+                                            $('input[name="company_name"], input[name="tagline"], input[name="logo_url"], input[name="show_header"], input[name="show_footer"], input[name="logo_width"], input[name="logo_height"]').on('change keyup', function () {
+                                                updatePreview();
+                                            });
+
+                                            // Device toggle
+                                            $('.device-btn').on('click', function () {
+                                                var width = $(this).data('width');
+                                                $('#template-preview').css('width', width + 'px');
+                                                $('.device-btn').removeClass('button-primary active');
+                                                $(this).addClass('button-primary active');
+                                            });
+
+                                            // Media uploader for logo
+                                            $('#upload_logo_btn').on('click', function (e) {
+                                                e.preventDefault();
+                                                var frame = wp.media({
+                                                    title: 'Select Logo',
+                                                    button: {
+                                                        text: 'Use this image'
+                                                    },
+                                                    multiple: false
+                                                });
+                                                frame.on('select', function () {
+                                                    var attachment = frame.state().get('selection').first().toJSON();
+                                                    $('#logo_url').val(attachment.url);
+                                                    updatePreview();
+                                                });
+                                                frame.open();
+                                            });
+
+                                            // Update preview - Table-based, inline-styled template (matches PHP class)
+                                            function escapeHtml(value) {
+                                                if (value === null || value === undefined) {
+                                                    return '';
+                                                }
+                                                return String(value)
+                                                    .replace(/&/g, '&amp;')
+                                                    .replace(/</g, '&lt;')
+                                                    .replace(/>/g, '&gt;')
+                                                    .replace(/"/g, '&quot;')
+                                                    .replace(/'/g, '&#x27;');
+                                            }
+
+                                            function escapeAttribute(value) {
+                                                return escapeHtml(value)
+                                                    .replace(/`/g, '&#x60;')
+                                            .replace(/=/g, '&#x3D;');
+                                    }
+
+                                    function updatePreview() {
+                                        var primary = $('input[name="primary_color"]').val() || '#2563eb';
+                                        var bgColor = $('input[name="bg_color"]').val() || '#f3f4f6';
+                                        var textColor = $('input[name="text_color"]').val() || '#111827';
+                                        var headerBg = '#111827'; // Dark header
+                                        var logo = $('input[name="logo_url"]').val() || '';
+                                        var company = $('input[name="company_name"]').val() || '';
+                                        var tagline = $('input[name="tagline"]').val() || '';
+                                        var safeLogo = escapeAttribute(logo);
+                                        var safeCompany = escapeHtml(company);
+                                        var safeTagline = escapeHtml(tagline);
+                                        var showHeader = $('input[name="show_header"]').is(':checked');
+                                        var showFooter = $('input[name="show_footer"]').is(':checked');
+                                        var logoWidth = parseInt($('input[name="logo_width"]').val()) || 140;
+
+                                        // Collect social links with brand colors
+                                        var socialLinks = {};
+                                        var socialColors = {
+                                            'facebook': '#1877f2',
+                                            'x': '#000000',
+                                            'instagram': '#e1306c',
+                                            'linkedin': '#0a66c2',
+                                            'youtube': '#ff0000',
+                                            'whatsapp': '#25d366'
+                                        };
+                                        var socialNames = {
+                                            'facebook': 'Facebook',
+                                            'x': 'X',
+                                            'instagram': 'Instagram',
+                                            'linkedin': 'LinkedIn',
+                                            'youtube': 'YouTube',
+                                            'whatsapp': 'WhatsApp'
+                                        };
+                                        $('input[name^="social["]').each(function () {
+                                            var platform = $(this).attr('name').match(/social\[(\w+)\]/)[1];
+                                            var url = $(this).val();
+                                            if (url) socialLinks[platform] = url;
+                                        });
+
+                                        // Build table-based HTML with inline styles
+                                        var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Email Preview</title></head>';
+                                        html += '<body style="margin:0; padding:0; background-color:' + bgColor + '; font-family:Arial, Helvetica, sans-serif;">';
+                                        html += '<table width="100%" cellpadding="0" cellspacing="0" style="background-color:' + bgColor + '; padding:30px 0;"><tr><td align="center">';
+
+                                        // Main card
+                                        html += '<table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; max-width:100%;">';
+
+                                        // Header
+                                        if (showHeader && (logo || company)) {
+                                            html += '<tr><td style="background-color:' + headerBg + '; padding:24px; text-align:center;">';
+                                            if (logo) {
+                                                html += '<img src="' + safeLogo + '" alt="' + safeCompany + '" style="max-width:' + logoWidth + 'px; height:auto; display:block; margin:0 auto;">';
+                                            } else if (company) {
+                                                html += '<div style="color:#ffffff; font-size:24px; font-weight:600;">' + safeCompany + '</div>';
+                                            }
+                                            html += '</td></tr>';
+                                        }
+
+                                        // Content
+                                        html += '<tr><td style="padding:32px; color:' + textColor + ';">';
+                                        html += '<div style="font-size:15px; line-height:1.7; color:#374151;">';
+                                        html += '<p style="margin:0 0 16px;"><strong>Hello John,</strong></p>';
+                                        html += '<p style="margin:0 0 16px;">This is a sample email to preview your template design. The content you write in your emails will appear here, with your branding and colors applied.</p>';
+                                        html += '<p style="margin:0;">Thank you for using Ofast Emailer!</p>';
+                                        html += '</div></td></tr>';
+
+                                        // Footer
+                                        if (showFooter) {
+                                            html += '<tr><td style="padding:0 32px;"><hr style="border:none; border-top:1px solid #e5e7eb;"></td></tr>';
+                                            html += '<tr><td style="padding:24px 32px; text-align:center; font-size:13px; color:#6b7280;">';
+
+                                            // Company/tagline
+                                            if (company || tagline) {
+                                                html += '<p style="margin:0 0 12px;">';
+                                                if (company && tagline) {
+                                                    html += safeCompany + ' - ' + safeTagline;
+                                                } else {
+                                                    html += safeCompany || safeTagline;
+                                                }
+                                                html += '</p>';
+                                            }
+
+                                            // Social buttons (text-based)
+                                            var hasSocial = Object.keys(socialLinks).length > 0;
+                                            if (hasSocial) {
+                                                html += '<table cellpadding="0" cellspacing="0" align="center" style="margin-bottom:12px;"><tr>';
+                                                for (var platform in socialLinks) {
+                                                    var color = socialColors[platform] || '#6b7280';
+                                                    var name = socialNames[platform] || platform;
+                                                    var safeUrl = escapeAttribute(socialLinks[platform]);
+                                                    var safeName = escapeHtml(name);
+                                                    html += '<td style="padding:4px;">';
+                                                    html += '<a href="' + safeUrl + '" style="display:inline-block; background-color:' + color + '; color:#ffffff; font-size:12px; font-weight:600; text-decoration:none; padding:8px 14px; border-radius:999px;">' + safeName + '</a>';
+                                                    html += '</td>';
+                                                }
+                                                html += '</tr></table>';
+                                            }
+
+                                            var footerCompany = safeCompany || 'Your Site';
+                                            html += '<p style="margin:0; font-size:12px; color:#9ca3af;">&copy; ' + new Date().getFullYear() + ' ' + footerCompany + '. All rights reserved.</p>';
+                                            html += '</td></tr>';
+                                        }
+
+                                        html += '</table></td></tr></table></body></html>';
+
+                                        document.getElementById('template-preview').srcdoc = html;
+                                    }
+
+                                    // Initial preview
+                                    updatePreview();
+                                });
+                            </script>
                             <?php
-                            $platforms = array('facebook', 'x', 'youtube', 'whatsapp', 'instagram', 'linkedin');
-                            foreach ($platforms as $p) {
-                                $val = $social[$p] ?? '';
-                                echo '<div style="margin-bottom: 8px;"><label style="display: flex; align-items: center; gap: 8px;">';
-                                echo '<span style="width: 70px; text-transform: capitalize;">' . esc_html($p) . '</span>';
-                                echo '<input type="url" name="social[' . $p . ']" value="' . esc_url($val) . '" style="flex: 1;" placeholder="https://">';
-                                echo '</label></div>';
-                            }
-                            ?>
-                        </div>
-
-                        <!-- Apply To -->
-                        <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
-                            <h3 style="margin: 0 0 15px 0; font-size: 14px;">Apply Template To</h3>
-                            <p style="margin: 0 0 10px 0; font-size: 12px; color: #666;">Select which email types should use this template:</p>
-                            <?php
-                            $email_types = array(
-                                'emailer' => 'Ofast Emailer (campaigns)',
-                                'notifications' => 'WordPress Notifications',
-                                'woocommerce' => 'WooCommerce Emails',
-                                'all_wp' => 'All WordPress Emails'
-                            );
-                            foreach ($email_types as $key => $label) {
-                                $checked = in_array($key, (array)$apply_to) ? 'checked' : '';
-                                echo '<label style="display: block; margin-bottom: 6px;">';
-                                echo '<input type="checkbox" name="apply_to[]" value="' . $key . '" ' . $checked . '> ' . esc_html($label);
-                                echo '</label>';
-                            }
-                            ?>
-                        </div>
-
-                        <!-- Buttons -->
-                        <style>
-                            @media screen and (max-width: 480px) {
-                                .ofast-template-buttons { gap: 8px !important; }
-                                .ofast-template-buttons .button { font-size: 11px !important; padding: 4px 8px !important; }
-                            }
-                        </style>
-                        <div class="ofast-template-buttons" style="display: flex; gap: 10px;">
-                            <button type="submit" name="ofast_save_template" class="button button-primary">Save Template</button>
-                            <button type="submit" name="ofast_send_test_template" class="button button-primary">Send Test Email</button>
-                            <button type="submit" name="ofast_reset_template" class="button" onclick="return confirm('Reset all template settings to defaults?');">Reset to Default</button>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Right Column: Preview -->
-                <div style="flex: 1; min-width: 0; position: sticky; top: 32px; align-self: flex-start;">
-                    <div class="postbox" style="padding: 15px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                            <h3 style="margin: 0; font-size: 14px;">Live Preview</h3>
-                            <div style="display: flex; gap: 5px;">
-                                <button type="button" class="button device-btn active" data-width="600">Desktop</button>
-                                <button type="button" class="button device-btn" data-width="375">Mobile</button>
-                            </div>
-                        </div>
-                        <div style="background: #f1f5f9; padding: 10px; border-radius: 8px; display: flex; justify-content: center; max-width: 100%; overflow-x: auto;">
-                            <iframe id="template-preview" sandbox style="width: 600px; max-width: 100%; height: 500px; border: none; border-radius: 8px; background: #fff; transition: width 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></iframe>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <script>
-            jQuery(document).ready(function($) {
-                // Initialize color pickers
-                $('.ofast-color-picker').wpColorPicker({
-                    change: function() {
-                        setTimeout(updatePreview, 100);
-                    }
-                });
-
-                // Template style change
-                $('input[name="template_style"]').on('change', function() {
-                    $('input[name="template_style"]').each(function() {
-                        var $label = $(this).closest('label');
-                        if ($(this).is(':checked')) {
-                            $label.css({
-                                'border-color': '#6366f1',
-                                'background': '#f0f6fc'
-                            });
-                        } else {
-                            $label.css({
-                                'border-color': '#ddd',
-                                'background': '#fff'
-                            });
-                        }
-                    });
-                    updatePreview();
-                });
-
-                // Other inputs
-                $('input[name="company_name"], input[name="tagline"], input[name="logo_url"], input[name="show_header"], input[name="show_footer"], input[name="logo_width"], input[name="logo_height"]').on('change keyup', function() {
-                    updatePreview();
-                });
-
-                // Device toggle
-                $('.device-btn').on('click', function() {
-                    var width = $(this).data('width');
-                    $('#template-preview').css('width', width + 'px');
-                    $('.device-btn').removeClass('button-primary active');
-                    $(this).addClass('button-primary active');
-                });
-
-                // Media uploader for logo
-                $('#upload_logo_btn').on('click', function(e) {
-                    e.preventDefault();
-                    var frame = wp.media({
-                        title: 'Select Logo',
-                        button: {
-                            text: 'Use this image'
-                        },
-                        multiple: false
-                    });
-                    frame.on('select', function() {
-                        var attachment = frame.state().get('selection').first().toJSON();
-                        $('#logo_url').val(attachment.url);
-                        updatePreview();
-                    });
-                    frame.open();
-                });
-
-                // Update preview - Table-based, inline-styled template (matches PHP class)
-                function escapeHtml(value) {
-                    if (value === null || value === undefined) {
-                        return '';
-                    }
-                    return String(value)
-                        .replace(/&/g, '&amp;')
-                        .replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;')
-                        .replace(/"/g, '&quot;')
-                        .replace(/'/g, '&#x27;');
-                }
-
-                function escapeAttribute(value) {
-                    return escapeHtml(value)
-                        .replace(/`/g, '&#x60;')
-                        .replace(/=/g, '&#x3D;');
-                }
-
-                function updatePreview() {
-                    var primary = $('input[name="primary_color"]').val() || '#2563eb';
-                    var bgColor = $('input[name="bg_color"]').val() || '#f3f4f6';
-                    var textColor = $('input[name="text_color"]').val() || '#111827';
-                    var headerBg = '#111827'; // Dark header
-                    var logo = $('input[name="logo_url"]').val() || '';
-                    var company = $('input[name="company_name"]').val() || '';
-                    var tagline = $('input[name="tagline"]').val() || '';
-                    var safeLogo = escapeAttribute(logo);
-                    var safeCompany = escapeHtml(company);
-                    var safeTagline = escapeHtml(tagline);
-                    var showHeader = $('input[name="show_header"]').is(':checked');
-                    var showFooter = $('input[name="show_footer"]').is(':checked');
-                    var logoWidth = parseInt($('input[name="logo_width"]').val()) || 140;
-
-                    // Collect social links with brand colors
-                    var socialLinks = {};
-                    var socialColors = {
-                        'facebook': '#1877f2',
-                        'x': '#000000',
-                        'instagram': '#e1306c',
-                        'linkedin': '#0a66c2',
-                        'youtube': '#ff0000',
-                        'whatsapp': '#25d366'
-                    };
-                    var socialNames = {
-                        'facebook': 'Facebook',
-                        'x': 'X',
-                        'instagram': 'Instagram',
-                        'linkedin': 'LinkedIn',
-                        'youtube': 'YouTube',
-                        'whatsapp': 'WhatsApp'
-                    };
-                    $('input[name^="social["]').each(function() {
-                        var platform = $(this).attr('name').match(/social\[(\w+)\]/)[1];
-                        var url = $(this).val();
-                        if (url) socialLinks[platform] = url;
-                    });
-
-                    // Build table-based HTML with inline styles
-                    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Email Preview</title></head>';
-                    html += '<body style="margin:0; padding:0; background-color:' + bgColor + '; font-family:Arial, Helvetica, sans-serif;">';
-                    html += '<table width="100%" cellpadding="0" cellspacing="0" style="background-color:' + bgColor + '; padding:30px 0;"><tr><td align="center">';
-                    
-                    // Main card
-                    html += '<table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; max-width:100%;">';
-
-                    // Header
-                    if (showHeader && (logo || company)) {
-                        html += '<tr><td style="background-color:' + headerBg + '; padding:24px; text-align:center;">';
-                        if (logo) {
-                            html += '<img src="' + safeLogo + '" alt="' + safeCompany + '" style="max-width:' + logoWidth + 'px; height:auto; display:block; margin:0 auto;">';
-                        } else if (company) {
-                            html += '<div style="color:#ffffff; font-size:24px; font-weight:600;">' + safeCompany + '</div>';
-                        }
-                        html += '</td></tr>';
-                    }
-
-                    // Content
-                    html += '<tr><td style="padding:32px; color:' + textColor + ';">';
-                    html += '<div style="font-size:15px; line-height:1.7; color:#374151;">';
-                    html += '<p style="margin:0 0 16px;"><strong>Hello John,</strong></p>';
-                    html += '<p style="margin:0 0 16px;">This is a sample email to preview your template design. The content you write in your emails will appear here, with your branding and colors applied.</p>';
-                    html += '<p style="margin:0;">Thank you for using Ofast Emailer!</p>';
-                    html += '</div></td></tr>';
-
-                    // Footer
-                    if (showFooter) {
-                        html += '<tr><td style="padding:0 32px;"><hr style="border:none; border-top:1px solid #e5e7eb;"></td></tr>';
-                        html += '<tr><td style="padding:24px 32px; text-align:center; font-size:13px; color:#6b7280;">';
-                        
-                        // Company/tagline
-                        if (company || tagline) {
-                            html += '<p style="margin:0 0 12px;">';
-                            if (company && tagline) {
-                                html += safeCompany + ' - ' + safeTagline;
-                            } else {
-                                html += safeCompany || safeTagline;
-                            }
-                            html += '</p>';
-                        }
-
-                        // Social buttons (text-based)
-                        var hasSocial = Object.keys(socialLinks).length > 0;
-                        if (hasSocial) {
-                            html += '<table cellpadding="0" cellspacing="0" align="center" style="margin-bottom:12px;"><tr>';
-                            for (var platform in socialLinks) {
-                                var color = socialColors[platform] || '#6b7280';
-                                var name = socialNames[platform] || platform;
-                                var safeUrl = escapeAttribute(socialLinks[platform]);
-                                var safeName = escapeHtml(name);
-                                html += '<td style="padding:4px;">';
-                                html += '<a href="' + safeUrl + '" style="display:inline-block; background-color:' + color + '; color:#ffffff; font-size:12px; font-weight:600; text-decoration:none; padding:8px 14px; border-radius:999px;">' + safeName + '</a>';
-                                html += '</td>';
-                            }
-                            html += '</tr></table>';
-                        }
-
-                        var footerCompany = safeCompany || 'Your Site';
-                        html += '<p style="margin:0; font-size:12px; color:#9ca3af;">&copy; ' + new Date().getFullYear() + ' ' + footerCompany + '. All rights reserved.</p>';
-                        html += '</td></tr>';
-                    }
-
-                    html += '</table></td></tr></table></body></html>';
-
-                    document.getElementById('template-preview').srcdoc = html;
-                }
-
-                // Initial preview
-                updatePreview();
-            });
-        </script>
-<?php
     }
 
     /**
@@ -2980,7 +3336,7 @@ class Ofast_X_Email_Admin
 
         // Email Cron Settings - LEGACY (kept for backwards compat)
         update_option('ofast_email_cron_enabled', isset($_POST['queue_enabled']) ? 1 : 0);
-        
+
         // Queue System Settings (NEW)
         update_option('ofast_email_queue_enabled', isset($_POST['queue_enabled']) ? true : false);
         update_option('ofast_email_rate_per_hour', max(10, min(500, absint($_POST['emails_per_hour'] ?? 30))));
@@ -3044,16 +3400,16 @@ class Ofast_X_Email_Admin
         if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['draft_id'])) {
             if (isset($_GET['_wpnonce']) && wp_verify_nonce($_GET['_wpnonce'], 'delete_draft_' . $_GET['draft_id'])) {
                 $draft_id = intval($_GET['draft_id']);
-                
+
                 // Explicit ownership verification before deletion
                 $draft = $wpdb->get_row($wpdb->prepare(
                     "SELECT id, admin_id FROM $table WHERE id = %d",
                     $draft_id
                 ));
-                
+
                 if (!$draft) {
                     echo Ofast_X_Toast::render('Draft not found.', 'error', true);
-                } elseif ((int)$draft->admin_id !== $current_user_id) {
+                } elseif ((int) $draft->admin_id !== $current_user_id) {
                     // Log unauthorized access attempt
                     error_log(sprintf(
                         'SECURITY: User %d attempted unauthorized deletion of draft %d (owned by user %d)',
@@ -3074,16 +3430,16 @@ class Ofast_X_Email_Admin
         if (isset($_GET['action']) && $_GET['action'] === 'send' && isset($_GET['draft_id'])) {
             if (isset($_GET['_wpnonce']) && wp_verify_nonce($_GET['_wpnonce'], 'send_draft_' . $_GET['draft_id'])) {
                 $draft_id = intval($_GET['draft_id']);
-                
+
                 // Explicit ownership verification before sending draft
                 $draft = $wpdb->get_row($wpdb->prepare(
                     "SELECT * FROM $table WHERE id = %d",
                     $draft_id
                 ));
-                
+
                 if (!$draft) {
                     echo Ofast_X_Toast::render('Draft not found.', 'error', true);
-                } elseif ((int)$draft->admin_id !== $current_user_id) {
+                } elseif ((int) $draft->admin_id !== $current_user_id) {
                     // Log unauthorized access attempt
                     error_log(sprintf(
                         'SECURITY: User %d attempted unauthorized send of draft %d (owned by user %d)',
@@ -3096,7 +3452,7 @@ class Ofast_X_Email_Admin
                     // User owns the draft, proceed with sending
                     $roles = json_decode($draft->roles, true) ?: array();
                     $user_ids = json_decode($draft->user_ids, true) ?: array();
-                    
+
                     // Get recipients
                     $total_ids = $user_ids;
                     if (!empty($roles)) {
@@ -3106,7 +3462,7 @@ class Ofast_X_Email_Admin
                     if (empty($total_ids)) {
                         $total_ids = array($current_user_id); // Fallback to admin
                     }
-                    
+
                     $sent = 0;
                     $headers = $this->get_email_headers();
                     foreach (get_users(array('include' => $total_ids)) as $user) {
@@ -3116,7 +3472,7 @@ class Ofast_X_Email_Admin
                             $sent++;
                         }
                     }
-                    
+
                     $this->log_email($draft->subject, $sent, 'Sent from draft', $draft->body);
                     $wpdb->delete($table, array('id' => $draft->id));
                     echo Ofast_X_Toast::render("Sent {$sent} emails from draft!", 'success', true);
@@ -3195,7 +3551,7 @@ class Ofast_X_Email_Admin
                 </div>
             </div>
             <div class="ofast-card">';
-        
+
         if (empty($drafts)) {
             echo '<div class="notice notice-info"><p>No drafts yet. <a href="' . admin_url('admin.php?page=ofast-emailer') . '">Create an email</a> and save it as draft.</p></div>';
         } else {
@@ -3209,19 +3565,21 @@ class Ofast_X_Email_Admin
                     </tr>
                 </thead>
                 <tbody>';
-            
+
             foreach ($drafts as $draft) {
                 $roles = json_decode($draft->roles, true) ?: array();
                 $user_ids = json_decode($draft->user_ids, true) ?: array();
                 $recipients = array();
-                if (!empty($roles)) $recipients[] = count($roles) . ' role(s)';
-                if (!empty($user_ids)) $recipients[] = count($user_ids) . ' user(s)';
+                if (!empty($roles))
+                    $recipients[] = count($roles) . ' role(s)';
+                if (!empty($user_ids))
+                    $recipients[] = count($user_ids) . ' user(s)';
                 $recipients_text = !empty($recipients) ? implode(', ', $recipients) : 'Admin only';
-                
+
                 $edit_url = admin_url('admin.php?page=ofast-emailer&draft_id=' . $draft->id);
                 $send_url = wp_nonce_url(admin_url('admin.php?page=ofast-email-drafts&action=send&draft_id=' . $draft->id), 'send_draft_' . $draft->id);
                 $delete_url = wp_nonce_url(admin_url('admin.php?page=ofast-email-drafts&action=delete&draft_id=' . $draft->id), 'delete_draft_' . $draft->id);
-                
+
                 echo '<tr>
                     <td><strong>' . esc_html($draft->subject ?: '(No subject)') . '</strong></td>
                     <td>' . esc_html($recipients_text) . '</td>
@@ -3233,10 +3591,10 @@ class Ofast_X_Email_Admin
                     </td>
                 </tr>';
             }
-            
+
             echo '</tbody></table>';
         }
-        
+
         echo '</div>';
     }
 }

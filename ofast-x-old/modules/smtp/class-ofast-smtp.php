@@ -57,7 +57,10 @@ class Ofast_X_SMTP
 
         // Email logging - always log when SMTP is enabled
         if ($this->is_enabled) {
-            // Logging
+            // SECURITY: Content sanitization (runs first, priority 5)
+            add_filter('wp_mail', array($this, 'sanitize_email_content'), 5, 1);
+
+            // Logging (runs after sanitization, priority 10)
             add_filter('wp_mail', array($this, 'log_outgoing_email'), 10, 1);
             add_action('wp_mail_succeeded', array($this, 'mark_email_success'), 10, 1);
             add_action('wp_mail_failed', array($this, 'mark_email_failed'), 10, 1);
@@ -70,12 +73,6 @@ class Ofast_X_SMTP
 
         // AJAX handlers
         add_action('wp_ajax_ofast_test_smtp', array($this, 'ajax_test_smtp'));
-
-        // Daily cleanup of SMTP logs (retention controlled by option)
-        if (!wp_next_scheduled('ofast_smtp_cleanup_logs')) {
-            wp_schedule_event(time(), 'daily', 'ofast_smtp_cleanup_logs');
-        }
-        add_action('ofast_smtp_cleanup_logs', array($this, 'cleanup_old_logs'));
     }
 
     /**
@@ -87,9 +84,6 @@ class Ofast_X_SMTP
         $current_count = get_transient($transient_key) ?: 0;
 
         if ($current_count >= $this->rate_limit_per_minute) {
-            // Log the rate-limited email so it appears in the Email Log
-            $this->log_rate_limited_email($atts);
-
             // Rate limit exceeded - log and block
             error_log('Ofast SMTP: Rate limit exceeded (' . $this->rate_limit_per_minute . '/min). Email blocked.');
 
@@ -107,16 +101,77 @@ class Ofast_X_SMTP
     }
 
     /**
+     * SECURITY: Sanitize email content to remove sensitive information
+     * Skips HTML template emails (trusted), applies to plain text only
+     */
+    public function sanitize_email_content($args)
+    {
+        if (!empty($args['message'])) {
+            $message = $args['message'];
+
+            // Skip sanitization for HTML emails (structured templates we control)
+            // These are trusted and sanitization breaks their HTML structure
+            if (stripos($message, '<!DOCTYPE') !== false || 
+                stripos($message, '<html') !== false ||
+                stripos($message, '<table') !== false) {
+                return $args; // Trust HTML template emails
+            }
+
+            // 1. Remove ALL wp-admin URLs - replace with site URL
+            $admin_url = admin_url();
+            $message = str_replace($admin_url, site_url(), $message);
+            $message = preg_replace('#https?://[^\s<>"\']+/wp-admin[^\s<>"\']*#i', site_url(), $message);
+
+            // 2. Remove server file paths (e.g., /var/www/, C:\xampp\, etc.)
+            $message = preg_replace('#(/var/www|/home/\w+|/srv|C:\\\\[^<\s]+|/usr/share)[^\s<>"\']*#i', '[hidden]', $message);
+
+            // 3. Remove WordPress installation paths
+            $abspath = preg_quote(ABSPATH, '#');
+            $message = preg_replace('#' . $abspath . '[^\s<>"\']*#i', '[hidden]', $message);
+
+            // 4. Remove debug patterns
+            $debug_patterns = array(
+                '#\bWP_DEBUG\b#i',
+                '#\bPHP (Fatal|Warning|Notice|Error)[^<\n]*#i',
+                '#Stack trace:[^<]*#is',
+                '#\bin /[^\s]+\.php on line \d+#i',
+                '#\bCall Stack\b[^<]*#is',
+                '#\bvar_dump\s*\([^)]*\)#is',
+                '#\bprint_r\s*\([^)]*\)#is',
+            );
+            foreach ($debug_patterns as $pattern) {
+                $message = preg_replace($pattern, '', $message);
+            }
+
+            // 5. Remove MySQL/database info
+            $message = preg_replace('#\b(mysql|mysqli|pdo|wpdb)\s*:?[^<\n]*#i', '', $message);
+
+            // 6. Remove wp-config references
+            $message = preg_replace('#wp-config\.php#i', '', $message);
+
+            // 7. Remove WordPress version info
+            $message = preg_replace('#WordPress\s+\d+\.\d+(\.\d+)?#i', 'WordPress', $message);
+
+            // 8. Remove PHP version info
+            $message = preg_replace('#PHP\s+\d+\.\d+(\.\d+)?#i', 'PHP', $message);
+
+            $args['message'] = $message;
+        }
+
+        return $args;
+    }
+
+    /**
      * Configure PHPMailer with SMTP settings
      */
     public function configure_phpmailer($phpmailer)
     {
         $mailer_type = get_option('ofast_smtp_mailer_type', 'default');
-
+        
         // PHP Mail (Default) - uses server's native mail function
         if ($mailer_type === 'default') {
             $phpmailer->isMail();
-
+            
             // Only set From if configured
             $from_email = get_option('ofast_smtp_from_email', '');
             $from_name = get_option('ofast_smtp_from_name', get_bloginfo('name'));
@@ -124,11 +179,11 @@ class Ofast_X_SMTP
                 $phpmailer->From = $from_email;
                 $phpmailer->FromName = $from_name;
             }
-
+            
             $phpmailer->XMailer = 'Ofast Mailer';
             return;
         }
-
+        
         // SMTP mode - requires host, port, credentials
         $phpmailer->isSMTP();
         $phpmailer->Host = get_option('ofast_smtp_host', '');
@@ -158,7 +213,7 @@ class Ofast_X_SMTP
         }
 
         // SECURITY: Sanitize headers to hide system fingerprint
-        $phpmailer->XMailer = 'Ofast Mailer';
+        $phpmailer->XMailer = 'Ofast Mailer'; // Hide PHPMailer version
 
         // Remove headers that expose server info
         $phpmailer->clearCustomHeaders();
@@ -517,35 +572,6 @@ class Ofast_X_SMTP
     }
 
     /**
-     * Log a rate-limited email so it's visible in the Email Log.
-     */
-    private function log_rate_limited_email($atts)
-    {
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'ofast_smtp_log';
-        $this->ensure_log_table();
-
-        $to = '';
-        $subject = '';
-
-        if (is_array($atts)) {
-            $to_value = isset($atts['to']) ? $atts['to'] : '';
-            $to = is_array($to_value) ? implode(', ', $to_value) : $to_value;
-            $subject = isset($atts['subject']) ? $atts['subject'] : '';
-        }
-
-        $wpdb->insert($table_name, array(
-            'to_email' => sanitize_text_field($to),
-            'subject' => sanitize_text_field($subject),
-            'body' => '',
-            'headers' => '',
-            'status' => 'rate_limited',
-            'error_message' => sprintf('Rate limit exceeded (%d/min)', $this->rate_limit_per_minute),
-            'sent_at' => current_time('mysql'),
-        ));
-    }
-
-    /**
      * Ensure log table exists
      */
     private function ensure_log_table()
@@ -587,24 +613,5 @@ class Ofast_X_SMTP
 
         // Cache the result for 24 hours
         set_transient('ofast_smtp_log_table_exists', true, DAY_IN_SECONDS);
-    }
-
-    /**
-     * Cleanup old SMTP logs to prevent database bloat.
-     */
-    public function cleanup_old_logs()
-    {
-        $retention_days = (int) get_option('ofast_smtp_log_retention_days', 90);
-        if ($retention_days <= 0) {
-            return;
-        }
-
-        global $wpdb;
-        $table = $wpdb->prefix . 'ofast_smtp_log';
-
-        $wpdb->query($wpdb->prepare(
-            "DELETE FROM {$table} WHERE sent_at < DATE_SUB(NOW(), INTERVAL %d DAY)",
-            $retention_days
-        ));
     }
 }

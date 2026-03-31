@@ -12,6 +12,7 @@ if (!defined('ABSPATH')) {
 class Ofast_X_SMTP
 {
     private static $instance = null;
+    private const LOG_SCHEMA_TRANSIENT = 'ofast_smtp_log_schema_v2';
     private $is_enabled = false;
     private $provider = 'default';
     private $current_log_id = null;
@@ -73,6 +74,12 @@ class Ofast_X_SMTP
 
         // AJAX handlers
         add_action('wp_ajax_ofast_test_smtp', array($this, 'ajax_test_smtp'));
+
+        // Daily cleanup of SMTP logs (retention controlled by option)
+        if (!wp_next_scheduled('ofast_smtp_cleanup_logs')) {
+            wp_schedule_event(time(), 'daily', 'ofast_smtp_cleanup_logs');
+        }
+        add_action('ofast_smtp_cleanup_logs', array($this, 'cleanup_old_logs'));
     }
 
     /**
@@ -915,7 +922,7 @@ class Ofast_X_SMTP
         }
 
         // Insert log entry with filtered content
-        $wpdb->insert($table_name, array(
+        $inserted = $wpdb->insert($table_name, array(
             'to_email' => sanitize_text_field($to),
             'subject' => sanitize_text_field($subject),
             'body' => $filtered_body,
@@ -924,8 +931,16 @@ class Ofast_X_SMTP
             'sent_at' => current_time('mysql')
         ));
 
+        if ($inserted === false) {
+            if ((defined('OFAST_SMTP_DEBUG') && OFAST_SMTP_DEBUG) || (defined('WP_DEBUG') && WP_DEBUG)) {
+                error_log('Ofast SMTP: Failed to insert SMTP log row - ' . $wpdb->last_error);
+            }
+            $this->current_log_id = null;
+            return $args;
+        }
+
         // Store the log ID for later status update
-        $this->current_log_id = $wpdb->insert_id;
+        $this->current_log_id = (int) $wpdb->insert_id;
 
         return $args;
     }
@@ -1074,46 +1089,105 @@ class Ofast_X_SMTP
     }
 
     /**
-     * Ensure log table exists
+     * Ensure the SMTP log table exists and upgrade older installs to the current schema.
      */
-    private function ensure_log_table()
+    public static function ensure_log_table_schema($force = false)
     {
-        // Check cache first to avoid redundant DB queries
-        if (get_transient('ofast_smtp_log_table_exists')) {
+        if (!$force && get_transient(self::LOG_SCHEMA_TRANSIENT)) {
             return;
         }
 
         global $wpdb;
         $table_name = $wpdb->prefix . 'ofast_smtp_log';
+        $charset = $wpdb->get_charset_collate();
 
-        // Check if table exists using proper escaping
-        $table_exists = $wpdb->get_var($wpdb->prepare(
-            "SHOW TABLES LIKE %s",
-            $table_name
-        ));
+        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+        dbDelta(self::get_log_table_schema_sql($table_name, $charset));
 
-        if ($table_exists !== $table_name) {
-            $charset = $wpdb->get_charset_collate();
-
-            $sql = "CREATE TABLE {$table_name} (
-                id bigint(20) NOT NULL AUTO_INCREMENT,
-                to_email varchar(255) NOT NULL,
-                subject varchar(255) NOT NULL,
-                body longtext,
-                headers text,
-                status varchar(20) DEFAULT 'pending',
-                error_message text,
-                sent_at datetime DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (id),
-                KEY status (status),
-                KEY sent_at (sent_at)
-            ) {$charset};";
-
-            require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-            dbDelta($sql);
+        $columns = $wpdb->get_results("SHOW COLUMNS FROM `{$table_name}`", OBJECT_K);
+        if (!is_array($columns)) {
+            return;
         }
 
-        // Cache the result for 24 hours
-        set_transient('ofast_smtp_log_table_exists', true, DAY_IN_SECONDS);
+        if (!isset($columns['to_email'])) {
+            $wpdb->query("ALTER TABLE `{$table_name}` ADD COLUMN `to_email` varchar(255) NOT NULL DEFAULT '' AFTER `id`");
+        }
+
+        if (!isset($columns['body'])) {
+            $wpdb->query("ALTER TABLE `{$table_name}` ADD COLUMN `body` longtext NULL AFTER `subject`");
+        }
+
+        if (!isset($columns['headers'])) {
+            $wpdb->query("ALTER TABLE `{$table_name}` ADD COLUMN `headers` longtext NULL AFTER `body`");
+        }
+
+        if (!isset($columns['error_message'])) {
+            $wpdb->query("ALTER TABLE `{$table_name}` ADD COLUMN `error_message` text NULL AFTER `status`");
+        }
+
+        if (!isset($columns['sent_at'])) {
+            $wpdb->query("ALTER TABLE `{$table_name}` ADD COLUMN `sent_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `error_message`");
+        }
+
+        if (isset($columns['status']) && stripos((string) $columns['status']->Type, 'varchar') === false) {
+            $wpdb->query("ALTER TABLE `{$table_name}` MODIFY `status` varchar(20) NOT NULL DEFAULT 'pending'");
+        }
+
+        $columns = $wpdb->get_results("SHOW COLUMNS FROM `{$table_name}`", OBJECT_K);
+
+        if (isset($columns['recipient']) && isset($columns['to_email'])) {
+            $wpdb->query("UPDATE `{$table_name}` SET `to_email` = `recipient` WHERE (`to_email` = '' OR `to_email` IS NULL) AND `recipient` <> ''");
+        }
+
+        $wpdb->query($wpdb->prepare(
+            "UPDATE `{$table_name}` SET `status` = %s WHERE `status` = %s",
+            'success',
+            'sent'
+        ));
+
+        delete_transient('ofast_smtp_log_table_exists');
+        set_transient(self::LOG_SCHEMA_TRANSIENT, true, DAY_IN_SECONDS);
+    }
+
+    private static function get_log_table_schema_sql($table_name, $charset)
+    {
+        return "CREATE TABLE {$table_name} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            to_email varchar(255) NOT NULL DEFAULT '',
+            subject varchar(255) NOT NULL DEFAULT '',
+            body longtext NULL,
+            headers longtext NULL,
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            error_message text NULL,
+            sent_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY status (status),
+            KEY sent_at (sent_at)
+        ) {$charset};";
+    }
+
+    private function ensure_log_table()
+    {
+        self::ensure_log_table_schema();
+    }
+
+    /**
+     * Cleanup old SMTP logs to prevent database bloat.
+     */
+    public function cleanup_old_logs()
+    {
+        $retention_days = (int) get_option('ofast_smtp_log_retention_days', 90);
+        if ($retention_days <= 0) {
+            return;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_smtp_log';
+        $this->ensure_log_table();
+
+        $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$table} WHERE sent_at < DATE_SUB(NOW(), INTERVAL %d DAY)",
+            $retention_days
+        ));
     }
 }

@@ -652,7 +652,7 @@ class Ofast_X_Email_Admin
                     <h3 id="modal-subject" style="margin:0;">Preview</h3>
                     <button type="button" id="close-history-modal" class="button">Close</button>
                 </div>
-                <iframe id="modal-content" style="width:100%; height:500px; border:1px solid #e5e7eb; border-radius:8px;"></iframe>
+                <iframe id="modal-content" sandbox style="width:100%; height:500px; border:1px solid #e5e7eb; border-radius:8px;"></iframe>
             </div>
         </div>
         
@@ -973,7 +973,7 @@ class Ofast_X_Email_Admin
                         <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #64748b;">Live Preview</h3>
                         <span class="dashicons dashicons-desktop" style="color: #64748b;"></span>
                     </div>
-                    <iframe id="template-preview" style="width: 100%; height: 800px; border: none; display: block;"></iframe>
+                    <iframe id="template-preview" sandbox style="width: 100%; height: 800px; border: none; display: block;"></iframe>
                 </div>
             </div>
         </div>
@@ -1078,9 +1078,9 @@ class Ofast_X_Email_Admin
                     if (showHeader && style !== 'minimal' && (logo || company)) {
                         html += '<tr><td style="background:' + headerBg + '; padding:24px; text-align:center;">';
                         if (logo) {
-                            html += '<img src="' + logo + '" alt="' + company + '" style="max-width:' + logoWidth + 'px; height:auto; display:block; margin:0 auto;">';
+                            html += '<img src="' + safeLogo + '" alt="' + safeCompany + '" style="max-width:' + logoWidth + 'px; height:auto; display:block; margin:0 auto;">';
                         } else if (company) {
-                            html += '<div style="color:#ffffff; font-size:24px; font-weight:600;">' + company + '</div>';
+                            html += '<div style="color:#ffffff; font-size:24px; font-weight:600;">' + safeCompany + '</div>';
                         }
                         html += '</td></tr>';
                     }
@@ -1102,9 +1102,9 @@ class Ofast_X_Email_Admin
                         if (company || tagline) {
                             html += '<p style="margin:0 0 12px;">';
                             if (company && tagline) {
-                                html += company + ' — ' + tagline;
+                                html += safeCompany + ' - ' + safeTagline;
                             } else {
-                                html += company || tagline;
+                                html += safeCompany || safeTagline;
                             }
                             html += '</p>';
                         }
@@ -1116,6 +1116,8 @@ class Ofast_X_Email_Admin
                             for (var platform in socialLinks) {
                                 var color = socialColors[platform] || '#6b7280';
                                 var name = socialNames[platform] || platform;
+                                var safeUrl = escapeAttribute(socialLinks[platform]);
+                                var safeName = escapeHtml(name);
                                 html += '<td style="padding:4px;">';
                                 html += '<a href="' + socialLinks[platform] + '" style="display:inline-block; background-color:' + color + '; color:#ffffff; font-size:12px; font-weight:600; text-decoration:none; padding:8px 14px; border-radius:999px; font-family:sans-serif;">' + name + '</a>';
                                 html += '</td>';
@@ -1123,7 +1125,7 @@ class Ofast_X_Email_Admin
                             html += '</tr></table>';
                         }
 
-                        var footerCompany = company || 'Your Site';
+                        var footerCompany = safeCompany || 'Your Site';
                         html += '<p style="margin:0; font-size:12px; color:#9ca3af;">&copy; ' + new Date().getFullYear() + ' ' + footerCompany + '. All rights reserved.</p>';
                         html += '</td></tr>';
                     }
@@ -1925,7 +1927,7 @@ class Ofast_X_Email_Admin
                     <button id="close-preview-modal" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;">&times;</button>
                 </div>
                 <div style="padding:20px;background:#1e293b;display:flex;justify-content:center;">
-                    <iframe id="preview-iframe" style="width:600px;height:calc(100vh - 150px);border:none;border-radius:8px;background:#fff;transition:width 0.3s ease;"></iframe>
+                    <iframe id="preview-iframe" sandbox style="width:600px;height:calc(100vh - 150px);border:none;border-radius:8px;background:#fff;transition:width 0.3s ease;"></iframe>
                 </div>
             </div>
         </div>';
@@ -2144,7 +2146,7 @@ class Ofast_X_Email_Admin
                     <h3 style="margin: 0;">Email Preview</h3>
                     <button type="button" id="close-emailer-preview" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
                 </div>
-                <iframe id="emailer-preview-frame" style="width: 100%; height: 60vh; border: none;"></iframe>
+                <iframe id="emailer-preview-frame" sandbox style="width: 100%; height: 60vh; border: none;"></iframe>
             </div>
         </div>
 
@@ -2744,7 +2746,7 @@ class Ofast_X_Email_Admin
                             </div>
                         </div>
                         <div style="background: #f1f5f9; padding: 10px; border-radius: 8px; display: flex; justify-content: center; max-width: 100%; overflow-x: auto;">
-                            <iframe id="template-preview" style="width: 600px; max-width: 100%; height: 500px; border: none; border-radius: 8px; background: #fff; transition: width 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></iframe>
+                            <iframe id="template-preview" sandbox style="width: 600px; max-width: 100%; height: 500px; border: none; border-radius: 8px; background: #fff; transition: width 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></iframe>
                         </div>
                     </div>
                 </div>
@@ -2811,6 +2813,24 @@ class Ofast_X_Email_Admin
                 });
 
                 // Update preview - Table-based, inline-styled template (matches PHP class)
+                function escapeHtml(value) {
+                    if (value === null || value === undefined) {
+                        return '';
+                    }
+                    return String(value)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#x27;');
+                }
+
+                function escapeAttribute(value) {
+                    return escapeHtml(value)
+                        .replace(/`/g, '&#x60;')
+                        .replace(/=/g, '&#x3D;');
+                }
+
                 function updatePreview() {
                     var primary = $('input[name="primary_color"]').val() || '#2563eb';
                     var bgColor = $('input[name="bg_color"]').val() || '#f3f4f6';
@@ -2819,6 +2839,9 @@ class Ofast_X_Email_Admin
                     var logo = $('input[name="logo_url"]').val() || '';
                     var company = $('input[name="company_name"]').val() || '';
                     var tagline = $('input[name="tagline"]').val() || '';
+                    var safeLogo = escapeAttribute(logo);
+                    var safeCompany = escapeHtml(company);
+                    var safeTagline = escapeHtml(tagline);
                     var showHeader = $('input[name="show_header"]').is(':checked');
                     var showFooter = $('input[name="show_footer"]').is(':checked');
                     var logoWidth = parseInt($('input[name="logo_width"]').val()) || 140;
@@ -2859,9 +2882,9 @@ class Ofast_X_Email_Admin
                     if (showHeader && (logo || company)) {
                         html += '<tr><td style="background-color:' + headerBg + '; padding:24px; text-align:center;">';
                         if (logo) {
-                            html += '<img src="' + logo + '" alt="' + company + '" style="max-width:' + logoWidth + 'px; height:auto; display:block; margin:0 auto;">';
+                            html += '<img src="' + safeLogo + '" alt="' + safeCompany + '" style="max-width:' + logoWidth + 'px; height:auto; display:block; margin:0 auto;">';
                         } else if (company) {
-                            html += '<div style="color:#ffffff; font-size:24px; font-weight:600;">' + company + '</div>';
+                            html += '<div style="color:#ffffff; font-size:24px; font-weight:600;">' + safeCompany + '</div>';
                         }
                         html += '</td></tr>';
                     }
@@ -2883,9 +2906,9 @@ class Ofast_X_Email_Admin
                         if (company || tagline) {
                             html += '<p style="margin:0 0 12px;">';
                             if (company && tagline) {
-                                html += company + ' — ' + tagline;
+                                html += safeCompany + ' - ' + safeTagline;
                             } else {
-                                html += company || tagline;
+                                html += safeCompany || safeTagline;
                             }
                             html += '</p>';
                         }
@@ -2897,14 +2920,16 @@ class Ofast_X_Email_Admin
                             for (var platform in socialLinks) {
                                 var color = socialColors[platform] || '#6b7280';
                                 var name = socialNames[platform] || platform;
+                                var safeUrl = escapeAttribute(socialLinks[platform]);
+                                var safeName = escapeHtml(name);
                                 html += '<td style="padding:4px;">';
-                                html += '<a href="' + socialLinks[platform] + '" style="display:inline-block; background-color:' + color + '; color:#ffffff; font-size:12px; font-weight:600; text-decoration:none; padding:8px 14px; border-radius:999px;">' + name + '</a>';
+                                html += '<a href="' + safeUrl + '" style="display:inline-block; background-color:' + color + '; color:#ffffff; font-size:12px; font-weight:600; text-decoration:none; padding:8px 14px; border-radius:999px;">' + safeName + '</a>';
                                 html += '</td>';
                             }
                             html += '</tr></table>';
                         }
 
-                        var footerCompany = company || 'Your Site';
+                        var footerCompany = safeCompany || 'Your Site';
                         html += '<p style="margin:0; font-size:12px; color:#9ca3af;">&copy; ' + new Date().getFullYear() + ' ' + footerCompany + '. All rights reserved.</p>';
                         html += '</td></tr>';
                     }
@@ -3215,3 +3240,4 @@ class Ofast_X_Email_Admin
         echo '</div>';
     }
 }
+

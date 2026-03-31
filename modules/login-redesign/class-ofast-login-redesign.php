@@ -108,6 +108,52 @@ class Ofast_X_Login_Redesign
     }
 
     /**
+     * Get a safe return URL for the settings screen.
+     *
+     * @param array $args Query arguments to append.
+     * @return string
+     */
+    private function get_settings_return_url($args = array())
+    {
+        $fallback = admin_url('admin.php?page=ofast-login-redesign');
+        $referer = wp_get_referer();
+        $base_url = $referer ? $referer : $fallback;
+
+        return add_query_arg($args, $base_url);
+    }
+
+    /**
+     * Sanitize a settings value against an allow-list.
+     *
+     * @param string $value   Submitted value.
+     * @param array  $allowed Allowed values.
+     * @param string $default Default value.
+     * @return string
+     */
+    private function sanitize_choice($value, $allowed, $default)
+    {
+        $value = sanitize_key((string) $value);
+
+        return in_array($value, $allowed, true) ? $value : $default;
+    }
+
+    /**
+     * Clamp a percentage-style field to a safe 0-100 range.
+     *
+     * @param mixed $value Submitted value.
+     * @param int   $default Default value.
+     * @return int
+     */
+    private function sanitize_percentage($value, $default)
+    {
+        if ($value === null || $value === '') {
+            return $default;
+        }
+
+        return max(0, min(100, absint($value)));
+    }
+
+    /**
      * Add admin menu
      */
     public function add_admin_menu()
@@ -147,9 +193,7 @@ class Ofast_X_Login_Redesign
 
         // Handle Reset
         if (isset($_POST['ofast_login_redesign_reset'])) {
-            if (!wp_verify_nonce($_POST['ofast_login_nonce'] ?? '', 'ofast_login_redesign_settings')) {
-                return;
-            }
+            check_admin_referer('ofast_login_redesign_settings', 'ofast_login_nonce');
 
             // Reset all options to defaults
             update_option('ofast_login_redesign_enabled', false);
@@ -199,7 +243,7 @@ class Ofast_X_Login_Redesign
             update_option('ofast_login_md_use_ofast_colors', false);
 
             Ofast_X_Toast::add('Settings reset to defaults!', 'success');
-            wp_redirect(add_query_arg('ofast_status', 'reset', wp_get_referer()));
+            wp_safe_redirect($this->get_settings_return_url(array('ofast_status' => 'reset')));
             exit;
         }
 
@@ -208,60 +252,62 @@ class Ofast_X_Login_Redesign
             return;
         }
 
-        if (!wp_verify_nonce($_POST['ofast_login_nonce'] ?? '', 'ofast_login_redesign_settings')) {
-            return;
-        }
+        check_admin_referer('ofast_login_redesign_settings', 'ofast_login_nonce');
+
+        $post = wp_unslash($_POST);
+        $template = $this->sanitize_choice($post['template'] ?? 'simple', array('simple', 'two-column', 'modern-dark'), 'simple');
+        $image_position = $this->sanitize_choice($post['tc_image_position'] ?? 'left', array('left', 'right'), 'left');
 
         // Common settings
-        update_option('ofast_login_redesign_enabled', isset($_POST['enabled']));
-        update_option('ofast_login_template', sanitize_text_field($_POST['template'] ?? 'simple'));
-        update_option('ofast_login_logo_url', esc_url_raw($_POST['logo_url'] ?? ''));
-        update_option('ofast_login_logo_width', absint($_POST['logo_width'] ?? 84));
-        update_option('ofast_login_logo_height', absint($_POST['logo_height'] ?? 84));
-        update_option('ofast_login_bg_color', sanitize_hex_color($_POST['bg_color'] ?? '#f0f0f1'));
-        update_option('ofast_login_bg_image', esc_url_raw($_POST['bg_image'] ?? ''));
-        update_option('ofast_login_form_bg', sanitize_hex_color($_POST['form_bg'] ?? '#ffffff'));
-        update_option('ofast_login_form_bg_end', sanitize_hex_color($_POST['form_bg_end'] ?? '#ffffff'));
-        update_option('ofast_login_form_use_gradient', isset($_POST['form_use_gradient']));
-        update_option('ofast_login_form_radius', absint($_POST['form_radius'] ?? 4));
-        update_option('ofast_login_btn_color', sanitize_hex_color($_POST['btn_color'] ?? '#2271b1'));
-        update_option('ofast_login_btn_hover', sanitize_hex_color($_POST['btn_hover'] ?? '#135e96'));
-        update_option('ofast_login_btn_text_color', sanitize_hex_color($_POST['btn_text_color'] ?? '#ffffff'));
-        update_option('ofast_login_link_color', sanitize_hex_color($_POST['link_color'] ?? '#50575e'));
-        update_option('ofast_login_link_hover', sanitize_hex_color($_POST['link_hover'] ?? '#2271b1'));
-        update_option('ofast_login_input_radius', absint($_POST['input_radius'] ?? 4));
-        update_option('ofast_login_input_border_color', sanitize_hex_color($_POST['input_border_color'] ?? '#8c8f94'));
-        update_option('ofast_login_input_border_width', absint($_POST['input_border_width'] ?? 1));
-        update_option('ofast_login_btn_border_color', sanitize_hex_color($_POST['btn_border_color'] ?? '#2271b1'));
-        update_option('ofast_login_btn_border_width', absint($_POST['btn_border_width'] ?? 1));
-        update_option('ofast_login_hide_back_link', isset($_POST['hide_back_link']));
-        update_option('ofast_login_custom_css', Ofast_X_Sanitizer::css(wp_unslash($_POST['custom_css'] ?? '')));
+        update_option('ofast_login_redesign_enabled', isset($post['enabled']));
+        update_option('ofast_login_template', $template);
+        update_option('ofast_login_logo_url', esc_url_raw($post['logo_url'] ?? ''));
+        update_option('ofast_login_logo_width', absint($post['logo_width'] ?? 84));
+        update_option('ofast_login_logo_height', absint($post['logo_height'] ?? 84));
+        update_option('ofast_login_bg_color', sanitize_hex_color($post['bg_color'] ?? '#f0f0f1'));
+        update_option('ofast_login_bg_image', esc_url_raw($post['bg_image'] ?? ''));
+        update_option('ofast_login_form_bg', sanitize_hex_color($post['form_bg'] ?? '#ffffff'));
+        update_option('ofast_login_form_bg_end', sanitize_hex_color($post['form_bg_end'] ?? '#ffffff'));
+        update_option('ofast_login_form_use_gradient', isset($post['form_use_gradient']));
+        update_option('ofast_login_form_radius', absint($post['form_radius'] ?? 4));
+        update_option('ofast_login_btn_color', sanitize_hex_color($post['btn_color'] ?? '#2271b1'));
+        update_option('ofast_login_btn_hover', sanitize_hex_color($post['btn_hover'] ?? '#135e96'));
+        update_option('ofast_login_btn_text_color', sanitize_hex_color($post['btn_text_color'] ?? '#ffffff'));
+        update_option('ofast_login_link_color', sanitize_hex_color($post['link_color'] ?? '#50575e'));
+        update_option('ofast_login_link_hover', sanitize_hex_color($post['link_hover'] ?? '#2271b1'));
+        update_option('ofast_login_input_radius', absint($post['input_radius'] ?? 4));
+        update_option('ofast_login_input_border_color', sanitize_hex_color($post['input_border_color'] ?? '#8c8f94'));
+        update_option('ofast_login_input_border_width', absint($post['input_border_width'] ?? 1));
+        update_option('ofast_login_btn_border_color', sanitize_hex_color($post['btn_border_color'] ?? '#2271b1'));
+        update_option('ofast_login_btn_border_width', absint($post['btn_border_width'] ?? 1));
+        update_option('ofast_login_hide_back_link', isset($post['hide_back_link']));
+        update_option('ofast_login_custom_css', Ofast_X_Sanitizer::css($post['custom_css'] ?? ''));
 
         // Two-column settings
-        update_option('ofast_login_tc_side_image', esc_url_raw($_POST['tc_side_image'] ?? ''));
-        update_option('ofast_login_tc_use_color', isset($_POST['tc_use_color']));
-        update_option('ofast_login_tc_side_color', sanitize_hex_color($_POST['tc_side_color'] ?? '#6366f1'));
-        update_option('ofast_login_tc_side_color_end', sanitize_hex_color($_POST['tc_side_color_end'] ?? '#764ba2'));
-        update_option('ofast_login_tc_image_position', sanitize_text_field($_POST['tc_image_position'] ?? 'left'));
-        update_option('ofast_login_tc_overlay_color', sanitize_hex_color($_POST['tc_overlay_color'] ?? '#000000'));
-        update_option('ofast_login_tc_overlay_opacity', absint($_POST['tc_overlay_opacity'] ?? 40));
-        update_option('ofast_login_tc_heading', sanitize_text_field($_POST['tc_heading'] ?? ''));
-        update_option('ofast_login_tc_subheading', sanitize_text_field($_POST['tc_subheading'] ?? ''));
-        update_option('ofast_login_tc_text_color', sanitize_hex_color($_POST['tc_text_color'] ?? '#ffffff'));
-        update_option('ofast_login_tc_form_border_color', sanitize_hex_color($_POST['tc_form_border_color'] ?? '#e0e0e0'));
-        update_option('ofast_login_tc_form_border_width', absint($_POST['tc_form_border_width'] ?? 0));
-        update_option('ofast_login_tc_centered', isset($_POST['tc_centered']));
-        update_option('ofast_login_tc_bg_color', sanitize_hex_color($_POST['tc_bg_color'] ?? '#f0f0f1'));
+        update_option('ofast_login_tc_side_image', esc_url_raw($post['tc_side_image'] ?? ''));
+        update_option('ofast_login_tc_use_color', isset($post['tc_use_color']));
+        update_option('ofast_login_tc_side_color', sanitize_hex_color($post['tc_side_color'] ?? '#6366f1'));
+        update_option('ofast_login_tc_side_color_end', sanitize_hex_color($post['tc_side_color_end'] ?? '#764ba2'));
+        update_option('ofast_login_tc_image_position', $image_position);
+        update_option('ofast_login_tc_overlay_color', sanitize_hex_color($post['tc_overlay_color'] ?? '#000000'));
+        update_option('ofast_login_tc_overlay_opacity', $this->sanitize_percentage($post['tc_overlay_opacity'] ?? 40, 40));
+        update_option('ofast_login_tc_heading', sanitize_text_field($post['tc_heading'] ?? ''));
+        update_option('ofast_login_tc_subheading', sanitize_text_field($post['tc_subheading'] ?? ''));
+        update_option('ofast_login_tc_text_color', sanitize_hex_color($post['tc_text_color'] ?? '#ffffff'));
+        update_option('ofast_login_tc_form_border_color', sanitize_hex_color($post['tc_form_border_color'] ?? '#e0e0e0'));
+        update_option('ofast_login_tc_form_border_width', absint($post['tc_form_border_width'] ?? 0));
+        update_option('ofast_login_tc_centered', isset($post['tc_centered']));
+        update_option('ofast_login_tc_bg_color', sanitize_hex_color($post['tc_bg_color'] ?? '#f0f0f1'));
 
         // Modern Dark settings
-        update_option('ofast_login_md_card_color', sanitize_hex_color($_POST['md_card_color'] ?? '#0f172a'));
-        update_option('ofast_login_md_card_opacity', absint($_POST['md_card_opacity'] ?? 60));
-        update_option('ofast_login_md_overlay_color', sanitize_hex_color($_POST['md_overlay_color'] ?? '#000000'));
-        update_option('ofast_login_md_overlay_opacity', absint($_POST['md_overlay_opacity'] ?? 0));
-        update_option('ofast_login_md_use_ofast_colors', isset($_POST['md_use_ofast_colors']));
+        update_option('ofast_login_md_card_color', sanitize_hex_color($post['md_card_color'] ?? '#0f172a'));
+        update_option('ofast_login_md_card_opacity', $this->sanitize_percentage($post['md_card_opacity'] ?? 60, 60));
+        update_option('ofast_login_md_overlay_color', sanitize_hex_color($post['md_overlay_color'] ?? '#000000'));
+        update_option('ofast_login_md_overlay_opacity', $this->sanitize_percentage($post['md_overlay_opacity'] ?? 0, 0));
+        update_option('ofast_login_md_use_ofast_colors', isset($post['md_use_ofast_colors']));
 
         Ofast_X_Toast::add('Settings saved!', 'success');
-        wp_redirect(add_query_arg('ofast_status', 'saved', wp_get_referer()));
+        wp_safe_redirect($this->get_settings_return_url(array('ofast_status' => 'saved')));
         exit;
     }
 

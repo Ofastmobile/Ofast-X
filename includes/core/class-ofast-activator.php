@@ -236,12 +236,13 @@ class Ofast_X_Activator
         $table_smtp_log = $wpdb->prefix . 'ofast_smtp_log';
         $sql_smtp_log = "CREATE TABLE IF NOT EXISTS {$table_smtp_log} (
             id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-            recipient VARCHAR(255) NOT NULL,
-            subject VARCHAR(255) NOT NULL,
-            headers TEXT,
-            status ENUM('sent', 'failed') DEFAULT 'sent',
-            error_message TEXT,
-            sent_at DATETIME NOT NULL,
+            to_email VARCHAR(255) NOT NULL DEFAULT '',
+            subject VARCHAR(255) NOT NULL DEFAULT '',
+            body LONGTEXT NULL,
+            headers LONGTEXT NULL,
+            status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            error_message TEXT NULL,
+            sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY idx_sent_at (sent_at),
             KEY idx_status (status)
@@ -270,7 +271,9 @@ class Ofast_X_Activator
                 'woocommerce' => false,       // Coming soon
                 'learndash' => false          // Coming soon
             ),
-            'ofast_email_retention_days' => 90
+            'ofast_email_retention_days' => 90,
+            'ofast_smtp_log_retention_days' => 90,
+            'ofast_spam_fail_open' => 0
         );
 
         foreach ($default_options as $key => $value) {
@@ -285,22 +288,19 @@ class Ofast_X_Activator
      */
     private static function clear_scheduled_events()
     {
-        // Clear email scheduler events
-        $timestamp = wp_next_scheduled('ofast_scheduled_email_event');
-        if ($timestamp) {
-            wp_unschedule_event($timestamp, 'ofast_scheduled_email_event');
-        }
-
-        // Clear daily cleanup
-        $timestamp = wp_next_scheduled('ofast_daily_cleanup');
-        if ($timestamp) {
-            wp_unschedule_event($timestamp, 'ofast_daily_cleanup');
-        }
-
-        // Clear license check
-        $timestamp = wp_next_scheduled('ofastx_daily_license_check');
-        if ($timestamp) {
-            wp_unschedule_event($timestamp, 'ofastx_daily_license_check');
+        // Clear all ofast-related cron events (including those with args).
+        $cron_array = _get_cron_array();
+        if (is_array($cron_array)) {
+            foreach ($cron_array as $timestamp => $hooks) {
+                foreach ($hooks as $hook => $jobs) {
+                    if (strpos($hook, 'ofast') === 0) {
+                        foreach ($jobs as $job) {
+                            $args = isset($job['args']) ? $job['args'] : array();
+                            wp_unschedule_event($timestamp, $hook, $args);
+                        }
+                    }
+                }
+            }
         }
     }
 

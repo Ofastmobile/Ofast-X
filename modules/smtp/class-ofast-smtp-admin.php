@@ -266,7 +266,7 @@ class Ofast_X_SMTP_Admin
 
         if ($table_exists) {
             $stats['total'] = intval($wpdb->get_var("SELECT COUNT(*) FROM {$table_name}"));
-            $stats['success'] = intval($wpdb->get_var("SELECT COUNT(*) FROM {$table_name} WHERE status = 'success'"));
+            $stats['success'] = intval($wpdb->get_var("SELECT COUNT(*) FROM {$table_name} WHERE status IN ('success', 'sent')"));
             $stats['failed'] = intval($wpdb->get_var("SELECT COUNT(*) FROM {$table_name} WHERE status = 'failed'"));
             $stats['rate'] = $stats['total'] > 0 ? round(($stats['success'] / $stats['total']) * 100) : 0;
 
@@ -420,6 +420,10 @@ class Ofast_X_SMTP_Admin
         $table_name = $wpdb->prefix . 'ofast_smtp_log';
         $this->create_log_table();
 
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized');
+        }
+
         // Handle resend action
         if (isset($_GET['resend']) && isset($_GET['_wpnonce'])) {
             if (wp_verify_nonce(sanitize_text_field($_GET['_wpnonce']), 'resend_email')) {
@@ -457,7 +461,7 @@ class Ofast_X_SMTP_Admin
 
         $stats = array(
             'total' => $total,
-            'success' => $wpdb->get_var("SELECT COUNT(*) FROM {$table_name} WHERE status = 'success'"),
+            'success' => $wpdb->get_var("SELECT COUNT(*) FROM {$table_name} WHERE status IN ('success', 'sent')"),
             'failed' => $wpdb->get_var("SELECT COUNT(*) FROM {$table_name} WHERE status = 'failed'"),
             'today' => $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table_name} WHERE DATE(sent_at) = %s", current_time('Y-m-d')))
         );
@@ -518,15 +522,18 @@ class Ofast_X_SMTP_Admin
                         <tr><td colspan="6" style="text-align: center; padding: 40px; color: #6b7280;">No emails logged yet.</td></tr>
                     <?php else: ?>
                         <?php foreach ($logs as $log): ?>
+                            <?php $status = strtolower((string) $log->status); ?>
                             <tr>
                                 <td><?php echo esc_html($log->id); ?></td>
                                 <td><?php echo esc_html($log->to_email); ?></td>
                                 <td><?php echo esc_html($log->subject); ?></td>
                                 <td>
-                                    <?php if ($log->status === 'success'): ?>
+                                    <?php if (in_array($status, array('success', 'sent'), true)): ?>
                                         <span style="background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 3px; font-size: 11px;">SUCCESS</span>
-                                    <?php else: ?>
+                                    <?php elseif ($status === 'failed'): ?>
                                         <span style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 3px; font-size: 11px;">FAILED</span>
+                                    <?php else: ?>
+                                        <span style="background: #e0f2fe; color: #0f4c81; padding: 2px 8px; border-radius: 3px; font-size: 11px;">PENDING</span>
                                     <?php endif; ?>
                                 </td>
                                 <td><?php echo esc_html($log->sent_at); ?></td>
@@ -536,9 +543,9 @@ class Ofast_X_SMTP_Admin
                                     <?php else: ?>
                                         <span style="color: #6b7280; font-style: italic;">No content stored</span>
                                     <?php endif; ?>
-                                    <?php if ($log->status === 'failed' && !empty($log->body)): ?>
+                                    <?php if ($status === 'failed' && !empty($log->body)): ?>
                                         <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-smtp&tab=log&resend=' . $log->id), 'resend_email'); ?>" class="button button-small">Resend</a>
-                                    <?php elseif ($log->status === 'failed'): ?>
+                                    <?php elseif ($status === 'failed'): ?>
                                         <span style="color: #6b7280; font-style: italic; margin-left: 8px;">Resend unavailable</span>
                                     <?php endif; ?>
                                 </td>
@@ -574,7 +581,7 @@ class Ofast_X_SMTP_Admin
                 </div>
                 <?php endif; ?>
                 
-                <iframe id="email-preview-frame" style="width: 100%; height: 60vh; border: none;"></iframe>
+                <iframe id="email-preview-frame" sandbox style="width: 100%; height: 60vh; border: none;"></iframe>
             </div>
         </div>
 
@@ -609,6 +616,7 @@ class Ofast_X_SMTP_Admin
         $password = get_option('ofast_smtp_password', '');
         $from_email = get_option('ofast_smtp_from_email', '');
         $from_name = get_option('ofast_smtp_from_name', get_bloginfo('name'));
+        $log_retention_days = intval(get_option('ofast_smtp_log_retention_days', 90));
         $presets = Ofast_X_SMTP::get_provider_presets();
         ?>
         <p>Configure SMTP to ensure reliable email delivery from your WordPress site.</p>
@@ -763,6 +771,15 @@ class Ofast_X_SMTP_Admin
                             <p class="description" style="color: #92400e;">
                                 <strong>Recommended: Leave unchecked</strong> - Only metadata (to, subject, status, timestamp) will be logged for security.<br>
                                 When enabled, sensitive patterns (passwords, tokens, API keys) are automatically filtered before storage.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Log Retention (Days)</th>
+                        <td>
+                            <input type="number" name="log_retention_days" value="<?php echo esc_attr($log_retention_days); ?>" min="0" max="3650" style="width: 90px;">
+                            <p class="description" style="color: #92400e;">
+                                Set to <strong>0</strong> to keep logs forever. Default is 90 days.
                             </p>
                         </td>
                     </tr>
@@ -963,6 +980,11 @@ class Ofast_X_SMTP_Admin
         // Email logging security settings
         $log_body_content = isset($_POST['log_body_content']) ? 1 : 0;
         update_option('ofast_smtp_log_body_content', $log_body_content);
+
+        // Log retention settings
+        $retention_days = intval($_POST['log_retention_days'] ?? 90);
+        $retention_days = max(0, min(3650, $retention_days));
+        update_option('ofast_smtp_log_retention_days', $retention_days);
         
         // Notify listeners when body logging is enabled (for optional auditing).
         if ($log_body_content) {
@@ -1051,16 +1073,29 @@ class Ofast_X_SMTP_Admin
         foreach ($logs as $log) {
             fputcsv($output, array(
                 $log->id,
-                $log->to_email,
-                $log->subject,
-                $log->status,
-                $log->error_message ?? '',
-                $log->sent_at
+                $this->sanitize_csv_value($log->to_email),
+                $this->sanitize_csv_value($log->subject),
+                $this->sanitize_csv_value($log->status),
+                $this->sanitize_csv_value($log->error_message ?? ''),
+                $this->sanitize_csv_value($log->sent_at)
             ));
         }
 
         fclose($output);
         exit;
+    }
+
+    /**
+     * Prevent CSV formula injection by prefixing risky values.
+     */
+    private function sanitize_csv_value($value)
+    {
+        $value = (string) $value;
+        $value = str_replace(array("\r", "\n"), ' ', $value);
+        if ($value !== '' && preg_match('/^[=+\\-@\\t]/', $value)) {
+            return "'" . $value;
+        }
+        return $value;
     }
 
     /**
@@ -1086,41 +1121,7 @@ class Ofast_X_SMTP_Admin
      */
     private function create_log_table()
     {
-        // Avoid repeated checks within a day
-        if (get_transient('ofast_smtp_log_table_exists')) {
-            return;
-        }
-
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'ofast_smtp_log';
-
-        $table_exists = $wpdb->get_var($wpdb->prepare(
-            "SHOW TABLES LIKE %s",
-            $table_name
-        ));
-
-        if ($table_exists !== $table_name) {
-            $charset = $wpdb->get_charset_collate();
-
-            $sql = "CREATE TABLE {$table_name} (
-                id bigint(20) NOT NULL AUTO_INCREMENT,
-                to_email varchar(255) NOT NULL,
-                subject varchar(255) NOT NULL,
-                body longtext,
-                headers text,
-                status varchar(20) DEFAULT 'pending',
-                error_message text,
-                sent_at datetime DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (id),
-                KEY status (status),
-                KEY sent_at (sent_at)
-            ) {$charset};";
-
-            require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-            dbDelta($sql);
-        }
-
-        set_transient('ofast_smtp_log_table_exists', true, DAY_IN_SECONDS);
+        Ofast_X_SMTP::ensure_log_table_schema();
     }
 }
 

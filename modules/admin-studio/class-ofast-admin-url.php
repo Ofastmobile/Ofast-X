@@ -49,6 +49,155 @@ class Ofast_X_Admin_Url
     }
 
     /**
+     * Send a hardened cookie with SameSite support.
+     *
+     * @param string $name    Cookie name.
+     * @param string $value   Cookie value.
+     * @param int    $expires Expiry timestamp.
+     * @return void
+     */
+    private function send_cookie($name, $value, $expires)
+    {
+        $path = defined('COOKIEPATH') && COOKIEPATH ? COOKIEPATH : '/';
+        $domain = defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '';
+        $secure = $this->is_secure_connection();
+        $http_only = true;
+
+        if (defined('PHP_VERSION_ID') && PHP_VERSION_ID >= 70300) {
+            setcookie($name, $value, array(
+                'expires' => $expires,
+                'path' => $path,
+                'domain' => $domain,
+                'secure' => $secure,
+                'httponly' => $http_only,
+                'samesite' => 'Strict',
+            ));
+            return;
+        }
+
+        setcookie($name, $value, $expires, $path . '; samesite=Strict', $domain, $secure, $http_only);
+    }
+
+    /**
+     * Clear a cookie immediately.
+     *
+     * @param string $name Cookie name.
+     * @return void
+     */
+    private function clear_cookie($name)
+    {
+        unset($_COOKIE[$name]);
+        $this->send_cookie($name, 'expired', time() - HOUR_IN_SECONDS);
+    }
+
+    /**
+     * Generate a temporary token for admin-access cookies.
+     *
+     * @return string
+     */
+    private function generate_session_token()
+    {
+        return function_exists('random_bytes')
+            ? bin2hex(random_bytes(32))
+            : wp_generate_password(64, false);
+    }
+
+    /**
+     * Check if a session-backed cookie is still valid.
+     *
+     * @param string $cookie_name      Cookie name.
+     * @param string $transient_prefix Transient prefix.
+     * @return bool
+     */
+    private function has_valid_session_cookie($cookie_name, $transient_prefix)
+    {
+        if (empty($_COOKIE[$cookie_name])) {
+            return false;
+        }
+
+        $session_token = sanitize_text_field(wp_unslash($_COOKIE[$cookie_name]));
+        if ($session_token === '') {
+            $this->clear_cookie($cookie_name);
+            return false;
+        }
+
+        $transient_key = $transient_prefix . md5($session_token);
+        if (get_transient($transient_key)) {
+            return true;
+        }
+
+        $this->clear_cookie($cookie_name);
+        return false;
+    }
+
+    /**
+     * Clear a session-backed cookie and its transient.
+     *
+     * @param string $cookie_name      Cookie name.
+     * @param string $transient_prefix Transient prefix.
+     * @return void
+     */
+    private function clear_session_cookie($cookie_name, $transient_prefix)
+    {
+        if (!empty($_COOKIE[$cookie_name])) {
+            $session_token = sanitize_text_field(wp_unslash($_COOKIE[$cookie_name]));
+            if ($session_token !== '') {
+                delete_transient($transient_prefix . md5($session_token));
+            }
+        }
+
+        $this->clear_cookie($cookie_name);
+    }
+
+    /**
+     * Create the temporary session that proves a user entered via the custom URL.
+     *
+     * @return void
+     */
+    private function set_custom_login_cookie()
+    {
+        $session_token = $this->generate_session_token();
+        set_transient('ofast_custom_login_session_' . md5($session_token), true, HOUR_IN_SECONDS);
+        $this->send_cookie('ofast_custom_login', $session_token, time() + HOUR_IN_SECONDS);
+        $_COOKIE['ofast_custom_login'] = $session_token;
+    }
+
+    /**
+     * Check whether the custom-login cookie is valid.
+     *
+     * @return bool
+     */
+    private function has_valid_custom_login_cookie()
+    {
+        return $this->has_valid_session_cookie('ofast_custom_login', 'ofast_custom_login_session_');
+    }
+
+    /**
+     * Check whether the emergency bypass cookie is valid.
+     *
+     * @return bool
+     */
+    private function has_valid_bypass_cookie()
+    {
+        return $this->has_valid_session_cookie('ofast_admin_bypass', 'ofast_bypass_session_');
+    }
+
+    /**
+     * Get a safe return URL for admin notices after saving settings.
+     *
+     * @param array $args Query args to append.
+     * @return string
+     */
+    private function get_return_url($args = array())
+    {
+        $fallback = admin_url('admin.php?page=ofast-admin-tweaks');
+        $referer = wp_get_referer();
+        $base_url = $referer ? $referer : $fallback;
+
+        return add_query_arg($args, $base_url);
+    }
+
+    /**
      * Initialize module
      */
     public function init()
@@ -109,7 +258,7 @@ class Ofast_X_Admin_Url
             // Increment attempt counter (5 minute window)
             set_transient($rate_key, $attempts + 1, 5 * MINUTE_IN_SECONDS);
             
-            $provided_key = sanitize_text_field($_GET['ofast_emergency']);
+            $provided_key = sanitize_text_field(wp_unslash($_GET['ofast_emergency']));
             if (hash_equals($this->emergency_key, $provided_key)) {
                 // Clear rate limit on successful use
                 delete_transient($rate_key);
@@ -117,10 +266,9 @@ class Ofast_X_Admin_Url
                 $new_key = $this->rotate_emergency_key();
 
                 // Set bypass cookie with cryptographically secure session token
-                $session_token = function_exists('random_bytes') 
-                    ? bin2hex(random_bytes(32)) 
-                    : wp_generate_password(64, false);
-                setcookie('ofast_admin_bypass', $session_token, time() + 3600, COOKIEPATH, COOKIE_DOMAIN, $this->is_secure_connection(), true);
+                $session_token = $this->generate_session_token();
+                $this->send_cookie('ofast_admin_bypass', $session_token, time() + HOUR_IN_SECONDS);
+                $_COOKIE['ofast_admin_bypass'] = $session_token;
 
                 // Store session token temporarily
                 set_transient('ofast_bypass_session_' . md5($session_token), true, HOUR_IN_SECONDS);
@@ -133,11 +281,8 @@ class Ofast_X_Admin_Url
         }
 
         // Check for bypass cookie (session-based, not key-based)
-        if (isset($_COOKIE['ofast_admin_bypass'])) {
-            $session_token = $_COOKIE['ofast_admin_bypass'];
-            if (get_transient('ofast_bypass_session_' . md5($session_token))) {
-                return;
-            }
+        if ($this->has_valid_bypass_cookie()) {
+            return;
         }
 
         // Register custom URL handler
@@ -172,7 +317,7 @@ class Ofast_X_Admin_Url
             if (current_user_can('manage_options')) {
                 delete_option('ofast_admin_custom_slug');
                 delete_option('ofast_admin_emergency_key');
-                wp_redirect(add_query_arg('ofast_status', 'deleted', wp_get_referer()));
+                wp_safe_redirect($this->get_return_url(array('ofast_status' => 'deleted')));
                 exit;
             }
         }
@@ -185,10 +330,10 @@ class Ofast_X_Admin_Url
                 $emergency_key = get_option('ofast_admin_emergency_key', '');
                 if (!empty($custom_slug) && !empty($emergency_key)) {
                     $this->send_admin_notification($custom_slug, $emergency_key);
-                    wp_redirect(add_query_arg('ofast_status', 'resent', wp_get_referer()));
+                    wp_safe_redirect($this->get_return_url(array('ofast_status' => 'resent')));
                     exit;
                 } else {
-                    wp_redirect(add_query_arg('ofast_status', 'no_url', wp_get_referer()));
+                    wp_safe_redirect($this->get_return_url(array('ofast_status' => 'no_url')));
                     exit;
                 }
             }
@@ -205,11 +350,11 @@ class Ofast_X_Admin_Url
         }
 
         $old_slug = get_option('ofast_admin_custom_slug', '');
-        $new_slug = sanitize_title($_POST['custom_slug']);
+        $new_slug = isset($_POST['custom_slug']) ? sanitize_title(wp_unslash($_POST['custom_slug'])) : '';
 
         // Validate slug
         $reserved = array('wp-admin', 'wp-login', 'wp-login.php', 'admin', 'login', 'dashboard', 'wp-content', 'wp-includes');
-        if (in_array($new_slug, $reserved)) {
+        if (in_array($new_slug, $reserved, true)) {
             add_settings_error('ofast_admin_url', 'reserved', __('That URL slug is reserved. Please choose another.', 'ofast-x'), 'error');
             return;
         }
@@ -253,15 +398,15 @@ class Ofast_X_Admin_Url
         update_option('ofast_admin_url_enabled', isset($_POST['protection_enabled']) ? 1 : 0);
 
         // Save security settings
-        $max_attempts = isset($_POST['max_attempts']) ? max(1, min(20, intval($_POST['max_attempts']))) : 5;
-        $lockout_duration = isset($_POST['lockout_duration']) ? max(1, min(1440, intval($_POST['lockout_duration']))) : 15;
-        $ip_whitelist = isset($_POST['ip_whitelist']) ? sanitize_textarea_field($_POST['ip_whitelist']) : '';
+        $max_attempts = isset($_POST['max_attempts']) ? max(1, min(20, intval(wp_unslash($_POST['max_attempts'])))) : 5;
+        $lockout_duration = isset($_POST['lockout_duration']) ? max(1, min(1440, intval(wp_unslash($_POST['lockout_duration'])))) : 15;
+        $ip_whitelist = isset($_POST['ip_whitelist']) ? sanitize_textarea_field(wp_unslash($_POST['ip_whitelist'])) : '';
 
         update_option('ofast_security_max_attempts', $max_attempts);
         update_option('ofast_security_lockout_duration', $lockout_duration);
         update_option('ofast_security_ip_whitelist', $ip_whitelist);
 
-        wp_redirect(add_query_arg('ofast_status', 'saved', wp_get_referer()));
+        wp_safe_redirect($this->get_return_url(array('ofast_status' => 'saved')));
         exit;
     }
 
@@ -419,17 +564,17 @@ a new key will be generated and emailed to you.
     public function handle_custom_url()
     {
         // Get the request path without query string
-        $request_uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $request_uri = parse_url(wp_unslash($_SERVER['REQUEST_URI']), PHP_URL_PATH);
         $request_uri = rtrim($request_uri, '/');
         $custom_slug = '/' . trim($this->custom_slug, '/');
 
         // Check if accessing custom login URL
         if ($request_uri === $custom_slug || str_ends_with($request_uri, $custom_slug)) {
             // Set a cookie to allow admin access
-            setcookie('ofast_custom_login', '1', time() + 3600, COOKIEPATH, COOKIE_DOMAIN, $this->is_secure_connection(), true);
+            $this->set_custom_login_cookie();
 
             // Redirect to wp-login.php
-            wp_redirect(wp_login_url());
+            wp_safe_redirect(wp_login_url());
             exit;
         }
     }
@@ -441,22 +586,24 @@ a new key will be generated and emailed to you.
     public function block_login_page()
     {
         // Allow if custom login cookie is set
-        if (isset($_COOKIE['ofast_custom_login'])) {
+        if ($this->has_valid_custom_login_cookie()) {
             return;
         }
 
         // Allow logout action (must be able to logout!)
-        if (isset($_GET['action']) && $_GET['action'] === 'logout') {
+        $action = isset($_GET['action']) ? sanitize_key(wp_unslash($_GET['action'])) : '';
+        if ($action === 'logout') {
             return;
         }
         
         // Allow logged-out redirect
-        if (isset($_GET['loggedout']) && $_GET['loggedout'] === 'true') {
+        $logged_out = isset($_GET['loggedout']) ? sanitize_text_field(wp_unslash($_GET['loggedout'])) : '';
+        if ($logged_out === 'true') {
             return;
         }
         
         // Allow password reset actions
-        if (isset($_GET['action']) && in_array($_GET['action'], array('lostpassword', 'rp', 'resetpass'), true)) {
+        if (in_array($action, array('lostpassword', 'rp', 'resetpass'), true)) {
             return;
         }
         
@@ -484,7 +631,7 @@ a new key will be generated and emailed to you.
      */
     public function block_admin_pages()
     {
-        $request_uri = $_SERVER['REQUEST_URI'];
+        $request_uri = wp_unslash($_SERVER['REQUEST_URI']);
 
         // Only block wp-admin requests
         if (strpos($request_uri, '/wp-admin') === false) {
@@ -492,7 +639,7 @@ a new key will be generated and emailed to you.
         }
 
         // Allow if custom login cookie is set
-        if (isset($_COOKIE['ofast_custom_login'])) {
+        if ($this->has_valid_custom_login_cookie()) {
             return;
         }
 
@@ -557,7 +704,8 @@ a new key will be generated and emailed to you.
     public function handle_logout_redirect()
     {
         // If we're on the login page with loggedout parameter, redirect to home
-        if (isset($_GET['loggedout']) && $_GET['loggedout'] === 'true') {
+        $logged_out = isset($_GET['loggedout']) ? sanitize_text_field(wp_unslash($_GET['loggedout'])) : '';
+        if ($logged_out === 'true') {
             wp_safe_redirect(home_url('/'));
             exit;
         }
@@ -570,17 +718,10 @@ a new key will be generated and emailed to you.
     public function clear_login_cookies()
     {
         // Clear the custom login cookie
-        if (isset($_COOKIE['ofast_custom_login'])) {
-            setcookie('ofast_custom_login', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN, $this->is_secure_connection(), true);
-        }
+        $this->clear_session_cookie('ofast_custom_login', 'ofast_custom_login_session_');
         
         // Clear the admin bypass cookie
-        if (isset($_COOKIE['ofast_admin_bypass'])) {
-            $session_token = $_COOKIE['ofast_admin_bypass'];
-            // Also delete the associated transient
-            delete_transient('ofast_bypass_session_' . md5($session_token));
-            setcookie('ofast_admin_bypass', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN, $this->is_secure_connection(), true);
-        }
+        $this->clear_session_cookie('ofast_admin_bypass', 'ofast_bypass_session_');
     }
 
     /**

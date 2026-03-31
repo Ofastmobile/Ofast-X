@@ -175,11 +175,18 @@ class Ofast_X_Turnstile
         if (is_wp_error($response)) {
             // Log error but allow submission (fail open)
             error_log('Ofast Turnstile: API error - ' . $response->get_error_message());
+            if ($this->should_fail_open()) {
+                return array(
+                    'success' => true,
+                    'error' => null,
+                    'skipped' => true,
+                    'reason' => 'api_error'
+                );
+            }
             return array(
-                'success' => true,
-                'error' => null,
-                'skipped' => true,
-                'reason' => 'api_error'
+                'success' => false,
+                'error' => 'Turnstile verification failed. Please try again.',
+                'code' => 'api_error'
             );
         }
 
@@ -198,6 +205,15 @@ class Ofast_X_Turnstile
             'success' => true,
             'error' => null
         );
+    }
+
+    /**
+     * Should we allow submissions when provider API is unavailable.
+     */
+    private function should_fail_open()
+    {
+        $fail_open = get_option('ofast_spam_fail_open', false);
+        return (bool) apply_filters('ofast_spam_fail_open', $fail_open);
     }
 
     /**
@@ -295,6 +311,7 @@ class Ofast_X_Turnstile
                         name="turnstile_site_key"
                         value="<?php echo esc_attr($this->site_key); ?>"
                         class="regular-text"
+                        style="border-radius: 8px;"
                         placeholder="0x4AAAAAAA...">
                 </td>
             </tr>
@@ -305,6 +322,7 @@ class Ofast_X_Turnstile
                         name="turnstile_secret_key"
                         value=""
                         class="regular-text"
+                        style="border-radius: 8px;"
                         placeholder="<?php echo $has_keys ? 'Leave blank to keep existing encrypted key' : '0x4AAAAAAA...'; ?>">
                     <p class="description">Secret key is stored encrypted. Leave unchanged to keep existing key.</p>
                 </td>

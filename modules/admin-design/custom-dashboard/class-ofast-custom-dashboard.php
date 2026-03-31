@@ -115,11 +115,16 @@ class Ofast_X_Custom_Dashboard
             return;
         }
 
+        $css_file = OFAST_X_PLUGIN_DIR . 'modules/admin-design/custom-dashboard/assets/dashboard.css';
+        $js_file = OFAST_X_PLUGIN_DIR . 'modules/admin-design/custom-dashboard/assets/dashboard.js';
+        $css_version = file_exists($css_file) ? (string) filemtime($css_file) : OFAST_X_VERSION;
+        $js_version = file_exists($js_file) ? (string) filemtime($js_file) : OFAST_X_VERSION;
+
         wp_enqueue_style(
             'ofast-custom-dashboard', 
             plugins_url('assets/dashboard.css', __FILE__), 
             array(), 
-            OFAST_X_VERSION
+            $css_version
         );
 
         // Chart.js for Analytics
@@ -135,7 +140,7 @@ class Ofast_X_Custom_Dashboard
             'ofast-custom-dashboard', 
             plugins_url('assets/dashboard.js', __FILE__), 
             array('jquery', 'jquery-ui-sortable', 'chart-js'), 
-            OFAST_X_VERSION, 
+            $js_version, 
             true
         );
         
@@ -584,7 +589,7 @@ class Ofast_X_Custom_Dashboard
         $total = $wpdb->get_var("SELECT COUNT(*) FROM `{$table}`");
         if ($total == 0) return array('status' => 'Ready', 'percent' => 100, 'total' => 0);
 
-        $success = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `{$table}` WHERE status = %s", 'success'));
+        $success = $wpdb->get_var("SELECT COUNT(*) FROM `{$table}` WHERE status IN ('success', 'sent')");
         $percent = ($success / $total) * 100;
 
         return array(

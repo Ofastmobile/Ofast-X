@@ -24,7 +24,11 @@ class Ofast_X_Security_Hardening
 
     private function __construct()
     {
-        $this->plugin_dir = dirname(dirname(__FILE__));
+        if (defined('OFAST_X_PLUGIN_DIR')) {
+            $this->plugin_dir = OFAST_X_PLUGIN_DIR;
+        } else {
+            $this->plugin_dir = dirname(dirname(__FILE__));
+        }
 
         // Security headers
         add_action('send_headers', array($this, 'add_security_headers'));
@@ -32,6 +36,7 @@ class Ofast_X_Security_Hardening
         // File integrity check (daily)
         add_action('admin_init', array($this, 'schedule_integrity_check'));
         add_action('ofast_integrity_check', array($this, 'run_integrity_check'));
+        add_action('admin_init', array($this, 'maybe_refresh_hashes_on_upgrade'), 20);
 
         // Emergency key rate limiting
         add_filter('authenticate', array($this, 'check_emergency_key_rate_limit'), 5, 3);
@@ -93,6 +98,10 @@ class Ofast_X_Security_Hardening
 
         update_option('ofast_file_hashes', $hashes);
         update_option('ofast_hash_generated', current_time('mysql'));
+        update_option('ofast_hashes_root', $this->plugin_dir);
+        if (defined('OFAST_X_VERSION')) {
+            update_option('ofast_hashes_version', OFAST_X_VERSION);
+        }
     }
 
     /**
@@ -112,6 +121,27 @@ class Ofast_X_Security_Hardening
         }
 
         return $files;
+    }
+
+    /**
+     * Regenerate integrity hashes on plugin upgrades or root path changes.
+     */
+    public function maybe_refresh_hashes_on_upgrade()
+    {
+        if (!defined('OFAST_X_VERSION')) {
+            return;
+        }
+
+        $stored_version = get_option('ofast_hashes_version', '');
+        $stored_root = get_option('ofast_hashes_root', '');
+
+        if ($stored_version !== OFAST_X_VERSION || $stored_root !== $this->plugin_dir) {
+            $this->generate_file_hashes();
+            delete_option('ofast_integrity_alert');
+
+            // Keep core version in sync for upgrade tracking.
+            update_option('ofastx_version', OFAST_X_VERSION);
+        }
     }
 
     /**

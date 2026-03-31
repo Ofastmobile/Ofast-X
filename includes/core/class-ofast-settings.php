@@ -440,10 +440,16 @@ class Ofast_X_Settings
                         <?php foreach ($grouped_modules[$cat_key] as $slug => $data):
                             $is_locked = !empty($data['locked']);
                             $is_enabled = !empty($enabled[$slug]) || $is_locked;
+                            $module_url = $this->get_module_admin_url($data);
                             $card_class = $is_enabled ? 'enabled' : '';
-                            if ($is_locked) $card_class .= ' locked';
+                            if ($is_locked) {
+                                $card_class .= ' locked';
+                            }
+                            if (!empty($module_url)) {
+                                $card_class .= ' has-module-link';
+                            }
                         ?>
-                        <div class="ofast-module-card <?php echo esc_attr($card_class); ?>" data-module="<?php echo esc_attr($slug); ?>">
+                        <div class="ofast-module-card <?php echo esc_attr(trim($card_class)); ?>" data-module="<?php echo esc_attr($slug); ?>"<?php echo !empty($module_url) ? ' data-module-url="' . esc_url($module_url) . '"' : ''; ?><?php echo (!empty($module_url) && $is_enabled) ? ' tabindex="0"' : ''; ?>>
                             <div class="module-header">
                                 <h3><?php echo esc_html($data['name']); ?></h3>
                                 <?php if ($is_locked): ?>
@@ -464,6 +470,11 @@ class Ofast_X_Settings
                                         <span class="slider"></span>
                                     </label>
                                     <span class="toggle-label"><?php echo $is_enabled ? 'Enabled' : 'Disabled'; ?></span>
+                                <?php endif; ?>
+                                <?php if (!empty($module_url)): ?>
+                                    <a href="<?php echo esc_url($module_url); ?>" class="module-open-link" aria-label="<?php echo esc_attr(sprintf(__('Open %s', 'ofast-x'), $data['name'])); ?>">
+                                        Open Module
+                                    </a>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -705,18 +716,61 @@ class Ofast_X_Settings
             @media (max-width: 768px) { .ofast-modules-grid { grid-template-columns: 1fr; } }
             
             /* Module Card */
-            .ofast-module-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; transition: all 0.3s ease; display: flex; flex-direction: column; }
+            .ofast-module-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; transition: all 0.3s ease; display: flex; flex-direction: column; position: relative; overflow: hidden; }
             .ofast-module-card.hidden { display: none; }
             .ofast-module-card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); transform: translateY(-2px); }
             .ofast-module-card.enabled { border-color: #6366f1; background: linear-gradient(to bottom, #eef2ff, #fff); }
             .ofast-module-card.locked { border-color: #6366f1; background: linear-gradient(to bottom, #eef2ff, #fff); }
-            
+            .ofast-module-card.has-module-link.enabled,
+            .ofast-module-card.has-module-link.locked { cursor: pointer; }
+            .ofast-module-card.has-module-link:focus { outline: 2px solid #6366f1; outline-offset: 2px; }
+             
             .module-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 10px; }
             .module-header h3 { margin: 0; font-size: 15px; font-weight: 600; color: #1e293b; }
             .module-description { color: #64748b; font-size: 13px; line-height: 1.5; margin: 0 0 15px 0; flex-grow: 1; }
-            .module-footer { display: flex; align-items: center; gap: 10px; padding-top: 15px; border-top: 1px solid #f1f5f9; }
+            .module-footer { display: flex; align-items: center; gap: 10px; padding-top: 15px; border-top: 1px solid #f1f5f9; flex-wrap: wrap; }
             .toggle-label, .always-active { font-size: 12px; color: #64748b; }
             .always-active { font-style: italic; }
+            .module-open-link {
+                margin-left: auto;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 8px 12px;
+                border-radius: 999px;
+                background: #4338ca;
+                color: #fff;
+                font-size: 12px;
+                font-weight: 600;
+                text-decoration: none;
+                opacity: 0;
+                visibility: hidden;
+                transform: translateY(6px);
+                pointer-events: none;
+                transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease, background 0.2s ease;
+            }
+            .module-open-link:hover,
+            .module-open-link:focus { background: #3730a3; color: #fff; }
+            .ofast-module-card.enabled:hover .module-open-link,
+            .ofast-module-card.locked:hover .module-open-link,
+            .ofast-module-card.enabled:focus-within .module-open-link,
+            .ofast-module-card.locked:focus-within .module-open-link,
+            .ofast-module-card.enabled:focus .module-open-link,
+            .ofast-module-card.locked:focus .module-open-link {
+                opacity: 1;
+                visibility: visible;
+                transform: translateY(0);
+                pointer-events: auto;
+            }
+            @media (hover: none) {
+                .ofast-module-card.enabled .module-open-link,
+                .ofast-module-card.locked .module-open-link {
+                    opacity: 1;
+                    visibility: visible;
+                    transform: translateY(0);
+                    pointer-events: auto;
+                }
+            }
 
             /* Toggle Switch */
             .ofast-toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
@@ -749,13 +803,35 @@ class Ofast_X_Settings
                     if (this.checked) {
                         label.text('Enabled');
                         card.addClass('enabled');
+                        if (card.data('module-url')) {
+                            card.attr('tabindex', '0');
+                        }
                         badge.removeClass('not-integrated').addClass('integrated').text('Enabled');
                     } else {
                         label.text('Disabled');
                         card.removeClass('enabled');
+                        card.removeAttr('tabindex');
                         badge.removeClass('integrated').addClass('not-integrated').text('Disabled');
                     }
                     updateCounts();
+                });
+
+                $('.ofast-module-card.has-module-link').on('keydown', function(event) {
+                    if (event.key !== 'Enter' && event.key !== ' ') {
+                        return;
+                    }
+
+                    if (!$(this).hasClass('enabled') && !$(this).hasClass('locked')) {
+                        return;
+                    }
+
+                    var moduleUrl = $(this).data('module-url');
+                    if (!moduleUrl) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    window.location.href = moduleUrl;
                 });
 
                 // Search functionality
@@ -818,6 +894,21 @@ class Ofast_X_Settings
     }
 
     /**
+     * Get the admin URL for a module card.
+     *
+     * @param array $module Module configuration.
+     * @return string
+     */
+    private function get_module_admin_url($module)
+    {
+        if (empty($module['admin_url'])) {
+            return '';
+        }
+
+        return admin_url(ltrim($module['admin_url'], '/'));
+    }
+
+    /**
      * Get available modules with categories
      */
     private function get_available_modules()
@@ -829,11 +920,13 @@ class Ofast_X_Settings
                 'description' => 'View user counts by role, recent activity, and system stats at a glance',
                 'category' => 'customization',
                 'locked' => true,
+                'admin_url' => 'admin.php?page=ofast-dashboard',
             ),
             'admin-tweaks' => array(
                 'name' => 'Admin Studio',
                 'description' => 'Admin customizations including User Roles, Menu Editor, Admin URL, Admin Design, and more',
                 'category' => 'customization',
+                'admin_url' => 'admin.php?page=ofast-admin-tweaks',
             ),
             // NOTE: Admin Footer module removed - footer text settings now in White Label (whos-admin module)
             // Dark Mode and Custom Dashboard toggles are handled within Admin Footer module internally
@@ -843,21 +936,25 @@ class Ofast_X_Settings
                 'name' => 'Email Module',
                 'description' => 'Send personalized bulk emails to users by role, with scheduling and templates',
                 'category' => 'communication',
+                'admin_url' => 'admin.php?page=ofast-emailer',
             ),
             'smtp' => array(
                 'name' => 'SMTP Configuration',
                 'description' => 'Configure SendGrid, Mailgun, Zoho, or Gmail to ensure emails reach inboxes',
                 'category' => 'communication',
+                'admin_url' => 'admin.php?page=ofast-smtp',
             ),
             'forms' => array(
                 'name' => 'Contact Forms',
                 'description' => 'Custom contact form builder with submission storage and admin review',
                 'category' => 'communication',
+                'admin_url' => 'admin.php?page=ofast-forms',
             ),
             'sms-channel' => array(
                 'name' => 'SMS Channel',
                 'description' => 'Multi-provider SMS sending via Twilio, Africa\'s Talking, Termii, or SmartSMSSolutions',
                 'category' => 'communication',
+                'admin_url' => 'admin.php?page=ofast-sms',
             ),
             
             // === SECURITY ===
@@ -865,16 +962,19 @@ class Ofast_X_Settings
                 'name' => 'Spam Protection',
                 'description' => 'Cloudflare Turnstile and Google reCAPTCHA v2/v3 integration to block spam',
                 'category' => 'security',
+                'admin_url' => 'admin.php?page=ofast-spam-protection',
             ),
             'login-redesign' => array(
                 'name' => 'Login Redesign',
                 'description' => 'Customize the WordPress login page with your logo, colors, and branding',
                 'category' => 'security',
+                'admin_url' => 'admin.php?page=ofast-login-redesign',
             ),
             'social-login' => array(
                 'name' => 'Social Login',
                 'description' => 'Allow users to login with Google and Facebook accounts (OAuth)',
                 'category' => 'security',
+                'admin_url' => 'admin.php?page=ofast-social-login',
             ),
             
             // === CONTENT ===
@@ -882,11 +982,13 @@ class Ofast_X_Settings
                 'name' => 'Code Snippets Manager',
                 'description' => 'Manage code snippets with visual toggle switches - easier than Code Snippets plugin',
                 'category' => 'content',
+                'admin_url' => 'admin.php?page=ofast-snippets',
             ),
             'redirects' => array(
                 'name' => 'Redirects Manager',
                 'description' => '301/302/307 redirects with import/export and usage tracking - SEO essential',
                 'category' => 'content',
+                'admin_url' => 'admin.php?page=ofast-redirects',
             ),
             
             // === UTILITY ===

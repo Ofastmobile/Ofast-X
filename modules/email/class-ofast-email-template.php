@@ -18,6 +18,8 @@ class Ofast_X_Email_Template
      */
     public static function get_template($content, $options = array())
     {
+        $prepared_content = self::prepare_content($content);
+
         // Get template style
         $style = get_option('ofast_email_template_style', 'modern');
 
@@ -25,7 +27,7 @@ class Ofast_X_Email_Template
         if ($style === 'custom') {
             $custom_html = get_option('ofast_email_custom_template', '');
             if (!empty($custom_html)) {
-                return str_replace('{{content}}', wp_kses_post($content), $custom_html);
+                return str_replace('{{content}}', wp_kses_post($prepared_content), $custom_html);
             }
             // Fallback to modern if custom template is empty
             $style = 'modern';
@@ -139,7 +141,7 @@ class Ofast_X_Email_Template
                     <tr>
                         <td style="padding:32px; color:<?php echo esc_attr($text_color); ?>;">
                             <div style="font-size:<?php echo esc_attr($font_size); ?>px; line-height:1.7; color:#374151;">
-                                <?php echo wp_kses_post($content); ?>
+                                <?php echo wp_kses_post($prepared_content); ?>
                             </div>
 
                             <?php if ($options['cta_button'] && !empty($options['cta_link'])): ?>
@@ -233,6 +235,40 @@ class Ofast_X_Email_Template
 </html>
 <?php
         return ob_get_clean();
+    }
+
+    /**
+     * Preserve paragraph breaks for plain-text content while leaving richer HTML intact.
+     */
+    private static function prepare_content($content)
+    {
+        $content = (string) $content;
+        if ($content === '') {
+            return '';
+        }
+
+        $content = str_replace(array("\r\n", "\r"), "\n", $content);
+
+        if (
+            stripos($content, '<!DOCTYPE') !== false ||
+            stripos($content, '<html') !== false ||
+            stripos($content, '<body') !== false
+        ) {
+            return $content;
+        }
+
+        $has_html = $content !== wp_strip_all_tags($content, false);
+        $has_block_markup = preg_match('/<(p|div|table|ul|ol|li|blockquote|h[1-6]|pre|br)\b/i', $content);
+
+        if (!$has_html) {
+            return wpautop(esc_html($content), false);
+        }
+
+        if (!$has_block_markup) {
+            return wpautop($content, false);
+        }
+
+        return $content;
     }
 
     /**

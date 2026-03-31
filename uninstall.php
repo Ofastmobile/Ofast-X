@@ -117,9 +117,12 @@ foreach ($options as $option) {
     delete_option($option);
 }
 
-// Also delete any options that match ofast_ pattern (catch-all for any we might have missed)
-$wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE 'ofast%'");
-$wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE 'ofastx%'");
+// Optional: delete all ofast/ofastx-prefixed options.
+// Enabled by default to fully remove plugin data; can be disabled via filter.
+if (apply_filters('ofast_uninstall_delete_all_prefix', true)) {
+    $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE 'ofast%'");
+    $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE 'ofastx%'");
+}
 
 /**
  * 3. Clear any scheduled cron events

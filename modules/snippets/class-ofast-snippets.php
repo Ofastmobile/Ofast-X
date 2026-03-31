@@ -5024,6 +5024,8 @@ class Ofast_X_Snippets
             if ($snippet_id > 0) {
                 $this->auto_deactivate_snippet($snippet_id, $e->getMessage());
             }
+        } finally {
+            $this->cleanup_temp_snippet_file($snippet_file, $snippet_id);
         }
     }
 
@@ -5038,14 +5040,20 @@ class Ofast_X_Snippets
      */
     private function write_snippet_file($code, $snippet_id = 0)
     {
-        $dir = get_temp_dir() . 'ofast-snippets';
+        $dir = trailingslashit(get_temp_dir()) . 'ofast-snippets';
         if (!is_dir($dir)) {
             wp_mkdir_p($dir);
         }
 
-        // Randomized filename prevents guessing even if directory were accessible
-        $hash = wp_hash($code . $snippet_id . wp_salt());
-        $filename = 'snippet-' . ($snippet_id > 0 ? intval($snippet_id) : 'tmp') . '-' . substr($hash, 0, 12) . '.php';
+        if ($snippet_id > 0) {
+            $snippet_id = intval($snippet_id);
+            $this->cleanup_legacy_snippet_files($dir, $snippet_id);
+            $filename = 'snippet-' . $snippet_id . '.php';
+        } else {
+            // Randomized filename for ad-hoc execution
+            $hash = wp_hash($code . wp_salt());
+            $filename = 'snippet-tmp-' . substr($hash, 0, 12) . '.php';
+        }
         $file = $dir . '/' . $filename;
 
         $written = @file_put_contents($file, "<?php\n" . $code);
@@ -5054,6 +5062,30 @@ class Ofast_X_Snippets
         }
 
         return $file;
+    }
+
+    /**
+     * Cleanup legacy hashed snippet files for a given snippet ID.
+     */
+    private function cleanup_legacy_snippet_files($dir, $snippet_id)
+    {
+        $pattern = $dir . '/snippet-' . intval($snippet_id) . '-*.php';
+        $legacy_files = glob($pattern);
+        if (!empty($legacy_files)) {
+            foreach ($legacy_files as $legacy_file) {
+                @unlink($legacy_file);
+            }
+        }
+    }
+
+    /**
+     * Remove temporary snippet files (non-persistent).
+     */
+    private function cleanup_temp_snippet_file($file, $snippet_id)
+    {
+        if ($snippet_id <= 0 && is_string($file) && $file !== '' && file_exists($file)) {
+            @unlink($file);
+        }
     }
 
     /**

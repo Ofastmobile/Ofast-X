@@ -513,13 +513,15 @@ class Ofast_X_Forms_Submissions
                     $('.view-submission').on('click', function(e) {
                         e.preventDefault();
                         var data = $(this).data('data');
-                        var html = '<table class="widefat striped" style="border:none; box-shadow: none;">';
+                        var $table = $('<table/>', { 'class': 'widefat striped', style: 'border:none; box-shadow: none;' });
                         $.each(data, function(k, v) {
                             if (Array.isArray(v)) v = v.join(', ');
-                            html += '<tr><th style="width: 30%; color: #1e293b;">' + k + '</th><td style="color: #475569;">' + v + '</td></tr>';
+                            var $row = $('<tr/>');
+                            $row.append($('<th/>', { text: k, style: 'width: 30%; color: #1e293b;' }));
+                            $row.append($('<td/>', { text: v, style: 'color: #475569;' }));
+                            $table.append($row);
                         });
-                        html += '</table>';
-                        $('#submission-content').html(html);
+                        $('#submission-content').empty().append($table);
                         $('#submission-modal').css('display', 'flex'); // Flex to center
                     });
                     
@@ -578,7 +580,7 @@ class Ofast_X_Forms_Submissions
         $headers = array('ID', 'Submitted At', 'Status', 'IP Address');
         if ($form && !empty($form->fields)) {
             foreach ($form->fields as $field) {
-                $headers[] = $field['label'] ?? 'Field';
+                $headers[] = $this->sanitize_csv_value($field['label'] ?? 'Field');
             }
         }
         fputcsv($csv, $headers);
@@ -586,10 +588,15 @@ class Ofast_X_Forms_Submissions
         // Rows
         foreach ($submissions as $sub) {
             $data = json_decode($sub->data, true) ?: array();
-            $row = array($sub->id, $sub->submitted_at, $sub->status, $sub->ip_address);
+            $row = array(
+                $sub->id,
+                $this->sanitize_csv_value($sub->submitted_at),
+                $this->sanitize_csv_value($sub->status),
+                $this->sanitize_csv_value($sub->ip_address)
+            );
             foreach ($data as $value) {
                 if (is_array($value)) $value = implode(', ', $value);
-                $row[] = $value;
+                $row[] = $this->sanitize_csv_value($value);
             }
             fputcsv($csv, $row);
         }
@@ -599,5 +606,18 @@ class Ofast_X_Forms_Submissions
         fclose($csv);
 
         return $content;
+    }
+
+    /**
+     * Prevent CSV formula injection by prefixing risky values.
+     */
+    private function sanitize_csv_value($value)
+    {
+        $value = (string) $value;
+        $value = str_replace(array("\r", "\n"), ' ', $value);
+        if ($value !== '' && preg_match('/^[=+\\-@\\t]/', $value)) {
+            return "'" . $value;
+        }
+        return $value;
     }
 }

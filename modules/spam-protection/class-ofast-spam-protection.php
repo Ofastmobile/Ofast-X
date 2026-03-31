@@ -97,12 +97,13 @@ class Ofast_X_Spam_Protection
     public function render_comment_widget()
     {
         $provider = $this->get_active_provider();
-        
+
         if ($provider === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
             echo '<p class="comment-form-turnstile" style="margin: 10px 0;">';
             echo Ofast_X_Turnstile::get_instance()->render_widget('comment');
             echo '</p>';
-        } elseif ($provider === 'math_captcha' && class_exists('Ofast_X_Math_Captcha')) {
+        }
+        elseif ($provider === 'math_captcha' && class_exists('Ofast_X_Math_Captcha')) {
             echo '<p class="comment-form-math-captcha" style="margin: 10px 0;">';
             echo Ofast_X_Math_Captcha::get_instance()->render_widget('comment');
             echo '</p>';
@@ -128,7 +129,7 @@ class Ofast_X_Spam_Protection
                 $token = isset($_POST['g-recaptcha-response']) ? sanitize_text_field($_POST['g-recaptcha-response']) : '';
             }
         }
-        
+
         $result = $this->verify($token);
 
         if (!$result['success']) {
@@ -149,12 +150,13 @@ class Ofast_X_Spam_Protection
     {
         $provider = $this->get_active_provider();
         $widget = '';
-        
+
         if ($provider === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
             $widget = '<div class="wpcf7-turnstile" style="margin: 15px 0;">';
             $widget .= Ofast_X_Turnstile::get_instance()->render_widget('cf7');
             $widget .= '</div>';
-        } elseif ($provider === 'math_captcha' && class_exists('Ofast_X_Math_Captcha')) {
+        }
+        elseif ($provider === 'math_captcha' && class_exists('Ofast_X_Math_Captcha')) {
             $widget = '<div class="wpcf7-math-captcha" style="margin: 15px 0;">';
             $widget .= Ofast_X_Math_Captcha::get_instance()->render_widget('cf7');
             $widget .= '</div>';
@@ -164,7 +166,7 @@ class Ofast_X_Spam_Protection
             // Add before submit button if possible
             $elements = preg_replace('/(<input[^>]*type=["\']submit["\'][^>]*>)/i', $widget . '$1', $elements, 1);
         }
-        
+
         return $elements;
     }
 
@@ -182,7 +184,7 @@ class Ofast_X_Spam_Protection
                 $token = isset($_POST['g-recaptcha-response']) ? sanitize_text_field($_POST['g-recaptcha-response']) : '';
             }
         }
-        
+
         $verify = $this->verify($token);
 
         if (!$verify['success']) {
@@ -198,12 +200,13 @@ class Ofast_X_Spam_Protection
     public function render_login_widget()
     {
         $provider = $this->get_active_provider();
-        
+
         if ($provider === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
             echo '<div class="login-form-turnstile" style="margin: 15px 0;">';
             echo Ofast_X_Turnstile::get_instance()->render_widget('login');
             echo '</div>';
-        } elseif ($provider === 'math_captcha' && class_exists('Ofast_X_Math_Captcha')) {
+        }
+        elseif ($provider === 'math_captcha' && class_exists('Ofast_X_Math_Captcha')) {
             echo '<div class="login-form-math-captcha" style="margin: 15px 0;">';
             echo Ofast_X_Math_Captcha::get_instance()->render_widget('login');
             echo '</div>';
@@ -247,21 +250,22 @@ class Ofast_X_Spam_Protection
                 return new WP_Error(
                     'spam_protection_failed',
                     '<strong>Security verification required.</strong> Please solve the math problem.'
-                );
+                    );
             }
-        } else {
+        }
+        else {
             // Turnstile/reCAPTCHA use cf-turnstile-response or g-recaptcha-response
             $token = isset($_POST['cf-turnstile-response']) ? sanitize_text_field($_POST['cf-turnstile-response']) : '';
             if (empty($token)) {
                 $token = isset($_POST['g-recaptcha-response']) ? sanitize_text_field($_POST['g-recaptcha-response']) : '';
             }
-            
+
             // If no token at all, block immediately (prevents bypass by removing field)
             if (empty($token)) {
                 return new WP_Error(
                     'spam_protection_failed',
                     '<strong>Security verification required.</strong> Please complete the spam protection challenge.'
-                );
+                    );
             }
         }
 
@@ -273,11 +277,11 @@ class Ofast_X_Spam_Protection
             if (function_exists('error_log')) {
                 error_log('Ofast Spam Protection: Login verification failed from IP ' . $this->get_client_ip() . ' - ' . ($result['error'] ?? 'Unknown error'));
             }
-            
+
             return new WP_Error(
                 'spam_protection_failed',
                 '<strong>Spam protection failed:</strong> ' . esc_html($result['error'] ?? 'Please complete the verification.')
-            );
+                );
         }
 
         return $user;
@@ -316,12 +320,13 @@ class Ofast_X_Spam_Protection
             update_option('ofast_spam_protect_comments', isset($_POST['protect_comments']) ? 1 : 0);
             update_option('ofast_spam_protect_cf7', isset($_POST['protect_cf7']) ? 1 : 0);
             update_option('ofast_spam_protect_login', isset($_POST['protect_login']) ? 1 : 0);
-            
+
             // New extended options
             update_option('ofast_spam_force_all_forms', isset($_POST['force_all_forms']) ? 1 : 0);
             update_option('ofast_spam_honeypot_enabled', isset($_POST['honeypot_enabled']) ? 1 : 0);
             update_option('ofast_spam_protect_woocommerce', isset($_POST['protect_woocommerce']) ? 1 : 0);
             update_option('ofast_spam_protect_tutor', isset($_POST['protect_tutor']) ? 1 : 0);
+            update_option('ofast_spam_fail_open', isset($_POST['spam_fail_open']) ? 1 : 0);
 
             // Save Math CAPTCHA settings
             if (class_exists('Ofast_X_Math_Captcha')) {
@@ -336,7 +341,7 @@ class Ofast_X_Spam_Protection
             $turnstile_secret = sanitize_text_field(wp_unslash($_POST['turnstile_secret_key'] ?? ''));
             if ($turnstile_secret !== '') {
                 $turnstile_site_key = sanitize_text_field(wp_unslash($_POST['turnstile_site_key'] ?? get_option('ofast_turnstile_site_key', '')));
-                $saved = class_exists('Ofast_X_Turnstile') ? Ofast_X_Turnstile::save_keys($turnstile_site_key, $turnstile_secret) : false;
+                $saved = class_exists('Ofast_X_Turnstile') ?Ofast_X_Turnstile::save_keys($turnstile_site_key, $turnstile_secret) : false;
 
                 if (!$saved) {
                     $secret_save_failed = true;
@@ -354,10 +359,12 @@ class Ofast_X_Spam_Protection
                     $encrypted = Ofast_X_Security_Hardening::encrypt_option($recaptcha_secret);
                     if ($encrypted !== false) {
                         update_option('ofast_recaptcha_secret_key', $encrypted);
-                    } else {
+                    }
+                    else {
                         $secret_save_failed = true;
                     }
-                } else {
+                }
+                else {
                     $secret_save_failed = true;
                 }
             }
@@ -378,12 +385,13 @@ class Ofast_X_Spam_Protection
         $protect_comments = get_option('ofast_spam_protect_comments', false);
         $protect_cf7 = get_option('ofast_spam_protect_cf7', false);
         $protect_login = get_option('ofast_spam_protect_login', false);
-        
+
         // New extended options
         $force_all_forms = get_option('ofast_spam_force_all_forms', false);
         $honeypot_enabled = get_option('ofast_spam_honeypot_enabled', true);
         $protect_woocommerce = get_option('ofast_spam_protect_woocommerce', false);
         $protect_tutor = get_option('ofast_spam_protect_tutor', false);
+        $fail_open = get_option('ofast_spam_fail_open', false);
 
         // Current Tab
         $default_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'general';
@@ -391,8 +399,13 @@ class Ofast_X_Spam_Protection
         // Show toast
         if (isset($_GET['settings_saved'])) {
             echo Ofast_X_Toast::render('Settings saved successfully!', 'success');
-        } elseif (isset($_GET['settings_error']) && $_GET['settings_error'] === 'secret_save_failed') {
+        }
+        elseif (isset($_GET['settings_error']) && $_GET['settings_error'] === 'secret_save_failed') {
             echo Ofast_X_Toast::render('Other settings were saved, but one or more secret keys could not be stored securely. Check WordPress security keys/OpenSSL and re-enter the secret key.', 'error');
+        }
+
+        if (class_exists('Ofast_X_Dropdown')) {
+            echo Ofast_X_Dropdown::render_assets();
         }
 ?>
         <style>
@@ -743,6 +756,21 @@ class Ofast_X_Spam_Protection
                                     <p class="description" style="margin-top: 8px; color: #666;">Adds invisible fields that only bots fill. Works when Turnstile/reCAPTCHA fails (network issues, blocked, etc.)</p>
                                 </td>
                             </tr>
+                            <tr>
+                                <th>
+                                    <span style="color: #f59e0b;"> </span> Fail Open on Provider Outage
+                                </th>
+                                <td>
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="spam_fail_open" value="1" <?php checked($fail_open); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                    <span class="description" style="vertical-align: middle;">Allow submissions when provider API is unreachable</span>
+                                    <p class="description" style="margin-top: 8px; color: #666;">
+                                        If disabled, forms will be blocked when Turnstile/reCAPTCHA cannot be verified due to network/API errors.
+                                    </p>
+                                </td>
+                            </tr>
                         </table>
                     </div>
                 </div>
@@ -752,15 +780,16 @@ class Ofast_X_Spam_Protection
                     <div class="ofast-card">
                         <h2>Cloudflare Turnstile Settings</h2>
                         <?php
-                        if (class_exists('Ofast_X_Turnstile')) {
-                            // We need to capture the output of render_settings_form if it echoes, 
-                            // but since we want it inside our card, we can just call it here.
-                            // Assuming it outputs standard form fields.
-                            Ofast_X_Turnstile::get_instance()->render_settings_form();
-                        } else {
-                            echo '<p>Turnstile module is not loaded.</p>';
-                        }
-                        ?>
+        if (class_exists('Ofast_X_Turnstile')) {
+            // We need to capture the output of render_settings_form if it echoes, 
+            // but since we want it inside our card, we can just call it here.
+            // Assuming it outputs standard form fields.
+            Ofast_X_Turnstile::get_instance()->render_settings_form();
+        }
+        else {
+            echo '<p>Turnstile module is not loaded.</p>';
+        }
+?>
                     </div>
                 </div>
 
@@ -769,12 +798,13 @@ class Ofast_X_Spam_Protection
                     <div class="ofast-card">
                         <h2>Math CAPTCHA Settings</h2>
                         <?php
-                        if (class_exists('Ofast_X_Math_Captcha')) {
-                            Ofast_X_Math_Captcha::get_instance()->render_settings_form();
-                        } else {
-                            echo '<p>Math CAPTCHA module is not loaded.</p>';
-                        }
-                        ?>
+        if (class_exists('Ofast_X_Math_Captcha')) {
+            Ofast_X_Math_Captcha::get_instance()->render_settings_form();
+        }
+        else {
+            echo '<p>Math CAPTCHA module is not loaded.</p>';
+        }
+?>
                     </div>
                 </div>
 
@@ -788,19 +818,19 @@ class Ofast_X_Spam_Protection
                             <tr>
                                 <th>Site Key</th>
                                 <td>
-                                    <input type="text" name="recaptcha_site_key" value="<?php echo esc_attr($recaptcha_site_key); ?>" class="regular-text">
+                                    <input type="text" name="recaptcha_site_key" value="<?php echo esc_attr($recaptcha_site_key); ?>" class="regular-text" style="border-radius: 8px;">
                                 </td>
                             </tr>
                             <tr>
                                 <th>Secret Key</th>
                                 <td>
-                                    <input type="password" name="recaptcha_secret_key" value="" class="regular-text" placeholder="<?php echo $recaptcha_site_key ? '(encrypted - enter to change)' : ''; ?>">
+                                    <input type="password" name="recaptcha_secret_key" value="" class="regular-text" placeholder="<?php echo $recaptcha_site_key ? '(encrypted - enter to change)' : ''; ?>" style="border-radius: 8px;">
                                 </td>
                             </tr>
                             <tr>
                                 <th>Score Threshold (v3)</th>
                                 <td>
-                                    <input type="number" name="recaptcha_threshold" value="<?php echo esc_attr($recaptcha_threshold); ?>" min="0" max="1" step="0.1" style="width:80px;">
+                                    <input type="number" name="recaptcha_threshold" value="<?php echo esc_attr($recaptcha_threshold); ?>" min="0" max="1" step="0.1" style="width:80px; border-radius: 8px;">
                                     <p class="description">0.0 (bot) to 1.0 (human). Default: 0.5</p>
                                 </td>
                             </tr>
@@ -832,6 +862,10 @@ class Ofast_X_Spam_Protection
                     var url = new URL(window.location);
                     url.searchParams.set('tab', target);
                     window.history.pushState({}, '', url);
+
+                    if (typeof window.OfastInitDropdowns === 'function') {
+                        window.OfastInitDropdowns('#tab-' + target);
+                    }
                 });
 
                 // Handle back button
@@ -931,7 +965,10 @@ class Ofast_X_Spam_Protection
         ));
 
         if (is_wp_error($response)) {
-            return array('success' => false, 'error' => $response->get_error_message());
+            if ($this->should_fail_open()) {
+                return array('success' => true, 'skipped' => true, 'reason' => 'api_error');
+            }
+            return array('success' => false, 'error' => 'reCAPTCHA verification failed. Please try again.');
         }
 
         $body = json_decode(wp_remote_retrieve_body($response), true);
@@ -955,6 +992,15 @@ class Ofast_X_Spam_Protection
     }
 
     /**
+     * Should we allow submissions when provider API is unavailable.
+     */
+    private function should_fail_open()
+    {
+        $fail_open = get_option('ofast_spam_fail_open', false);
+        return (bool) apply_filters('ofast_spam_fail_open', $fail_open);
+    }
+
+    /**
      * Get decrypted reCAPTCHA secret key
      */
     private function get_decrypted_recaptcha_secret()
@@ -975,7 +1021,8 @@ class Ofast_X_Spam_Protection
                 if ($encrypted !== false) {
                     update_option('ofast_recaptcha_secret_key', $encrypted);
                     return $stored_secret;
-                } else {
+                }
+                else {
                     Ofast_X_Logger::warning(
                         'Failed to encrypt legacy reCAPTCHA secret. Migration failed.',
                         array('redacted_secret' => substr($stored_secret, 0, 10) . '...')

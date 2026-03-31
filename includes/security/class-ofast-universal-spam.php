@@ -211,9 +211,25 @@ class Ofast_X_Universal_Spam
             );
         }
         
-        // Not configured - allow through but log warning
-        error_log('Ofast Spam: Protection not configured - allowing request through');
-        return array('success' => true, 'skipped' => true);
+        // Not configured - allow or block based on fail-open setting
+        if ($this->should_fail_open()) {
+            error_log('Ofast Spam: Protection not configured - allowing request through');
+            return array('success' => true, 'skipped' => true);
+        }
+
+        return array(
+            'success' => false,
+            'error' => 'Spam protection is enabled but not configured. Please contact the site administrator.'
+        );
+    }
+
+    /**
+     * Should we allow submissions when protection is not configured.
+     */
+    private function should_fail_open()
+    {
+        $fail_open = get_option('ofast_spam_fail_open', false);
+        return (bool) apply_filters('ofast_spam_fail_open', $fail_open);
     }
     
     /**

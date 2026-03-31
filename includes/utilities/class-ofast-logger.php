@@ -39,6 +39,25 @@ class Ofast_X_Logger {
         // Create log directory if doesn't exist
         self::create_log_dir();
     }
+
+    /**
+     * Ensure logger is initialized before file writes.
+     */
+    private static function ensure_initialized() {
+        if (self::$log_dir === '') {
+            self::init();
+        }
+    }
+
+    /**
+     * Check if file logging is enabled.
+     * Default is off for safety. Enable via constant or filter.
+     */
+    private static function file_logging_enabled() {
+        $enabled = defined('OFAST_X_ENABLE_FILE_LOGS') && OFAST_X_ENABLE_FILE_LOGS;
+        $enabled = apply_filters('ofast_logger_enable_file_logging', $enabled);
+        return $enabled && defined('WP_DEBUG') && WP_DEBUG;
+    }
     
     /**
      * Create log directory with security
@@ -46,13 +65,32 @@ class Ofast_X_Logger {
     private static function create_log_dir() {
         if (!file_exists(self::$log_dir)) {
             wp_mkdir_p(self::$log_dir);
-            
-            // Create .htaccess to deny access
+        }
+
+        // Create .htaccess to deny access (Apache)
+        $htaccess = self::$log_dir . '/.htaccess';
+        if (!file_exists($htaccess)) {
             $htaccess_content = "Order deny,allow\nDeny from all";
-            file_put_contents(self::$log_dir . '/.htaccess', $htaccess_content);
-            
-            // Create index.php to prevent directory listing
-            file_put_contents(self::$log_dir . '/index.php', '<?php // Silence is golden');
+            file_put_contents($htaccess, $htaccess_content);
+        }
+
+        // Create web.config to deny access (IIS)
+        $web_config = self::$log_dir . '/web.config';
+        if (!file_exists($web_config)) {
+            $web_config_content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<configuration>\n  <system.webServer>\n    <authorization>\n      <deny users=\"*\" />\n    </authorization>\n  </system.webServer>\n</configuration>";
+            file_put_contents($web_config, $web_config_content);
+        }
+
+        // Create index.php to prevent directory listing
+        $index_php = self::$log_dir . '/index.php';
+        if (!file_exists($index_php)) {
+            file_put_contents($index_php, '<?php // Silence is golden');
+        }
+
+        // Create blank index.html as an extra guard
+        $index_html = self::$log_dir . '/index.html';
+        if (!file_exists($index_html)) {
+            file_put_contents($index_html, '');
         }
     }
     
@@ -73,10 +111,12 @@ class Ofast_X_Logger {
      * @param array $context Additional context data
      */
     private static function write($level, $message, $context = array()) {
-        // Only log if WP_DEBUG is enabled or it's an error
-        if (!defined('WP_DEBUG') || (!WP_DEBUG && $level !== self::ERROR)) {
+        // File logging is opt-in for safety.
+        if (!self::file_logging_enabled()) {
             return;
         }
+
+        self::ensure_initialized();
         
         $timestamp = date('Y-m-d H:i:s');
         $user_id = get_current_user_id();

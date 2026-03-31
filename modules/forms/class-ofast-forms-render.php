@@ -258,18 +258,27 @@ class Ofast_X_Forms_Render
                 if (existingToast) {
                     existingToast.remove();
                 }
-
-                var icon = type === 'success' ? '✓' : '✗';
+                message = (message === undefined || message === null) ? '' : String(message);
+                var icon = type === 'success' ? 'OK' : 'X';
                 var toast = document.createElement('div');
                 toast.className = 'ofast-toast ' + type;
-                toast.innerHTML = '<span class="ofast-toast-icon">' + icon + '</span>' +
-                    '<span>' + message + '</span>' +
-                    '<button type="button" class="ofast-toast-close">&times;</button>';
-                
+                var iconSpan = document.createElement('span');
+                iconSpan.className = 'ofast-toast-icon';
+                iconSpan.textContent = icon;
+                var messageSpan = document.createElement('span');
+                messageSpan.textContent = message;
+                var closeBtn = document.createElement('button');
+                closeBtn.type = 'button';
+                closeBtn.className = 'ofast-toast-close';
+                closeBtn.setAttribute('aria-label', 'Close');
+                closeBtn.textContent = 'x';
+                toast.appendChild(iconSpan);
+                toast.appendChild(messageSpan);
+                toast.appendChild(closeBtn);
                 document.body.appendChild(toast);
 
                 // Close button handler
-                toast.querySelector('.ofast-toast-close').addEventListener('click', function() {
+                closeBtn.addEventListener('click', function() {
                     toast.style.transition = 'all 0.3s ease';
                     toast.style.transform = 'translateX(100%)';
                     toast.style.opacity = '0';
@@ -330,7 +339,8 @@ class Ofast_X_Forms_Render
                                         $.each(response.data.field_errors, function(field, error) {
                                             var $field = $form.find('[name="fields[' + field + ']"]').closest('.ofast-form-field');
                                             $field.addClass('has-error');
-                                            $field.append('<div class="field-error">' + error + '</div>');
+                                            var $error = $('<div/>', { 'class': 'field-error', text: error });
+                                            $field.append($error);
                                         });
                                     }
                                     showOfastToast(response.data.message || 'An error occurred.', 'error');
@@ -461,3 +471,5 @@ class Ofast_X_Forms_Render
 <?php
     }
 }
+
+

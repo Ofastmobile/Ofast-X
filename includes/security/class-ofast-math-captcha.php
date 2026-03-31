@@ -529,7 +529,7 @@ class Ofast_X_Math_Captcha
             <tr>
                 <th scope="row">Difficulty</th>
                 <td>
-                    <select name="math_captcha_difficulty" style="min-width: 200px;">
+                    <select name="math_captcha_difficulty" class="ofast-dropdown-native" style="min-width: 200px; padding:12px 16px; background:#f8fafc; border:2px solid transparent; border-radius:12px; font-size:14px;">
                         <option value="easy" <?php selected($difficulty, 'easy'); ?>>Easy (1-10)</option>
                         <option value="medium" <?php selected($difficulty, 'medium'); ?>>Medium (5-50)</option>
                         <option value="hard" <?php selected($difficulty, 'hard'); ?>>Hard (10-99)</option>

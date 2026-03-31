@@ -12,6 +12,11 @@ if (!defined('ABSPATH')) {
 
 class Ofast_X_Whos_Admin
 {
+    private const PAGE_PROTECTION_COOKIE_PREFIX = 'ofast_page_protection_';
+    private const PAGE_PROTECTION_TIMEOUT_DEFAULT = 30;
+    private const PAGE_PROTECTION_TIMEOUT_MIN = 5;
+    private const PAGE_PROTECTION_TIMEOUT_MAX = 480;
+
     /**
      * @var Ofast_X_Menu_Editor|null Menu editor instance for embedding.
      */
@@ -48,6 +53,8 @@ class Ofast_X_Whos_Admin
         if (get_option('ofast_page_protection_enabled', 0)) {
             add_action('admin_init', array($this, 'protect_admin_pages'), 1);
         }
+
+        add_action('wp_logout', array($this, 'clear_protection_cookie'));
     }
 
     /**
@@ -208,8 +215,10 @@ class Ofast_X_Whos_Admin
             delete_option('ofast_page_protection_enabled');
             delete_option('ofast_super_admin_username');
             delete_option('ofast_protection_password');
+            delete_option('ofast_page_protection_timeout');
             delete_option('ofast_protected_pages_list');
             delete_site_transient('update_plugins');
+            $this->clear_protection_cookie();
 
             // Reset menu editor settings
             if ($this->menu_editor) {
@@ -272,19 +281,24 @@ class Ofast_X_Whos_Admin
         update_option('ofast_page_protection_enabled', isset($_POST['ofast_page_protection_enabled']) ? 1 : 0);
 
         if (!empty($_POST['ofast_super_admin_username'])) {
-            update_option('ofast_super_admin_username', sanitize_user($_POST['ofast_super_admin_username']));
+            update_option('ofast_super_admin_username', sanitize_user(wp_unslash($_POST['ofast_super_admin_username'])));
         }
 
         // Only update password if a new one was entered
         if (!empty($_POST['ofast_protection_password'])) {
-            update_option('ofast_protection_password', wp_hash_password($_POST['ofast_protection_password']));
+            update_option('ofast_protection_password', wp_hash_password((string) wp_unslash($_POST['ofast_protection_password'])));
         }
+
+        $timeout_minutes = isset($_POST['ofast_page_protection_timeout']) ? absint(wp_unslash($_POST['ofast_page_protection_timeout'])) : self::PAGE_PROTECTION_TIMEOUT_DEFAULT;
+        $timeout_minutes = min(max($timeout_minutes, self::PAGE_PROTECTION_TIMEOUT_MIN), self::PAGE_PROTECTION_TIMEOUT_MAX);
+        update_option('ofast_page_protection_timeout', $timeout_minutes);
 
         $protected_pages = array();
         if (!empty($_POST['ofast_protected_pages']) && is_array($_POST['ofast_protected_pages'])) {
             $protected_pages = array_map('sanitize_text_field', $_POST['ofast_protected_pages']);
         }
         update_option('ofast_protected_pages_list', $protected_pages);
+        $this->clear_protection_cookie();
 
         // Save Menu Editor settings (menu_items are part of the global form now)
         if ($this->menu_editor && isset($_POST['menu_items'])) {
@@ -455,26 +469,31 @@ class Ofast_X_Whos_Admin
             return;
         }
 
+        if ($this->has_valid_protection_cookie($current_user, $stored_password_hash, $protected_pages)) {
+            return;
+        }
+
         // Handle password submission
         if (isset($_POST['ofast_protected_page_password']) && isset($_POST['ofast_protected_page_access'])) {
-            // Verify nonce
-            if (!wp_verify_nonce($_POST['_ofast_protection_nonce'], 'ofast_page_protection')) {
-                // Invalid nonce, show form again
+            if (!isset($_POST['_ofast_protection_nonce']) || !wp_verify_nonce($_POST['_ofast_protection_nonce'], 'ofast_page_protection')) {
+                $error_message = __('Security check failed. Please try again.', 'ofast-x');
             } else {
-                $entered_password = $_POST['ofast_protected_page_password'];
+                $entered_password = (string) wp_unslash($_POST['ofast_protected_page_password']);
 
-                // Check password using WordPress password hashing
                 if (wp_check_password($entered_password, $stored_password_hash)) {
-                    // Password correct — allow access
-                    return;
+                    $current_url = $this->get_current_admin_url();
+                    $this->set_protection_cookie($current_user, $stored_password_hash, $protected_pages);
+                    wp_safe_redirect($current_url);
+                    exit;
                 }
+
+                $error_message = __('Incorrect password! Try again.', 'ofast-x');
             }
-            $error_message = __('Incorrect password! Try again.', 'ofast-x');
         }
 
         // Show password form
         $dashboard_url = admin_url();
-        $current_url = esc_url($_SERVER['REQUEST_URI']);
+        $current_url = $this->get_current_admin_url();
         $nonce = wp_create_nonce('ofast_page_protection');
 
         $error_html = '';
@@ -501,6 +520,7 @@ class Ofast_X_Whos_Admin
                                 <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 6px; font-size: 14px;">Password</label>
                                 <input type="password" name="ofast_protected_page_password"
                                     placeholder="Enter protection password"
+                                    autocomplete="current-password"
                                     style="width: 100%; padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 15px; background: #f8fafc; transition: all 0.2s; box-sizing: border-box; outline: none;"
                                     onfocus="this.style.borderColor=\'#6366f1\'; this.style.background=\'#fff\'; this.style.boxShadow=\'0 0 0 4px rgba(99,102,241,0.1)\';"
                                     onblur="this.style.borderColor=\'#e2e8f0\'; this.style.background=\'#f8fafc\'; this.style.boxShadow=\'none\';"
@@ -523,6 +543,115 @@ class Ofast_X_Whos_Admin
                 </div>
             </div>
         ', esc_html__('Protected Area - Authentication Required', 'ofast-x'), array('response' => 403));
+    }
+
+    private function get_page_protection_timeout_minutes()
+    {
+        $minutes = absint(get_option('ofast_page_protection_timeout', self::PAGE_PROTECTION_TIMEOUT_DEFAULT));
+        return min(max($minutes, self::PAGE_PROTECTION_TIMEOUT_MIN), self::PAGE_PROTECTION_TIMEOUT_MAX);
+    }
+
+    private function get_current_admin_url()
+    {
+        global $pagenow;
+
+        $query_args = array();
+        foreach ($_GET as $key => $value) {
+            if (is_scalar($value)) {
+                $query_args[$key] = sanitize_text_field(wp_unslash($value));
+            }
+        }
+
+        return add_query_arg($query_args, admin_url($pagenow));
+    }
+
+    private function get_protection_cookie_name($user_id = 0)
+    {
+        $user_id = $user_id ? absint($user_id) : get_current_user_id();
+        $hash = defined('COOKIEHASH') && COOKIEHASH ? COOKIEHASH : md5(site_url());
+        return self::PAGE_PROTECTION_COOKIE_PREFIX . $hash . '_' . $user_id;
+    }
+
+    private function get_protection_cookie_signature($user_id, $expires, $stored_password_hash, $protected_pages)
+    {
+        $session_token = function_exists('wp_get_session_token') ? (string) wp_get_session_token() : '';
+        $pages_hash = md5(wp_json_encode(array_values((array) $protected_pages)));
+        $payload = implode('|', array((int) $user_id, (int) $expires, $session_token, $stored_password_hash, $pages_hash));
+
+        return hash_hmac('sha256', $payload, wp_salt('auth'));
+    }
+
+    private function has_valid_protection_cookie($current_user, $stored_password_hash, $protected_pages)
+    {
+        $cookie_name = $this->get_protection_cookie_name($current_user->ID);
+        if (empty($_COOKIE[$cookie_name])) {
+            return false;
+        }
+
+        $parts = explode('|', (string) wp_unslash($_COOKIE[$cookie_name]));
+        if (count($parts) !== 3) {
+            $this->clear_protection_cookie($current_user->ID);
+            return false;
+        }
+
+        $cookie_user_id = absint($parts[0]);
+        $expires = absint($parts[1]);
+        $signature = (string) $parts[2];
+
+        if ($cookie_user_id !== (int) $current_user->ID || $expires <= time()) {
+            $this->clear_protection_cookie($current_user->ID);
+            return false;
+        }
+
+        $expected_signature = $this->get_protection_cookie_signature($cookie_user_id, $expires, $stored_password_hash, $protected_pages);
+        if (!hash_equals($expected_signature, $signature)) {
+            $this->clear_protection_cookie($current_user->ID);
+            return false;
+        }
+
+        return true;
+    }
+
+    private function set_protection_cookie($current_user, $stored_password_hash, $protected_pages)
+    {
+        $expires = time() + ($this->get_page_protection_timeout_minutes() * MINUTE_IN_SECONDS);
+        $signature = $this->get_protection_cookie_signature($current_user->ID, $expires, $stored_password_hash, $protected_pages);
+        $value = implode('|', array((int) $current_user->ID, (int) $expires, $signature));
+
+        $this->send_protection_cookie($this->get_protection_cookie_name($current_user->ID), $value, $expires);
+    }
+
+    public function clear_protection_cookie($user_id = 0)
+    {
+        $cookie_name = $this->get_protection_cookie_name($user_id);
+
+        if (isset($_COOKIE[$cookie_name])) {
+            unset($_COOKIE[$cookie_name]);
+        }
+
+        $this->send_protection_cookie($cookie_name, 'expired', time() - HOUR_IN_SECONDS);
+    }
+
+    private function send_protection_cookie($name, $value, $expires)
+    {
+        $path = defined('ADMIN_COOKIE_PATH') && ADMIN_COOKIE_PATH ? ADMIN_COOKIE_PATH : '/';
+        $domain = defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '';
+        $secure = is_ssl();
+        $http_only = true;
+
+        if (defined('PHP_VERSION_ID') && PHP_VERSION_ID >= 70300) {
+            setcookie($name, $value, array(
+                'expires' => $expires,
+                'path' => $path,
+                'domain' => $domain,
+                'secure' => $secure,
+                'httponly' => $http_only,
+                'samesite' => 'Strict',
+            ));
+            return;
+        }
+
+        setcookie($name, $value, $expires, $path . '; samesite=Strict', $domain, $secure, $http_only);
     }
 
     /**
@@ -960,6 +1089,7 @@ class Ofast_X_Whos_Admin
                                         $protected_pages_list = array();
                                     }
                                     $has_password_set = (bool) get_option('ofast_protection_password', '');
+                                    $page_protection_timeout = absint(get_option('ofast_page_protection_timeout', self::PAGE_PROTECTION_TIMEOUT_DEFAULT));
 
                                     // Common admin pages
                                     $available_pages = array(
@@ -1053,6 +1183,22 @@ class Ofast_X_Whos_Admin
                                                                 <span style="color: #ef4444;">✗
                                                                     <?php esc_html_e('No password set. Feature will not work until a password is configured.', 'ofast-x'); ?></span>
                                                             <?php endif; ?>
+                                                        </span>
+                                                    </div>
+
+                                                    <div class="ofast-form-group">
+                                                        <label for="ofast_page_protection_timeout">
+                                                            <span class="dashicons dashicons-clock"></span>
+                                                            <?php esc_html_e('Remember Access For (Minutes)', 'ofast-x'); ?>
+                                                        </label>
+                                                        <input type="number" id="ofast_page_protection_timeout"
+                                                            name="ofast_page_protection_timeout"
+                                                            value="<?php echo esc_attr($page_protection_timeout); ?>"
+                                                            min="<?php echo esc_attr(self::PAGE_PROTECTION_TIMEOUT_MIN); ?>"
+                                                            max="<?php echo esc_attr(self::PAGE_PROTECTION_TIMEOUT_MAX); ?>"
+                                                            step="5">
+                                                        <span class="ofast-field-hint">
+                                                            <?php esc_html_e('Recommended: 30 minutes. Access is remembered in a signed, expiring admin cookie — not as plain text and never in the URL.', 'ofast-x'); ?>
                                                         </span>
                                                     </div>
                                                 </div>
@@ -1940,6 +2086,20 @@ class Ofast_X_Whos_Admin
                     });
                 });
 
+                // Header arrow toggle for Page Protection card body
+                $('#ofast-page-protection-header').on('click', function (e) {
+                    if ($(e.target).closest('.ofast-toggle, .ofast-toggle-switch, input, label, button, a').length) return;
+                    var $body = $('#ofast-page-protection-body');
+                    var $arrow = $('#ofast-page-protection-arrow');
+                    $body.stop(true, true).slideToggle(200, function () {
+                        if ($body.is(':visible')) {
+                            $arrow.removeClass('dashicons-arrow-down-alt2').addClass('dashicons-arrow-up-alt2');
+                        } else {
+                            $arrow.removeClass('dashicons-arrow-up-alt2').addClass('dashicons-arrow-down-alt2');
+                        }
+                    });
+                });
+
                 // Plugin search filter
                 $('#ofast-plugin-search').on('input', function () {
                     var query = $(this).val().toLowerCase();
@@ -1969,6 +2129,8 @@ class Ofast_X_Whos_Admin
                 // Toggle page protection settings visibility
                 $('#ofast_page_protection_enabled').on('change', function () {
                     if ($(this).is(':checked')) {
+                        $('#ofast-page-protection-body').stop(true, true).slideDown(200);
+                        $('#ofast-page-protection-arrow').removeClass('dashicons-arrow-down-alt2').addClass('dashicons-arrow-up-alt2');
                         $('#ofast-page-protection-settings').slideDown(200);
                     } else {
                         $('#ofast-page-protection-settings').slideUp(200);

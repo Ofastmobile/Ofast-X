@@ -801,14 +801,13 @@ class Ofast_X_Email_Admin
         <!-- Preview Modal -->
         <div id="history-preview-modal"
             style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:10000; padding:50px;">
-            <div
+            <div class="ofast-modal-body"
                 style="background:#fff; max-width:800px; margin:0 auto; border-radius:12px; padding:20px; max-height:80vh; overflow:auto;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <h3 id="modal-subject" style="margin:0;">Preview</h3>
                     <button type="button" id="close-history-modal" class="button">Close</button>
                 </div>
-                <iframe id="modal-content" sandbox
-                    style="width:100%; height:500px; border:1px solid #e5e7eb; border-radius:8px;"></iframe>
+                <iframe id="modal-content" style="width:100%; height:500px; border:1px solid #e5e7eb; border-radius:8px;"></iframe>
             </div>
         </div>
 
@@ -818,12 +817,16 @@ class Ofast_X_Email_Admin
                     var body = $(this).attr('data-body');
                     var subject = $(this).attr('data-subject');
                     $('#modal-subject').text(subject);
-                    $('#modal-content').attr('srcdoc', body);
+                    // Remove old iframe and create a fresh one to force re-render
+                    $('#modal-content').remove();
+                    var iframe = $('<iframe id="modal-content" style="width:100%; height:500px; border:1px solid #e5e7eb; border-radius:8px;"></iframe>');
+                    iframe.attr('srcdoc', body);
+                    $('#history-preview-modal .ofast-modal-body').append(iframe);
                     $('#history-preview-modal').fadeIn();
                 });
                 $('#close-history-modal').on('click', function () {
                     $('#history-preview-modal').fadeOut();
-                    $('#modal-content').attr('srcdoc', '');
+                    $('#modal-content').remove();
                 });
             });
         </script>

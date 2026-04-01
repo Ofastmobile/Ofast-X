@@ -18,6 +18,7 @@ class Ofast_X_SMTP_Admin
     {
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'handle_save'));
+        add_action('admin_init', array($this, 'handle_resend'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_head', array($this, 'admin_head_styles'));
     }
@@ -474,12 +475,7 @@ class Ofast_X_SMTP_Admin
             wp_die('Unauthorized');
         }
 
-        // Handle resend action
-        if (isset($_GET['resend']) && isset($_GET['_wpnonce'])) {
-            if (wp_verify_nonce(sanitize_text_field($_GET['_wpnonce']), 'resend_email')) {
-                $this->resend_email(intval($_GET['resend']));
-            }
-        }
+        // Resend is handled in handle_resend() on admin_init (before output)
 
         // Handle export CSV
         if (isset($_GET['export_csv']) && isset($_GET['_wpnonce'])) {
@@ -1020,6 +1016,35 @@ class Ofast_X_SMTP_Admin
     }
 
     /**
+     * Handle resend action on admin_init (before any output, so redirect works)
+     */
+    public function handle_resend()
+    {
+        // Only run on our SMTP page
+        if (!isset($_GET['page']) || sanitize_key($_GET['page']) !== 'ofast-smtp') {
+            return;
+        }
+
+        if (!isset($_GET['resend']) || !isset($_GET['_wpnonce'])) {
+            return;
+        }
+
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+
+        if (!wp_verify_nonce(sanitize_text_field($_GET['_wpnonce']), 'resend_email')) {
+            return;
+        }
+
+        $this->resend_email(intval($_GET['resend']));
+
+        // PRG: Redirect to clean URL to prevent re-send on page refresh
+        wp_safe_redirect(admin_url('admin.php?page=ofast-smtp&tab=log'));
+        exit;
+    }
+
+    /**
      * Handle settings save
      */
     public function handle_save()
@@ -1289,12 +1314,29 @@ class Ofast_X_SMTP_Admin
             return;
         }
 
+        // Temporarily remove the SMTP logging filter to prevent duplicate log entries
+        $smtp_instance = Ofast_X_SMTP::get_instance();
+        remove_filter('wp_mail', array($smtp_instance, 'log_outgoing_email'), 10);
+        remove_action('wp_mail_succeeded', array($smtp_instance, 'mark_email_success'), 10);
+        remove_action('wp_mail_failed', array($smtp_instance, 'mark_email_failed'), 10);
+
         $headers = array('Content-Type: text/html; charset=UTF-8');
         $body = !empty($log->body) ? $log->body : '';
 
         $result = wp_mail($log->to_email, $log->subject, $body, $headers);
 
+        // Re-add the logging filter
+        add_filter('wp_mail', array($smtp_instance, 'log_outgoing_email'), 10, 1);
+        add_action('wp_mail_succeeded', array($smtp_instance, 'mark_email_success'), 10, 1);
+        add_action('wp_mail_failed', array($smtp_instance, 'mark_email_failed'), 10, 1);
+
         if ($result) {
+            // Update original log entry status to 'resent' instead of creating a new entry
+            $wpdb->update(
+                $table_name,
+                array('status' => 'success', 'error_message' => 'Resent successfully'),
+                array('id' => $log_id)
+            );
             Ofast_X_Toast::add('Email resent successfully to ' . esc_html($log->to_email), 'success');
         } else {
             Ofast_X_Toast::add('Failed to resend email. Check your SMTP configuration.', 'error');

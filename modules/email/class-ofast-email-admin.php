@@ -464,6 +464,9 @@ class Ofast_X_Email_Admin
                 <a href="#" class="ofast-tab <?php echo $active_tab === 'templates' ? 'active' : ''; ?>" data-tab="templates">
                     <span class="dashicons dashicons-layout"></span> Templates
                 </a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-smtp'); ?>" class="ofast-tab">
+                    <span class="dashicons dashicons-email-alt2"></span> SMTP
+                </a>
             </nav>
 
             <!-- Send Email Tab -->
@@ -491,8 +494,8 @@ class Ofast_X_Email_Admin
 
         <script>
             jQuery(document).ready(function ($) {
-                // Tab Switching
-                $('.ofast-tabs-nav .ofast-tab').on('click', function (e) {
+                // Tab Switching (only tabs with data-tab, not external links)
+                $('.ofast-tabs-nav .ofast-tab[data-tab]').on('click', function (e) {
                     e.preventDefault();
                     var target = $(this).data('tab');
 

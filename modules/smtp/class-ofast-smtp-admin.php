@@ -454,8 +454,8 @@ class Ofast_X_SMTP_Admin
             <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                 <a href="<?php echo admin_url('admin.php?page=ofast-smtp&tab=settings'); ?>"
                     class="button button-primary button-large">Configure SMTP</a>
-                <a href="<?php echo admin_url('admin.php?page=ofast-smtp&tab=log'); ?>"
-                    class="button button-secondary button-large">View All Logs</a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-emailer&tab=history'); ?>"
+                    class="button button-secondary button-large">Emailer</a>
             </div>
         </div>
         <?php

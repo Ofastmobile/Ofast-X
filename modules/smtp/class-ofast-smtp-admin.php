@@ -86,9 +86,9 @@ class Ofast_X_SMTP_Admin
             }
 
             .ofast-tab.active {
-                background: linear-gradient(135deg, #6366f1 0%, #764ba2 100%);
+                background: #6366f1;
                 color: #fff;
-                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
             }
 
             .ofast-tab .dashicons {
@@ -182,7 +182,16 @@ class Ofast_X_SMTP_Admin
         $default_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'dashboard';
         ?>
         <div class="wrap">
-            <h1>SMTP</h1>
+            <!-- Header -->
+            <div class="ofast-header" style="display:flex; align-items:center; gap:20px; background:#fff; padding:25px 30px; border-radius:12px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom:25px; margin-top:20px;">
+                <div style="width:56px; height:56px; background:#fff; border:1px solid #e2e8f0; box-shadow:0 2px 4px rgba(0,0,0,0.02); border-radius:16px; display:flex; align-items:center; justify-content:center;">
+                    <span class="dashicons dashicons-email-alt2" style="font-size:28px; width:28px; height:28px; color:#6366f1;"></span>
+                </div>
+                <div>
+                    <h1 style="margin:0 0 5px 0; font-size:24px; font-weight:700; color:#1e293b; display:block; padding:0;">SMTP</h1>
+                    <p style="margin:0; color:#64748b; font-size:14px;">Configure email delivery, monitor performance, and view logs.</p>
+                </div>
+            </div>
 
             <!-- Modern Tabs Navigation (sticky on scroll) -->
             <nav class="ofast-tabs-nav" id="smtp-tabs-nav">
@@ -626,7 +635,7 @@ class Ofast_X_SMTP_Admin
         <!-- Preview Modal -->
         <div id="email-preview-modal"
             style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100000;">
-            <div
+            <div class="ofast-smtp-modal-body"
                 style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border-radius: 8px; width: 90%; max-width: 700px; max-height: 80vh; overflow: hidden;">
                 <div
                     style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
@@ -643,7 +652,7 @@ class Ofast_X_SMTP_Admin
                     </div>
                 <?php endif; ?>
 
-                <iframe id="email-preview-frame" sandbox style="width: 100%; height: 60vh; border: none;"></iframe>
+                <iframe id="email-preview-frame" style="width: 100%; height: 60vh; border: none;"></iframe>
             </div>
         </div>
 
@@ -651,12 +660,17 @@ class Ofast_X_SMTP_Admin
             jQuery(document).ready(function ($) {
                 $('.preview-email').on('click', function () {
                     var content = atob($(this).data('content'));
-                    document.getElementById('email-preview-frame').srcdoc = content;
+                    // Remove old iframe and create a fresh one to force re-render
+                    $('#email-preview-frame').remove();
+                    var iframe = $('<iframe id="email-preview-frame" style="width: 100%; height: 60vh; border: none;"></iframe>');
+                    iframe.attr('srcdoc', content);
+                    $('#email-preview-modal .ofast-smtp-modal-body').append(iframe);
                     $('#email-preview-modal').fadeIn(200);
                 });
                 $('#close-preview, #email-preview-modal').on('click', function (e) {
                     if (e.target === this || $(this).attr('id') === 'close-preview') {
                         $('#email-preview-modal').fadeOut(200);
+                        $('#email-preview-frame').remove();
                     }
                 });
             });

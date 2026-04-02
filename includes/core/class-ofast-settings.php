@@ -244,7 +244,7 @@ class Ofast_X_Settings
     {
         if (!$menu_order) return true;
 
-        $ofast_menus = array('ofast-dashboard', 'ofast-email', 'ofast-smtp', 'ofast-forms');
+        $ofast_menus = array('ofast-dashboard');
         $new_order = array();
 
         if (in_array('index.php', $menu_order)) $new_order[] = 'index.php';

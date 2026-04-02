@@ -78,14 +78,13 @@ class Ofast_X_Email_Admin
      */
     public function add_admin_menu()
     {
-        add_menu_page(
+        add_submenu_page(
+            'ofast-dashboard',
             'Ofast Emailer',
-            'Ofast Emailer',
+            'Emailer',
             'manage_options',
             'ofast-emailer',
-            array($this, 'render_main_page'),
-            'dashicons-email',
-            25
+            array($this, 'render_main_page')
         );
     }
 

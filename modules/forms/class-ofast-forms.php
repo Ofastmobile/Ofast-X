@@ -62,14 +62,13 @@ class Ofast_X_Forms
      */
     public function add_admin_menu()
     {
-        add_menu_page(
+        add_submenu_page(
+            'ofast-dashboard',
             'Contact Forms',
             'Contact Forms',
             'manage_options',
             'ofast-forms',
-            array($this, 'render_main_page'),
-            'dashicons-feedback',
-            30
+            array($this, 'render_main_page')
         );
     }
 

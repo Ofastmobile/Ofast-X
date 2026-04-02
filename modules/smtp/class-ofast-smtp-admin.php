@@ -131,12 +131,23 @@ class Ofast_X_SMTP_Admin
                 min-width: 0;
             }
 
+            .ofast-layout-sidebar {
+                display: grid;
+                grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+                gap: 20px;
+                align-items: start;
+            }
+
             @media (max-width: 1200px) {
                 .ofast-grid-4 {
                     grid-template-columns: repeat(2, minmax(0, 1fr));
                 }
 
                 .ofast-flex-layout {
+                    grid-template-columns: 1fr;
+                }
+
+                .ofast-layout-sidebar {
                     grid-template-columns: 1fr;
                 }
             }
@@ -391,61 +402,195 @@ class Ofast_X_SMTP_Admin
             </div>
         </div>
 
-        <!-- Weekly Chart & Recent -->
-        <div class="ofast-flex-layout" style="margin: 25px 0;">
-            <div class="ofast-main"
-                style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; flex-direction: column;">
-                <h3 style="margin: 0; font-size: 16px; color: #374151;">Emails Last 7 Days</h3>
-                <div style="flex: 1;"></div>
-                <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;">
-                    <?php foreach ($weekly_data as $day): ?>
-                        <?php
-                        // Max height 80px for bars
-                        $bar_height = $max_weekly > 0 ? round(($day['count'] / $max_weekly) * 80) : 0;
-                        $bar_height = max(5, $bar_height);
-                        ?>
-                        <div style="flex: 1; text-align: center;">
-                            <div style="background: linear-gradient(to top, #6366f1, #818cf8); height: <?php echo $bar_height; ?>px; border-radius: 4px 4px 0 0; min-height: 5px;"
-                                title="<?php echo $day['count']; ?> emails"></div>
-                            <div style="font-size: 11px; color: #6b7280; margin-top: 8px;"><?php echo esc_html($day['day']); ?>
-                            </div>
-                            <div style="font-size: 12px; font-weight: 600; color: #374151;"><?php echo $day['count']; ?></div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-
-            <div class="ofast-main"
-                style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                <h3 style="margin: 0 0 20px 0; font-size: 16px; color: #374151;">Recent Emails</h3>
-                <?php if (empty($recent_emails)): ?>
-                    <p style="color: #6b7280; text-align: center; padding: 30px 0;">No emails sent yet.</p>
-                <?php else: ?>
-                    <div style="max-height: 200px; overflow-y: auto;">
-                        <?php foreach ($recent_emails as $email): ?>
-                            <div style="display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #f3f4f6;">
-                                <div style="flex: 1; min-width: 0;">
-                                    <div
-                                        style="font-size: 13px; font-weight: 500; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                        <?php echo esc_html($email->subject); ?>
-                                    </div>
-                                    <div style="font-size: 12px; color: #6b7280;">
-                                        <?php echo esc_html($email->to_email); ?>
-                                    </div>
+        <!-- Sidebar Layout -->
+        <div class="ofast-layout-sidebar" style="margin: 25px 0;">
+            
+            <!-- Left Column -->
+            <div style="min-width: 0;">
+                <!-- Emails Last 7 Days -->
+                <div class="ofast-main"
+                    style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; flex-direction: column; margin-bottom: 25px;">
+                    <h3 style="margin: 0; font-size: 16px; color: #374151;">Emails Last 7 Days</h3>
+                    <div style="flex: 1;"></div>
+                    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-top: 20px;">
+                        <?php foreach ($weekly_data as $day): ?>
+                            <?php
+                            // Max height 80px for bars
+                            $bar_height = $max_weekly > 0 ? round(($day['count'] / $max_weekly) * 80) : 0;
+                            $bar_height = max(5, $bar_height);
+                            ?>
+                            <div style="flex: 1; text-align: center;">
+                                <div style="background: linear-gradient(to top, #6366f1, #818cf8); height: <?php echo $bar_height; ?>px; border-radius: 4px 4px 0 0; min-height: 5px;"
+                                    title="<?php echo $day['count']; ?> emails"></div>
+                                <div style="font-size: 11px; color: #6b7280; margin-top: 8px;"><?php echo esc_html($day['day']); ?>
                                 </div>
-                                <div style="margin-left: 10px;">
-                                    <?php if ($email->status === 'success'): ?>
-                                        <span
-                                            style="background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 3px; font-size: 10px;">✓</span>
-                                    <?php else: ?>
-                                        <span
-                                            style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 3px; font-size: 10px;">✗</span>
-                                    <?php endif; ?>
-                                </div>
+                                <div style="font-size: 12px; font-weight: 600; color: #374151;"><?php echo $day['count']; ?></div>
                             </div>
                         <?php endforeach; ?>
                     </div>
-                <?php endif; ?>
+                </div>
+
+                <!-- Recent Emails -->
+                <div class="ofast-main"
+                    style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 25px;">
+                    <h3 style="margin: 0 0 20px 0; font-size: 16px; color: #374151;">Recent Emails</h3>
+                    <?php if (empty($recent_emails)): ?>
+                        <p style="color: #6b7280; text-align: center; padding: 30px 0;">No emails sent yet.</p>
+                    <?php else: ?>
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            <?php foreach ($recent_emails as $email): ?>
+                                <div style="display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #f3f4f6;">
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div
+                                            style="font-size: 13px; font-weight: 500; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                            <?php echo esc_html($email->subject); ?>
+                                        </div>
+                                        <div style="font-size: 12px; color: #6b7280;">
+                                            <?php echo esc_html($email->to_email); ?>
+                                        </div>
+                                    </div>
+                                    <div style="margin-left: 10px;">
+                                        <?php if ($email->status === 'success'): ?>
+                                            <span
+                                                style="background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 3px; font-size: 10px;">✓</span>
+                                        <?php else: ?>
+                                            <span
+                                                style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 3px; font-size: 10px;">✗</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Pro Features -->
+                <div style="background: linear-gradient(135deg, #1e40af, #3b82f6); padding: 35px; border-radius: 12px; color: #fff; text-align: center; position: relative; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3); margin-bottom: 25px;">
+                    <!-- Pattern Background -->
+                    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.1; background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 24px 24px;"></div>
+                    
+                    <div style="position: relative; z-index: 1;">
+                        <div style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-bottom: 15px;">
+                            <span class="dashicons dashicons-star-filled" style="color: #fbbf24; font-size: 32px; width: 32px; height: 32px;"></span>
+                        </div>
+                        <h3 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Pro Features</h3>
+                        <p style="margin: 0 0 30px 0; font-size: 16px; font-weight: 500; opacity: 0.9;">Supercharge your Email</p>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; text-align: left; margin-bottom: 30px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;"><span class="dashicons dashicons-clock" style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Email Scheduling<br>Quota Management</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;"><span class="dashicons dashicons-chart-pie" style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Email Report<br>and Tracking</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;"><span class="dashicons dashicons-paperclip" style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Email Log<br>Attachment</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;"><span class="dashicons dashicons-smartphone" style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">SMS<br>Notification</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;"><span class="dashicons dashicons-update-alt" style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Auto Resend<br>Failed Emails</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;"><span class="dashicons dashicons-email" style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Microsoft 365 /<br>Office 365</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;"><span class="dashicons dashicons-cloud" style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Amazon SES<br>Support</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;"><span class="dashicons dashicons-email-alt" style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Zoho Mail<br>Support</span>
+                            </div>
+                        </div>
+
+                        <a href="https://example.com/pro" target="_blank" style="display: inline-block; background: #f59e0b; color: #fff; padding: 12px 30px; border-radius: 30px; font-weight: 600; text-decoration: none; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3);">Get Post SMTP Pro &rarr;</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div style="min-width: 0;">
+                
+                <!-- Video Section -->
+                <div style="background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; position: relative; margin-bottom: 25px;">
+                    <!-- Inline Video Container -->
+                    <div id="ofast-inline-video-wrapper" style="height: 200px; position: relative; display: flex; align-items: center; justify-content: center; background-color: #0f172a; overflow: hidden; margin: 0; padding: 0;" class="ofast-video-container" data-video-id="0dcd5bLtYs8">
+                        <!-- Featured Image: YouTube Thumbnail (falls back to hqdefault if maxres doesn't exist) -->
+                        <img src="https://img.youtube.com/vi/0dcd5bLtYs8/maxresdefault.jpg" onerror="this.src='https://img.youtube.com/vi/0dcd5bLtYs8/hqdefault.jpg';" alt="SMTP Setup Video" style="position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0.7; transition: opacity 0.3s ease;">
+                        
+                        <!-- Overlay gradient for better contrast -->
+                        <div style="position: absolute; width: 100%; height: 100%; background: linear-gradient(135deg, rgba(30,27,75,0.4) 0%, rgba(76,29,149,0.4) 100%); pointer-events: none;"></div>
+                        
+                        <!-- Play Button -->
+                        <div style="width: 64px; height: 64px; background: #8b5cf6; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 2; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); transition: transform 0.2s ease, background 0.2s ease;" class="ofast-play-btn">
+                            <div style="width: 0; height: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-left: 16px solid #fff; margin-left: 6px;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <style>
+                    .ofast-video-container:hover img {
+                        opacity: 0.9 !important;
+                    }
+                    .ofast-video-container:hover .ofast-play-btn {
+                        transform: scale(1.1);
+                        background: #7c3aed !important;
+                    }
+                </style>
+                
+                <script>
+                    jQuery(document).ready(function($) {
+                        $('#ofast-inline-video-wrapper').on('click', function() {
+                            var videoId = $(this).data('video-id');
+                            var iframe = $('<iframe/>', {
+                                'src': 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&rel=0',
+                                'frameborder': '0',
+                                'allow': 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+                                'allowfullscreen': 'true',
+                                'css': {
+                                    'width': '100%',
+                                    'height': '100%',
+                                    'position': 'absolute',
+                                    'top': '0',
+                                    'left': '0',
+                                    'z-index': '10'
+                                }
+                            });
+                            $(this).empty().append(iframe);
+                        });
+                    });
+                </script>
+
+                <!-- Troubleshooting -->
+                <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 25px;">
+                    <h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: 600; color: #1e293b;">Troubleshooting</h3>
+                    <ul style="margin: 0; padding: 0; list-style: none;">
+                        <li style="margin-bottom: 16px;"><a href="#" style="text-decoration: none; color: #4b5563; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px;"><span class="dashicons dashicons-email" style="color: #3b82f6;"></span> Send test email</a></li>
+                        <li style="margin-bottom: 16px;"><a href="#" style="text-decoration: none; color: #4b5563; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px;"><span class="dashicons dashicons-external" style="color: #3b82f6;"></span> Spam Score Checker</a></li>
+                        <li style="margin-bottom: 16px;"><a href="#" style="text-decoration: none; color: #4b5563; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px;"><span class="dashicons dashicons-update" style="color: #3b82f6;"></span> Import/Export</a></li>
+                        <li style="margin-bottom: 16px;"><a href="#" style="text-decoration: none; color: #4b5563; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px;"><span class="dashicons dashicons-admin-links" style="color: #3b82f6;"></span> Connectivity test</a></li>
+                        <li style="margin-bottom: 16px;"><a href="#" style="text-decoration: none; color: #4b5563; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px;"><span class="dashicons dashicons-search" style="color: #3b82f6;"></span> Diagnostic test</a></li>
+                        <li style="margin-bottom: 0;"><a href="#" style="text-decoration: none; color: #4b5563; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px;"><span class="dashicons dashicons-image-rotate" style="color: #3b82f6;"></span> Reset plugin</a></li>
+                    </ul>
+                </div>
+
+                <!-- Let Our Experts -->
+                <div style="background: linear-gradient(to bottom, #312e81, #1e1b4b); padding: 35px 25px; border-radius: 12px; color: #fff; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 25px;">
+                    <div style="width: 70px; height: 70px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
+                        <span class="dashicons dashicons-businessman" style="font-size: 38px; width: 38px; height: 38px; color: #60a5fa;"></span>
+                    </div>
+                    <p style="margin: 0 0 25px 0; font-size: 16px; font-weight: 500; line-height: 1.5;">Let Our Experts Handle Your Post SMTP Plugin Setup</p>
+                    <a href="#" style="display: inline-block; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 10px 24px; border-radius: 30px; text-decoration: none; font-weight: 500; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Book Now</a>
+                </div>
+
             </div>
         </div>
 

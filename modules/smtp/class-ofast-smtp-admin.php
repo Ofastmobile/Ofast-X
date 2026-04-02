@@ -337,7 +337,7 @@ class Ofast_X_SMTP_Admin
         $weekly_counts = array_column($weekly_data, 'count');
         $max_weekly = !empty($weekly_counts) ? max($weekly_counts) : 1;
         ?>
-        <p>Monitor your email delivery performance and SMTP status.</p>
+
 
         <!-- Connection Status -->
         <div class="ofast-grid-3" style="margin: 25px 0;">
@@ -595,13 +595,12 @@ class Ofast_X_SMTP_Admin
         </div>
 
         <!-- Quick Actions -->
-        <div style="background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb;">
-            <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #374151;">Quick Actions</h3>
+        <div style="margin: 15px 0 25px 0;">
             <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                 <a href="<?php echo admin_url('admin.php?page=ofast-smtp&tab=settings'); ?>"
-                    class="button button-primary button-large">Configure SMTP</a>
+                    class="button ofast-btn-primary button-large">Configure SMTP</a>
                 <a href="<?php echo admin_url('admin.php?page=ofast-emailer&tab=history'); ?>"
-                    class="button button-secondary button-large">Emailer</a>
+                    class="button ofast-btn-secondary button-large">Emailer</a>
             </div>
         </div>
         <?php
@@ -657,7 +656,7 @@ class Ofast_X_SMTP_Admin
             'today' => $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table_name} WHERE DATE(sent_at) = %s", current_time('Y-m-d')))
         );
         ?>
-        <p>View all emails sent through SMTP with status and preview.</p>
+
 
         <!-- Stats -->
         <div class="ofast-grid-4" style="margin: 20px 0;">
@@ -1048,7 +1047,6 @@ class Ofast_X_SMTP_Admin
             }
         </style>
 
-        <p>Configure SMTP to ensure reliable email delivery from your WordPress site.</p>
 
         <form method="post" id="ofast-smtp-form">
             <?php wp_nonce_field('ofast_smtp_settings', '_wpnonce'); ?>

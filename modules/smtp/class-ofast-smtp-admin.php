@@ -690,7 +690,219 @@ class Ofast_X_SMTP_Admin
         $from_name = get_option('ofast_smtp_from_name', get_bloginfo('name'));
         $log_retention_days = intval(get_option('ofast_smtp_log_retention_days', 90));
         $presets = Ofast_X_SMTP::get_provider_presets();
+
+        // Include Ofast Dropdown assets
+        if (class_exists('Ofast_X_Dropdown')) {
+            echo Ofast_X_Dropdown::render_assets();
+        }
         ?>
+        <style>
+            /* Ofast Toggle Switch */
+            .ofast-toggle {
+                position: relative;
+                display: inline-block;
+                width: 44px;
+                height: 24px;
+                vertical-align: middle;
+                margin-right: 10px;
+            }
+            .ofast-toggle input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+            .ofast-slider {
+                position: absolute;
+                cursor: pointer;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background-color: #cbd5e1;
+                transition: .4s;
+                border-radius: 34px;
+            }
+            .ofast-slider:before {
+                position: absolute;
+                content: "";
+                height: 18px;
+                width: 18px;
+                left: 3px;
+                bottom: 3px;
+                background-color: white;
+                transition: .4s;
+                border-radius: 50%;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            input:checked + .ofast-slider {
+                background-color: #6366f1;
+            }
+            input:focus + .ofast-slider {
+                box-shadow: 0 0 1px #6366f1;
+            }
+            input:checked + .ofast-slider:before {
+                transform: translateX(20px);
+            }
+
+            /* Ofast Form Styling */
+            #ofast-smtp-form .form-table input[type="text"],
+            #ofast-smtp-form .form-table input[type="email"],
+            #ofast-smtp-form .form-table input[type="password"],
+            #ofast-smtp-form .form-table input[type="number"] {
+                border-radius: 8px;
+                border: 1px solid #d7deea;
+                padding: 8px 12px;
+                transition: border-color 0.2s, box-shadow 0.2s;
+            }
+            #ofast-smtp-form .form-table input[type="text"]:focus,
+            #ofast-smtp-form .form-table input[type="email"]:focus,
+            #ofast-smtp-form .form-table input[type="password"]:focus,
+            #ofast-smtp-form .form-table input[type="number"]:focus {
+                border-color: #6366f1;
+                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+                outline: none;
+            }
+
+            /* Encryption Segmented Control */
+            .ofast-encryption-group {
+                display: inline-flex;
+                gap: 0;
+                border: 1px solid #d7deea;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            .ofast-encryption-group label {
+                padding: 8px 18px;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 500;
+                color: #64748b;
+                background: #f8fafc;
+                border-right: 1px solid #d7deea;
+                transition: all 0.2s;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .ofast-encryption-group label:last-child {
+                border-right: none;
+            }
+            .ofast-encryption-group input[type="radio"] {
+                display: none;
+            }
+            .ofast-encryption-group input[type="radio"]:checked + span {
+                /* handled via JS below */
+            }
+            .ofast-encryption-group label.active {
+                background: #6366f1;
+                color: #fff;
+            }
+
+            /* Ofast Button Styling */
+            #ofast-smtp-form .button.button-primary,
+            #ofast-smtp-form .button.ofast-btn-primary {
+                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+                border-color: #6366f1 !important;
+                text-shadow: none !important;
+                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+                transition: all 0.3s ease !important;
+                padding: 10px 24px !important;
+                height: auto !important;
+                border-radius: 8px !important;
+                font-weight: 600 !important;
+                font-size: 14px !important;
+            }
+            #ofast-smtp-form .button.button-primary:hover,
+            #ofast-smtp-form .button.ofast-btn-primary:hover {
+                background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
+            }
+            #ofast-smtp-form .button.button-secondary,
+            #ofast-smtp-form .button.ofast-btn-secondary {
+                border-radius: 8px !important;
+                padding: 8px 18px !important;
+                font-weight: 500 !important;
+                transition: all 0.2s !important;
+                border: 1px solid #d7deea !important;
+            }
+            #ofast-smtp-form .button.button-secondary:hover {
+                border-color: #6366f1 !important;
+                color: #6366f1 !important;
+            }
+            #ofast-smtp-form .button.button-small {
+                border-radius: 6px !important;
+                padding: 4px 12px !important;
+            }
+
+            /* Tooltip */
+            .ofast-tooltip-wrap {
+                position: relative;
+                display: inline-flex;
+                align-items: center;
+                margin-left: 8px;
+                vertical-align: middle;
+            }
+            .ofast-tooltip-icon {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                background: rgba(99, 102, 241, 0.1);
+                border: 1px solid rgba(99, 102, 241, 0.3);
+                color: #6366f1;
+                font-size: 13px;
+                font-weight: 700;
+                cursor: help;
+                transition: all 0.25s ease;
+            }
+            .ofast-tooltip-icon:hover {
+                background: #6366f1;
+                border-color: #6366f1;
+                color: #fff;
+                transform: scale(1.1);
+                box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+            }
+            .ofast-tooltip-text {
+                visibility: hidden;
+                opacity: 0;
+                position: absolute;
+                bottom: calc(100% + 10px);
+                left: 50%;
+                transform: translateX(-50%) translateY(4px);
+                background: rgba(15, 23, 42, 0.85);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                color: #f1f5f9;
+                font-size: 13px;
+                font-weight: 400;
+                line-height: 1.6;
+                padding: 12px 16px;
+                border-radius: 12px;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                min-width: 280px;
+                max-width: 420px;
+                white-space: normal;
+                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255, 255, 255, 0.1) inset;
+                z-index: 1000;
+                transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
+                pointer-events: none;
+            }
+            .ofast-tooltip-text::after {
+                content: '';
+                position: absolute;
+                top: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                border: 6px solid transparent;
+                border-top-color: rgba(15, 23, 42, 0.85);
+            }
+            .ofast-tooltip-wrap:hover .ofast-tooltip-text {
+                visibility: visible;
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        </style>
+
         <p>Configure SMTP to ensure reliable email delivery from your WordPress site.</p>
 
         <form method="post" id="ofast-smtp-form">
@@ -700,27 +912,25 @@ class Ofast_X_SMTP_Admin
                 <tr>
                     <th>Enable SMTP</th>
                     <td>
-                        <label><input type="checkbox" name="smtp_enabled" value="1" <?php checked($enabled); ?>> Use SMTP for
-                            all WordPress emails</label>
+                        <label class="ofast-toggle">
+                            <input type="checkbox" name="smtp_enabled" value="1" <?php checked($enabled); ?>>
+                            <span class="ofast-slider"></span>
+                        </label>
+                        <span style="vertical-align: middle; font-weight: 500;">Use SMTP for all WordPress emails</span>
                         <p class="description">When enabled, all emails will be sent through your configured mailer.</p>
                     </td>
                 </tr>
                 <tr>
                     <th>Mailer Type</th>
                     <td>
-                        <select name="smtp_mailer_type" id="smtp_mailer_type">
-                            <option value="default" <?php selected($mailer_type, 'default'); ?>>PHP Mail (Default) - No
-                                credentials needed</option>
+                        <select name="smtp_mailer_type" id="smtp_mailer_type" class="ofast-dropdown-native" style="width: 360px;">
+                            <option value="default" <?php selected($mailer_type, 'default'); ?>>PHP Mail (Default) - No credentials needed</option>
                             <option value="smtp" <?php selected($mailer_type, 'smtp'); ?>>Other SMTP - Custom server</option>
                         </select>
-                        <p class="description" id="mailer_note"
-                            style="margin-top: 10px; padding: 10px; background: #f0f6fc; border-radius: 5px;">
-                            <?php if ($mailer_type === 'default'): ?>
-                                Uses your server's built-in mail function. Only From Email/Name needed. Best for most hosts.
-                            <?php else: ?>
-                                Requires SMTP server credentials. Better deliverability with providers like SendGrid, Mailgun.
-                            <?php endif; ?>
-                        </p>
+                        <span class="ofast-tooltip-wrap">
+                            <span class="ofast-tooltip-icon">?</span>
+                            <span class="ofast-tooltip-text" id="mailer_note"><?php echo $mailer_type === 'default' ? 'Uses your server\'s built-in mail function. Only From Email/Name needed. Best for most hosts.' : 'Requires SMTP server credentials. Better deliverability with providers like SendGrid, Mailgun.'; ?></span>
+                        </span>
                     </td>
                 </tr>
             </table>
@@ -731,17 +941,17 @@ class Ofast_X_SMTP_Admin
                     <tr>
                         <th>Email Provider</th>
                         <td>
-                            <select name="smtp_provider" id="smtp_provider">
+                            <select name="smtp_provider" id="smtp_provider" class="ofast-dropdown-native" style="width: 360px;">
                                 <?php foreach ($presets as $key => $preset): ?>
                                     <option value="<?php echo esc_attr($key); ?>" <?php selected($provider, $key); ?>>
                                         <?php echo esc_html($preset['name']); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
-                            <p class="description" id="provider_note"
-                                style="margin-top: 10px; padding: 10px; background: #f0f6fc; border-radius: 5px;">
-                                <?php echo esc_html($presets[$provider]['note'] ?? ''); ?>
-                            </p>
+                            <span class="ofast-tooltip-wrap">
+                                <span class="ofast-tooltip-icon">?</span>
+                                <span class="ofast-tooltip-text" id="provider_note"><?php echo esc_html($presets[$provider]['note'] ?? ''); ?></span>
+                            </span>
                         </td>
                     </tr>
                 </table>
@@ -764,11 +974,20 @@ class Ofast_X_SMTP_Admin
                     <tr>
                         <th>Encryption</th>
                         <td>
-                            <label><input type="radio" name="smtp_encryption" value="tls" <?php checked($encryption, 'tls'); ?>>
-                                TLS (Recommended)</label><br>
-                            <label><input type="radio" name="smtp_encryption" value="ssl" <?php checked($encryption, 'ssl'); ?>>
-                                SSL</label><br>
-                            <label><input type="radio" name="smtp_encryption" value="none" <?php checked($encryption, 'none'); ?>> None</label>
+                            <div class="ofast-encryption-group">
+                                <label class="<?php echo $encryption === 'tls' ? 'active' : ''; ?>">
+                                    <input type="radio" name="smtp_encryption" value="tls" <?php checked($encryption, 'tls'); ?>>
+                                    <span>TLS (Recommended)</span>
+                                </label>
+                                <label class="<?php echo $encryption === 'ssl' ? 'active' : ''; ?>">
+                                    <input type="radio" name="smtp_encryption" value="ssl" <?php checked($encryption, 'ssl'); ?>>
+                                    <span>SSL</span>
+                                </label>
+                                <label class="<?php echo $encryption === 'none' ? 'active' : ''; ?>">
+                                    <input type="radio" name="smtp_encryption" value="none" <?php checked($encryption, 'none'); ?>>
+                                    <span>None</span>
+                                </label>
+                            </div>
                         </td>
                     </tr>
                 </table>
@@ -818,8 +1037,13 @@ class Ofast_X_SMTP_Admin
                 <table class="form-table">
                     <tr>
                         <th>Enable Rate Limiting</th>
-                        <td><label><input type="checkbox" name="rate_limit_enabled" value="1" <?php checked(get_option('ofast_smtp_rate_limit_enabled', true)); ?>> Limit emails per
-                                minute</label></td>
+                        <td>
+                            <label class="ofast-toggle">
+                                <input type="checkbox" name="rate_limit_enabled" value="1" <?php checked(get_option('ofast_smtp_rate_limit_enabled', true)); ?>>
+                                <span class="ofast-slider"></span>
+                            </label>
+                            <span style="vertical-align: middle;">Limit emails per minute</span>
+                        </td>
                     </tr>
                     <tr>
                         <th><label for="rate_limit">Max Emails/Minute</label></th>
@@ -833,26 +1057,11 @@ class Ofast_X_SMTP_Admin
                 </table>
             </div>
 
-            <!-- Test Connection -->
-            <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 30px 0;">
-                <h3 style="margin-top: 0;">Test Connection</h3>
-                <p>Send a test email to verify your settings are correct.</p>
-                <button type="button" id="test-smtp-btn" class="button button-secondary">Send Test Email to
-                    <?php echo esc_html(get_option('admin_email')); ?></button>
-                <span id="test-result" style="margin-left: 15px;"></span>
-                <div id="test-details" style="margin-top: 15px; display: none;">
-                    <pre
-                        style="background: #1e293b; color: #10b981; padding: 15px; border-radius: 5px; overflow-x: auto;"></pre>
-                </div>
-            </div>
-
-            <!-- Email Logging Security Settings -->
-            <div style="background: #fffbeb; border: 1px solid #f59e0b; border-radius: 8px; padding: 20px; margin: 30px 0;">
-                <h3 style="margin-top: 0; color: #92400e;">🔒 Email Logging Security</h3>
-                <p style="color: #92400e;">
-                    <strong>Security Notice:</strong> Email logs may contain sensitive information like passwords, tokens, and
-                    personal data.
-                    Configure logging level based on your security requirements.
+            <!-- Email Logging Settings -->
+            <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 30px 0;">
+                <h3 style="margin-top: 0;">Email Logging</h3>
+                <p style="color: #64748b;">
+                    Control what data is stored in your email history logs.
                 </p>
 
                 <table class="form-table">
@@ -860,13 +1069,14 @@ class Ofast_X_SMTP_Admin
                         <th>Log Email Content</th>
                         <td>
                             <?php $log_body = get_option('ofast_smtp_log_body_content', false); ?>
-                            <label>
+                            <label class="ofast-toggle">
                                 <input type="checkbox" name="log_body_content" value="1" <?php checked($log_body); ?>>
-                                Store filtered email content in logs
+                                <span class="ofast-slider"></span>
                             </label>
-                            <p class="description" style="color: #92400e;">
-                                <strong>Recommended: Leave unchecked</strong> - Only metadata (to, subject, status, timestamp)
-                                will be logged for security.<br>
+                            <span style="vertical-align: middle;">Store email body content in logs</span>
+                            <p class="description">
+                                <strong>Recommended: Leave off</strong> — Only metadata (to, subject, status, timestamp)
+                                will be logged.<br>
                                 When enabled, sensitive patterns (passwords, tokens, API keys) are automatically filtered before
                                 storage.
                             </p>
@@ -877,7 +1087,7 @@ class Ofast_X_SMTP_Admin
                         <td>
                             <input type="number" name="log_retention_days" value="<?php echo esc_attr($log_retention_days); ?>"
                                 min="0" max="3650" style="width: 90px;">
-                            <p class="description" style="color: #92400e;">
+                            <p class="description">
                                 Set to <strong>0</strong> to keep logs forever. Default is 90 days.
                             </p>
                         </td>
@@ -890,6 +1100,30 @@ class Ofast_X_SMTP_Admin
                     Settings</button>
             </p>
         </form>
+
+        <!-- Test Connection (outside form, uses saved settings) -->
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 30px 0;">
+            <h3 style="margin-top: 0;">Test Connection</h3>
+            <p>Send a test email to verify your saved settings are working.</p>
+            <button type="button" id="test-smtp-btn" class="button button-secondary"
+                style="border-radius: 8px !important; padding: 8px 18px !important; font-weight: 500 !important; transition: all 0.2s !important; border: 1px solid #d7deea !important;">Send Test Email to
+                <?php echo esc_html(get_option('admin_email')); ?></button>
+            <span id="test-result" style="margin-left: 15px;"></span>
+            <div id="test-details" style="margin-top: 15px; display: none;">
+                <pre
+                    style="background: #1e293b; color: #10b981; padding: 15px; border-radius: 8px; overflow-x: auto;"></pre>
+            </div>
+        </div>
+
+        <script>
+        jQuery(document).ready(function($) {
+            // Encryption segmented control
+            $('.ofast-encryption-group label').on('click', function() {
+                $(this).closest('.ofast-encryption-group').find('label').removeClass('active');
+                $(this).addClass('active');
+            });
+        });
+        </script>
 
         <!-- Provider Setup Guides -->
         <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-top: 30px;">

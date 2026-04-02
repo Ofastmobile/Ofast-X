@@ -388,15 +388,17 @@ class Ofast_X_SMTP_DNS
             <h3 style="margin-top: 0;">Email DNS Checker</h3>
             <p style="color: #666;">Verify SPF, DKIM, and DMARC records for email deliverability.</p>
 
-            <form method="post" style="margin-bottom: 20px;">
+            <form method="post" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
                 <?php wp_nonce_field('ofast_dns_check', 'dns_nonce'); ?>
-                <input type="text" name="domain" value="<?php echo esc_attr($domain); ?>" class="regular-text" placeholder="example.com">
-                <button type="submit" name="check_dns" class="button button-primary">Check DNS Records</button>
+                <input type="text" name="domain" value="<?php echo esc_attr($domain); ?>" class="regular-text" placeholder="example.com"
+                    style="border-radius: 8px; border: 1px solid #d7deea; padding: 8px 12px;">
+                <button type="submit" name="check_dns" class="button button-primary"
+                    style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important; border-color: #6366f1 !important; text-shadow: none !important; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important; padding: 8px 20px !important; height: auto !important; border-radius: 8px !important; font-weight: 600 !important;">Check DNS Records</button>
             </form>
 
             <?php if ($results): ?>
                 <?php $score = $this->get_health_score($results); ?>
-                <div style="margin-bottom: 20px; padding: 15px; background: <?php echo $score >= 70 ? '#d4edda' : ($score >= 40 ? '#fff3cd' : '#f8d7da'); ?>; border-radius: 5px;">
+                <div style="margin-bottom: 20px; padding: 15px; background: <?php echo $score >= 70 ? '#d4edda' : ($score >= 40 ? '#fff3cd' : '#f8d7da'); ?>; border-radius: 8px;">
                     <strong>Email Health Score: <?php echo $score; ?>/100</strong>
                     <?php if ($score >= 70): ?>
                         <span style="color: #155724;"> - Good! Your email authentication is well configured.</span>
@@ -438,11 +440,11 @@ class Ofast_X_SMTP_DNS
         $color = $status_colors[$data['status']] ?? '#6c757d';
         $icon = $status_icons[$data['status']] ?? '?';
     ?>
-        <div style="border: 1px solid #ddd; border-left: 4px solid <?php echo $color; ?>; padding: 15px; margin-bottom: 15px; border-radius: 4px;">
+        <div style="border: 1px solid #ddd; border-left: 4px solid <?php echo $color; ?>; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
             <h4 style="margin: 0 0 10px 0;"><?php echo esc_html($title); ?> <span style="color: <?php echo $color; ?>;"><?php echo $icon; ?> <?php echo ucfirst($data['status']); ?></span></h4>
 
             <?php if (!empty($data['record'])): ?>
-                <code style="display: block; padding: 10px; background: #f5f5f5; margin: 10px 0; word-break: break-all; font-size: 12px;"><?php echo esc_html($data['record']); ?></code>
+                <code style="display: block; padding: 10px; background: #f5f5f5; margin: 10px 0; word-break: break-all; font-size: 12px; border-radius: 6px;"><?php echo esc_html($data['record']); ?></code>
             <?php endif; ?>
 
             <?php if (!empty($data['records'])): ?>
@@ -464,7 +466,7 @@ class Ofast_X_SMTP_DNS
             <?php endif; ?>
 
             <?php if (!empty($data['issues'])): ?>
-                <div style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 4px;">
+                <div style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 8px;">
                     <strong>Issues:</strong>
                     <ul style="margin: 5px 0 0 20px;">
                         <?php foreach ($data['issues'] as $issue): ?>
@@ -475,7 +477,7 @@ class Ofast_X_SMTP_DNS
             <?php endif; ?>
 
             <?php if (!empty($data['recommendations'])): ?>
-                <div style="margin-top: 10px; padding: 10px; background: #e7f3ff; border-radius: 4px;">
+                <div style="margin-top: 10px; padding: 10px; background: #e7f3ff; border-radius: 8px;">
                     <strong>Recommendations:</strong>
                     <ul style="margin: 5px 0 0 20px;">
                         <?php foreach ($data['recommendations'] as $rec): ?>

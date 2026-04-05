@@ -511,7 +511,7 @@ class Ofast_X_SMTP_Admin
                             </div>
                         </div>
 
-                        <a href="https://example.com/pro" target="_blank" style="display: inline-block; background: #f59e0b; color: #fff; padding: 12px 30px; border-radius: 30px; font-weight: 600; text-decoration: none; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3);">Get Post SMTP Pro &rarr;</a>
+                        <a href="https://ofastshop.com/ofast-x" target="_blank" style="display: inline-block; background: #f59e0b; color: #fff; padding: 12px 30px; border-radius: 30px; font-weight: 600; text-decoration: none; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3);">Get Ofast Toolkit Pro &rarr;</a>
                     </div>
                 </div>
             </div>
@@ -587,7 +587,7 @@ class Ofast_X_SMTP_Admin
                     <div style="width: 70px; height: 70px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
                         <span class="dashicons dashicons-businessman" style="font-size: 38px; width: 38px; height: 38px; color: #60a5fa;"></span>
                     </div>
-                    <p style="margin: 0 0 25px 0; font-size: 16px; font-weight: 500; line-height: 1.5;">Let Our Experts Handle Your Post SMTP Plugin Setup</p>
+                    <p style="margin: 0 0 25px 0; font-size: 16px; font-weight: 500; line-height: 1.5;">Let Our Experts Handle Your Ofast SMTP Setup</p>
                     <a href="#" style="display: inline-block; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 10px 24px; border-radius: 30px; text-decoration: none; font-weight: 500; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Book Now</a>
                 </div>
 

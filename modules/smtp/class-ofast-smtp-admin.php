@@ -21,6 +21,7 @@ class Ofast_X_SMTP_Admin
         add_action('admin_init', array($this, 'handle_resend'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_head', array($this, 'admin_head_styles'));
+        add_action('wp_ajax_ofast_smtp_fetch_logs', array($this, 'ajax_fetch_logs'));
     }
 
     /**
@@ -638,7 +639,13 @@ class Ofast_X_SMTP_Admin
             }
         }
 
-        $per_page = 20;
+        $allowed_per_page = array(10, 20, 50, 100);
+        $per_page_input = isset($_GET['per_page']) ? sanitize_text_field($_GET['per_page']) : '20';
+        $show_all = ($per_page_input === 'all');
+        $per_page = $show_all ? 999999 : intval($per_page_input);
+        if (!$show_all && !in_array($per_page, $allowed_per_page)) {
+            $per_page = 20;
+        }
         $current_page = max(1, intval($_GET['paged'] ?? 1));
         $offset = ($current_page - 1) * $per_page;
 
@@ -695,7 +702,25 @@ class Ofast_X_SMTP_Admin
                 <button type="submit" name="clear_logs" class="button" onclick="return confirm('Are you sure?');">Clear Old
                     Logs</button>
             </form>
+
+            <!-- Per-page selector -->
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                <span style="color: #6b7280; font-size: 13px;">Show</span>
+                <select id="ofast-smtp-per-page" style="width: auto; min-width: 70px; border: 1px solid #d1d5db; border-radius: 8px; padding: 6px 10px; font-size: 13px; background: #fff; color: #374151; cursor: pointer;">
+                    <?php foreach (array(10, 20, 50, 100, 'all') as $opt): ?>
+                        <option value="<?php echo esc_attr($opt); ?>" <?php selected($show_all ? 'all' : $per_page, $opt === 'all' ? 'all' : $opt); ?>>
+                            <?php echo $opt === 'all' ? 'All' : $opt; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <span style="color: #6b7280; font-size: 13px;">per page</span>
+            </div>
         </div>
+
+        <?php
+        // Nonce for AJAX pagination
+        $ajax_nonce = wp_create_nonce('ofast_smtp_logs_nonce');
+        ?>
 
         <!-- Log Table -->
         <div style="overflow-x: auto; max-width: 100%;">
@@ -710,67 +735,124 @@ class Ofast_X_SMTP_Admin
                         <th style="width: 150px;">Actions</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <?php if (empty($logs)): ?>
-                        <tr>
-                            <td colspan="6" style="text-align: center; padding: 40px; color: #6b7280;">No emails logged yet.</td>
-                        </tr>
-                    <?php else: ?>
-                        <?php foreach ($logs as $log): ?>
-                            <?php $status = strtolower((string) $log->status); ?>
-                            <tr>
-                                <td><?php echo esc_html($log->id); ?></td>
-                                <td><?php echo esc_html($log->to_email); ?></td>
-                                <td><?php echo esc_html($log->subject); ?></td>
-                                <td>
-                                    <?php if (in_array($status, array('success', 'sent'), true)): ?>
-                                        <span
-                                            style="background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 3px; font-size: 11px;">SUCCESS</span>
-                                    <?php elseif ($status === 'failed'): ?>
-                                        <span
-                                            style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 3px; font-size: 11px;">FAILED</span>
-                                    <?php elseif ($status === 'rate_limited'): ?>
-                                        <span
-                                            style="background: #ffedd5; color: #9a3412; padding: 2px 8px; border-radius: 3px; font-size: 11px;">RATE
-                                            LIMITED</span>
-                                    <?php else: ?>
-                                        <span
-                                            style="background: #e0f2fe; color: #0f4c81; padding: 2px 8px; border-radius: 3px; font-size: 11px;">PENDING</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td><?php echo esc_html($log->sent_at); ?></td>
-                                <td>
-                                    <?php if (!empty($log->body)): ?>
-                                        <button type="button" class="button button-small preview-email"
-                                            data-id="<?php echo esc_attr($log->id); ?>"
-                                            data-content="<?php echo esc_attr(base64_encode($log->body)); ?>">Preview</button>
-                                    <?php else: ?>
-                                        <span style="color: #6b7280; font-style: italic;">No content stored</span>
-                                    <?php endif; ?>
-                                    <?php if ($status === 'failed' && !empty($log->body)): ?>
-                                        <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-smtp&tab=log&resend=' . $log->id), 'resend_email'); ?>"
-                                            class="button button-small">Resend</a>
-                                    <?php elseif ($status === 'failed'): ?>
-                                        <span style="color: #6b7280; font-style: italic; margin-left: 8px;">Resend unavailable</span>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
+                <tbody id="ofast-smtp-log-tbody">
+                    <?php echo $this->render_log_rows($logs); ?>
                 </tbody>
             </table>
         </div>
 
         <?php
-        $total_pages = ceil($total / $per_page);
-        if ($total_pages > 1):
-            ?>
-            <div class="tablenav bottom">
-                <div class="tablenav-pages">
-                    <?php echo paginate_links(array('base' => add_query_arg('paged', '%#%'), 'format' => '', 'prev_text' => '&laquo;', 'next_text' => '&raquo;', 'total' => $total_pages, 'current' => $current_page)); ?>
-                </div>
-            </div>
-        <?php endif; ?>
+        $total_pages = $show_all ? 1 : ceil($total / $per_page);
+        $showing_start = $total > 0 ? $offset + 1 : 0;
+        $showing_end = min($offset + $per_page, $total);
+        ?>
+
+        <style>
+            /* Pagination styles loaded from shared ofast-pagination.css */
+            .ofast-smtp-loading {
+                position: relative;
+                pointer-events: none;
+            }
+            .ofast-smtp-loading::after {
+                content: '';
+                position: absolute;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(255,255,255,0.7);
+                border-radius: inherit;
+            }
+        </style>
+
+        <div id="ofast-smtp-pagination-wrap">
+            <?php echo $this->render_pagination_bar($current_page, $total_pages, $total, $per_page, $show_all, $offset); ?>
+        </div>
+
+        <script>
+        jQuery(document).ready(function($) {
+            var smtpState = {
+                page: <?php echo intval($current_page); ?>,
+                perPage: '<?php echo esc_js($show_all ? 'all' : $per_page); ?>',
+                nonce: '<?php echo esc_js($ajax_nonce); ?>'
+            };
+
+            function smtpFetchPage(page, perPage) {
+                var $tbody = $('#ofast-smtp-log-tbody');
+                var $paginationWrap = $('#ofast-smtp-pagination-wrap');
+                $tbody.closest('table').addClass('ofast-smtp-loading');
+                $paginationWrap.addClass('ofast-smtp-loading');
+
+                $.post(ajaxurl, {
+                    action: 'ofast_smtp_fetch_logs',
+                    nonce: smtpState.nonce,
+                    paged: page,
+                    per_page: perPage
+                }, function(response) {
+                    if (response.success) {
+                        $tbody.html(response.data.rows_html);
+                        $paginationWrap.html(response.data.pagination_html);
+                        smtpState.page = response.data.current_page;
+                        smtpState.perPage = perPage;
+
+                        // Update per-page dropdown to stay in sync
+                        $('#ofast-smtp-per-page').val(perPage);
+
+                        // Update URL without reload (bookmarkable)
+                        var url = new URL(window.location);
+                        url.searchParams.set('paged', response.data.current_page);
+                        url.searchParams.set('per_page', perPage);
+                        url.searchParams.set('tab', 'log');
+                        history.replaceState(null, '', url.toString());
+
+                        // Re-bind preview buttons for new rows
+                        smtpBindPreview();
+                        // Re-bind pagination clicks
+                        smtpBindPagination();
+                    }
+                    $tbody.closest('table').removeClass('ofast-smtp-loading');
+                    $paginationWrap.removeClass('ofast-smtp-loading');
+                }).fail(function() {
+                    $tbody.closest('table').removeClass('ofast-smtp-loading');
+                    $paginationWrap.removeClass('ofast-smtp-loading');
+                });
+            }
+
+            function smtpBindPagination() {
+                $('#ofast-smtp-pagination-wrap').off('click', '.ofast-page-btn').on('click', '.ofast-page-btn', function(e) {
+                    e.preventDefault();
+                    if ($(this).hasClass('disabled') || $(this).hasClass('active')) return;
+                    var page = $(this).data('page');
+                    if (page) smtpFetchPage(page, smtpState.perPage);
+                });
+            }
+
+            function smtpBindPreview() {
+                $('#ofast-smtp-log-tbody').off('click', '.preview-email').on('click', '.preview-email', function() {
+                    var content = atob($(this).data('content'));
+                    $('#email-preview-frame').remove();
+                    var iframe = $('<iframe id="email-preview-frame" style="width: 100%; height: 60vh; border: none;"></iframe>');
+                    iframe.attr('srcdoc', content);
+                    $('#email-preview-modal .ofast-smtp-modal-body').append(iframe);
+                    $('#email-preview-modal').fadeIn(200);
+                });
+            }
+
+            // Per-page change → AJAX
+            $('#ofast-smtp-per-page').on('change', function() {
+                smtpFetchPage(1, $(this).val());
+            });
+
+            // Initial bindings
+            smtpBindPagination();
+            smtpBindPreview();
+
+            // Close preview modal
+            $('#close-preview, #email-preview-modal').on('click', function(e) {
+                if (e.target === this || $(this).attr('id') === 'close-preview') {
+                    $('#email-preview-modal').fadeOut(200);
+                    $('#email-preview-frame').remove();
+                }
+            });
+        });
+        </script>
 
         <!-- Preview Modal -->
         <div id="email-preview-modal"
@@ -796,26 +878,146 @@ class Ofast_X_SMTP_Admin
             </div>
         </div>
 
-        <script>
-            jQuery(document).ready(function ($) {
-                $('.preview-email').on('click', function () {
-                    var content = atob($(this).data('content'));
-                    // Remove old iframe and create a fresh one to force re-render
-                    $('#email-preview-frame').remove();
-                    var iframe = $('<iframe id="email-preview-frame" style="width: 100%; height: 60vh; border: none;"></iframe>');
-                    iframe.attr('srcdoc', content);
-                    $('#email-preview-modal .ofast-smtp-modal-body').append(iframe);
-                    $('#email-preview-modal').fadeIn(200);
-                });
-                $('#close-preview, #email-preview-modal').on('click', function (e) {
-                    if (e.target === this || $(this).attr('id') === 'close-preview') {
-                        $('#email-preview-modal').fadeOut(200);
-                        $('#email-preview-frame').remove();
-                    }
-                });
-            });
-        </script>
         <?php
+    }
+
+    /**
+     * Render log table rows HTML (reused by both SSR and AJAX)
+     */
+    private function render_log_rows($logs)
+    {
+        if (empty($logs)) {
+            return '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #6b7280;">No emails logged yet.</td></tr>';
+        }
+        $html = '';
+        foreach ($logs as $log) {
+            $status = strtolower((string) $log->status);
+            $html .= '<tr>';
+            $html .= '<td>' . esc_html($log->id) . '</td>';
+            $html .= '<td>' . esc_html($log->to_email) . '</td>';
+            $html .= '<td>' . esc_html($log->subject) . '</td>';
+            $html .= '<td>';
+            if (in_array($status, array('success', 'sent'), true)) {
+                $html .= '<span style="background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 3px; font-size: 11px;">SUCCESS</span>';
+            } elseif ($status === 'failed') {
+                $html .= '<span style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 3px; font-size: 11px;">FAILED</span>';
+            } elseif ($status === 'rate_limited') {
+                $html .= '<span style="background: #ffedd5; color: #9a3412; padding: 2px 8px; border-radius: 3px; font-size: 11px;">RATE LIMITED</span>';
+            } else {
+                $html .= '<span style="background: #e0f2fe; color: #0f4c81; padding: 2px 8px; border-radius: 3px; font-size: 11px;">PENDING</span>';
+            }
+            $html .= '</td>';
+            $html .= '<td>' . esc_html($log->sent_at) . '</td>';
+            $html .= '<td>';
+            if (!empty($log->body)) {
+                $html .= '<button type="button" class="button button-small preview-email" data-id="' . esc_attr($log->id) . '" data-content="' . esc_attr(base64_encode($log->body)) . '">Preview</button>';
+            } else {
+                $html .= '<span style="color: #6b7280; font-style: italic;">No content stored</span>';
+            }
+            if ($status === 'failed' && !empty($log->body)) {
+                $html .= ' <a href="' . wp_nonce_url(admin_url('admin.php?page=ofast-smtp&tab=log&resend=' . $log->id), 'resend_email') . '" class="button button-small">Resend</a>';
+            } elseif ($status === 'failed') {
+                $html .= '<span style="color: #6b7280; font-style: italic; margin-left: 8px;">Resend unavailable</span>';
+            }
+            $html .= '</td>';
+            $html .= '</tr>';
+        }
+        return $html;
+    }
+
+    /**
+     * Render pagination bar HTML (reused by both SSR and AJAX)
+     */
+    private function render_pagination_bar($current_page, $total_pages, $total, $per_page, $show_all, $offset)
+    {
+        $showing_start = $total > 0 ? $offset + 1 : 0;
+        $showing_end = min($offset + $per_page, $total);
+
+        $html = '<div class="ofast-pagination">';
+        $html .= '<div class="ofast-pagination-info">';
+        $html .= 'Showing <strong>' . esc_html($showing_start) . '–' . esc_html($showing_end) . '</strong> of <strong>' . esc_html($total) . '</strong> emails';
+        $html .= '</div>';
+
+        if ($total_pages > 1) {
+            $html .= '<div class="ofast-pagination-pages">';
+
+            // Prev button
+            $prev_disabled = $current_page <= 1 ? ' disabled' : '';
+            $html .= '<a href="#" class="ofast-page-btn' . $prev_disabled . '" data-page="' . max(1, $current_page - 1) . '" title="Previous page">';
+            $html .= '<span class="dashicons dashicons-arrow-left-alt2" style="font-size: 16px; width: 16px; height: 16px; line-height: 16px;"></span>';
+            $html .= '</a>';
+
+            // Page numbers with smart ellipsis
+            $range = 2;
+            for ($i = 1; $i <= $total_pages; $i++) {
+                if ($i === 1 || $i === $total_pages || ($i >= $current_page - $range && $i <= $current_page + $range)) {
+                    $active = $i === $current_page ? ' active' : '';
+                    $html .= '<a href="#" class="ofast-page-btn' . $active . '" data-page="' . $i . '">' . $i . '</a>';
+                } elseif ($i === $current_page - $range - 1 || $i === $current_page + $range + 1) {
+                    $html .= '<span class="ofast-page-ellipsis">…</span>';
+                }
+            }
+
+            // Next button
+            $next_disabled = $current_page >= $total_pages ? ' disabled' : '';
+            $html .= '<a href="#" class="ofast-page-btn' . $next_disabled . '" data-page="' . min($total_pages, $current_page + 1) . '" title="Next page">';
+            $html .= '<span class="dashicons dashicons-arrow-right-alt2" style="font-size: 16px; width: 16px; height: 16px; line-height: 16px;"></span>';
+            $html .= '</a>';
+
+            $html .= '</div>';
+        }
+
+        $html .= '</div>';
+        return $html;
+    }
+
+    /**
+     * AJAX handler: Fetch log rows + pagination for instant navigation
+     */
+    public function ajax_fetch_logs()
+    {
+        check_ajax_referer('ofast_smtp_logs_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized', 403);
+        }
+
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'ofast_smtp_log';
+
+        $allowed_per_page = array(10, 20, 50, 100);
+        $per_page_input = isset($_POST['per_page']) ? sanitize_text_field($_POST['per_page']) : '20';
+        $show_all = ($per_page_input === 'all');
+        $per_page = $show_all ? 999999 : intval($per_page_input);
+        if (!$show_all && !in_array($per_page, $allowed_per_page)) {
+            $per_page = 20;
+        }
+
+        $current_page = max(1, intval($_POST['paged'] ?? 1));
+        $offset = ($current_page - 1) * $per_page;
+
+        $total = intval($wpdb->get_var("SELECT COUNT(*) FROM {$table_name}"));
+        $total_pages = $show_all ? 1 : (int) ceil($total / $per_page);
+
+        // Clamp page
+        if ($current_page > $total_pages && $total_pages > 0) {
+            $current_page = $total_pages;
+            $offset = ($current_page - 1) * $per_page;
+        }
+
+        $logs = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$table_name} ORDER BY sent_at DESC LIMIT %d OFFSET %d",
+            $per_page,
+            $offset
+        ));
+
+        wp_send_json_success(array(
+            'rows_html' => $this->render_log_rows($logs),
+            'pagination_html' => $this->render_pagination_bar($current_page, $total_pages, $total, $per_page, $show_all, $offset),
+            'current_page' => $current_page,
+            'total_pages' => $total_pages,
+            'total' => $total,
+        ));
     }
 
     private function render_settings_page_content()
@@ -1376,6 +1578,14 @@ class Ofast_X_SMTP_Admin
         if (strpos($hook, 'ofast-smtp') === false) {
             return;
         }
+
+        // Shared pagination CSS (reusable across modules)
+        wp_enqueue_style(
+            'ofast-pagination',
+            OFAST_X_PLUGIN_URL . 'assets/css/ofast-pagination.css',
+            array(),
+            OFAST_X_VERSION
+        );
 
         wp_enqueue_script(
             'ofast-smtp-admin',

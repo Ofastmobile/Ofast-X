@@ -101,6 +101,14 @@ class Ofast_X_Email_Admin
         wp_enqueue_style('wp-color-picker');
         wp_enqueue_script('wp-color-picker');
         wp_enqueue_media();
+
+        // Shared pagination CSS (reusable across modules)
+        wp_enqueue_style(
+            'ofast-pagination',
+            OFAST_X_PLUGIN_URL . 'assets/css/ofast-pagination.css',
+            array(),
+            OFAST_X_VERSION
+        );
     }
 
     /**
@@ -749,11 +757,53 @@ class Ofast_X_Email_Admin
     {
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_email_logs';
-        $logs = $wpdb->get_results("SELECT * FROM $table ORDER BY sent_at DESC LIMIT 100");
+
+        // Pagination params
+        $allowed_per_page = array(10, 20, 50, 100);
+        $per_page_input = isset($_GET['hist_per_page']) ? sanitize_text_field($_GET['hist_per_page']) : '20';
+        $show_all = ($per_page_input === 'all');
+        $per_page = $show_all ? 999999 : intval($per_page_input);
+        if (!$show_all && !in_array($per_page, $allowed_per_page)) {
+            $per_page = 20;
+        }
+        $current_page = max(1, intval($_GET['hist_paged'] ?? 1));
+        $offset = ($current_page - 1) * $per_page;
+
+        $total = intval($wpdb->get_var("SELECT COUNT(*) FROM $table"));
+        $total_pages = $show_all ? 1 : (int) ceil($total / $per_page);
+        if ($current_page > $total_pages && $total_pages > 0) {
+            $current_page = $total_pages;
+            $offset = ($current_page - 1) * $per_page;
+        }
+
+        $logs = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $table ORDER BY sent_at DESC LIMIT %d OFFSET %d",
+            $per_page,
+            $offset
+        ));
+
+        $showing_start = $total > 0 ? $offset + 1 : 0;
+        $showing_end = min($offset + $per_page, $total);
         ?>
         <div class="ofast-card">
-            <h2>Email History</h2>
-            <p>View sent emails and preview their content. Showing the last 100 entries.</p>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px;">
+                <div>
+                    <h2 style="margin: 0 0 4px 0;">Email History</h2>
+                    <p style="margin: 0; color: #64748b; font-size: 13px;">View sent emails and preview their content.</p>
+                </div>
+                <!-- Per-page selector -->
+                <div class="ofast-per-page-wrap">
+                    <span>Show</span>
+                    <select id="ofast-history-per-page" class="ofast-per-page-select">
+                        <?php foreach (array(10, 20, 50, 100, 'all') as $opt): ?>
+                            <option value="<?php echo esc_attr($opt); ?>" <?php selected($show_all ? 'all' : $per_page, $opt === 'all' ? 'all' : $opt); ?>>
+                                <?php echo $opt === 'all' ? 'All' : $opt; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <span>per page</span>
+                </div>
+            </div>
 
             <?php if (empty($logs)): ?>
                 <p>No emails have been logged yet.</p>
@@ -797,6 +847,41 @@ class Ofast_X_Email_Admin
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Pagination Bar -->
+                <div class="ofast-pagination">
+                    <div class="ofast-pagination-info">
+                        Showing <strong><?php echo esc_html($showing_start); ?>–<?php echo esc_html($showing_end); ?></strong> of <strong><?php echo esc_html($total); ?></strong> emails
+                    </div>
+                    <?php if ($total_pages > 1): ?>
+                        <div class="ofast-pagination-pages">
+                            <?php
+                            // Prev
+                            $prev_disabled = $current_page <= 1 ? ' disabled' : '';
+                            echo '<a href="#" class="ofast-page-btn' . $prev_disabled . '" data-page="' . max(1, $current_page - 1) . '" title="Previous">';
+                            echo '<span class="dashicons dashicons-arrow-left-alt2" style="font-size:16px;width:16px;height:16px;line-height:16px;"></span>';
+                            echo '</a>';
+
+                            // Page numbers with smart ellipsis
+                            $range = 2;
+                            for ($i = 1; $i <= $total_pages; $i++) {
+                                if ($i === 1 || $i === $total_pages || ($i >= $current_page - $range && $i <= $current_page + $range)) {
+                                    $active = $i === $current_page ? ' active' : '';
+                                    echo '<a href="#" class="ofast-page-btn' . $active . '" data-page="' . $i . '">' . $i . '</a>';
+                                } elseif ($i === $current_page - $range - 1 || $i === $current_page + $range + 1) {
+                                    echo '<span class="ofast-page-ellipsis">…</span>';
+                                }
+                            }
+
+                            // Next
+                            $next_disabled = $current_page >= $total_pages ? ' disabled' : '';
+                            echo '<a href="#" class="ofast-page-btn' . $next_disabled . '" data-page="' . min($total_pages, $current_page + 1) . '" title="Next">';
+                            echo '<span class="dashicons dashicons-arrow-right-alt2" style="font-size:16px;width:16px;height:16px;line-height:16px;"></span>';
+                            echo '</a>';
+                            ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
             <?php endif; ?>
         </div>
 
@@ -815,11 +900,11 @@ class Ofast_X_Email_Admin
 
         <script>
             jQuery(document).ready(function ($) {
+                // Preview button
                 $('.preview-log-btn').on('click', function () {
                     var body = $(this).attr('data-body');
                     var subject = $(this).attr('data-subject');
                     $('#modal-subject').text(subject);
-                    // Remove old iframe and create a fresh one to force re-render
                     $('#modal-content').remove();
                     var iframe = $('<iframe id="modal-content" style="width:100%; height:500px; border:1px solid #e5e7eb; border-radius:8px;"></iframe>');
                     iframe.attr('srcdoc', body);
@@ -829,6 +914,26 @@ class Ofast_X_Email_Admin
                 $('#close-history-modal').on('click', function () {
                     $('#history-preview-modal').fadeOut();
                     $('#modal-content').remove();
+                });
+
+                // Per-page selector → reload via URL
+                $('#ofast-history-per-page').on('change', function () {
+                    var url = new URL(window.location);
+                    url.searchParams.set('tab', 'history');
+                    url.searchParams.set('hist_per_page', $(this).val());
+                    url.searchParams.delete('hist_paged');
+                    window.location.href = url.toString();
+                });
+
+                // Pagination page clicks → reload via URL
+                $('.ofast-pagination').on('click', '.ofast-page-btn', function (e) {
+                    e.preventDefault();
+                    if ($(this).hasClass('disabled') || $(this).hasClass('active')) return;
+                    var page = $(this).data('page');
+                    var url = new URL(window.location);
+                    url.searchParams.set('tab', 'history');
+                    url.searchParams.set('hist_paged', page);
+                    window.location.href = url.toString();
                 });
             });
         </script>
@@ -2094,15 +2199,37 @@ class Ofast_X_Email_Admin
                 <div class="ofast-card" style="margin-top: 30px;">
                     <h3 style="margin-top: 0; margin-bottom: 15px;">Select Users Manually (Optional)</h3>
 
-                    <label>Search: <input type="text" id="user-search" style="margin-left:5px;"></label>
-                    <label style="margin-left:20px;">Show
-                        <select id="rows-per-page">
-                            <option value="10">10</option>
-                            <option value="20">20</option>
-                            <option value="50">50</option>
-                            <option value="all">All</option>
-                        </select> users per page
-                    </label>
+                    <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; margin-bottom: 15px;">
+                        <label style="display: flex; align-items: center; gap: 6px; color: #374151; font-size: 13px; font-weight: 500;">
+                            <span class="dashicons dashicons-search" style="font-size: 16px; width: 16px; height: 16px; color: #6366f1;"></span>
+                            <input type="text" id="user-search" placeholder="Search users..." style="border: 1px solid #d1d5db; border-radius: 8px; padding: 7px 12px; font-size: 13px; min-width: 180px;">
+                        </label>
+
+                        <label style="display: flex; align-items: center; gap: 6px; color: #374151; font-size: 13px; font-weight: 500;">
+                            Show
+                            <select id="rows-per-page" style="border: 1px solid #d1d5db; border-radius: 8px; padding: 6px 10px; font-size: 13px; background: #fff; cursor: pointer;">
+                                <option value="10">10</option>
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                                <option value="all">All</option>
+                            </select>
+                            per page
+                        </label>
+
+                        <!-- Row Range Selector -->
+                        <div style="display: flex; align-items: center; gap: 6px; margin-left: auto; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 8px;">
+                            <span class="dashicons dashicons-screenoptions" style="font-size: 16px; width: 16px; height: 16px; color: #6366f1;"></span>
+                            <input type="text" id="row-range-input" placeholder="e.g. 1-50" style="border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 10px; font-size: 13px; width: 110px; background: #fff;">
+                            <button type="button" id="row-range-select" style="background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s;">
+                                Select
+                            </button>
+                            <button type="button" id="row-range-clear" style="background: #fff; color: #6b7280; border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 10px; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.2s;" title="Clear all selections">
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                    <div id="row-range-feedback" style="display: none; margin-bottom: 10px; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; animation: ofastFadeIn 0.3s ease;"></div>
 
                     <div style="overflow-x:auto; margin-top:15px; margin-bottom:10px;">
                         <table class="wp-list-table widefat striped" id="user-table">
@@ -2167,21 +2294,56 @@ class Ofast_X_Email_Admin
                     }
 
                     function updatePagination() {
-                        var numPages = Math.ceil(visibleRows.length / itemsPerPage);
-                        var pagination = "";
-                        for (var i = 1; i <= numPages; i++) {
-                            var disabled = i === currentPage ? " disabled" : "";
-                            pagination += "<button type=\'button\' class=\'button page-btn\' data-page=\'" + i + "\'" + disabled + ">" + i + "</button> ";
+                        var total = visibleRows.length;
+                        var numPages = Math.ceil(total / itemsPerPage);
+                        if (numPages < 1) numPages = 1;
+                        if (currentPage > numPages) currentPage = numPages;
+
+                        var start = (currentPage - 1) * itemsPerPage;
+                        var showStart = total > 0 ? start + 1 : 0;
+                        var showEnd = Math.min(start + itemsPerPage, total);
+
+                        // Build modern pagination bar
+                        var html = \'<div class="ofast-pagination">\';
+                        html += \'<div class="ofast-pagination-info">Showing <strong>\' + showStart + \'–\' + showEnd + \'</strong> of <strong>\' + total + \'</strong> users</div>\';
+
+                        if (numPages > 1) {
+                            html += \'<div class="ofast-pagination-pages">\';
+
+                            // Prev
+                            var prevClass = currentPage <= 1 ? " disabled" : "";
+                            html += \'<a href="#" class="ofast-page-btn\' + prevClass + \'" data-page="\' + Math.max(1, currentPage - 1) + \'" title="Previous"><span class="dashicons dashicons-arrow-left-alt2" style="font-size:16px;width:16px;height:16px;line-height:16px;"></span></a>\';
+
+                            // Page numbers with smart ellipsis
+                            var range = 2;
+                            for (var i = 1; i <= numPages; i++) {
+                                if (i === 1 || i === numPages || (i >= currentPage - range && i <= currentPage + range)) {
+                                    var active = i === currentPage ? " active" : "";
+                                    html += \'<a href="#" class="ofast-page-btn\' + active + \'" data-page="\' + i + \'">\' + i + \'</a>\';
+                                } else if (i === currentPage - range - 1 || i === currentPage + range + 1) {
+                                    html += \'<span class="ofast-page-ellipsis">…</span>\';
+                                }
+                            }
+
+                            // Next
+                            var nextClass = currentPage >= numPages ? " disabled" : "";
+                            html += \'<a href="#" class="ofast-page-btn\' + nextClass + \'" data-page="\' + Math.min(numPages, currentPage + 1) + \'" title="Next"><span class="dashicons dashicons-arrow-right-alt2" style="font-size:16px;width:16px;height:16px;line-height:16px;"></span></a>\';
+
+                            html += \'</div>\';
                         }
-                        $("#user-pagination").html(pagination);
-                        
-                        $(".page-btn").click(function() {
+                        html += \'</div>\';
+
+                        $("#user-pagination").html(html);
+
+                        // Bind page clicks (delegated)
+                        $("#user-pagination").off("click", ".ofast-page-btn").on("click", ".ofast-page-btn", function(e) {
+                            e.preventDefault();
+                            if ($(this).hasClass("disabled") || $(this).hasClass("active")) return;
                             currentPage = parseInt($(this).data("page"));
                             showPage(currentPage);
-                            $(".page-btn").removeAttr("disabled");
-                            $(this).attr("disabled", true);
+                            updatePagination();
                         });
-                        
+
                         showPage(currentPage);
                     }
 
@@ -2196,6 +2358,74 @@ class Ofast_X_Email_Admin
 
                     $("#check-all").change(function() {
                         visibleRows.find(".user-checkbox").prop("checked", $(this).prop("checked"));
+                    });
+
+                    // --- Row Range Selector ---
+                    function parseRangeInput(input) {
+                        var indices = [];
+                        var parts = input.split(/[,;]+/);
+                        for (var p = 0; p < parts.length; p++) {
+                            var part = parts[p].trim();
+                            if (!part) continue;
+                            if (part.indexOf("-") !== -1) {
+                                var range = part.split("-");
+                                var start = parseInt(range[0]);
+                                var end = parseInt(range[1]);
+                                if (!isNaN(start) && !isNaN(end) && start > 0 && end > 0) {
+                                    if (start > end) { var tmp = start; start = end; end = tmp; }
+                                    if (end - start > 5000) end = start + 5000;
+                                    for (var n = start; n <= end; n++) {
+                                        indices.push(n);
+                                    }
+                                }
+                            } else {
+                                var num = parseInt(part);
+                                if (!isNaN(num) && num > 0) indices.push(num);
+                            }
+                        }
+                        return indices;
+                    }
+
+                    function showRangeFeedback(count, total) {
+                        var $fb = $("#row-range-feedback");
+                        if (count > 0) {
+                            $fb.css({"background": "#ecfdf5", "color": "#065f46", "border": "1px solid #a7f3d0"});
+                            $fb.html("\u2705 Selected <strong>" + count + "</strong> of " + total + " users");
+                        } else {
+                            $fb.css({"background": "#fef2f2", "color": "#991b1b", "border": "1px solid #fecaca"});
+                            $fb.html("\u26a0\ufe0f No matching rows found. Enter S/N numbers like <strong>1-50</strong> or <strong>1,5,10-20</strong>");
+                        }
+                        $fb.show();
+                        setTimeout(function() { $fb.fadeOut(400); }, 4000);
+                    }
+
+                    $("#row-range-select").click(function() {
+                        var input = $("#row-range-input").val().trim();
+                        if (!input) return;
+                        var indices = parseRangeInput(input);
+                        if (indices.length === 0) { showRangeFeedback(0, allRows.length); return; }
+
+                        var selected = 0;
+                        allRows.each(function() {
+                            var sn = parseInt($(this).find("td:nth-child(2)").text().trim());
+                            if (indices.indexOf(sn) !== -1) {
+                                $(this).find(".user-checkbox").prop("checked", true);
+                                selected++;
+                            }
+                        });
+                        showRangeFeedback(selected, allRows.length);
+                    });
+
+                    // Handle Enter key in range input
+                    $("#row-range-input").keypress(function(e) {
+                        if (e.which === 13) { e.preventDefault(); $("#row-range-select").click(); }
+                    });
+
+                    $("#row-range-clear").click(function() {
+                        allRows.find(".user-checkbox").prop("checked", false);
+                        $("#check-all").prop("checked", false);
+                        $("#row-range-input").val("");
+                        $("#row-range-feedback").hide();
                     });
         
                     updatePagination();

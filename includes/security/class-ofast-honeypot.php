@@ -66,6 +66,14 @@ class Ofast_X_Honeypot
         $index = hexdec(substr($seed, 0, 4)) % count(self::$field_names);
         return self::$field_names[$index];
     }
+
+    /**
+     * Check whether the honeypot field was included in the submitted form.
+     */
+    public static function has_submitted_field()
+    {
+        return array_key_exists(self::get_field_name(), $_POST);
+    }
     
     /**
      * Render honeypot field HTML
@@ -148,6 +156,8 @@ class Ofast_X_Honeypot
             var formSelectors = [
                 // WordPress
                 '#loginform', '#registerform', '#lostpasswordform', '#commentform',
+                // Contact Form 7
+                '.wpcf7-form',
                 // WooCommerce
                 '.woocommerce-form-login', '.woocommerce-form-register', '.woocommerce-checkout',
                 // Tutor LMS

@@ -73,6 +73,10 @@ class Ofast_X_Forms_Submissions
                 // Math CAPTCHA reads its own POST field internally
 
                 $result = $spam->verify($token);
+                if (!$result['success'] && $this->can_use_turnstile_honeypot_fallback($provider, $token)) {
+                    $result = array('success' => true, 'fallback' => true, 'method' => 'honeypot');
+                }
+
                 if (!$result['success']) {
                     wp_send_json_error(array('message' => 'Spam protection verification failed. Please try again.'));
                 }
@@ -606,6 +610,19 @@ class Ofast_X_Forms_Submissions
         fclose($csv);
 
         return $content;
+    }
+
+    /**
+     * Ofast forms already render a built-in honeypot field, so we can
+     * safely fall back to it when Turnstile failed to return a token.
+     */
+    private function can_use_turnstile_honeypot_fallback($provider, $token)
+    {
+        return $provider === 'turnstile'
+            && empty($token)
+            && get_option('ofast_spam_honeypot_enabled', true)
+            && array_key_exists('ofast_hp_field', $_POST)
+            && empty($_POST['ofast_hp_field']);
     }
 
     /**

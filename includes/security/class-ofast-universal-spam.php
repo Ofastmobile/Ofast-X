@@ -93,7 +93,7 @@ class Ofast_X_Universal_Spam
     public function enqueue_turnstile_script()
     {
         if ($this->get_provider() === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
-            echo Ofast_X_Turnstile::render_script();
+            Ofast_X_Turnstile::enqueue_script();
         }
     }
     
@@ -190,7 +190,11 @@ class Ofast_X_Universal_Spam
         }
         
         // Fallback to honeypot if enabled
-        if (class_exists('Ofast_X_Honeypot') && get_option('ofast_spam_honeypot_enabled', true)) {
+        if (
+            class_exists('Ofast_X_Honeypot') &&
+            get_option('ofast_spam_honeypot_enabled', true) &&
+            Ofast_X_Honeypot::has_submitted_field()
+        ) {
             $honeypot_result = Ofast_X_Honeypot::verify();
             
             // If honeypot passes, we allow through (secondary protection)

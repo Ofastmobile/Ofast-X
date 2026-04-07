@@ -2166,6 +2166,49 @@ class Ofast_X_Email_Admin
 
                     <!-- Right Column - Sidebar -->
                     <div class="ofast-form-sidebar">
+                        <div class="ofast-sidebar-card" style="padding: 0; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer;">
+                            <div id="ofast-emailer-video-wrapper" style="height: 200px; position: relative; display: flex; align-items: center; justify-content: center; background-color: #0f172a; overflow: hidden; margin: 0; padding: 0;" class="ofast-emailer-video-container" data-video-id="0dcd5bLtYs8">
+                                <img src="https://img.youtube.com/vi/0dcd5bLtYs8/maxresdefault.jpg" onerror="this.src='https://img.youtube.com/vi/0dcd5bLtYs8/hqdefault.jpg';" alt="Emailer Setup Video" style="position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0.7; transition: opacity 0.3s ease;">
+                                <div style="position: absolute; width: 100%; height: 100%; background: linear-gradient(135deg, rgba(30,27,75,0.4) 0%, rgba(76,29,149,0.4) 100%); pointer-events: none;"></div>
+                                <div style="width: 64px; height: 64px; background: #8b5cf6; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 2; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); transition: transform 0.2s ease, background 0.2s ease;" class="ofast-emailer-play-btn">
+                                    <div style="width: 0; height: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-left: 16px solid #fff; margin-left: 6px;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <style>
+                            .ofast-emailer-video-container:hover img {
+                                opacity: 0.9 !important;
+                            }
+                            .ofast-emailer-video-container:hover .ofast-emailer-play-btn {
+                                transform: scale(1.1);
+                                background: #7c3aed !important;
+                            }
+                        </style>
+
+                        <script>
+                            jQuery(document).ready(function($) {
+                                $('#ofast-emailer-video-wrapper').on('click', function() {
+                                    var videoId = $(this).data('video-id');
+                                    var iframe = $('<iframe/>', {
+                                        'src': 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&rel=0',
+                                        'frameborder': '0',
+                                        'allow': 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+                                        'allowfullscreen': 'true',
+                                        'css': {
+                                            'width': '100%',
+                                            'height': '100%',
+                                            'position': 'absolute',
+                                            'top': '0',
+                                            'left': '0',
+                                            'z-index': '10'
+                                        }
+                                    });
+                                    $(this).empty().append(iframe);
+                                });
+                            });
+                        </script>
+
                         <div class="ofast-sidebar-card">
                             <h4>Schedule</h4>
                             <div class="ofast-form-group" style="margin-bottom: 15px;">
@@ -2185,12 +2228,12 @@ class Ofast_X_Email_Admin
                             </label>
 
                             <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
-                                <button type="submit" name="send_email" class="button button-primary" style="width: 100%;">Send
-                                    Email</button>
                                 <button type="button" id="preview-email-btn" class="button button-secondary"
                                     style="width: 100%;">Preview Email</button>
                                 <button type="submit" name="save_draft" class="button button-secondary"
                                     style="width: 100%;">Save as Draft</button>
+                                <button type="submit" name="send_email" class="button button-primary" style="width: 100%;">Send
+                                    Email</button>
                             </div>
                         </div>
                     </div>

@@ -12,6 +12,7 @@ if (!defined('ABSPATH')) {
 class Ofast_X_Turnstile
 {
     private static $instance = null;
+    private static $script_output_done = false;
     private $site_key;
     private $secret_key;
 
@@ -230,10 +231,30 @@ class Ofast_X_Turnstile
 
         $html = '<div class="cf-turnstile" 
                      data-sitekey="' . esc_attr($this->site_key) . '" 
-                     data-callback="onTurnstileSuccess_' . esc_attr($form_id) . '"
                      data-theme="light"></div>';
 
         return $html;
+    }
+
+    /**
+     * Enqueue Turnstile API script
+     */
+    public static function enqueue_script()
+    {
+        if (self::$script_output_done) {
+            return;
+        }
+
+        if (function_exists('wp_enqueue_script')) {
+            wp_enqueue_script(
+                'ofast-turnstile-api',
+                'https://challenges.cloudflare.com/turnstile/v0/api.js',
+                array(),
+                null,
+                false
+            );
+            self::$script_output_done = true;
+        }
     }
 
     /**
@@ -242,11 +263,10 @@ class Ofast_X_Turnstile
      */
     public static function render_script()
     {
-        static $rendered = false;
-        if ($rendered) {
+        if (self::$script_output_done) {
             return '';
         }
-        $rendered = true;
+        self::$script_output_done = true;
 
         return '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>';
     }

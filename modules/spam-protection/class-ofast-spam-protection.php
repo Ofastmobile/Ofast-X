@@ -87,7 +87,7 @@ class Ofast_X_Spam_Protection
     {
         $provider = $this->get_active_provider();
         if ($provider === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
-            echo Ofast_X_Turnstile::render_script();
+            Ofast_X_Turnstile::enqueue_script();
         }
     }
 
@@ -130,7 +130,7 @@ class Ofast_X_Spam_Protection
             }
         }
 
-        $result = $this->verify($token);
+        $result = $this->verify_with_turnstile_honeypot_fallback($provider, $token);
 
         if (!$result['success']) {
             wp_die(
@@ -154,6 +154,9 @@ class Ofast_X_Spam_Protection
         if ($provider === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
             $widget = '<div class="wpcf7-turnstile" style="margin: 15px 0;">';
             $widget .= Ofast_X_Turnstile::get_instance()->render_widget('cf7');
+            if (class_exists('Ofast_X_Honeypot') && get_option('ofast_spam_honeypot_enabled', true)) {
+                $widget .= Ofast_X_Honeypot::get_field_html();
+            }
             $widget .= '</div>';
         }
         elseif ($provider === 'math_captcha' && class_exists('Ofast_X_Math_Captcha')) {
@@ -185,7 +188,7 @@ class Ofast_X_Spam_Protection
             }
         }
 
-        $verify = $this->verify($token);
+        $verify = $this->verify_with_turnstile_honeypot_fallback($provider, $token);
 
         if (!$verify['success']) {
             $result->invalidate('', $verify['error'] ?? 'Spam verification failed');
@@ -220,7 +223,7 @@ class Ofast_X_Spam_Protection
     {
         $provider = $this->get_active_provider();
         if ($provider === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
-            echo Ofast_X_Turnstile::render_script();
+            Ofast_X_Turnstile::enqueue_script();
         }
     }
 
@@ -262,15 +265,17 @@ class Ofast_X_Spam_Protection
 
             // If no token at all, block immediately (prevents bypass by removing field)
             if (empty($token)) {
-                return new WP_Error(
-                    'spam_protection_failed',
-                    '<strong>Security verification required.</strong> Please complete the spam protection challenge.'
-                    );
+                if (!$this->should_try_turnstile_honeypot_fallback($provider, $token)) {
+                    return new WP_Error(
+                        'spam_protection_failed',
+                        '<strong>Security verification required.</strong> Please complete the spam protection challenge.'
+                        );
+                }
             }
         }
 
         // Call the unified verify method (handles all providers)
-        $result = $this->verify(isset($token) ? $token : '');
+        $result = $this->verify_with_turnstile_honeypot_fallback($provider, isset($token) ? $token : '');
 
         if (!$result['success']) {
             // Log failed verification attempts
@@ -285,6 +290,54 @@ class Ofast_X_Spam_Protection
         }
 
         return $user;
+    }
+
+    /**
+     * Determine whether Turnstile can safely fall back to the honeypot field.
+     */
+    private function should_try_turnstile_honeypot_fallback($provider, $token, $result = array())
+    {
+        if ($provider !== 'turnstile') {
+            return false;
+        }
+
+        if (!class_exists('Ofast_X_Honeypot') || !get_option('ofast_spam_honeypot_enabled', true)) {
+            return false;
+        }
+
+        if (!Ofast_X_Honeypot::has_submitted_field()) {
+            return false;
+        }
+
+        if (empty($token)) {
+            return true;
+        }
+
+        return isset($result['code']) && $result['code'] === 'api_error';
+    }
+
+    /**
+     * Use the honeypot field as a fallback when Turnstile could not verify.
+     */
+    private function verify_with_turnstile_honeypot_fallback($provider, $token)
+    {
+        $result = $this->verify($token);
+
+        if ($result['success']) {
+            return $result;
+        }
+
+        if (!$this->should_try_turnstile_honeypot_fallback($provider, $token, $result)) {
+            return $result;
+        }
+
+        $honeypot_result = Ofast_X_Honeypot::verify();
+        if ($honeypot_result['success']) {
+            $honeypot_result['fallback'] = true;
+            return $honeypot_result;
+        }
+
+        return $result;
     }
 
     /**

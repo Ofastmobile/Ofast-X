@@ -9,6 +9,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once OFAST_X_PLUGIN_DIR . 'includes/utilities/class-ofast-logger.php';
+
 class Ofast_X_Forms_Submissions
 {
     /**
@@ -75,6 +77,13 @@ class Ofast_X_Forms_Submissions
                 $result = $spam->verify($token);
                 if (!$result['success'] && $this->can_use_turnstile_honeypot_fallback($provider, $token)) {
                     $result = array('success' => true, 'fallback' => true, 'method' => 'honeypot');
+                    Ofast_X_Logger::info('Turnstile verification failed, falling back to honeypot', array(
+                        'provider' => $provider,
+                        'token_present' => !empty($token),
+                        'ip' => $this->get_client_ip(),
+                        'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
+                        'honeypot_value' => $_POST['ofast_hp_field'] ?? ''
+                    ));
                 }
 
                 if (!$result['success']) {

@@ -1589,7 +1589,7 @@ class Ofast_X_SMTP_Admin
 
         wp_enqueue_script(
             'ofast-smtp-admin',
-            OFAST_X_PLUGIN_URL . 'modules/smtp/smtp-admin.js',
+            plugins_url('assets/smtp-admin.js', __FILE__),
             array('jquery'),
             OFAST_X_VERSION,
             true

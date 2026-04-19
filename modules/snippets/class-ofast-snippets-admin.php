@@ -455,6 +455,9 @@ class Ofast_X_Snippets_Admin
                 // Audit log
                 $this->core->log_snippet_action('UPDATED', $id, $name, "Language: {$language}, Scope: {$scope}, Active: " . ($active ? 'Yes' : 'No'));
 
+                // Clear execution cache so updated snippet takes effect immediately
+                $this->core->clear_snippets_cache();
+
                 if ($validation === true) {
                     echo Ofast_X_Toast::render('Snippet updated and ' . ($active ? 'activated' : 'saved') . '!', 'success');
                 } else {
@@ -524,6 +527,9 @@ class Ofast_X_Snippets_Admin
 
                         // Audit log
                         $this->core->log_snippet_action('CREATED', $new_id, $name, "Language: {$language}, Scope: {$scope}, Active: " . ($active ? 'Yes' : 'No'));
+
+                        // Clear execution cache so new snippet takes effect immediately
+                        $this->core->clear_snippets_cache();
 
                         if ($validation === true) {
                             echo Ofast_X_Toast::render('Snippet added and ' . ($active ? 'activated' : 'saved') . '!', 'success');

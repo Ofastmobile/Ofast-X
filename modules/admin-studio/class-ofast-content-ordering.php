@@ -64,7 +64,7 @@ class Ofast_X_Content_Ordering
         // Enqueue external CSS
         wp_enqueue_style(
             'ofast-content-ordering',
-            OFAST_X_PLUGIN_URL . 'assets/css/content-ordering.css',
+            plugins_url('assets/content-ordering.css', __FILE__),
             array(),
             OFAST_X_VERSION
         );
@@ -72,7 +72,7 @@ class Ofast_X_Content_Ordering
         // Enqueue external JS
         wp_enqueue_script(
             'ofast-content-ordering',
-            OFAST_X_PLUGIN_URL . 'assets/js/content-ordering.js',
+            plugins_url('assets/content-ordering.js', __FILE__),
             array('jquery', 'jquery-ui-sortable'),
             OFAST_X_VERSION,
             true

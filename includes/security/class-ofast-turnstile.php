@@ -253,6 +253,8 @@ class Ofast_X_Turnstile
                 null,
                 false
             );
+            wp_script_add_data('ofast-turnstile-api', 'async', true);
+            wp_script_add_data('ofast-turnstile-api', 'defer', true);
             self::$script_output_done = true;
         }
     }

@@ -57,14 +57,14 @@ class Ofast_X_Menu_Editor
 
         wp_enqueue_style(
             'ofast-menu-editor',
-            OFAST_X_PLUGIN_URL . 'assets/css/menu-editor.css',
+            plugins_url('assets/menu-editor.css', __FILE__),
             array(),
             OFAST_X_VERSION
         );
 
         wp_enqueue_script(
             'ofast-menu-editor',
-            OFAST_X_PLUGIN_URL . 'assets/js/menu-editor.js',
+            plugins_url('assets/menu-editor.js', __FILE__),
             array('jquery', 'jquery-ui-sortable'),
             OFAST_X_VERSION,
             true

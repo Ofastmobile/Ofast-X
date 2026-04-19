@@ -52,14 +52,14 @@ class Ofast_X_Redirects
 
         wp_enqueue_style(
             'ofast-redirects',
-            OFAST_X_PLUGIN_URL . 'assets/css/redirects.css',
+            plugins_url('assets/redirects.css', __FILE__),
             array(),
             OFAST_X_VERSION
         );
 
         wp_enqueue_script(
             'ofast-redirects',
-            OFAST_X_PLUGIN_URL . 'assets/js/redirects.js',
+            plugins_url('assets/redirects.js', __FILE__),
             array('jquery'),
             OFAST_X_VERSION,
             true

@@ -54,8 +54,10 @@ class Ofast_X_Snippets
         $this->ajax->register_hooks();
         $this->importer->register_hooks();
 
-        // Execute active snippets
-        add_action('init', array($this, 'execute_snippets'), 999);
+        // Execute active snippets early so snippet-registered hooks (e.g. add_action('init', ...))
+        // still fire at their default priority. Priority 1 ensures snippets load before
+        // most other init callbacks (default priority 10).
+        add_action('init', array($this, 'execute_snippets'), 1);
 
         // Auto-purge trashed snippets via daily cron
         add_action('ofast_purge_trashed_snippets', array($this, 'purge_old_trashed_snippets'));
@@ -263,9 +265,14 @@ class Ofast_X_Snippets
             global $wpdb;
             $table = $wpdb->prefix . 'ofast_snippets';
             $priority_supported = $this->ensure_snippets_priority_schema();
+            $trash_supported = $this->ensure_snippets_trash_schema();
             $execution_order = $priority_supported ? 'priority ASC, id ASC' : 'id ASC';
-            // Get all active snippets with all relevant fields
-            $snippets = $wpdb->get_results("SELECT id, code, language, scope, location, target_type, target_value, run_once, executed_at FROM $table WHERE active = 1 ORDER BY {$execution_order}");
+            // Get all active, non-trashed snippets with all relevant fields
+            $where = 'active = 1';
+            if ($trash_supported) {
+                $where .= " AND (status IS NULL OR status != 'trash')";
+            }
+            $snippets = $wpdb->get_results("SELECT id, code, language, scope, location, target_type, target_value, run_once, executed_at FROM $table WHERE {$where} ORDER BY {$execution_order}");
 
             // Cache for 1 hour (3600 seconds)
             set_transient('ofast_active_snippets_cache', $snippets, 3600);

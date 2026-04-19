@@ -80,14 +80,14 @@ class Ofast_X_Whos_Admin
 
         wp_enqueue_style(
             'ofast-tabs',
-            OFAST_X_PLUGIN_URL . 'assets/css/ofast-tabs.css',
+            plugins_url('assets/ofast-tabs.css', __FILE__),
             array(),
             OFAST_X_VERSION
         );
 
         wp_enqueue_script(
             'ofast-tabs',
-            OFAST_X_PLUGIN_URL . 'assets/js/ofast-tabs.js',
+            plugins_url('assets/ofast-tabs.js', __FILE__),
             array('jquery'),
             OFAST_X_VERSION,
             true

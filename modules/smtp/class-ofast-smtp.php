@@ -20,6 +20,12 @@ class Ofast_X_SMTP
     private $rate_limit_per_minute = 60;
     private $rate_limit_enabled = true;
 
+    // Fallback SMTP: when true, get_smtp_option() returns fallback values
+    private $fallback_active = false;
+
+    // Store last failed email data for fallback retry
+    private $last_email_args = null;
+
     public static function get_instance()
     {
         if (self::$instance === null) {
@@ -70,6 +76,13 @@ class Ofast_X_SMTP
 
         // AJAX handlers
         add_action('wp_ajax_ofast_test_smtp', array($this, 'ajax_test_smtp'));
+        add_action('wp_ajax_ofast_smtp_port_test', array($this, 'ajax_port_test'));
+
+        // Load health reports if enabled
+        if (get_option('ofast_smtp_health_report_enabled', false)) {
+            require_once dirname(__FILE__) . '/class-ofast-smtp-health-report.php';
+            new Ofast_X_SMTP_Health_Report();
+        }
 
         // Daily cleanup of SMTP logs (retention controlled by option)
         if (!wp_next_scheduled('ofast_smtp_cleanup_logs')) {
@@ -111,34 +124,37 @@ class Ofast_X_SMTP
      */
     public function configure_phpmailer($phpmailer)
     {
-        $mailer_type = get_option('ofast_smtp_mailer_type', 'default');
+        // When fallback is active, skip default mailer type check — always use SMTP fallback
+        if (!$this->fallback_active) {
+            $mailer_type = get_option('ofast_smtp_mailer_type', 'default');
 
-        // PHP Mail (Default) - uses server's native mail function
-        if ($mailer_type === 'default') {
-            $phpmailer->isMail();
+            // PHP Mail (Default) - uses server's native mail function
+            if ($mailer_type === 'default') {
+                $phpmailer->isMail();
 
-            // Only set From if configured
-            $from_email = get_option('ofast_smtp_from_email', '');
-            $from_name = get_option('ofast_smtp_from_name', get_bloginfo('name'));
-            if (!empty($from_email)) {
-                $phpmailer->From = $from_email;
-                $phpmailer->FromName = $from_name;
+                // Only set From if configured
+                $from_email = get_option('ofast_smtp_from_email', '');
+                $from_name = get_option('ofast_smtp_from_name', get_bloginfo('name'));
+                if (!empty($from_email)) {
+                    $phpmailer->From = $from_email;
+                    $phpmailer->FromName = $from_name;
+                }
+
+                $phpmailer->XMailer = 'Ofast Mailer';
+                return;
             }
-
-            $phpmailer->XMailer = 'Ofast Mailer';
-            return;
         }
 
-        // SMTP mode - requires host, port, credentials
+        // SMTP mode - uses get_smtp_option() which auto-switches to fallback values
         $phpmailer->isSMTP();
-        $phpmailer->Host = get_option('ofast_smtp_host', '');
-        $phpmailer->Port = get_option('ofast_smtp_port', 587);
+        $phpmailer->Host = $this->get_smtp_option('host', '');
+        $phpmailer->Port = $this->get_smtp_option('port', 587);
         $phpmailer->SMTPAuth = true;
-        $phpmailer->Username = get_option('ofast_smtp_username', '');
-        $phpmailer->Password = $this->decrypt_password(get_option('ofast_smtp_password', ''));
+        $phpmailer->Username = $this->get_smtp_option('username', '');
+        $phpmailer->Password = $this->decrypt_password($this->get_smtp_option('password', ''));
 
         // Encryption
-        $encryption = get_option('ofast_smtp_encryption', 'tls');
+        $encryption = $this->get_smtp_option('encryption', 'tls');
         if ($encryption === 'ssl') {
             $phpmailer->SMTPSecure = 'ssl';
         } elseif ($encryption === 'tls') {
@@ -148,9 +164,9 @@ class Ofast_X_SMTP
             $phpmailer->SMTPAutoTLS = false;
         }
 
-        // From settings
-        $from_email = get_option('ofast_smtp_from_email', '');
-        $from_name = get_option('ofast_smtp_from_name', get_bloginfo('name'));
+        // From settings — fallback may have its own from address
+        $from_email = $this->get_smtp_option('from_email', '');
+        $from_name = $this->get_smtp_option('from_name', get_bloginfo('name'));
 
         if (!empty($from_email)) {
             $phpmailer->From = $from_email;
@@ -170,6 +186,33 @@ class Ofast_X_SMTP
         if (defined('OFAST_SMTP_DEBUG') && OFAST_SMTP_DEBUG && defined('WP_DEBUG') && WP_DEBUG) {
             $phpmailer->SMTPDebug = 2;
         }
+    }
+
+    /**
+     * Get an SMTP option, checking fallback prefix when fallback is active.
+     * When $this->fallback_active is true, reads from ofast_smtp_fallback_* options.
+     *
+     * @param string $key     Option key suffix (e.g. 'host', 'port', 'username')
+     * @param mixed  $default Default value
+     * @return mixed
+     */
+    private function get_smtp_option($key, $default = '')
+    {
+        $prefix = $this->fallback_active ? 'ofast_smtp_fallback_' : 'ofast_smtp_';
+        return get_option($prefix . $key, $default);
+    }
+
+    /**
+     * Check if fallback SMTP is enabled and configured
+     */
+    private function is_fallback_enabled()
+    {
+        if (!get_option('ofast_smtp_fallback_enabled', false)) {
+            return false;
+        }
+        // Must have at least a host configured
+        $host = get_option('ofast_smtp_fallback_host', '');
+        return !empty($host);
     }
 
     /**
@@ -454,6 +497,9 @@ class Ofast_X_SMTP
         // Create table if not exists
         $this->ensure_log_table();
 
+        // Store email args for potential fallback retry
+        $this->last_email_args = $args;
+
         // Get recipient(s) as string
         $to = is_array($args['to']) ? implode(', ', $args['to']) : $args['to'];
 
@@ -480,17 +526,21 @@ class Ofast_X_SMTP
     {
         if (!empty($this->current_log_id)) {
             global $wpdb;
+            $status_label = $this->fallback_active ? 'success (fallback)' : 'success';
             $wpdb->update(
                 $wpdb->prefix . 'ofast_smtp_log',
-                array('status' => 'success'),
+                array('status' => $status_label),
                 array('id' => $this->current_log_id)
             );
             $this->current_log_id = null;
         }
+
+        // Increment lifetime success counter
+        $this->increment_counter('ofast_smtp_success_count');
     }
 
     /**
-     * Mark email as failed
+     * Mark email as failed — then attempt fallback SMTP if configured
      */
     public function mark_email_failed($error)
     {
@@ -512,8 +562,57 @@ class Ofast_X_SMTP
                 ),
                 array('id' => $this->current_log_id)
             );
-            $this->current_log_id = null;
         }
+
+        // Increment lifetime failure counter
+        $this->increment_counter('ofast_smtp_failed_count');
+
+        // Attempt fallback SMTP if not already in fallback mode
+        if (!$this->fallback_active && $this->is_fallback_enabled() && !empty($this->last_email_args)) {
+            $saved_log_id = $this->current_log_id;
+            $this->current_log_id = null; // Prevent duplicate log update
+
+            $this->fallback_active = true;
+
+            // Remove and re-add our logging hooks to prevent duplicate log entries
+            remove_filter('wp_mail', array($this, 'log_outgoing_email'), 10);
+            remove_action('wp_mail_succeeded', array($this, 'mark_email_success'), 10);
+            remove_action('wp_mail_failed', array($this, 'mark_email_failed'), 10);
+
+            $args = $this->last_email_args;
+            $fallback_result = wp_mail(
+                $args['to'],
+                $args['subject'],
+                $args['message'],
+                isset($args['headers']) ? $args['headers'] : '',
+                isset($args['attachments']) ? $args['attachments'] : array()
+            );
+
+            // Re-add hooks
+            add_filter('wp_mail', array($this, 'log_outgoing_email'), 10, 1);
+            add_action('wp_mail_succeeded', array($this, 'mark_email_success'), 10, 1);
+            add_action('wp_mail_failed', array($this, 'mark_email_failed'), 10, 1);
+
+            $this->fallback_active = false;
+
+            // Update original log entry with fallback result
+            if ($fallback_result && $saved_log_id) {
+                global $wpdb;
+                $wpdb->update(
+                    $wpdb->prefix . 'ofast_smtp_log',
+                    array(
+                        'status' => 'success (fallback)',
+                        'error_message' => 'Primary failed: ' . sanitize_text_field($error_message) . ' — Sent via fallback SMTP'
+                    ),
+                    array('id' => $saved_log_id)
+                );
+                // Count fallback success
+                $this->increment_counter('ofast_smtp_success_count');
+                $this->increment_counter('ofast_smtp_fallback_used_count');
+            }
+        }
+
+        $this->current_log_id = null;
     }
 
     /**
@@ -543,6 +642,9 @@ class Ofast_X_SMTP
             'error_message' => sprintf('Rate limit exceeded (%d/min)', $this->rate_limit_per_minute),
             'sent_at' => current_time('mysql'),
         ));
+
+        // Count rate-limited emails as blocked
+        $this->increment_counter('ofast_smtp_failed_count');
     }
 
     /**
@@ -606,5 +708,103 @@ class Ofast_X_SMTP
             "DELETE FROM {$table} WHERE sent_at < DATE_SUB(NOW(), INTERVAL %d DAY)",
             $retention_days
         ));
+    }
+
+    // =========================================================================
+    // Delivery Counters — persist lifetime stats beyond log cleanup
+    // =========================================================================
+
+    /**
+     * Increment a named counter option.
+     * Uses autoload=false to keep options table lean.
+     */
+    private function increment_counter($option_name)
+    {
+        $current = (int) get_option($option_name, 0);
+        update_option($option_name, $current + 1, false);
+    }
+
+    /**
+     * Get lifetime delivery statistics.
+     * These persist even after log cleanup.
+     *
+     * @return array ['success' => int, 'failed' => int, 'fallback_used' => int]
+     */
+    public static function get_delivery_stats()
+    {
+        return array(
+            'success'        => (int) get_option('ofast_smtp_success_count', 0),
+            'failed'         => (int) get_option('ofast_smtp_failed_count', 0),
+            'fallback_used'  => (int) get_option('ofast_smtp_fallback_used_count', 0),
+        );
+    }
+
+    // =========================================================================
+    // Port Connectivity Test — AJAX handler
+    // =========================================================================
+
+    /**
+     * AJAX: Test SMTP port connectivity, auth methods, STARTTLS, and MITM detection
+     */
+    public function ajax_port_test()
+    {
+        check_ajax_referer('ofast_port_test', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        $hostname = sanitize_text_field($_POST['hostname'] ?? '');
+        if (empty($hostname)) {
+            wp_send_json_error('Hostname is required');
+        }
+
+        require_once dirname(__FILE__) . '/class-ofast-smtp-port-test.php';
+        $tester = new Ofast_X_SMTP_Port_Test();
+
+        $ports = isset($_POST['ports']) ? array_map('intval', (array) $_POST['ports']) : array(25, 465, 587);
+        $results = array();
+
+        foreach ($ports as $port) {
+            $results[$port] = $tester->test_port($hostname, $port);
+        }
+
+        wp_send_json_success(array(
+            'hostname' => $hostname,
+            'results'  => $results
+        ));
+    }
+
+    /**
+     * Validate that encryption keys are available for secure password storage.
+     */
+    public static function validate_encryption_keys()
+    {
+        return defined('SECURE_AUTH_KEY') && !empty(SECURE_AUTH_KEY)
+            && defined('AUTH_KEY') && !empty(AUTH_KEY)
+            && SECURE_AUTH_KEY !== 'put your unique phrase here'
+            && AUTH_KEY !== 'put your unique phrase here';
+    }
+
+    /**
+     * Get diagnostic info about encryption key validation.
+     */
+    public static function get_key_validation_details()
+    {
+        if (!defined('SECURE_AUTH_KEY') || empty(SECURE_AUTH_KEY)) {
+            return array(
+                'valid' => false,
+                'message' => 'SECURE_AUTH_KEY is not defined in wp-config.php.',
+                'suggestion' => 'Add unique security keys to wp-config.php using the WordPress salt generator.'
+            );
+        }
+        if (SECURE_AUTH_KEY === 'put your unique phrase here') {
+            return array(
+                'valid' => false,
+                'message' => 'SECURE_AUTH_KEY is set to the default placeholder value.',
+                'suggestion' => 'Replace it with a unique key from https://api.wordpress.org/secret-key/1.1/salt/'
+            );
+        }
+        return array('valid' => true, 'message' => 'Encryption keys are valid.', 'suggestion' => '');
     }
 }

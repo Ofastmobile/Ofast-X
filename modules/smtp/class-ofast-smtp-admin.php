@@ -403,6 +403,36 @@ class Ofast_X_SMTP_Admin
             </div>
         </div>
 
+        <!-- Lifetime Counters (persist beyond log cleanup) -->
+        <?php $lifetime = Ofast_X_SMTP::get_delivery_stats(); ?>
+        <?php if ($lifetime['success'] > 0 || $lifetime['failed'] > 0): ?>
+        <div style="display: flex; gap: 15px; margin: 0 0 25px 0; flex-wrap: wrap;">
+            <div style="flex: 1; background: linear-gradient(135deg, #f0fdf4, #dcfce7); padding: 16px 20px; border-radius: 10px; border: 1px solid #bbf7d0; display: flex; align-items: center; gap: 12px; min-width: 200px;">
+                <span class="dashicons dashicons-saved" style="color: #16a34a; font-size: 22px; width: 22px; height: 22px;"></span>
+                <div>
+                    <div style="font-size: 20px; font-weight: 700; color: #15803d;"><?php echo number_format($lifetime['success']); ?></div>
+                    <div style="font-size: 12px; color: #4ade80;">Lifetime Delivered</div>
+                </div>
+            </div>
+            <div style="flex: 1; background: linear-gradient(135deg, #fef2f2, #fee2e2); padding: 16px 20px; border-radius: 10px; border: 1px solid #fecaca; display: flex; align-items: center; gap: 12px; min-width: 200px;">
+                <span class="dashicons dashicons-dismiss" style="color: #dc2626; font-size: 22px; width: 22px; height: 22px;"></span>
+                <div>
+                    <div style="font-size: 20px; font-weight: 700; color: #b91c1c;"><?php echo number_format($lifetime['failed']); ?></div>
+                    <div style="font-size: 12px; color: #f87171;">Lifetime Failed</div>
+                </div>
+            </div>
+            <?php if ($lifetime['fallback_used'] > 0): ?>
+            <div style="flex: 1; background: linear-gradient(135deg, #fffbeb, #fef3c7); padding: 16px 20px; border-radius: 10px; border: 1px solid #fde68a; display: flex; align-items: center; gap: 12px; min-width: 200px;">
+                <span class="dashicons dashicons-update-alt" style="color: #d97706; font-size: 22px; width: 22px; height: 22px;"></span>
+                <div>
+                    <div style="font-size: 20px; font-weight: 700; color: #b45309;"><?php echo number_format($lifetime['fallback_used']); ?></div>
+                    <div style="font-size: 12px; color: #fbbf24;">Fallback Recoveries</div>
+                </div>
+            </div>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+
         <!-- Sidebar Layout -->
         <div class="ofast-layout-sidebar" style="margin: 25px 0;">
             
@@ -1440,6 +1470,99 @@ class Ofast_X_SMTP_Admin
                 </table>
             </div>
 
+        <!-- ============================================ -->
+        <!-- Fallback SMTP Server -->
+        <!-- ============================================ -->
+        <div style="margin-top: 30px;">
+            <h2>Fallback SMTP Server</h2>
+            <p style="color: #64748b; margin-top: -5px;">If your primary SMTP server fails, emails will automatically retry using this backup server.</p>
+
+            <table class="form-table">
+                <tr>
+                    <th>Enable Fallback</th>
+                    <td>
+                        <label class="ofast-toggle">
+                            <input type="checkbox" name="fallback_enabled" id="fallback_enabled" value="1" <?php checked(get_option('ofast_smtp_fallback_enabled', false)); ?>>
+                            <span class="ofast-slider"></span>
+                        </label>
+                        <span style="color: #64748b;">Automatically retry failed emails via backup server</span>
+                    </td>
+                </tr>
+            </table>
+
+            <div id="fallback-smtp-fields" style="<?php echo get_option('ofast_smtp_fallback_enabled', false) ? '' : 'display:none;'; ?> background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 20px; margin-top: 10px;">
+                <table class="form-table">
+                    <tr>
+                        <th>Fallback Host</th>
+                        <td><input type="text" name="fallback_host" value="<?php echo esc_attr(get_option('ofast_smtp_fallback_host', '')); ?>" class="regular-text" placeholder="smtp.backup-server.com"></td>
+                    </tr>
+                    <tr>
+                        <th>Fallback Port</th>
+                        <td><input type="number" name="fallback_port" value="<?php echo esc_attr(get_option('ofast_smtp_fallback_port', 587)); ?>" style="width: 100px;"></td>
+                    </tr>
+                    <tr>
+                        <th>Fallback Encryption</th>
+                        <td>
+                            <select name="fallback_encryption">
+                                <option value="tls" <?php selected(get_option('ofast_smtp_fallback_encryption', 'tls'), 'tls'); ?>>TLS</option>
+                                <option value="ssl" <?php selected(get_option('ofast_smtp_fallback_encryption', 'tls'), 'ssl'); ?>>SSL</option>
+                                <option value="none" <?php selected(get_option('ofast_smtp_fallback_encryption', 'tls'), 'none'); ?>>None</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Fallback Username</th>
+                        <td><input type="text" name="fallback_username" value="<?php echo esc_attr(get_option('ofast_smtp_fallback_username', '')); ?>" class="regular-text"></td>
+                    </tr>
+                    <tr>
+                        <th>Fallback Password</th>
+                        <td><input type="password" name="fallback_password" value="<?php echo get_option('ofast_smtp_fallback_password', '') ? '••••••••' : ''; ?>" class="regular-text" autocomplete="new-password"></td>
+                    </tr>
+                    <tr>
+                        <th>Fallback From Email</th>
+                        <td><input type="email" name="fallback_from_email" value="<?php echo esc_attr(get_option('ofast_smtp_fallback_from_email', '')); ?>" class="regular-text" placeholder="backup@yourdomain.com"></td>
+                    </tr>
+                    <tr>
+                        <th>Fallback From Name</th>
+                        <td><input type="text" name="fallback_from_name" value="<?php echo esc_attr(get_option('ofast_smtp_fallback_from_name', '')); ?>" class="regular-text"></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- Email Health Reports -->
+        <!-- ============================================ -->
+        <div style="margin-top: 30px;">
+            <h2>Email Health Reports</h2>
+            <p style="color: #64748b; margin-top: -5px;">Receive automated email reports summarizing your send/fail statistics.</p>
+
+            <table class="form-table">
+                <tr>
+                    <th>Enable Health Reports</th>
+                    <td>
+                        <label class="ofast-toggle">
+                            <input type="checkbox" name="health_report_enabled" value="1" <?php checked(get_option('ofast_smtp_health_report_enabled', false)); ?>>
+                            <span class="ofast-slider"></span>
+                        </label>
+                        <span style="color: #64748b;">Send digest email to admin</span>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Report Interval</th>
+                    <td>
+                        <select name="health_report_interval" class="ofast-dropdown-native" style="width: 200px;">
+                            <?php $hr_interval = get_option('ofast_smtp_health_report_interval', 'weekly'); ?>
+                            <option value="daily" <?php selected($hr_interval, 'daily'); ?>>Daily</option>
+                            <option value="weekly" <?php selected($hr_interval, 'weekly'); ?>>Weekly</option>
+                            <option value="monthly" <?php selected($hr_interval, 'monthly'); ?>>Monthly</option>
+                        </select>
+                        <p class="description">Reports are sent to <?php echo esc_html(get_option('admin_email')); ?></p>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
             <p class="submit">
                 <button type="submit" name="ofast_smtp_save" class="button button-primary button-large">Save SMTP
                     Settings</button>
@@ -1554,7 +1677,150 @@ class Ofast_X_SMTP_Admin
                         ? 'Requires SMTP server credentials. Better deliverability with providers like SendGrid, Mailgun.'
                         : 'Uses your server\'s built-in mail function. Only From Email/Name needed. Best for most hosts.');
                 });
+
+                // Toggle fallback section
+                $('#fallback_enabled').on('change', function () {
+                    $('#fallback-smtp-fields').toggle(this.checked);
+                });
+
+                // Toggle health report fields visibility
+                $('input[name="health_report_enabled"]').on('change', function () {
+                    $('select[name="health_report_interval"]').closest('tr').toggle(this.checked);
+                });
             });
+        </script>
+
+
+
+        <!-- ============================================ -->
+        <!-- Port Connectivity Test -->
+        <!-- ============================================ -->
+        <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 24px; margin-top: 30px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <div>
+                    <h2 style="margin: 0;">Port Connectivity Test</h2>
+                    <p style="color: #64748b; margin: 4px 0 0;">Probe your SMTP server to check which ports are open, auth methods, and detect security issues.</p>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center; flex-shrink: 0;">
+                    <input type="text" id="port-test-hostname" placeholder="smtp.yourdomain.com" value="<?php echo esc_attr(get_option('ofast_smtp_host', '')); ?>" class="regular-text" style="border-radius: 8px; border: 1px solid #d7deea; padding: 8px 12px;">
+                    <button type="button" id="ofast-run-port-test" class="button button-primary" style="background: linear-gradient(135deg, #6366f1, #4f46e5) !important; border-color: #6366f1 !important; text-shadow: none !important; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important; padding: 8px 20px !important; height: auto !important; border-radius: 8px !important; font-weight: 600 !important;">Test Ports</button>
+                    <span id="port-test-spinner" class="spinner" style="float: none;"></span>
+                </div>
+            </div>
+
+            <div id="port-test-results" style="display: none; margin-top: 20px;">
+                <!-- Tab navigation -->
+                <div id="port-tabs" style="display: flex; border-bottom: 2px solid #e5e7eb;"></div>
+                <!-- Tab content -->
+                <div id="port-tab-content" style="padding: 20px 0;"></div>
+            </div>
+        </div>
+
+        <script>
+        jQuery(document).ready(function($) {
+            $('#ofast-run-port-test').on('click', function() {
+                var hostname = $('#port-test-hostname').val().trim();
+                if (!hostname) { alert('Enter a hostname first'); return; }
+
+                var $btn = $(this);
+                var $spinner = $('#port-test-spinner');
+                var $results = $('#port-test-results');
+
+                $btn.prop('disabled', true);
+                $spinner.addClass('is-active');
+                $results.hide();
+
+                $.post(ajaxurl, {
+                    action: 'ofast_smtp_port_test',
+                    nonce: ofastSMTP.port_test_nonce,
+                    hostname: hostname,
+                    ports: [25, 465, 587]
+                }, function(response) {
+                    $btn.prop('disabled', false);
+                    $spinner.removeClass('is-active');
+
+                    if (!response.success) {
+                        $results.html('<div style="padding:12px;background:#fee2e2;border-radius:8px;color:#991b1b;">'+response.data+'</div>').show();
+                        return;
+                    }
+
+                    var portLabels = {25: 'Port 25 (Plain)', 465: 'Port 465 (SSL)', 587: 'Port 587 (TLS)'};
+                    var portOrder = [587, 465, 25];
+                    var tabs = '';
+                    var panels = {};
+                    var firstPort = null;
+
+                    $.each(portOrder, function(i, port) {
+                        var r = response.data.results[port];
+                        if (!r) return;
+                        if (!firstPort) firstPort = port;
+
+                        var statusDot = r.open ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;margin-right:6px;"></span>' : '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:6px;"></span>';
+                        var isActive = (port == firstPort);
+
+                        tabs += '<button type="button" class="port-tab" data-port="' + port + '" style="padding: 10px 20px; border: none; background: ' + (isActive ? '#f8fafc' : 'transparent') + '; cursor: pointer; font-weight: ' + (isActive ? '600' : '400') + '; font-size: 13px; color: ' + (isActive ? '#6366f1' : '#64748b') + '; border-bottom: 2px solid ' + (isActive ? '#6366f1' : 'transparent') + '; margin-bottom: -2px; transition: all 0.2s;">' + statusDot + (portLabels[port] || 'Port ' + port) + '</button>';
+
+                        var panel = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">';
+                        panel += '<div style="background: ' + (r.open ? '#f0fdf4' : '#fef2f2') + '; border: 1px solid ' + (r.open ? '#bbf7d0' : '#fecaca') + '; border-radius: 10px; padding: 16px;">';
+                        panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px;">Status</div>';
+                        panel += '<div style="font-size: 18px; font-weight: 700; color: ' + (r.open ? '#059669' : '#dc2626') + ';">' + (r.open ? 'Open' : 'Closed') + '</div>';
+                        panel += '</div>';
+
+                        if (r.open) {
+                            panel += '<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">';
+                            panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px;">Security</div>';
+                            var secItems = [];
+                            if (r.secure) secItems.push('🔒 Encrypted');
+                            if (r.starttls) secItems.push('↗ STARTTLS');
+                            if (!r.secure && !r.starttls) secItems.push('⚠ No encryption');
+                            panel += '<div style="font-weight: 600;">' + secItems.join(' &nbsp;·&nbsp; ') + '</div>';
+                            panel += '</div>';
+
+                            var auths = [];
+                            if (r.auth_login) auths.push('LOGIN');
+                            if (r.auth_plain) auths.push('PLAIN');
+                            if (r.auth_crammd5) auths.push('CRAM-MD5');
+                            if (r.auth_xoauth) auths.push('XOAUTH2');
+                            if (auths.length) {
+                                panel += '<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">';
+                                panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px;">Auth Methods</div>';
+                                panel += '<div style="display: flex; gap: 6px; flex-wrap: wrap;">';
+                                $.each(auths, function(j, a) {
+                                    panel += '<span style="background: #eef2ff; color: #4338ca; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500;">' + a + '</span>';
+                                });
+                                panel += '</div></div>';
+                            }
+
+                            if (r.mitm) {
+                                panel += '<div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 16px;">';
+                                panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #92400e; margin-bottom: 8px;">⚠ MITM Warning</div>';
+                                panel += '<div style="color: #92400e; font-weight: 500;">' + (r.mitm_detail || 'Certificate hostname mismatch detected') + '</div>';
+                                panel += '</div>';
+                            }
+                        } else if (r.error) {
+                            panel += '<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 16px;">';
+                            panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px;">Error</div>';
+                            panel += '<div style="color: #991b1b; font-size: 13px;">' + r.error.substring(0, 120) + '</div>';
+                            panel += '</div>';
+                        }
+                        panel += '</div>';
+                        panels[port] = panel;
+                    });
+
+                    $('#port-tabs').html(tabs);
+                    $('#port-tab-content').html(panels[firstPort] || '');
+                    $results.show();
+
+                    // Tab switching
+                    $('#port-tabs').off('click', '.port-tab').on('click', '.port-tab', function() {
+                        var port = $(this).data('port');
+                        $('#port-tabs .port-tab').css({ background: 'transparent', fontWeight: '400', color: '#64748b', borderBottom: '2px solid transparent' });
+                        $(this).css({ background: '#f8fafc', fontWeight: '600', color: '#6366f1', borderBottom: '2px solid #6366f1' });
+                        $('#port-tab-content').html(panels[port] || '');
+                    });
+                });
+            });
+        });
         </script>
 
         <!-- DNS Checker Section -->
@@ -1598,6 +1864,7 @@ class Ofast_X_SMTP_Admin
         wp_localize_script('ofast-smtp-admin', 'ofastSMTP', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('ofast_test_smtp'),
+            'port_test_nonce' => wp_create_nonce('ofast_port_test'),
             'presets' => Ofast_X_SMTP::get_provider_presets()
         ));
     }
@@ -1702,6 +1969,31 @@ class Ofast_X_SMTP_Admin
         $retention_days = intval($_POST['log_retention_days'] ?? 90);
         $retention_days = max(0, min(3650, $retention_days));
         update_option('ofast_smtp_log_retention_days', $retention_days);
+
+        // Fallback SMTP settings
+        update_option('ofast_smtp_fallback_enabled', isset($_POST['fallback_enabled']) ? 1 : 0);
+        update_option('ofast_smtp_fallback_host', sanitize_text_field(wp_unslash($_POST['fallback_host'] ?? '')));
+        update_option('ofast_smtp_fallback_port', intval($_POST['fallback_port'] ?? 587));
+        update_option('ofast_smtp_fallback_encryption', sanitize_text_field(wp_unslash($_POST['fallback_encryption'] ?? 'tls')));
+        update_option('ofast_smtp_fallback_username', sanitize_text_field(wp_unslash($_POST['fallback_username'] ?? '')));
+        update_option('ofast_smtp_fallback_from_email', sanitize_email(wp_unslash($_POST['fallback_from_email'] ?? '')));
+        update_option('ofast_smtp_fallback_from_name', sanitize_text_field(wp_unslash($_POST['fallback_from_name'] ?? '')));
+
+        // Fallback password (same mask-detection as primary)
+        $fallback_password = wp_unslash($_POST['fallback_password'] ?? '');
+        if (!empty($fallback_password) && $fallback_password !== '••••••••') {
+            $encrypted_fb = Ofast_X_SMTP::encrypt_password($fallback_password);
+            update_option('ofast_smtp_fallback_password', $encrypted_fb);
+        }
+
+        // Health report settings
+        update_option('ofast_smtp_health_report_enabled', isset($_POST['health_report_enabled']) ? 1 : 0);
+        $valid_hr_intervals = array('daily', 'weekly', 'monthly');
+        $hr_interval = sanitize_text_field($_POST['health_report_interval'] ?? 'weekly');
+        if (!in_array($hr_interval, $valid_hr_intervals)) {
+            $hr_interval = 'weekly';
+        }
+        update_option('ofast_smtp_health_report_interval', $hr_interval);
 
         // Notify listeners when body logging is enabled (for optional auditing).
         if ($log_body_content) {

@@ -311,6 +311,7 @@ class Ofast_X_Forms_Submissions
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_form_submissions';
         $forms_table = $wpdb->prefix . 'ofast_forms';
+        $base_url = admin_url('admin.php?page=ofast-forms&tab=submissions');
 
         // Handle actions with security checks
         if (isset($_GET['action']) && isset($_GET['id'])) {
@@ -326,6 +327,9 @@ class Ofast_X_Forms_Submissions
             switch ($action) {
                 case 'mark_read':
                     $wpdb->update($table, array('status' => 'read', 'read_at' => current_time('mysql')), array('id' => $id));
+                    break;
+                case 'mark_unread':
+                    $wpdb->update($table, array('status' => 'unread', 'read_at' => null), array('id' => $id));
                     break;
                 case 'mark_spam':
                     $wpdb->update($table, array('status' => 'spam'), array('id' => $id));
@@ -343,6 +347,24 @@ class Ofast_X_Forms_Submissions
         // Get submissions
         $form_id = isset($_GET['form_id']) ? absint($_GET['form_id']) : 0;
         $status = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
+        $submission_id = isset($_GET['submission_id']) ? absint($_GET['submission_id']) : 0;
+        $list_args = array();
+
+        if ($form_id) {
+            $list_args['form_id'] = $form_id;
+        }
+
+        if ($status) {
+            $list_args['status'] = $status;
+        }
+
+        $list_url = !empty($list_args) ? add_query_arg($list_args, $base_url) : $base_url;
+
+        if ($submission_id) {
+            $submission = $this->get_submission_record($submission_id);
+            $this->render_submission_detail_page($submission, $list_url, $list_args);
+            return;
+        }
 
         // Build parameterized query with proper WHERE conditions
         $where_conditions = array();
@@ -387,8 +409,6 @@ class Ofast_X_Forms_Submissions
             // Placeholder for potentially handling separate page loads vs tab switching
         }
 
-        // Fix pagination/filter URLs to maintain tab
-        $base_url = admin_url('admin.php?page=ofast-forms&tab=submissions');
 ?>
         <div class="ofast-submissions-list">
             
@@ -455,6 +475,10 @@ class Ofast_X_Forms_Submissions
                                 <?php
                                 $data = json_decode($sub->data, true);
                                 $preview = '';
+                                $view_url = add_query_arg(array_merge($list_args, array('submission_id' => $sub->id)), $base_url);
+                                $mark_read_url = $this->build_submission_action_url('mark_read', $sub->id, $list_args);
+                                $mark_spam_url = $this->build_submission_action_url('mark_spam', $sub->id, $list_args);
+                                $delete_url = $this->build_submission_action_url('delete', $sub->id, $list_args);
                                 if (is_array($data)) {
                                     $first_two = array_slice($data, 0, 2);
                                     foreach ($first_two as $k => $v) {
@@ -481,19 +505,15 @@ class Ofast_X_Forms_Submissions
                                     </td>
                                     <td style="padding: 15px 20px; vertical-align: middle; color: #64748b;"><?php echo date('M j, Y g:i a', strtotime($sub->submitted_at)); ?></td>
                                     <td style="padding: 15px 20px; vertical-align: middle;">
-                                        <?php
-                                        $nonce = wp_create_nonce('submission_action_' . $sub->id);
-                                        $action_url = add_query_arg(array('id' => $sub->id, '_wpnonce' => $nonce));
-                                        ?>
                                         <div style="display: flex; gap: 8px; align-items: center;">
-                                            <a href="#" class="view-submission" data-id="<?php echo $sub->id; ?>" data-data="<?php echo esc_attr(wp_json_encode($data)); ?>" style="color:#6366f1; font-weight:500;">View</a>
-                                            
+                                            <a href="<?php echo esc_url($view_url); ?>" style="color:#6366f1; font-weight:500;">View</a>
+                                             
                                             <?php if ($sub->status === 'unread'): ?>
-                                                <a href="<?php echo esc_url(add_query_arg('action', 'mark_read', $action_url)); ?>" style="color:#64748b; font-size: 13px;">Read</a>
+                                                <a href="<?php echo esc_url($mark_read_url); ?>" style="color:#64748b; font-size: 13px;">Read</a>
                                             <?php endif; ?>
-                                            
-                                            <a href="<?php echo esc_url(add_query_arg('action', 'mark_spam', $action_url)); ?>" style="color:#d97706; font-size: 13px;">Spam</a>
-                                            <a href="<?php echo esc_url(add_query_arg('action', 'delete', $action_url)); ?>" style="color:#ef4444; font-size: 13px;" onclick="return confirm('Delete this submission?');">Delete</a>
+                                             
+                                            <a href="<?php echo esc_url($mark_spam_url); ?>" style="color:#d97706; font-size: 13px;">Spam</a>
+                                            <a href="<?php echo esc_url($delete_url); ?>" style="color:#ef4444; font-size: 13px;" onclick="return confirm('Delete this submission?');">Delete</a>
                                         </div>
                                     </td>
                                 </tr>
@@ -502,52 +522,240 @@ class Ofast_X_Forms_Submissions
                     </table>
                 </div>
             <?php endif; ?>
+        </div>
+<?php
+    }
 
-            <!-- View Modal -->
-            <div id="submission-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:100000; padding: 20px; display: flex; align-items: center; justify-content: center;">
-                <div style="background:#fff; width:100%; max-width:600px; border-radius:12px; max-height:85vh; display: flex; flex-direction: column; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
-                    <div style="padding: 20px 25px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-                        <h2 style="margin:0; font-size: 18px; color: #1e293b;">Submission Details</h2>
-                        <button type="button" onclick="document.getElementById('submission-modal').style.display='none';" style="background:none; border:none; font-size: 24px; color: #64748b; cursor: pointer; padding: 0;">&times;</button>
-                    </div>
-                    
-                    <div id="submission-content" style="padding: 25px; overflow-y: auto;">
-                        <!-- Content injected via JS -->
-                    </div>
-                    
-                    <div style="padding: 15px 25px; border-top: 1px solid #e2e8f0; text-align: right; background: #f8fafc; border-radius: 0 0 12px 12px;">
-                        <button type="button" class="button" onclick="document.getElementById('submission-modal').style.display='none';">Close</button>
-                    </div>
+    /**
+     * Get a single submission with its form title.
+     */
+    private function get_submission_record($submission_id)
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_form_submissions';
+        $forms_table = $wpdb->prefix . 'ofast_forms';
+
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT s.*, f.title as form_title
+            FROM {$table} s
+            LEFT JOIN {$forms_table} f ON s.form_id = f.id
+            WHERE s.id = %d
+            LIMIT 1",
+            $submission_id
+        ));
+    }
+
+    /**
+     * Render a full submission details screen.
+     */
+    private function render_submission_detail_page($submission, $list_url, $list_args)
+    {
+        if (!$submission) {
+            echo Ofast_X_Toast::render('Submission not found.', 'error');
+            echo '<p style="margin-top:16px;"><a href="' . esc_url($list_url) . '" class="button">Back to Submissions</a></p>';
+            return;
+        }
+
+        $data = json_decode($submission->data, true) ?: array();
+        $status_styles = array(
+            'unread' => 'background:#fef3c7; color:#b45309;',
+            'read' => 'background:#dcfce7; color:#15803d;',
+            'spam' => 'background:#fee2e2; color:#b91c1c;',
+            'trash' => 'background:#f1f5f9; color:#64748b;'
+        );
+        $detail_args = array_merge($list_args, array('submission_id' => $submission->id));
+        $status_style = $status_styles[$submission->status] ?? $status_styles['trash'];
+        $mark_read_url = $this->build_submission_action_url('mark_read', $submission->id, $detail_args);
+        $mark_unread_url = $this->build_submission_action_url('mark_unread', $submission->id, $detail_args);
+        $mark_spam_url = $this->build_submission_action_url('mark_spam', $submission->id, $detail_args);
+        $delete_url = $this->build_submission_action_url('delete', $submission->id, $list_args);
+        $edit_form_url = admin_url('admin.php?page=ofast-forms&tab=add-new&id=' . absint($submission->form_id));
+?>
+        <div class="ofast-submission-detail">
+            <style>
+                .ofast-submission-detail a { text-decoration: none; }
+                .ofast-submission-detail-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                    gap: 14px;
+                    margin: 24px 0;
+                }
+                .ofast-submission-panel {
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 14px;
+                    padding: 18px 20px;
+                }
+                .ofast-submission-panel h3 {
+                    margin: 0 0 16px;
+                    font-size: 16px;
+                    color: #1e293b;
+                }
+                .ofast-submission-meta-label {
+                    display: block;
+                    margin-bottom: 6px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    letter-spacing: 0.04em;
+                    text-transform: uppercase;
+                    color: #64748b;
+                }
+                .ofast-submission-meta-value {
+                    color: #1e293b;
+                    font-size: 15px;
+                    line-height: 1.5;
+                    word-break: break-word;
+                }
+                .ofast-submission-data-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                .ofast-submission-data-table th,
+                .ofast-submission-data-table td {
+                    padding: 14px 0;
+                    border-bottom: 1px solid #e2e8f0;
+                    vertical-align: top;
+                }
+                .ofast-submission-data-table th {
+                    width: 220px;
+                    padding-right: 24px;
+                    color: #1e293b;
+                    font-weight: 600;
+                    text-align: left;
+                }
+                .ofast-submission-data-table td {
+                    color: #475569;
+                }
+                .ofast-submission-actions {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 10px;
+                }
+            </style>
+
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:18px;">
+                <div>
+                    <a href="<?php echo esc_url($list_url); ?>" style="display:inline-flex; align-items:center; gap:6px; color:#6366f1; font-weight:600;">&larr; Back to submissions</a>
+                    <h2 style="margin:10px 0 6px; color:#1e293b;">Submission #<?php echo absint($submission->id); ?></h2>
+                    <p style="margin:0; color:#64748b;">
+                        <?php echo esc_html($submission->form_title ?: 'Unknown Form'); ?> submitted on <?php echo esc_html(date('M j, Y g:i a', strtotime($submission->submitted_at))); ?>
+                    </p>
+                </div>
+
+                <div class="ofast-submission-actions">
+                    <a href="<?php echo esc_url($edit_form_url); ?>" class="button">Edit Form</a>
+                    <?php if ($submission->status === 'unread'): ?>
+                        <a href="<?php echo esc_url($mark_read_url); ?>" class="button">Mark Read</a>
+                    <?php else: ?>
+                        <a href="<?php echo esc_url($mark_unread_url); ?>" class="button">Mark Unread</a>
+                    <?php endif; ?>
+                    <?php if ($submission->status !== 'spam'): ?>
+                        <a href="<?php echo esc_url($mark_spam_url); ?>" class="button" style="color:#b45309;">Mark Spam</a>
+                    <?php endif; ?>
+                    <a href="<?php echo esc_url($delete_url); ?>" class="button" style="color:#b91c1c;" onclick="return confirm('Delete this submission?');">Delete</a>
                 </div>
             </div>
 
-            <script>
-                jQuery(function($) {
-                    $('.view-submission').on('click', function(e) {
-                        e.preventDefault();
-                        var data = $(this).data('data');
-                        var $table = $('<table/>', { 'class': 'widefat striped', style: 'border:none; box-shadow: none;' });
-                        $.each(data, function(k, v) {
-                            if (Array.isArray(v)) v = v.join(', ');
-                            var $row = $('<tr/>');
-                            $row.append($('<th/>', { text: k, style: 'width: 30%; color: #1e293b;' }));
-                            $row.append($('<td/>', { text: v, style: 'color: #475569;' }));
-                            $table.append($row);
-                        });
-                        $('#submission-content').empty().append($table);
-                        $('#submission-modal').css('display', 'flex'); // Flex to center
-                    });
-                    
-                    // Close on overlay click
-                    $('#submission-modal').on('click', function(e) {
-                        if(e.target === this) {
-                            $(this).hide();
-                        }
-                    });
-                });
-            </script>
+            <div class="ofast-submission-detail-grid">
+                <div class="ofast-submission-panel">
+                    <span class="ofast-submission-meta-label">Form</span>
+                    <div class="ofast-submission-meta-value"><?php echo esc_html($submission->form_title ?: 'Unknown Form'); ?></div>
+                </div>
+                <div class="ofast-submission-panel">
+                    <span class="ofast-submission-meta-label">Status</span>
+                    <div class="ofast-submission-meta-value">
+                        <span style="display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:600; <?php echo esc_attr($status_style); ?>">
+                            <?php echo esc_html(ucfirst($submission->status)); ?>
+                        </span>
+                    </div>
+                </div>
+                <div class="ofast-submission-panel">
+                    <span class="ofast-submission-meta-label">Submitted</span>
+                    <div class="ofast-submission-meta-value"><?php echo esc_html(date('M j, Y g:i a', strtotime($submission->submitted_at))); ?></div>
+                </div>
+                <div class="ofast-submission-panel">
+                    <span class="ofast-submission-meta-label">Read At</span>
+                    <div class="ofast-submission-meta-value"><?php echo !empty($submission->read_at) ? esc_html(date('M j, Y g:i a', strtotime($submission->read_at))) : 'Not yet read'; ?></div>
+                </div>
+            </div>
+
+            <div class="ofast-submission-panel" style="margin-bottom:18px;">
+                <h3>Submitted Data</h3>
+                <?php if (empty($data)): ?>
+                    <p style="margin:0; color:#64748b;">No submission fields were stored for this entry.</p>
+                <?php else: ?>
+                    <table class="ofast-submission-data-table">
+                        <tbody>
+                            <?php foreach ($data as $label => $value): ?>
+                                <tr>
+                                    <th><?php echo esc_html($label); ?></th>
+                                    <td><?php echo wp_kses_post($this->format_submission_value($value)); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+            </div>
+
+            <div class="ofast-submission-panel">
+                <h3>Request Details</h3>
+                <table class="ofast-submission-data-table">
+                    <tbody>
+                        <tr>
+                            <th>IP Address</th>
+                            <td><?php echo esc_html($submission->ip_address ?: 'Unknown'); ?></td>
+                        </tr>
+                        <tr>
+                            <th>Referrer</th>
+                            <td>
+                                <?php if (!empty($submission->referer) && filter_var($submission->referer, FILTER_VALIDATE_URL)): ?>
+                                    <a href="<?php echo esc_url($submission->referer); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html($submission->referer); ?></a>
+                                <?php else: ?>
+                                    <?php echo !empty($submission->referer) ? esc_html($submission->referer) : 'Not available'; ?>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>User Agent</th>
+                            <td><?php echo !empty($submission->user_agent) ? esc_html($submission->user_agent) : 'Not available'; ?></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 <?php
+    }
+
+    /**
+     * Build a secure action URL for a submission record.
+     */
+    private function build_submission_action_url($action, $submission_id, $args = array())
+    {
+        return add_query_arg(array_merge(
+            $args,
+            array(
+                'action' => $action,
+                'id' => $submission_id,
+                '_wpnonce' => wp_create_nonce('submission_action_' . $submission_id),
+            )
+        ), admin_url('admin.php?page=ofast-forms&tab=submissions'));
+    }
+
+    /**
+     * Format submission values for detail output.
+     */
+    private function format_submission_value($value)
+    {
+        if (is_array($value)) {
+            $value = implode(', ', array_map('strval', $value));
+        }
+
+        $value = trim((string) $value);
+        if ($value === '') {
+            return '<span style="color:#94a3b8;">-</span>';
+        }
+
+        return nl2br(esc_html($value));
     }
 
     /**

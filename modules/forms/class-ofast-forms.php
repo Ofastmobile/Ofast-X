@@ -37,8 +37,8 @@ class Ofast_X_Forms
             return;
         }
 
-        // Admin menu
-        add_action('admin_menu', array($this, 'add_admin_menu'));
+        // Register after Ofast Settings creates the parent menu.
+        add_action('admin_menu', array($this, 'add_admin_menu'), 20);
 
         // AJAX handlers
         add_action('wp_ajax_ofast_save_form', array($this, 'ajax_save_form'));

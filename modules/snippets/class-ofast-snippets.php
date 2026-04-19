@@ -54,10 +54,16 @@ class Ofast_X_Snippets
         $this->ajax->register_hooks();
         $this->importer->register_hooks();
 
-        // Execute active snippets early so snippet-registered hooks (e.g. add_action('init', ...))
-        // still fire at their default priority. Priority 1 ensures snippets load before
-        // most other init callbacks (default priority 10).
-        add_action('init', array($this, 'execute_snippets'), 1);
+        // Safe Mode: propagate ?ofast-safe-mode=1 through all admin/home URLs
+        if ($this->is_safe_mode_requested()) {
+            add_filter('admin_url', array($this, 'add_safe_mode_query_var'));
+            add_filter('home_url', array($this, 'add_safe_mode_query_var'));
+        }
+
+        // Execute active snippets on plugins_loaded (priority 99) — late enough for
+        // Ofast-X to be fully loaded, but early enough that snippet-registered hooks
+        // (e.g. add_action('init', ...)) still fire at their default priority.
+        add_action('plugins_loaded', array($this, 'execute_snippets'), 99);
 
         // Auto-purge trashed snippets via daily cron
         add_action('ofast_purge_trashed_snippets', array($this, 'purge_old_trashed_snippets'));
@@ -67,6 +73,40 @@ class Ofast_X_Snippets
 
         // Show runtime error notices
         add_action('admin_notices', array($this, 'show_runtime_error_notice'));
+    }
+
+    // =========================================================================
+    // SAFE MODE — Bypass snippet execution via ?ofast-safe-mode=1
+    // =========================================================================
+
+    /**
+     * Check if safe mode is requested (raw URL param check).
+     * Used during early hooks (plugins_loaded) when user caps aren't ready.
+     */
+    public function is_safe_mode_requested()
+    {
+        return !empty($_REQUEST['ofast-safe-mode']);
+    }
+
+    /**
+     * Check if safe mode is fully active (URL param + admin capability).
+     * Used during admin_notices and other late hooks when user session is ready.
+     */
+    public function is_safe_mode()
+    {
+        return $this->is_safe_mode_requested() && current_user_can('manage_options');
+    }
+
+    /**
+     * Propagate the safe mode query var through all admin/home URLs
+     * so navigating the admin doesn't lose the safe mode flag.
+     */
+    public function add_safe_mode_query_var($url)
+    {
+        if (!empty($_REQUEST['ofast-safe-mode'])) {
+            $url = add_query_arg('ofast-safe-mode', '1', $url);
+        }
+        return $url;
     }
 
     // =========================================================================
@@ -253,13 +293,20 @@ class Ofast_X_Snippets
     // =========================================================================
 
     /**
-     * Execute active snippets
-     * PERFORMANCE: Uses transient caching to avoid DB queries on every request
+     * Execute active snippets.
+     * Uses wp_cache (object cache) instead of transients to avoid stale data.
+     * Object cache is per-request by default; if Redis/Memcached is active,
+     * explicit cache clearing on save/toggle still works correctly.
      */
     public function execute_snippets()
     {
-        // PERFORMANCE: Get active snippets from cache (1 hour TTL)
-        $snippets = get_transient('ofast_active_snippets_cache');
+        // Safe Mode: skip ALL snippet execution when ?ofast-safe-mode=1
+        if ($this->is_safe_mode_requested()) {
+            return;
+        }
+
+        // PERFORMANCE: Get active snippets from object cache
+        $snippets = wp_cache_get('ofast_active_snippets', 'ofast_snippets');
 
         if ($snippets === false) {
             global $wpdb;
@@ -274,8 +321,8 @@ class Ofast_X_Snippets
             }
             $snippets = $wpdb->get_results("SELECT id, code, language, scope, location, target_type, target_value, run_once, executed_at FROM $table WHERE {$where} ORDER BY {$execution_order}");
 
-            // Cache for 1 hour (3600 seconds)
-            set_transient('ofast_active_snippets_cache', $snippets, 3600);
+            // Store in object cache (persists for this request; cleared on save/toggle)
+            wp_cache_set('ofast_active_snippets', $snippets, 'ofast_snippets');
         }
 
         if (empty($snippets)) {
@@ -568,11 +615,51 @@ class Ofast_X_Snippets
     // =========================================================================
 
     /**
-     * Clear snippets cache when snippets are modified
+     * Clear snippets cache when snippets are modified.
+     * Uses wp_cache (object cache) — always fresh, no TTL stale data issues.
      */
     public function clear_snippets_cache()
     {
-        delete_transient('ofast_active_snippets_cache');
+        wp_cache_delete('ofast_active_snippets', 'ofast_snippets');
+    }
+
+    /**
+     * Test PHP snippet code for runtime errors BEFORE activation.
+     * Executes the code in a sandboxed include with output buffering
+     * to catch ParseErrors and Throwables without affecting the site.
+     *
+     * @param string $code The snippet code to test.
+     * @param int    $snippet_id The snippet ID.
+     * @return true|string True if code runs without error, error message string on failure.
+     */
+    public function test_snippet_code($code, $snippet_id = 0)
+    {
+        $code = $this->normalize_php_code($code);
+        if (empty($code)) {
+            return true;
+        }
+
+        // Write to temp file for include-based execution
+        $snippet_file = $this->write_snippet_file($code, 0); // Use 0 for temp file
+        if (!$snippet_file) {
+            return 'Could not create temporary file for code testing.';
+        }
+
+        ob_start();
+        try {
+            include $snippet_file;
+            ob_end_clean();
+            @unlink($snippet_file);
+            return true;
+        } catch (\ParseError $e) {
+            ob_end_clean();
+            @unlink($snippet_file);
+            return 'Parse error: ' . ucfirst(rtrim($e->getMessage(), '.')) . ' (line ' . $e->getLine() . ')';
+        } catch (\Throwable $e) {
+            ob_end_clean();
+            @unlink($snippet_file);
+            return 'Runtime error: ' . ucfirst(rtrim($e->getMessage(), '.')) . ' (line ' . $e->getLine() . ')';
+        }
     }
 
     // =========================================================================
@@ -803,10 +890,22 @@ class Ofast_X_Snippets
     }
 
     /**
-     * Show admin notice for runtime errors
+     * Show admin notice for runtime errors and safe mode status.
      */
     public function show_runtime_error_notice()
     {
+        // Safe Mode banner — persistent, non-dismissible native notice
+        if ($this->is_safe_mode()) {
+            $exit_url = remove_query_arg('ofast-safe-mode');
+            $snippets_url = admin_url('admin.php?page=ofast-snippets');
+            echo '<div class="notice notice-warning" style="border-left-color:#f59e0b;background:#fffbeb;padding:12px 16px;">';
+            echo '<p style="margin:0;font-size:14px;">';
+            echo '<strong>🛡️ Ofast Safe Mode Active</strong> — All code snippets are paused. ';
+            echo '<a href="' . esc_url($snippets_url) . '">Manage Snippets</a> | ';
+            echo '<a href="' . esc_url($exit_url) . '" style="color:#dc2626;font-weight:600;">Exit Safe Mode</a>';
+            echo '</p></div>';
+        }
+
         $failed_snippets = get_transient('ofast_failed_snippets');
 
         if (empty($failed_snippets)) {

@@ -642,8 +642,12 @@ class Ofast_X_Snippets_Validator
     }
 
     /**
-     * Check for function name conflicts
-     * Returns true if no conflicts, error message string if conflicts found
+     * Check for function name conflicts.
+     * Smart detection: if a function is wrapped in a function_exists() guard
+     * (e.g., `if (!function_exists('my_func')) { function my_func() {} }`),
+     * it is excluded from conflict detection since the guard prevents redeclaration.
+     *
+     * Returns true if no conflicts, error message string if conflicts found.
      */
     public function check_function_conflicts($code)
     {
@@ -661,8 +665,20 @@ class Ofast_X_Snippets_Validator
             return true; // No named functions = no conflicts possible
         }
 
+        // Detect guarded declarations: function_exists() / class_exists() checks.
+        // If a function is wrapped in `if (!function_exists('func'))`, skip it.
+        $guarded_names = array();
+        if (preg_match_all('/(?:function_exists|class_exists)\s*\(\s*[\'"]([a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*)[\'"]\s*\)/i', $code, $guard_matches)) {
+            $guarded_names = array_map('strtolower', $guard_matches[1]);
+        }
+
         $conflicts = array();
         foreach ($function_names as $func_name) {
+            // Skip if this function has a function_exists() guard
+            if (in_array(strtolower($func_name), $guarded_names, true)) {
+                continue;
+            }
+
             // Check if function already exists
             if (function_exists($func_name)) {
                 $conflicts[] = $func_name;
@@ -671,7 +687,7 @@ class Ofast_X_Snippets_Validator
 
         if (!empty($conflicts)) {
             $conflict_list = implode(', ', $conflicts);
-            return "Function conflict detected! These functions already exist: {$conflict_list}. This may be caused by another plugin (Code Snippets, WPCode, etc.) or another active snippet using the same function names. Deactivate the conflicting snippet/plugin first, or rename the functions in this code.";
+            return "Function conflict detected! These functions already exist: {$conflict_list}. This may be caused by another plugin (Code Snippets, WPCode, etc.) or another active snippet using the same function names. Deactivate the conflicting snippet/plugin first, or rename the functions in this code. Tip: Wrap your function in if (!function_exists('name')) { } to prevent this.";
         }
 
         return true;

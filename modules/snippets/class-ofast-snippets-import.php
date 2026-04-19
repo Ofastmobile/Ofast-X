@@ -35,6 +35,67 @@ class Ofast_X_Snippets_Import
     }
 
     /**
+     * Map Code Snippets plugin scope to our language, scope, location, and run_once.
+     * Their scope field determines BOTH the execution context AND the language type.
+     *
+     * @param string|int $cs_scope The Code Snippets scope value.
+     * @return array ['language' => string, 'scope' => string, 'location' => string, 'run_once' => int]
+     */
+    private function map_code_snippets_scope($cs_scope)
+    {
+        // Numeric scope values (legacy Code Snippets versions)
+        if (is_numeric($cs_scope)) {
+            $numeric_map = array(
+                0 => 'global',
+                1 => 'front-end',
+                2 => 'admin',
+                3 => 'single-use',
+            );
+            $cs_scope = isset($numeric_map[intval($cs_scope)]) ? $numeric_map[intval($cs_scope)] : 'global';
+        }
+
+        $map = array(
+            // PHP scopes
+            'global'         => array('language' => 'php', 'scope' => 'global',   'location' => 'footer', 'run_once' => 0),
+            'admin'          => array('language' => 'php', 'scope' => 'admin',    'location' => 'footer', 'run_once' => 0),
+            'front-end'      => array('language' => 'php', 'scope' => 'frontend', 'location' => 'footer', 'run_once' => 0),
+            'single-use'     => array('language' => 'php', 'scope' => 'global',   'location' => 'footer', 'run_once' => 1),
+            // HTML scopes
+            'content'        => array('language' => 'html', 'scope' => 'global',   'location' => 'footer',  'run_once' => 0),
+            'head-content'   => array('language' => 'html', 'scope' => 'global',   'location' => 'header',  'run_once' => 0),
+            'footer-content' => array('language' => 'html', 'scope' => 'global',   'location' => 'footer',  'run_once' => 0),
+            // CSS scopes
+            'admin-css'      => array('language' => 'css', 'scope' => 'admin',    'location' => 'header',  'run_once' => 0),
+            'site-css'       => array('language' => 'css', 'scope' => 'frontend', 'location' => 'header',  'run_once' => 0),
+            // JS scopes
+            'site-head-js'   => array('language' => 'javascript', 'scope' => 'global', 'location' => 'header', 'run_once' => 0),
+            'site-footer-js' => array('language' => 'javascript', 'scope' => 'global', 'location' => 'footer', 'run_once' => 0),
+        );
+
+        return isset($map[$cs_scope])
+            ? $map[$cs_scope]
+            : array('language' => 'php', 'scope' => 'global', 'location' => 'footer', 'run_once' => 0);
+    }
+
+    /**
+     * Parse Code Snippets tags (stored as serialized array or comma-separated string).
+     *
+     * @param mixed $tags Raw tags value from Code Snippets database.
+     * @return string Comma-separated sanitized tags string.
+     */
+    private function parse_code_snippets_tags($tags)
+    {
+        if (empty($tags)) {
+            return '';
+        }
+        $tag_data = maybe_unserialize($tags);
+        if (is_array($tag_data)) {
+            return implode(', ', array_map('sanitize_text_field', $tag_data));
+        }
+        return sanitize_text_field((string) $tags);
+    }
+
+    /**
      * Detect other snippet plugins installed on the site
      */
     public function detect_other_snippet_plugins()
@@ -214,7 +275,9 @@ class Ofast_X_Snippets_Import
             // Insert snippet (always as INACTIVE for safety)
             $insert_data = array(
                 'name' => sanitize_text_field($snippet['name']) . ' (imported)',
-                'description' => isset($snippet['description']) ? sanitize_textarea_field($snippet['description']) : '',
+                'description' => isset($snippet['description'])
+                    ? sanitize_textarea_field($snippet['description'])
+                    : (isset($snippet['desc']) ? sanitize_textarea_field($snippet['desc']) : ''),
                 'code' => $snippet_code,
                 'language' => $language,
                 'scope' => isset($snippet['scope']) ? sanitize_text_field($snippet['scope']) : 'global',
@@ -286,26 +349,23 @@ class Ofast_X_Snippets_Import
             $snippets = $wpdb->get_results("SELECT * FROM $source_table");
 
             foreach ($snippets as $snippet) {
-                $snippet_code = isset($snippet->code) ? $this->core->normalize_php_code((string) $snippet->code) : '';
+                // Map scope → language, scope, location, run_once
+                $cs_scope = isset($snippet->scope) ? $snippet->scope : 'global';
+                $mapped = $this->map_code_snippets_scope($cs_scope);
 
-                // Validate PHP code — only hard-block Tier 1 (exec/eval/etc)
-                if ($snippet_code !== '') {
+                $snippet_code = isset($snippet->code) ? (string) $snippet->code : '';
+                // Only normalize PHP code (stripping <?php tags etc)
+                if ($mapped['language'] === 'php') {
+                    $snippet_code = $this->core->normalize_php_code($snippet_code);
+                }
+
+                // Validate code — only hard-block Tier 1 for PHP
+                if ($mapped['language'] === 'php' && $snippet_code !== '') {
                     $validation = $this->core->validator->validate_php_code($snippet_code);
                     if ($this->core->validator->is_hard_error($validation)) {
                         $errors[] = $snippet->name . ': ' . $validation;
                         $skipped++;
                         continue;
-                    }
-                    // Tier 2/3: import normally as inactive
-                }
-
-                // Map scope
-                $scope = 'global';
-                if (isset($snippet->scope)) {
-                    if ($snippet->scope === 'admin' || $snippet->scope === 2) {
-                        $scope = 'admin';
-                    } elseif ($snippet->scope === 'front-end' || $snippet->scope === 1) {
-                        $scope = 'frontend';
                     }
                 }
 
@@ -320,19 +380,29 @@ class Ofast_X_Snippets_Import
                     continue;
                 }
 
-                $wpdb->insert($table, array(
+                // Parse tags and priority
+                $tags = $this->parse_code_snippets_tags(isset($snippet->tags) ? $snippet->tags : '');
+                $priority = isset($snippet->priority) ? max(1, min(9999, intval($snippet->priority))) : 10;
+
+                $insert_data = array(
                     'name' => sanitize_text_field($snippet->name) . ' (from Code Snippets)',
                     'description' => isset($snippet->desc) ? sanitize_textarea_field($snippet->desc) : '',
                     'code' => $snippet_code,
-                    'language' => 'php',
-                    'scope' => $scope,
-                    'location' => 'footer',
+                    'language' => $mapped['language'],
+                    'scope' => $mapped['scope'],
+                    'location' => $mapped['location'],
                     'target_type' => 'all',
                     'target_value' => '',
-                    'run_once' => 0,
+                    'run_once' => $mapped['run_once'],
+                    'tags' => $tags,
                     'active' => 0, // Always inactive
                     'created_at' => current_time('mysql')
-                ));
+                );
+                if ($this->core->ensure_snippets_priority_schema()) {
+                    $insert_data['priority'] = $priority;
+                }
+
+                $wpdb->insert($table, $insert_data);
                 $imported++;
             }
         } elseif ($plugin === 'wpcode') {
@@ -448,7 +518,13 @@ class Ofast_X_Snippets_Import
             $source_snippets = $wpdb->get_results("SELECT * FROM $source_table");
 
             foreach ($source_snippets as $s) {
-                $normalized_preview_code = isset($s->code) ? $this->core->normalize_php_code((string) $s->code) : '';
+                // Map scope to determine language
+                $cs_scope = isset($s->scope) ? $s->scope : 'global';
+                $mapped = $this->map_code_snippets_scope($cs_scope);
+
+                $raw_code = isset($s->code) ? (string) $s->code : '';
+                $normalized_preview_code = ($mapped['language'] === 'php') ? $this->core->normalize_php_code($raw_code) : $raw_code;
+
                 $code_hash = md5(trim($normalized_preview_code));
                 $existing_id = $wpdb->get_var($wpdb->prepare(
                     "SELECT id FROM $our_table WHERE MD5(TRIM(code)) = %s",
@@ -462,11 +538,11 @@ class Ofast_X_Snippets_Import
                     $status = 'active';
                 }
 
-                // Validate PHP syntax with tiered security
+                // Validate with tiered security (only for PHP snippets)
                 $is_safe = true;
                 $security_tier = 0;
                 $error_message = null;
-                if ($normalized_preview_code !== '') {
+                if ($mapped['language'] === 'php' && $normalized_preview_code !== '') {
                     $validation = $this->core->validator->validate_php_code($normalized_preview_code);
                     if ($this->core->validator->is_hard_error($validation)) {
                         $is_safe = false;
@@ -485,7 +561,7 @@ class Ofast_X_Snippets_Import
                     'id' => $s->id,
                     'name' => $s->name,
                     'description' => isset($s->desc) ? $s->desc : '',
-                    'language' => 'php',
+                    'language' => $mapped['language'],
                     'status' => $status,
                     'existing_id' => $existing_id ? intval($existing_id) : null,
                     'is_safe' => $is_safe,
@@ -616,26 +692,22 @@ class Ofast_X_Snippets_Import
             ));
 
             foreach ($snippets as $snippet) {
-                $snippet_code = isset($snippet->code) ? $this->core->normalize_php_code((string) $snippet->code) : '';
+                // Map scope → language, scope, location, run_once
+                $cs_scope = isset($snippet->scope) ? $snippet->scope : 'global';
+                $mapped = $this->map_code_snippets_scope($cs_scope);
+
+                $snippet_code = isset($snippet->code) ? (string) $snippet->code : '';
+                if ($mapped['language'] === 'php') {
+                    $snippet_code = $this->core->normalize_php_code($snippet_code);
+                }
 
                 // Validate PHP code — only hard-block Tier 1
-                if ($snippet_code !== '') {
+                if ($mapped['language'] === 'php' && $snippet_code !== '') {
                     $validation = $this->core->validator->validate_php_code($snippet_code);
                     if ($this->core->validator->is_hard_error($validation)) {
                         $errors[] = $snippet->name . ': ' . $validation;
                         $skipped++;
                         continue;
-                    }
-                    // Tier 2/3: import normally as inactive
-                }
-
-                // Map scope
-                $scope = 'global';
-                if (isset($snippet->scope)) {
-                    if ($snippet->scope === 'admin' || $snippet->scope === 2) {
-                        $scope = 'admin';
-                    } elseif ($snippet->scope === 'front-end' || $snippet->scope === 1) {
-                        $scope = 'frontend';
                     }
                 }
 
@@ -650,19 +722,29 @@ class Ofast_X_Snippets_Import
                     continue;
                 }
 
-                $wpdb->insert($table, array(
+                // Parse tags and priority
+                $tags = $this->parse_code_snippets_tags(isset($snippet->tags) ? $snippet->tags : '');
+                $priority = isset($snippet->priority) ? max(1, min(9999, intval($snippet->priority))) : 10;
+
+                $insert_data = array(
                     'name' => sanitize_text_field($snippet->name) . ' (from Code Snippets)',
                     'description' => isset($snippet->desc) ? sanitize_textarea_field($snippet->desc) : '',
                     'code' => $snippet_code,
-                    'language' => 'php',
-                    'scope' => $scope,
-                    'location' => 'footer',
+                    'language' => $mapped['language'],
+                    'scope' => $mapped['scope'],
+                    'location' => $mapped['location'],
                     'target_type' => 'all',
                     'target_value' => '',
-                    'run_once' => 0,
+                    'run_once' => $mapped['run_once'],
+                    'tags' => $tags,
                     'active' => 0,
                     'created_at' => current_time('mysql')
-                ));
+                );
+                if ($this->core->ensure_snippets_priority_schema()) {
+                    $insert_data['priority'] = $priority;
+                }
+
+                $wpdb->insert($table, $insert_data);
                 $imported++;
             }
         } elseif ($plugin === 'wpcode') {

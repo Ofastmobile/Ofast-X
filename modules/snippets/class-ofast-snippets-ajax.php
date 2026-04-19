@@ -130,6 +130,14 @@ class Ofast_X_Snippets_Ajax
                     wp_send_json_error('Cannot activate: duplicate conflict with active snippet(s). ' . $conflict_preview);
                     return;
                 }
+
+                // Pre-activation test: execute the code in a sandbox to catch runtime errors
+                // before actually activating. Prevents admin lockouts from broken snippets.
+                $test_result = $this->core->test_snippet_code($candidate_code, $snippet->id);
+                if ($test_result !== true) {
+                    wp_send_json_error('Cannot activate — code test failed: ' . $test_result);
+                    return;
+                }
             }
         }
 

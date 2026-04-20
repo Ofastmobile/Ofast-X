@@ -196,13 +196,18 @@ class Ofast_X_SMTP_Admin
         ?>
         <div class="wrap">
             <!-- Header -->
-            <div class="ofast-header" style="display:flex; align-items:center; gap:20px; background:#fff; padding:25px 30px; border-radius:12px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom:25px; margin-top:20px;">
-                <div style="width:56px; height:56px; background:#fff; border:1px solid #e2e8f0; box-shadow:0 2px 4px rgba(0,0,0,0.02); border-radius:16px; display:flex; align-items:center; justify-content:center;">
-                    <span class="dashicons dashicons-email-alt2" style="font-size:28px; width:28px; height:28px; color:#6366f1;"></span>
+            <div class="ofast-header"
+                style="display:flex; align-items:center; gap:20px; background:#fff; padding:25px 30px; border-radius:12px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom:25px; margin-top:20px;">
+                <div
+                    style="width:56px; height:56px; background:#fff; border:1px solid #e2e8f0; box-shadow:0 2px 4px rgba(0,0,0,0.02); border-radius:16px; display:flex; align-items:center; justify-content:center;">
+                    <span class="dashicons dashicons-email-alt2"
+                        style="font-size:28px; width:28px; height:28px; color:#6366f1;"></span>
                 </div>
                 <div>
-                    <h1 style="margin:0 0 5px 0; font-size:24px; font-weight:700; color:#1e293b; display:block; padding:0;">SMTP</h1>
-                    <p style="margin:0; color:#64748b; font-size:14px;">Configure email delivery, monitor performance, and view logs.</p>
+                    <h1 style="margin:0 0 5px 0; font-size:24px; font-weight:700; color:#1e293b; display:block; padding:0;">SMTP
+                    </h1>
+                    <p style="margin:0; color:#64748b; font-size:14px;">Configure email delivery, monitor performance, and view
+                        logs.</p>
                 </div>
             </div>
 
@@ -406,36 +411,45 @@ class Ofast_X_SMTP_Admin
         <!-- Lifetime Counters (persist beyond log cleanup) -->
         <?php $lifetime = Ofast_X_SMTP::get_delivery_stats(); ?>
         <?php if ($lifetime['success'] > 0 || $lifetime['failed'] > 0): ?>
-        <div style="display: flex; gap: 15px; margin: 0 0 25px 0; flex-wrap: wrap;">
-            <div style="flex: 1; background: linear-gradient(135deg, #f0fdf4, #dcfce7); padding: 16px 20px; border-radius: 10px; border: 1px solid #bbf7d0; display: flex; align-items: center; gap: 12px; min-width: 200px;">
-                <span class="dashicons dashicons-saved" style="color: #16a34a; font-size: 22px; width: 22px; height: 22px;"></span>
-                <div>
-                    <div style="font-size: 20px; font-weight: 700; color: #15803d;"><?php echo number_format($lifetime['success']); ?></div>
-                    <div style="font-size: 12px; color: #4ade80;">Lifetime Delivered</div>
+            <div style="display: flex; gap: 15px; margin: 0 0 25px 0; flex-wrap: wrap;">
+                <div
+                    style="flex: 1; background: linear-gradient(135deg, #f0fdf4, #dcfce7); padding: 16px 20px; border-radius: 10px; border: 1px solid #bbf7d0; display: flex; align-items: center; gap: 12px; min-width: 200px;">
+                    <span class="dashicons dashicons-saved"
+                        style="color: #16a34a; font-size: 22px; width: 22px; height: 22px;"></span>
+                    <div>
+                        <div style="font-size: 20px; font-weight: 700; color: #15803d;">
+                            <?php echo number_format($lifetime['success']); ?></div>
+                        <div style="font-size: 12px; color: #4ade80;">Lifetime Delivered</div>
+                    </div>
                 </div>
-            </div>
-            <div style="flex: 1; background: linear-gradient(135deg, #fef2f2, #fee2e2); padding: 16px 20px; border-radius: 10px; border: 1px solid #fecaca; display: flex; align-items: center; gap: 12px; min-width: 200px;">
-                <span class="dashicons dashicons-dismiss" style="color: #dc2626; font-size: 22px; width: 22px; height: 22px;"></span>
-                <div>
-                    <div style="font-size: 20px; font-weight: 700; color: #b91c1c;"><?php echo number_format($lifetime['failed']); ?></div>
-                    <div style="font-size: 12px; color: #f87171;">Lifetime Failed</div>
+                <div
+                    style="flex: 1; background: linear-gradient(135deg, #fef2f2, #fee2e2); padding: 16px 20px; border-radius: 10px; border: 1px solid #fecaca; display: flex; align-items: center; gap: 12px; min-width: 200px;">
+                    <span class="dashicons dashicons-dismiss"
+                        style="color: #dc2626; font-size: 22px; width: 22px; height: 22px;"></span>
+                    <div>
+                        <div style="font-size: 20px; font-weight: 700; color: #b91c1c;">
+                            <?php echo number_format($lifetime['failed']); ?></div>
+                        <div style="font-size: 12px; color: #f87171;">Lifetime Failed</div>
+                    </div>
                 </div>
+                <?php if ($lifetime['fallback_used'] > 0): ?>
+                    <div
+                        style="flex: 1; background: linear-gradient(135deg, #fffbeb, #fef3c7); padding: 16px 20px; border-radius: 10px; border: 1px solid #fde68a; display: flex; align-items: center; gap: 12px; min-width: 200px;">
+                        <span class="dashicons dashicons-update-alt"
+                            style="color: #d97706; font-size: 22px; width: 22px; height: 22px;"></span>
+                        <div>
+                            <div style="font-size: 20px; font-weight: 700; color: #b45309;">
+                                <?php echo number_format($lifetime['fallback_used']); ?></div>
+                            <div style="font-size: 12px; color: #fbbf24;">Fallback Recoveries</div>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
-            <?php if ($lifetime['fallback_used'] > 0): ?>
-            <div style="flex: 1; background: linear-gradient(135deg, #fffbeb, #fef3c7); padding: 16px 20px; border-radius: 10px; border: 1px solid #fde68a; display: flex; align-items: center; gap: 12px; min-width: 200px;">
-                <span class="dashicons dashicons-update-alt" style="color: #d97706; font-size: 22px; width: 22px; height: 22px;"></span>
-                <div>
-                    <div style="font-size: 20px; font-weight: 700; color: #b45309;"><?php echo number_format($lifetime['fallback_used']); ?></div>
-                    <div style="font-size: 12px; color: #fbbf24;">Fallback Recoveries</div>
-                </div>
-            </div>
-            <?php endif; ?>
-        </div>
         <?php endif; ?>
 
         <!-- Sidebar Layout -->
         <div class="ofast-layout-sidebar" style="margin: 25px 0;">
-            
+
             <!-- Left Column -->
             <div style="min-width: 0;">
                 <!-- Emails Last 7 Days -->
@@ -443,7 +457,8 @@ class Ofast_X_SMTP_Admin
                     style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; flex-direction: column; margin-bottom: 25px;">
                     <h3 style="margin: 0; font-size: 16px; color: #374151;">Emails Last 7 Days</h3>
                     <div style="flex: 1;"></div>
-                    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-top: 20px;">
+                    <div
+                        style="display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-top: 20px;">
                         <?php foreach ($weekly_data as $day): ?>
                             <?php
                             // Max height 80px for bars
@@ -496,90 +511,141 @@ class Ofast_X_SMTP_Admin
                 </div>
 
                 <!-- Pro Features -->
-                <div style="background: linear-gradient(135deg, #1e40af, #3b82f6); padding: 35px; border-radius: 12px; color: #fff; text-align: center; position: relative; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3); margin-bottom: 25px;">
+                <div
+                    style="background: linear-gradient(135deg, #1e40af, #3b82f6); padding: 35px; border-radius: 12px; color: #fff; text-align: center; position: relative; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3); margin-bottom: 25px;">
                     <!-- Pattern Background -->
-                    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.1; background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 24px 24px;"></div>
-                    
+                    <div
+                        style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.1; background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 24px 24px;">
+                    </div>
+
                     <div style="position: relative; z-index: 1;">
-                        <div style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-bottom: 15px;">
-                            <span class="dashicons dashicons-star-filled" style="color: #fbbf24; font-size: 32px; width: 32px; height: 32px;"></span>
+                        <div
+                            style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-bottom: 15px;">
+                            <span class="dashicons dashicons-star-filled"
+                                style="color: #fbbf24; font-size: 32px; width: 32px; height: 32px;"></span>
                         </div>
-                        <h3 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Pro Features</h3>
-                        <p style="margin: 0 0 30px 0; font-size: 16px; font-weight: 500; opacity: 0.9;">Supercharge your Email</p>
-                        
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; text-align: left; margin-bottom: 30px;">
+                        <h3
+                            style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            Pro Features</h3>
+                        <p style="margin: 0 0 30px 0; font-size: 16px; font-weight: 500; opacity: 0.9;">Supercharge your Email
+                        </p>
+
+                        <div
+                            style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; text-align: left; margin-bottom: 30px;">
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;"><span class="dashicons dashicons-clock" style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
-                                <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Email Scheduling<br>Quota Management</span>
+                                <div
+                                    style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;">
+                                    <span class="dashicons dashicons-clock"
+                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Email Scheduling<br>Quota
+                                    Management</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;"><span class="dashicons dashicons-chart-pie" style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
-                                <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Email Report<br>and Tracking</span>
+                                <div
+                                    style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;">
+                                    <span class="dashicons dashicons-chart-pie"
+                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Email Report<br>and
+                                    Tracking</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;"><span class="dashicons dashicons-paperclip" style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
-                                <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Email Log<br>Attachment</span>
+                                <div
+                                    style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;">
+                                    <span class="dashicons dashicons-paperclip"
+                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Email
+                                    Log<br>Attachment</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;"><span class="dashicons dashicons-smartphone" style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                <div
+                                    style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;">
+                                    <span class="dashicons dashicons-smartphone"
+                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
                                 <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">SMS<br>Notification</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;"><span class="dashicons dashicons-update-alt" style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
-                                <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Auto Resend<br>Failed Emails</span>
+                                <div
+                                    style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;">
+                                    <span class="dashicons dashicons-update-alt"
+                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Auto Resend<br>Failed
+                                    Emails</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;"><span class="dashicons dashicons-email" style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
-                                <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Microsoft 365 /<br>Office 365</span>
+                                <div
+                                    style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;">
+                                    <span class="dashicons dashicons-email"
+                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Microsoft 365 /<br>Office
+                                    365</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;"><span class="dashicons dashicons-cloud" style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                <div
+                                    style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;">
+                                    <span class="dashicons dashicons-cloud"
+                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
                                 <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Amazon SES<br>Support</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;"><span class="dashicons dashicons-email-alt" style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                <div
+                                    style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;">
+                                    <span class="dashicons dashicons-email-alt"
+                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
                                 <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Zoho Mail<br>Support</span>
                             </div>
                         </div>
 
-                        <a href="https://ofastshop.com/ofast-x" target="_blank" style="display: inline-block; background: #f59e0b; color: #fff; padding: 12px 30px; border-radius: 30px; font-weight: 600; text-decoration: none; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3);">Get Ofast Toolkit Pro &rarr;</a>
+                        <a href="https://ofastshop.com/ofast-x" target="_blank"
+                            style="display: inline-block; background: #f59e0b; color: #fff; padding: 12px 30px; border-radius: 30px; font-weight: 600; text-decoration: none; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3);">Get
+                            Ofast Toolkit Pro &rarr;</a>
                     </div>
                 </div>
             </div>
 
             <!-- Right Column -->
             <div style="min-width: 0;">
-                
+
                 <!-- Video Section -->
-                <div style="background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; position: relative; margin-bottom: 25px;">
+                <div
+                    style="background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; position: relative; margin-bottom: 25px;">
                     <!-- Inline Video Container -->
-                    <div id="ofast-inline-video-wrapper" style="height: 200px; position: relative; display: flex; align-items: center; justify-content: center; background-color: #0f172a; overflow: hidden; margin: 0; padding: 0;" class="ofast-video-container" data-video-id="0dcd5bLtYs8">
+                    <div id="ofast-inline-video-wrapper"
+                        style="height: 200px; position: relative; display: flex; align-items: center; justify-content: center; background-color: #0f172a; overflow: hidden; margin: 0; padding: 0;"
+                        class="ofast-video-container" data-video-id="0dcd5bLtYs8">
                         <!-- Featured Image: YouTube Thumbnail (falls back to hqdefault if maxres doesn't exist) -->
-                        <img src="https://img.youtube.com/vi/0dcd5bLtYs8/maxresdefault.jpg" onerror="this.src='https://img.youtube.com/vi/0dcd5bLtYs8/hqdefault.jpg';" alt="SMTP Setup Video" style="position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0.7; transition: opacity 0.3s ease;">
-                        
+                        <img src="https://img.youtube.com/vi/0dcd5bLtYs8/maxresdefault.jpg"
+                            onerror="this.src='https://img.youtube.com/vi/0dcd5bLtYs8/hqdefault.jpg';" alt="SMTP Setup Video"
+                            style="position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0.7; transition: opacity 0.3s ease;">
+
                         <!-- Overlay gradient for better contrast -->
-                        <div style="position: absolute; width: 100%; height: 100%; background: linear-gradient(135deg, rgba(30,27,75,0.4) 0%, rgba(76,29,149,0.4) 100%); pointer-events: none;"></div>
-                        
+                        <div
+                            style="position: absolute; width: 100%; height: 100%; background: linear-gradient(135deg, rgba(30,27,75,0.4) 0%, rgba(76,29,149,0.4) 100%); pointer-events: none;">
+                        </div>
+
                         <!-- Play Button -->
-                        <div style="width: 64px; height: 64px; background: #8b5cf6; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 2; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); transition: transform 0.2s ease, background 0.2s ease;" class="ofast-play-btn">
-                            <div style="width: 0; height: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-left: 16px solid #fff; margin-left: 6px;"></div>
+                        <div style="width: 64px; height: 64px; background: #8b5cf6; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 2; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); transition: transform 0.2s ease, background 0.2s ease;"
+                            class="ofast-play-btn">
+                            <div
+                                style="width: 0; height: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-left: 16px solid #fff; margin-left: 6px;">
+                            </div>
                         </div>
                     </div>
                 </div>
-                
+
                 <style>
                     .ofast-video-container:hover img {
                         opacity: 0.9 !important;
                     }
+
                     .ofast-video-container:hover .ofast-play-btn {
                         transform: scale(1.1);
                         background: #7c3aed !important;
                     }
                 </style>
-                
+
                 <script>
-                    jQuery(document).ready(function($) {
-                        $('#ofast-inline-video-wrapper').on('click', function() {
+                    jQuery(document).ready(function ($) {
+                        $('#ofast-inline-video-wrapper').on('click', function () {
                             var videoId = $(this).data('video-id');
                             var iframe = $('<iframe/>', {
                                 'src': 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&rel=0',
@@ -601,25 +667,47 @@ class Ofast_X_SMTP_Admin
                 </script>
 
                 <!-- Troubleshooting -->
-                <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 25px;">
+                <div
+                    style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 25px;">
                     <h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: 600; color: #1e293b;">Troubleshooting</h3>
                     <ul style="margin: 0; padding: 0; list-style: none;">
-                        <li style="margin-bottom: 16px;"><a href="#" style="text-decoration: none; color: #4b5563; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px;"><span class="dashicons dashicons-email" style="color: #3b82f6;"></span> Send test email</a></li>
-                        <li style="margin-bottom: 16px;"><a href="#" style="text-decoration: none; color: #4b5563; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px;"><span class="dashicons dashicons-external" style="color: #3b82f6;"></span> Spam Score Checker</a></li>
-                        <li style="margin-bottom: 16px;"><a href="#" style="text-decoration: none; color: #4b5563; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px;"><span class="dashicons dashicons-update" style="color: #3b82f6;"></span> Import/Export</a></li>
-                        <li style="margin-bottom: 16px;"><a href="#" style="text-decoration: none; color: #4b5563; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px;"><span class="dashicons dashicons-admin-links" style="color: #3b82f6;"></span> Connectivity test</a></li>
-                        <li style="margin-bottom: 16px;"><a href="#" style="text-decoration: none; color: #4b5563; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px;"><span class="dashicons dashicons-search" style="color: #3b82f6;"></span> Diagnostic test</a></li>
-                        <li style="margin-bottom: 0;"><a href="#" style="text-decoration: none; color: #4b5563; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px;"><span class="dashicons dashicons-image-rotate" style="color: #3b82f6;"></span> Reset plugin</a></li>
+                        <li style="margin-bottom: 16px;"><a href="#"
+                                style="text-decoration: none; color: #4b5563; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px;"><span
+                                    class="dashicons dashicons-email" style="color: #3b82f6;"></span> Send test email</a></li>
+                        <li style="margin-bottom: 16px;"><a href="#"
+                                style="text-decoration: none; color: #4b5563; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px;"><span
+                                    class="dashicons dashicons-external" style="color: #3b82f6;"></span> Spam Score Checker</a>
+                        </li>
+                        <li style="margin-bottom: 16px;"><a href="#"
+                                style="text-decoration: none; color: #4b5563; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px;"><span
+                                    class="dashicons dashicons-update" style="color: #3b82f6;"></span> Import/Export</a></li>
+                        <li style="margin-bottom: 16px;"><a href="#"
+                                style="text-decoration: none; color: #4b5563; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px;"><span
+                                    class="dashicons dashicons-admin-links" style="color: #3b82f6;"></span> Connectivity
+                                test</a></li>
+                        <li style="margin-bottom: 16px;"><a href="#"
+                                style="text-decoration: none; color: #4b5563; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px;"><span
+                                    class="dashicons dashicons-search" style="color: #3b82f6;"></span> Diagnostic test</a></li>
+                        <li style="margin-bottom: 0;"><a href="#"
+                                style="text-decoration: none; color: #4b5563; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px;"><span
+                                    class="dashicons dashicons-image-rotate" style="color: #3b82f6;"></span> Reset plugin</a>
+                        </li>
                     </ul>
                 </div>
 
                 <!-- Let Our Experts -->
-                <div style="background: linear-gradient(to bottom, #312e81, #1e1b4b); padding: 35px 25px; border-radius: 12px; color: #fff; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 25px;">
-                    <div style="width: 70px; height: 70px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
-                        <span class="dashicons dashicons-businessman" style="font-size: 38px; width: 38px; height: 38px; color: #60a5fa;"></span>
+                <div
+                    style="background: linear-gradient(to bottom, #312e81, #1e1b4b); padding: 35px 25px; border-radius: 12px; color: #fff; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 25px;">
+                    <div
+                        style="width: 70px; height: 70px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
+                        <span class="dashicons dashicons-businessman"
+                            style="font-size: 38px; width: 38px; height: 38px; color: #60a5fa;"></span>
                     </div>
-                    <p style="margin: 0 0 25px 0; font-size: 16px; font-weight: 500; line-height: 1.5;">Let Our Experts Handle Your Ofast SMTP Setup</p>
-                    <a href="#" style="display: inline-block; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 10px 24px; border-radius: 30px; text-decoration: none; font-weight: 500; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Book Now</a>
+                    <p style="margin: 0 0 25px 0; font-size: 16px; font-weight: 500; line-height: 1.5;">Let Our Experts Handle
+                        Your Ofast SMTP Setup</p>
+                    <a href="#"
+                        style="display: inline-block; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 10px 24px; border-radius: 30px; text-decoration: none; font-weight: 500; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Book
+                        Now</a>
                 </div>
 
             </div>
@@ -736,7 +824,8 @@ class Ofast_X_SMTP_Admin
             <!-- Per-page selector -->
             <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
                 <span style="color: #6b7280; font-size: 13px;">Show</span>
-                <select id="ofast-smtp-per-page" style="width: auto; min-width: 70px; border: 1px solid #d1d5db; border-radius: 8px; padding: 6px 10px; font-size: 13px; background: #fff; color: #374151; cursor: pointer;">
+                <select id="ofast-smtp-per-page"
+                    style="width: auto; min-width: 70px; border: 1px solid #d1d5db; border-radius: 8px; padding: 6px 10px; font-size: 13px; background: #fff; color: #374151; cursor: pointer;">
                     <?php foreach (array(10, 20, 50, 100, 'all') as $opt): ?>
                         <option value="<?php echo esc_attr($opt); ?>" <?php selected($show_all ? 'all' : $per_page, $opt === 'all' ? 'all' : $opt); ?>>
                             <?php echo $opt === 'all' ? 'All' : $opt; ?>
@@ -783,11 +872,15 @@ class Ofast_X_SMTP_Admin
                 position: relative;
                 pointer-events: none;
             }
+
             .ofast-smtp-loading::after {
                 content: '';
                 position: absolute;
-                top: 0; left: 0; right: 0; bottom: 0;
-                background: rgba(255,255,255,0.7);
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(255, 255, 255, 0.7);
                 border-radius: inherit;
             }
         </style>
@@ -797,91 +890,91 @@ class Ofast_X_SMTP_Admin
         </div>
 
         <script>
-        jQuery(document).ready(function($) {
-            var smtpState = {
-                page: <?php echo intval($current_page); ?>,
-                perPage: '<?php echo esc_js($show_all ? 'all' : $per_page); ?>',
-                nonce: '<?php echo esc_js($ajax_nonce); ?>'
-            };
+            jQuery(document).ready(function ($) {
+                var smtpState = {
+                    page: <?php echo intval($current_page); ?>,
+                    perPage: '<?php echo esc_js($show_all ? 'all' : $per_page); ?>',
+                    nonce: '<?php echo esc_js($ajax_nonce); ?>'
+                };
 
-            function smtpFetchPage(page, perPage) {
-                var $tbody = $('#ofast-smtp-log-tbody');
-                var $paginationWrap = $('#ofast-smtp-pagination-wrap');
-                $tbody.closest('table').addClass('ofast-smtp-loading');
-                $paginationWrap.addClass('ofast-smtp-loading');
+                function smtpFetchPage(page, perPage) {
+                    var $tbody = $('#ofast-smtp-log-tbody');
+                    var $paginationWrap = $('#ofast-smtp-pagination-wrap');
+                    $tbody.closest('table').addClass('ofast-smtp-loading');
+                    $paginationWrap.addClass('ofast-smtp-loading');
 
-                $.post(ajaxurl, {
-                    action: 'ofast_smtp_fetch_logs',
-                    nonce: smtpState.nonce,
-                    paged: page,
-                    per_page: perPage
-                }, function(response) {
-                    if (response.success) {
-                        $tbody.html(response.data.rows_html);
-                        $paginationWrap.html(response.data.pagination_html);
-                        smtpState.page = response.data.current_page;
-                        smtpState.perPage = perPage;
+                    $.post(ajaxurl, {
+                        action: 'ofast_smtp_fetch_logs',
+                        nonce: smtpState.nonce,
+                        paged: page,
+                        per_page: perPage
+                    }, function (response) {
+                        if (response.success) {
+                            $tbody.html(response.data.rows_html);
+                            $paginationWrap.html(response.data.pagination_html);
+                            smtpState.page = response.data.current_page;
+                            smtpState.perPage = perPage;
 
-                        // Update per-page dropdown to stay in sync
-                        $('#ofast-smtp-per-page').val(perPage);
+                            // Update per-page dropdown to stay in sync
+                            $('#ofast-smtp-per-page').val(perPage);
 
-                        // Update URL without reload (bookmarkable)
-                        var url = new URL(window.location);
-                        url.searchParams.set('paged', response.data.current_page);
-                        url.searchParams.set('per_page', perPage);
-                        url.searchParams.set('tab', 'log');
-                        history.replaceState(null, '', url.toString());
+                            // Update URL without reload (bookmarkable)
+                            var url = new URL(window.location);
+                            url.searchParams.set('paged', response.data.current_page);
+                            url.searchParams.set('per_page', perPage);
+                            url.searchParams.set('tab', 'log');
+                            history.replaceState(null, '', url.toString());
 
-                        // Re-bind preview buttons for new rows
-                        smtpBindPreview();
-                        // Re-bind pagination clicks
-                        smtpBindPagination();
-                    }
-                    $tbody.closest('table').removeClass('ofast-smtp-loading');
-                    $paginationWrap.removeClass('ofast-smtp-loading');
-                }).fail(function() {
-                    $tbody.closest('table').removeClass('ofast-smtp-loading');
-                    $paginationWrap.removeClass('ofast-smtp-loading');
-                });
-            }
-
-            function smtpBindPagination() {
-                $('#ofast-smtp-pagination-wrap').off('click', '.ofast-page-btn').on('click', '.ofast-page-btn', function(e) {
-                    e.preventDefault();
-                    if ($(this).hasClass('disabled') || $(this).hasClass('active')) return;
-                    var page = $(this).data('page');
-                    if (page) smtpFetchPage(page, smtpState.perPage);
-                });
-            }
-
-            function smtpBindPreview() {
-                $('#ofast-smtp-log-tbody').off('click', '.preview-email').on('click', '.preview-email', function() {
-                    var content = atob($(this).data('content'));
-                    $('#email-preview-frame').remove();
-                    var iframe = $('<iframe id="email-preview-frame" style="width: 100%; height: 60vh; border: none;"></iframe>');
-                    iframe.attr('srcdoc', content);
-                    $('#email-preview-modal .ofast-smtp-modal-body').append(iframe);
-                    $('#email-preview-modal').fadeIn(200);
-                });
-            }
-
-            // Per-page change → AJAX
-            $('#ofast-smtp-per-page').on('change', function() {
-                smtpFetchPage(1, $(this).val());
-            });
-
-            // Initial bindings
-            smtpBindPagination();
-            smtpBindPreview();
-
-            // Close preview modal
-            $('#close-preview, #email-preview-modal').on('click', function(e) {
-                if (e.target === this || $(this).attr('id') === 'close-preview') {
-                    $('#email-preview-modal').fadeOut(200);
-                    $('#email-preview-frame').remove();
+                            // Re-bind preview buttons for new rows
+                            smtpBindPreview();
+                            // Re-bind pagination clicks
+                            smtpBindPagination();
+                        }
+                        $tbody.closest('table').removeClass('ofast-smtp-loading');
+                        $paginationWrap.removeClass('ofast-smtp-loading');
+                    }).fail(function () {
+                        $tbody.closest('table').removeClass('ofast-smtp-loading');
+                        $paginationWrap.removeClass('ofast-smtp-loading');
+                    });
                 }
+
+                function smtpBindPagination() {
+                    $('#ofast-smtp-pagination-wrap').off('click', '.ofast-page-btn').on('click', '.ofast-page-btn', function (e) {
+                        e.preventDefault();
+                        if ($(this).hasClass('disabled') || $(this).hasClass('active')) return;
+                        var page = $(this).data('page');
+                        if (page) smtpFetchPage(page, smtpState.perPage);
+                    });
+                }
+
+                function smtpBindPreview() {
+                    $('#ofast-smtp-log-tbody').off('click', '.preview-email').on('click', '.preview-email', function () {
+                        var content = atob($(this).data('content'));
+                        $('#email-preview-frame').remove();
+                        var iframe = $('<iframe id="email-preview-frame" style="width: 100%; height: 60vh; border: none;"></iframe>');
+                        iframe.attr('srcdoc', content);
+                        $('#email-preview-modal .ofast-smtp-modal-body').append(iframe);
+                        $('#email-preview-modal').fadeIn(200);
+                    });
+                }
+
+                // Per-page change → AJAX
+                $('#ofast-smtp-per-page').on('change', function () {
+                    smtpFetchPage(1, $(this).val());
+                });
+
+                // Initial bindings
+                smtpBindPagination();
+                smtpBindPreview();
+
+                // Close preview modal
+                $('#close-preview, #email-preview-modal').on('click', function (e) {
+                    if (e.target === this || $(this).attr('id') === 'close-preview') {
+                        $('#email-preview-modal').fadeOut(200);
+                        $('#email-preview-frame').remove();
+                    }
+                });
             });
-        });
         </script>
 
         <!-- Preview Modal -->
@@ -1082,19 +1175,25 @@ class Ofast_X_SMTP_Admin
                 vertical-align: middle;
                 margin-right: 10px;
             }
+
             .ofast-toggle input {
                 opacity: 0;
                 width: 0;
                 height: 0;
             }
+
             .ofast-slider {
                 position: absolute;
                 cursor: pointer;
-                top: 0; left: 0; right: 0; bottom: 0;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
                 background-color: #cbd5e1;
                 transition: .4s;
                 border-radius: 34px;
             }
+
             .ofast-slider:before {
                 position: absolute;
                 content: "";
@@ -1105,15 +1204,18 @@ class Ofast_X_SMTP_Admin
                 background-color: white;
                 transition: .4s;
                 border-radius: 50%;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             }
-            input:checked + .ofast-slider {
+
+            input:checked+.ofast-slider {
                 background-color: #6366f1;
             }
-            input:focus + .ofast-slider {
+
+            input:focus+.ofast-slider {
                 box-shadow: 0 0 1px #6366f1;
             }
-            input:checked + .ofast-slider:before {
+
+            input:checked+.ofast-slider:before {
                 transform: translateX(20px);
             }
 
@@ -1127,6 +1229,7 @@ class Ofast_X_SMTP_Admin
                 padding: 8px 12px;
                 transition: border-color 0.2s, box-shadow 0.2s;
             }
+
             #ofast-smtp-form .form-table input[type="text"]:focus,
             #ofast-smtp-form .form-table input[type="email"]:focus,
             #ofast-smtp-form .form-table input[type="password"]:focus,
@@ -1144,6 +1247,7 @@ class Ofast_X_SMTP_Admin
                 border-radius: 8px;
                 overflow: hidden;
             }
+
             .ofast-encryption-group label {
                 padding: 8px 18px;
                 cursor: pointer;
@@ -1157,15 +1261,19 @@ class Ofast_X_SMTP_Admin
                 align-items: center;
                 gap: 6px;
             }
+
             .ofast-encryption-group label:last-child {
                 border-right: none;
             }
+
             .ofast-encryption-group input[type="radio"] {
                 display: none;
             }
-            .ofast-encryption-group input[type="radio"]:checked + span {
+
+            .ofast-encryption-group input[type="radio"]:checked+span {
                 /* handled via JS below */
             }
+
             .ofast-encryption-group label.active {
                 background: #6366f1;
                 color: #fff;
@@ -1185,12 +1293,14 @@ class Ofast_X_SMTP_Admin
                 font-weight: 600 !important;
                 font-size: 14px !important;
             }
+
             #ofast-smtp-form .button.button-primary:hover,
             #ofast-smtp-form .button.ofast-btn-primary:hover {
                 background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
                 transform: translateY(-2px);
                 box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
             }
+
             #ofast-smtp-form .button.button-secondary,
             #ofast-smtp-form .button.ofast-btn-secondary {
                 border-radius: 8px !important;
@@ -1199,10 +1309,12 @@ class Ofast_X_SMTP_Admin
                 transition: all 0.2s !important;
                 border: 1px solid #d7deea !important;
             }
+
             #ofast-smtp-form .button.button-secondary:hover {
                 border-color: #6366f1 !important;
                 color: #6366f1 !important;
             }
+
             #ofast-smtp-form .button.button-small {
                 border-radius: 6px !important;
                 padding: 4px 12px !important;
@@ -1216,6 +1328,7 @@ class Ofast_X_SMTP_Admin
                 margin-left: 8px;
                 vertical-align: middle;
             }
+
             .ofast-tooltip-icon {
                 display: inline-flex;
                 align-items: center;
@@ -1231,6 +1344,7 @@ class Ofast_X_SMTP_Admin
                 cursor: help;
                 transition: all 0.25s ease;
             }
+
             .ofast-tooltip-icon:hover {
                 background: #6366f1;
                 border-color: #6366f1;
@@ -1238,6 +1352,7 @@ class Ofast_X_SMTP_Admin
                 transform: scale(1.1);
                 box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
             }
+
             .ofast-tooltip-text {
                 visibility: hidden;
                 opacity: 0;
@@ -1263,6 +1378,7 @@ class Ofast_X_SMTP_Admin
                 transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
                 pointer-events: none;
             }
+
             .ofast-tooltip-text::after {
                 content: '';
                 position: absolute;
@@ -1272,6 +1388,7 @@ class Ofast_X_SMTP_Admin
                 border: 6px solid transparent;
                 border-top-color: rgba(15, 23, 42, 0.85);
             }
+
             .ofast-tooltip-wrap:hover .ofast-tooltip-text {
                 visibility: visible;
                 opacity: 1;
@@ -1283,153 +1400,165 @@ class Ofast_X_SMTP_Admin
         <form method="post" id="ofast-smtp-form">
             <?php wp_nonce_field('ofast_smtp_settings', '_wpnonce'); ?>
 
-            <table class="form-table">
-                <tr>
-                    <th>Enable SMTP</th>
-                    <td>
-                        <label class="ofast-toggle">
-                            <input type="checkbox" name="smtp_enabled" value="1" <?php checked($enabled); ?>>
-                            <span class="ofast-slider"></span>
-                        </label>
-                        <span style="vertical-align: middle; font-weight: 500;">Use SMTP for all WordPress emails</span>
-                        <p class="description">When enabled, all emails will be sent through your configured mailer.</p>
-                    </td>
-                </tr>
-                <tr>
-                    <th>Mailer Type</th>
-                    <td>
-                        <select name="smtp_mailer_type" id="smtp_mailer_type" class="ofast-dropdown-native" style="width: 360px;">
-                            <option value="default" <?php selected($mailer_type, 'default'); ?>>PHP Mail (Default) - No credentials needed</option>
-                            <option value="smtp" <?php selected($mailer_type, 'smtp'); ?>>Other SMTP - Custom server</option>
-                        </select>
-                        <span class="ofast-tooltip-wrap">
-                            <span class="ofast-tooltip-icon">?</span>
-                            <span class="ofast-tooltip-text" id="mailer_note"><?php echo $mailer_type === 'default' ? 'Uses your server\'s built-in mail function. Only From Email/Name needed. Best for most hosts.' : 'Requires SMTP server credentials. Better deliverability with providers like SendGrid, Mailgun.'; ?></span>
-                        </span>
-                    </td>
-                </tr>
-            </table>
+            <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 0;">
+                <h3 style="margin-top: 0;">SMTP Configuration</h3>
+                <p style="color: #64748b;">Configure your mailer type, server credentials, sender identity, and rate limits.</p>
 
-            <!-- SMTP Provider (only for smtp mailer type) -->
-            <div id="smtp-credentials-section" style="<?php echo $mailer_type === 'default' ? 'display:none;' : ''; ?>">
                 <table class="form-table">
                     <tr>
-                        <th>Email Provider</th>
+                        <th>Enable SMTP</th>
                         <td>
-                            <select name="smtp_provider" id="smtp_provider" class="ofast-dropdown-native" style="width: 360px;">
-                                <?php foreach ($presets as $key => $preset): ?>
-                                    <option value="<?php echo esc_attr($key); ?>" <?php selected($provider, $key); ?>>
-                                        <?php echo esc_html($preset['name']); ?>
-                                    </option>
-                                <?php endforeach; ?>
+                            <label class="ofast-toggle">
+                                <input type="checkbox" name="smtp_enabled" value="1" <?php checked($enabled); ?>>
+                                <span class="ofast-slider"></span>
+                            </label>
+                            <span style="vertical-align: middle; font-weight: 500;">Use SMTP for all WordPress emails</span>
+                            <p class="description">When enabled, all emails will be sent through your configured mailer.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Mailer Type</th>
+                        <td>
+                            <select name="smtp_mailer_type" id="smtp_mailer_type" class="ofast-dropdown-native"
+                                style="width: 360px;">
+                                <option value="default" <?php selected($mailer_type, 'default'); ?>>PHP Mail (Default) - No
+                                    credentials needed</option>
+                                <option value="smtp" <?php selected($mailer_type, 'smtp'); ?>>Other SMTP - Custom server
+                                </option>
                             </select>
                             <span class="ofast-tooltip-wrap">
                                 <span class="ofast-tooltip-icon">?</span>
-                                <span class="ofast-tooltip-text" id="provider_note"><?php echo esc_html($presets[$provider]['note'] ?? ''); ?></span>
+                                <span class="ofast-tooltip-text"
+                                    id="mailer_note"><?php echo $mailer_type === 'default' ? 'Uses your server\'s built-in mail function. Only From Email/Name needed. Best for most hosts.' : 'Requires SMTP server credentials. Better deliverability with providers like SendGrid, Mailgun.'; ?></span>
                             </span>
                         </td>
                     </tr>
                 </table>
 
-                <h2 style="margin-top: 30px;">Connection Settings</h2>
+                <!-- SMTP Provider (only for smtp mailer type) -->
+                <div id="smtp-credentials-section" style="<?php echo $mailer_type === 'default' ? 'display:none;' : ''; ?>">
+                    <table class="form-table">
+                        <tr>
+                            <th>Email Provider</th>
+                            <td>
+                                <select name="smtp_provider" id="smtp_provider" class="ofast-dropdown-native"
+                                    style="width: 360px;">
+                                    <?php foreach ($presets as $key => $preset): ?>
+                                        <option value="<?php echo esc_attr($key); ?>" <?php selected($provider, $key); ?>>
+                                            <?php echo esc_html($preset['name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <span class="ofast-tooltip-wrap">
+                                    <span class="ofast-tooltip-icon">?</span>
+                                    <span class="ofast-tooltip-text"
+                                        id="provider_note"><?php echo esc_html($presets[$provider]['note'] ?? ''); ?></span>
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <h2 style="margin-top: 30px;">Connection Settings</h2>
+                    <table class="form-table">
+                        <tr>
+                            <th><label for="smtp_host">SMTP Host *</label></th>
+                            <td><input type="text" name="smtp_host" id="smtp_host" value="<?php echo esc_attr($host); ?>"
+                                    class="regular-text" placeholder="smtp.example.com"></td>
+                        </tr>
+                        <tr>
+                            <th><label for="smtp_port">SMTP Port *</label></th>
+                            <td>
+                                <input type="number" name="smtp_port" id="smtp_port" value="<?php echo esc_attr($port); ?>"
+                                    style="width: 100px;">
+                                <span class="description">Common: 587 (TLS), 465 (SSL), 25 (None)</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Encryption</th>
+                            <td>
+                                <div class="ofast-encryption-group">
+                                    <label class="<?php echo $encryption === 'tls' ? 'active' : ''; ?>">
+                                        <input type="radio" name="smtp_encryption" value="tls" <?php checked($encryption, 'tls'); ?>>
+                                        <span>TLS (Recommended)</span>
+                                    </label>
+                                    <label class="<?php echo $encryption === 'ssl' ? 'active' : ''; ?>">
+                                        <input type="radio" name="smtp_encryption" value="ssl" <?php checked($encryption, 'ssl'); ?>>
+                                        <span>SSL</span>
+                                    </label>
+                                    <label class="<?php echo $encryption === 'none' ? 'active' : ''; ?>">
+                                        <input type="radio" name="smtp_encryption" value="none" <?php checked($encryption, 'none'); ?>>
+                                        <span>None</span>
+                                    </label>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <h2 style="margin-top: 30px;">Authentication</h2>
+                    <table class="form-table">
+                        <tr>
+                            <th><label for="smtp_username">Username *</label></th>
+                            <td><input type="text" name="smtp_username" id="smtp_username"
+                                    value="<?php echo esc_attr($username); ?>" class="regular-text"
+                                    placeholder="your@email.com or apikey"></td>
+                        </tr>
+                        <tr>
+                            <th><label for="smtp_password">Password *</label></th>
+                            <td>
+                                <input type="password" name="smtp_password" id="smtp_password"
+                                    value="<?php echo $password ? '••••••••' : ''; ?>" class="regular-text"
+                                    placeholder="Enter password or API key">
+                                <button type="button" class="button button-small"
+                                    onclick="this.previousElementSibling.type = this.previousElementSibling.type === 'password' ? 'text' : 'password'">Show/Hide</button>
+                                <p class="description">For Gmail/Zoho: Use an App Password, not your login password</p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <h2 style="margin-top: 30px;">From Settings</h2>
                 <table class="form-table">
                     <tr>
-                        <th><label for="smtp_host">SMTP Host *</label></th>
-                        <td><input type="text" name="smtp_host" id="smtp_host" value="<?php echo esc_attr($host); ?>"
-                                class="regular-text" placeholder="smtp.example.com"></td>
-                    </tr>
-                    <tr>
-                        <th><label for="smtp_port">SMTP Port *</label></th>
+                        <th><label for="smtp_from_email">From Email *</label></th>
                         <td>
-                            <input type="number" name="smtp_port" id="smtp_port" value="<?php echo esc_attr($port); ?>"
-                                style="width: 100px;">
-                            <span class="description">Common: 587 (TLS), 465 (SSL), 25 (None)</span>
+                            <input type="email" name="smtp_from_email" id="smtp_from_email"
+                                value="<?php echo esc_attr($from_email); ?>" class="regular-text"
+                                placeholder="noreply@yoursite.com">
+                            <p class="description">The email address shown as sender</p>
                         </td>
                     </tr>
                     <tr>
-                        <th>Encryption</th>
-                        <td>
-                            <div class="ofast-encryption-group">
-                                <label class="<?php echo $encryption === 'tls' ? 'active' : ''; ?>">
-                                    <input type="radio" name="smtp_encryption" value="tls" <?php checked($encryption, 'tls'); ?>>
-                                    <span>TLS (Recommended)</span>
-                                </label>
-                                <label class="<?php echo $encryption === 'ssl' ? 'active' : ''; ?>">
-                                    <input type="radio" name="smtp_encryption" value="ssl" <?php checked($encryption, 'ssl'); ?>>
-                                    <span>SSL</span>
-                                </label>
-                                <label class="<?php echo $encryption === 'none' ? 'active' : ''; ?>">
-                                    <input type="radio" name="smtp_encryption" value="none" <?php checked($encryption, 'none'); ?>>
-                                    <span>None</span>
-                                </label>
-                            </div>
-                        </td>
+                        <th><label for="smtp_from_name">From Name</label></th>
+                        <td><input type="text" name="smtp_from_name" id="smtp_from_name"
+                                value="<?php echo esc_attr($from_name); ?>" class="regular-text"
+                                placeholder="Your Website Name"></td>
                     </tr>
                 </table>
 
-                <h2 style="margin-top: 30px;">Authentication</h2>
-                <table class="form-table">
-                    <tr>
-                        <th><label for="smtp_username">Username *</label></th>
-                        <td><input type="text" name="smtp_username" id="smtp_username"
-                                value="<?php echo esc_attr($username); ?>" class="regular-text"
-                                placeholder="your@email.com or apikey"></td>
-                    </tr>
-                    <tr>
-                        <th><label for="smtp_password">Password *</label></th>
-                        <td>
-                            <input type="password" name="smtp_password" id="smtp_password"
-                                value="<?php echo $password ? '••••••••' : ''; ?>" class="regular-text"
-                                placeholder="Enter password or API key">
-                            <button type="button" class="button button-small"
-                                onclick="this.previousElementSibling.type = this.previousElementSibling.type === 'password' ? 'text' : 'password'">Show/Hide</button>
-                            <p class="description">For Gmail/Zoho: Use an App Password, not your login password</p>
-                        </td>
-                    </tr>
-                </table>
-            </div>
-
-            <h2 style="margin-top: 30px;">From Settings</h2>
-            <table class="form-table">
-                <tr>
-                    <th><label for="smtp_from_email">From Email *</label></th>
-                    <td>
-                        <input type="email" name="smtp_from_email" id="smtp_from_email"
-                            value="<?php echo esc_attr($from_email); ?>" class="regular-text"
-                            placeholder="noreply@yoursite.com">
-                        <p class="description">The email address shown as sender</p>
-                    </td>
-                </tr>
-                <tr>
-                    <th><label for="smtp_from_name">From Name</label></th>
-                    <td><input type="text" name="smtp_from_name" id="smtp_from_name" value="<?php echo esc_attr($from_name); ?>"
-                            class="regular-text" placeholder="Your Website Name"></td>
-                </tr>
-            </table>
-
-            <div id="rate-limit-section" style="<?php echo $mailer_type === 'default' ? 'display:none;' : ''; ?>">
-                <h2 style="margin-top: 30px;">Rate Limiting</h2>
-                <table class="form-table">
-                    <tr>
-                        <th>Enable Rate Limiting</th>
-                        <td>
-                            <label class="ofast-toggle">
-                                <input type="checkbox" name="rate_limit_enabled" value="1" <?php checked(get_option('ofast_smtp_rate_limit_enabled', true)); ?>>
-                                <span class="ofast-slider"></span>
-                            </label>
-                            <span style="vertical-align: middle;">Limit emails per minute</span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th><label for="rate_limit">Max Emails/Minute</label></th>
-                        <td>
-                            <input type="number" name="rate_limit" id="rate_limit"
-                                value="<?php echo esc_attr(get_option('ofast_smtp_rate_limit', 60)); ?>" min="1" max="500"
-                                style="width: 80px;">
-                            <span class="description">Recommended: 30-60 for shared hosting</span>
-                        </td>
-                    </tr>
-                </table>
+                <div id="rate-limit-section" style="<?php echo $mailer_type === 'default' ? 'display:none;' : ''; ?>">
+                    <h2 style="margin-top: 30px;">Rate Limiting</h2>
+                    <table class="form-table">
+                        <tr>
+                            <th>Enable Rate Limiting</th>
+                            <td>
+                                <label class="ofast-toggle">
+                                    <input type="checkbox" name="rate_limit_enabled" value="1" <?php checked(get_option('ofast_smtp_rate_limit_enabled', true)); ?>>
+                                    <span class="ofast-slider"></span>
+                                </label>
+                                <span style="vertical-align: middle;">Limit emails per minute</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th><label for="rate_limit">Max Emails/Minute</label></th>
+                            <td>
+                                <input type="number" name="rate_limit" id="rate_limit"
+                                    value="<?php echo esc_attr(get_option('ofast_smtp_rate_limit', 60)); ?>" min="1" max="500"
+                                    style="width: 80px;">
+                                <span class="description">Recommended: 30-60 for shared hosting</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
             </div>
 
             <!-- Email Logging Settings -->
@@ -1470,98 +1599,112 @@ class Ofast_X_SMTP_Admin
                 </table>
             </div>
 
-        <!-- ============================================ -->
-        <!-- Fallback SMTP Server -->
-        <!-- ============================================ -->
-        <div style="margin-top: 30px;">
-            <h2>Fallback SMTP Server</h2>
-            <p style="color: #64748b; margin-top: -5px;">If your primary SMTP server fails, emails will automatically retry using this backup server.</p>
+            <!-- ============================================ -->
+            <!-- Fallback SMTP Server -->
+            <!-- ============================================ -->
+            <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 30px 0;">
+                <h3 style="margin-top: 0;">Fallback SMTP Server</h3>
+                <p style="color: #64748b;">If your primary SMTP server fails, emails will automatically retry using this backup
+                    server.</p>
 
-            <table class="form-table">
-                <tr>
-                    <th>Enable Fallback</th>
-                    <td>
-                        <label class="ofast-toggle">
-                            <input type="checkbox" name="fallback_enabled" id="fallback_enabled" value="1" <?php checked(get_option('ofast_smtp_fallback_enabled', false)); ?>>
-                            <span class="ofast-slider"></span>
-                        </label>
-                        <span style="color: #64748b;">Automatically retry failed emails via backup server</span>
-                    </td>
-                </tr>
-            </table>
-
-            <div id="fallback-smtp-fields" style="<?php echo get_option('ofast_smtp_fallback_enabled', false) ? '' : 'display:none;'; ?> background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 20px; margin-top: 10px;">
                 <table class="form-table">
                     <tr>
-                        <th>Fallback Host</th>
-                        <td><input type="text" name="fallback_host" value="<?php echo esc_attr(get_option('ofast_smtp_fallback_host', '')); ?>" class="regular-text" placeholder="smtp.backup-server.com"></td>
-                    </tr>
-                    <tr>
-                        <th>Fallback Port</th>
-                        <td><input type="number" name="fallback_port" value="<?php echo esc_attr(get_option('ofast_smtp_fallback_port', 587)); ?>" style="width: 100px;"></td>
-                    </tr>
-                    <tr>
-                        <th>Fallback Encryption</th>
+                        <th>Enable Fallback</th>
                         <td>
-                            <select name="fallback_encryption">
-                                <option value="tls" <?php selected(get_option('ofast_smtp_fallback_encryption', 'tls'), 'tls'); ?>>TLS</option>
-                                <option value="ssl" <?php selected(get_option('ofast_smtp_fallback_encryption', 'tls'), 'ssl'); ?>>SSL</option>
-                                <option value="none" <?php selected(get_option('ofast_smtp_fallback_encryption', 'tls'), 'none'); ?>>None</option>
-                            </select>
+                            <label class="ofast-toggle">
+                                <input type="checkbox" name="fallback_enabled" id="fallback_enabled" value="1" <?php checked(get_option('ofast_smtp_fallback_enabled', false)); ?>>
+                                <span class="ofast-slider"></span>
+                            </label>
+                            <span style="color: #64748b;">Automatically retry failed emails via backup server</span>
+                        </td>
+                    </tr>
+                </table>
+
+                <div id="fallback-smtp-fields"
+                    style="<?php echo get_option('ofast_smtp_fallback_enabled', false) ? '' : 'display:none;'; ?> background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px; margin-top: 10px;">
+                    <table class="form-table">
+                        <tr>
+                            <th>Fallback Host</th>
+                            <td><input type="text" name="fallback_host"
+                                    value="<?php echo esc_attr(get_option('ofast_smtp_fallback_host', '')); ?>"
+                                    class="regular-text" placeholder="smtp.backup-server.com"></td>
+                        </tr>
+                        <tr>
+                            <th>Fallback Port</th>
+                            <td><input type="number" name="fallback_port"
+                                    value="<?php echo esc_attr(get_option('ofast_smtp_fallback_port', 587)); ?>"
+                                    style="width: 100px;"></td>
+                        </tr>
+                        <tr>
+                            <th>Fallback Encryption</th>
+                            <td>
+                                <select name="fallback_encryption">
+                                    <option value="tls" <?php selected(get_option('ofast_smtp_fallback_encryption', 'tls'), 'tls'); ?>>TLS</option>
+                                    <option value="ssl" <?php selected(get_option('ofast_smtp_fallback_encryption', 'tls'), 'ssl'); ?>>SSL</option>
+                                    <option value="none" <?php selected(get_option('ofast_smtp_fallback_encryption', 'tls'), 'none'); ?>>None</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Fallback Username</th>
+                            <td><input type="text" name="fallback_username"
+                                    value="<?php echo esc_attr(get_option('ofast_smtp_fallback_username', '')); ?>"
+                                    class="regular-text"></td>
+                        </tr>
+                        <tr>
+                            <th>Fallback Password</th>
+                            <td><input type="password" name="fallback_password"
+                                    value="<?php echo get_option('ofast_smtp_fallback_password', '') ? '••••••••' : ''; ?>"
+                                    class="regular-text" autocomplete="new-password"></td>
+                        </tr>
+                        <tr>
+                            <th>Fallback From Email</th>
+                            <td><input type="email" name="fallback_from_email"
+                                    value="<?php echo esc_attr(get_option('ofast_smtp_fallback_from_email', '')); ?>"
+                                    class="regular-text" placeholder="backup@yourdomain.com"></td>
+                        </tr>
+                        <tr>
+                            <th>Fallback From Name</th>
+                            <td><input type="text" name="fallback_from_name"
+                                    value="<?php echo esc_attr(get_option('ofast_smtp_fallback_from_name', '')); ?>"
+                                    class="regular-text"></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ============================================ -->
+            <!-- Email Health Reports -->
+            <!-- ============================================ -->
+            <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 30px 0;">
+                <h3 style="margin-top: 0;">Email Health Reports</h3>
+                <p style="color: #64748b;">Receive automated email reports summarizing your send/fail statistics.</p>
+
+                <table class="form-table">
+                    <tr>
+                        <th>Enable Health Reports</th>
+                        <td>
+                            <label class="ofast-toggle">
+                                <input type="checkbox" name="health_report_enabled" value="1" <?php checked(get_option('ofast_smtp_health_report_enabled', false)); ?>>
+                                <span class="ofast-slider"></span>
+                            </label>
+                            <span style="color: #64748b;">Send digest email to admin</span>
                         </td>
                     </tr>
                     <tr>
-                        <th>Fallback Username</th>
-                        <td><input type="text" name="fallback_username" value="<?php echo esc_attr(get_option('ofast_smtp_fallback_username', '')); ?>" class="regular-text"></td>
-                    </tr>
-                    <tr>
-                        <th>Fallback Password</th>
-                        <td><input type="password" name="fallback_password" value="<?php echo get_option('ofast_smtp_fallback_password', '') ? '••••••••' : ''; ?>" class="regular-text" autocomplete="new-password"></td>
-                    </tr>
-                    <tr>
-                        <th>Fallback From Email</th>
-                        <td><input type="email" name="fallback_from_email" value="<?php echo esc_attr(get_option('ofast_smtp_fallback_from_email', '')); ?>" class="regular-text" placeholder="backup@yourdomain.com"></td>
-                    </tr>
-                    <tr>
-                        <th>Fallback From Name</th>
-                        <td><input type="text" name="fallback_from_name" value="<?php echo esc_attr(get_option('ofast_smtp_fallback_from_name', '')); ?>" class="regular-text"></td>
+                        <th>Report Interval</th>
+                        <td>
+                            <select name="health_report_interval" class="ofast-dropdown-native" style="width: 200px;">
+                                <?php $hr_interval = get_option('ofast_smtp_health_report_interval', 'weekly'); ?>
+                                <option value="daily" <?php selected($hr_interval, 'daily'); ?>>Daily</option>
+                                <option value="weekly" <?php selected($hr_interval, 'weekly'); ?>>Weekly</option>
+                                <option value="monthly" <?php selected($hr_interval, 'monthly'); ?>>Monthly</option>
+                            </select>
+                            <p class="description">Reports are sent to <?php echo esc_html(get_option('admin_email')); ?></p>
+                        </td>
                     </tr>
                 </table>
             </div>
-        </div>
-
-        <!-- ============================================ -->
-        <!-- Email Health Reports -->
-        <!-- ============================================ -->
-        <div style="margin-top: 30px;">
-            <h2>Email Health Reports</h2>
-            <p style="color: #64748b; margin-top: -5px;">Receive automated email reports summarizing your send/fail statistics.</p>
-
-            <table class="form-table">
-                <tr>
-                    <th>Enable Health Reports</th>
-                    <td>
-                        <label class="ofast-toggle">
-                            <input type="checkbox" name="health_report_enabled" value="1" <?php checked(get_option('ofast_smtp_health_report_enabled', false)); ?>>
-                            <span class="ofast-slider"></span>
-                        </label>
-                        <span style="color: #64748b;">Send digest email to admin</span>
-                    </td>
-                </tr>
-                <tr>
-                    <th>Report Interval</th>
-                    <td>
-                        <select name="health_report_interval" class="ofast-dropdown-native" style="width: 200px;">
-                            <?php $hr_interval = get_option('ofast_smtp_health_report_interval', 'weekly'); ?>
-                            <option value="daily" <?php selected($hr_interval, 'daily'); ?>>Daily</option>
-                            <option value="weekly" <?php selected($hr_interval, 'weekly'); ?>>Weekly</option>
-                            <option value="monthly" <?php selected($hr_interval, 'monthly'); ?>>Monthly</option>
-                        </select>
-                        <p class="description">Reports are sent to <?php echo esc_html(get_option('admin_email')); ?></p>
-                    </td>
-                </tr>
-            </table>
-        </div>
 
             <p class="submit">
                 <button type="submit" name="ofast_smtp_save" class="button button-primary button-large">Save SMTP
@@ -1570,28 +1713,201 @@ class Ofast_X_SMTP_Admin
         </form>
 
         <!-- Test Connection (outside form, uses saved settings) -->
-        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 30px 0;">
+        <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 30px 0;">
             <h3 style="margin-top: 0;">Test Connection</h3>
             <p>Send a test email to verify your saved settings are working.</p>
             <button type="button" id="test-smtp-btn" class="button button-secondary"
-                style="border-radius: 8px !important; padding: 8px 18px !important; font-weight: 500 !important; transition: all 0.2s !important; border: 1px solid #d7deea !important;">Send Test Email to
+                style="border-radius: 8px !important; padding: 8px 18px !important; font-weight: 500 !important; transition: all 0.2s !important; border: 1px solid #d7deea !important;">Send
+                Test Email to
                 <?php echo esc_html(get_option('admin_email')); ?></button>
             <span id="test-result" style="margin-left: 15px;"></span>
             <div id="test-details" style="margin-top: 15px; display: none;">
-                <pre
-                    style="background: #1e293b; color: #10b981; padding: 15px; border-radius: 8px; overflow-x: auto;"></pre>
+                <pre style="background: #1e293b; color: #10b981; padding: 15px; border-radius: 8px; overflow-x: auto;"></pre>
             </div>
         </div>
 
         <script>
-        jQuery(document).ready(function($) {
-            // Encryption segmented control
-            $('.ofast-encryption-group label').on('click', function() {
-                $(this).closest('.ofast-encryption-group').find('label').removeClass('active');
-                $(this).addClass('active');
+            jQuery(document).ready(function ($) {
+                // Encryption segmented control
+                $('.ofast-encryption-group label').on('click', function () {
+                    $(this).closest('.ofast-encryption-group').find('label').removeClass('active');
+                    $(this).addClass('active');
+                });
             });
-        });
         </script>
+
+
+        <script>
+            jQuery(document).ready(function ($) {
+                $('#smtp_mailer_type').on('change', function () {
+                    var isSmtp = $(this).val() === 'smtp';
+                    $('#smtp-credentials-section').toggle(isSmtp);
+                    $('#rate-limit-section').toggle(isSmtp);
+                    $('#mailer_note').text(isSmtp
+                        ? 'Requires SMTP server credentials. Better deliverability with providers like SendGrid, Mailgun.'
+                        : 'Uses your server\'s built-in mail function. Only From Email/Name needed. Best for most hosts.');
+                });
+
+                // Toggle fallback section
+                $('#fallback_enabled').on('change', function () {
+                    $('#fallback-smtp-fields').toggle(this.checked);
+                });
+
+                // Toggle health report fields visibility
+                $('input[name="health_report_enabled"]').on('change', function () {
+                    $('select[name="health_report_interval"]').closest('tr').toggle(this.checked);
+                });
+            });
+        </script>
+
+
+
+        <!-- ============================================ -->
+        <!-- Port Connectivity Test -->
+        <!-- ============================================ -->
+        <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 24px; margin-top: 30px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <div>
+                    <h2 style="margin: 0;">Port Connectivity Test</h2>
+                    <p style="color: #64748b; margin: 4px 0 0;">Probe your SMTP server to check which ports are open, auth
+                        methods, and detect security issues.</p>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center; flex-shrink: 0;">
+                    <input type="text" id="port-test-hostname" placeholder="smtp.yourdomain.com"
+                        value="<?php echo esc_attr(get_option('ofast_smtp_host', '')); ?>" class="regular-text"
+                        style="border-radius: 8px; border: 1px solid #d7deea; padding: 8px 12px;">
+                    <button type="button" id="ofast-run-port-test" class="button button-primary"
+                        style="background: linear-gradient(135deg, #6366f1, #4f46e5) !important; border-color: #6366f1 !important; text-shadow: none !important; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important; padding: 8px 20px !important; height: auto !important; border-radius: 8px !important; font-weight: 600 !important;">Test
+                        Ports</button>
+                    <span id="port-test-spinner" class="spinner" style="float: none;"></span>
+                </div>
+            </div>
+
+            <div id="port-test-results" style="display: none; margin-top: 20px;">
+                <!-- Tab navigation -->
+                <div id="port-tabs" style="display: flex; border-bottom: 2px solid #e5e7eb;"></div>
+                <!-- Tab content -->
+                <div id="port-tab-content" style="padding: 20px 0;"></div>
+            </div>
+        </div>
+
+        <script>
+            jQuery(document).ready(function ($) {
+                $('#ofast-run-port-test').on('click', function () {
+                    var hostname = $('#port-test-hostname').val().trim();
+                    if (!hostname) { alert('Enter a hostname first'); return; }
+
+                    var $btn = $(this);
+                    var $spinner = $('#port-test-spinner');
+                    var $results = $('#port-test-results');
+
+                    $btn.prop('disabled', true);
+                    $spinner.addClass('is-active');
+                    $results.hide();
+
+                    $.post(ajaxurl, {
+                        action: 'ofast_smtp_port_test',
+                        nonce: ofastSMTP.port_test_nonce,
+                        hostname: hostname,
+                        ports: [25, 465, 587]
+                    }, function (response) {
+                        $btn.prop('disabled', false);
+                        $spinner.removeClass('is-active');
+
+                        if (!response.success) {
+                            $results.html('<div style="padding:12px;background:#fee2e2;border-radius:8px;color:#991b1b;">' + response.data + '</div>').show();
+                            return;
+                        }
+
+                        var portLabels = { 25: 'Port 25 (Plain)', 465: 'Port 465 (SSL)', 587: 'Port 587 (TLS)' };
+                        var portOrder = [587, 465, 25];
+                        var tabs = '';
+                        var panels = {};
+                        var firstPort = null;
+
+                        $.each(portOrder, function (i, port) {
+                            var r = response.data.results[port];
+                            if (!r) return;
+                            if (!firstPort) firstPort = port;
+
+                            var statusDot = r.open ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;margin-right:6px;"></span>' : '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:6px;"></span>';
+                            var isActive = (port == firstPort);
+
+                            tabs += '<button type="button" class="port-tab" data-port="' + port + '" style="padding: 10px 20px; border: none; background: ' + (isActive ? '#f8fafc' : 'transparent') + '; cursor: pointer; font-weight: ' + (isActive ? '600' : '400') + '; font-size: 13px; color: ' + (isActive ? '#6366f1' : '#64748b') + '; border-bottom: 2px solid ' + (isActive ? '#6366f1' : 'transparent') + '; margin-bottom: -2px; transition: all 0.2s;">' + statusDot + (portLabels[port] || 'Port ' + port) + '</button>';
+
+                            var panel = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">';
+                            panel += '<div style="background: ' + (r.open ? '#f0fdf4' : '#fef2f2') + '; border: 1px solid ' + (r.open ? '#bbf7d0' : '#fecaca') + '; border-radius: 10px; padding: 16px;">';
+                            panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px;">Status</div>';
+                            panel += '<div style="font-size: 18px; font-weight: 700; color: ' + (r.open ? '#059669' : '#dc2626') + ';">' + (r.open ? 'Open' : 'Closed') + '</div>';
+                            panel += '</div>';
+
+                            if (r.open) {
+                                panel += '<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">';
+                                panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px;">Security</div>';
+                                var secItems = [];
+                                if (r.secure) secItems.push('🔒 Encrypted');
+                                if (r.starttls) secItems.push('↗ STARTTLS');
+                                if (!r.secure && !r.starttls) secItems.push('⚠ No encryption');
+                                panel += '<div style="font-weight: 600;">' + secItems.join(' &nbsp;·&nbsp; ') + '</div>';
+                                panel += '</div>';
+
+                                var auths = [];
+                                if (r.auth_login) auths.push('LOGIN');
+                                if (r.auth_plain) auths.push('PLAIN');
+                                if (r.auth_crammd5) auths.push('CRAM-MD5');
+                                if (r.auth_xoauth) auths.push('XOAUTH2');
+                                if (auths.length) {
+                                    panel += '<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">';
+                                    panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px;">Auth Methods</div>';
+                                    panel += '<div style="display: flex; gap: 6px; flex-wrap: wrap;">';
+                                    $.each(auths, function (j, a) {
+                                        panel += '<span style="background: #eef2ff; color: #4338ca; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500;">' + a + '</span>';
+                                    });
+                                    panel += '</div></div>';
+                                }
+
+                                if (r.mitm) {
+                                    panel += '<div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 16px;">';
+                                    panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #92400e; margin-bottom: 8px;">⚠ MITM Warning</div>';
+                                    panel += '<div style="color: #92400e; font-weight: 500;">' + (r.mitm_detail || 'Certificate hostname mismatch detected') + '</div>';
+                                    panel += '</div>';
+                                }
+                            } else if (r.error) {
+                                panel += '<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 16px;">';
+                                panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px;">Error</div>';
+                                panel += '<div style="color: #991b1b; font-size: 13px;">' + r.error.substring(0, 120) + '</div>';
+                                panel += '</div>';
+                            }
+                            panel += '</div>';
+                            panels[port] = panel;
+                        });
+
+                        $('#port-tabs').html(tabs);
+                        $('#port-tab-content').html(panels[firstPort] || '');
+                        $results.show();
+
+                        // Tab switching
+                        $('#port-tabs').off('click', '.port-tab').on('click', '.port-tab', function () {
+                            var port = $(this).data('port');
+                            $('#port-tabs .port-tab').css({ background: 'transparent', fontWeight: '400', color: '#64748b', borderBottom: '2px solid transparent' });
+                            $(this).css({ background: '#f8fafc', fontWeight: '600', color: '#6366f1', borderBottom: '2px solid #6366f1' });
+                            $('#port-tab-content').html(panels[port] || '');
+                        });
+                    });
+                });
+            });
+        </script>
+
+        <!-- DNS Checker Section -->
+        <div style="margin-top: 30px;">
+            <h2>Email Authentication (DNS)</h2>
+            <?php
+            if (file_exists(OFAST_X_PLUGIN_DIR . 'modules/smtp/class-ofast-smtp-dns.php')) {
+                require_once OFAST_X_PLUGIN_DIR . 'modules/smtp/class-ofast-smtp-dns.php';
+                Ofast_X_SMTP_DNS::get_instance()->render_checker_ui();
+            }
+            ?>
+        </div>
 
         <!-- Provider Setup Guides -->
         <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-top: 30px;">
@@ -1665,173 +1981,6 @@ class Ofast_X_SMTP_Admin
                         first).</p>
                 </div>
             </details>
-        </div>
-
-        <script>
-            jQuery(document).ready(function ($) {
-                $('#smtp_mailer_type').on('change', function () {
-                    var isSmtp = $(this).val() === 'smtp';
-                    $('#smtp-credentials-section').toggle(isSmtp);
-                    $('#rate-limit-section').toggle(isSmtp);
-                    $('#mailer_note').text(isSmtp
-                        ? 'Requires SMTP server credentials. Better deliverability with providers like SendGrid, Mailgun.'
-                        : 'Uses your server\'s built-in mail function. Only From Email/Name needed. Best for most hosts.');
-                });
-
-                // Toggle fallback section
-                $('#fallback_enabled').on('change', function () {
-                    $('#fallback-smtp-fields').toggle(this.checked);
-                });
-
-                // Toggle health report fields visibility
-                $('input[name="health_report_enabled"]').on('change', function () {
-                    $('select[name="health_report_interval"]').closest('tr').toggle(this.checked);
-                });
-            });
-        </script>
-
-
-
-        <!-- ============================================ -->
-        <!-- Port Connectivity Test -->
-        <!-- ============================================ -->
-        <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 24px; margin-top: 30px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                <div>
-                    <h2 style="margin: 0;">Port Connectivity Test</h2>
-                    <p style="color: #64748b; margin: 4px 0 0;">Probe your SMTP server to check which ports are open, auth methods, and detect security issues.</p>
-                </div>
-                <div style="display: flex; gap: 10px; align-items: center; flex-shrink: 0;">
-                    <input type="text" id="port-test-hostname" placeholder="smtp.yourdomain.com" value="<?php echo esc_attr(get_option('ofast_smtp_host', '')); ?>" class="regular-text" style="border-radius: 8px; border: 1px solid #d7deea; padding: 8px 12px;">
-                    <button type="button" id="ofast-run-port-test" class="button button-primary" style="background: linear-gradient(135deg, #6366f1, #4f46e5) !important; border-color: #6366f1 !important; text-shadow: none !important; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important; padding: 8px 20px !important; height: auto !important; border-radius: 8px !important; font-weight: 600 !important;">Test Ports</button>
-                    <span id="port-test-spinner" class="spinner" style="float: none;"></span>
-                </div>
-            </div>
-
-            <div id="port-test-results" style="display: none; margin-top: 20px;">
-                <!-- Tab navigation -->
-                <div id="port-tabs" style="display: flex; border-bottom: 2px solid #e5e7eb;"></div>
-                <!-- Tab content -->
-                <div id="port-tab-content" style="padding: 20px 0;"></div>
-            </div>
-        </div>
-
-        <script>
-        jQuery(document).ready(function($) {
-            $('#ofast-run-port-test').on('click', function() {
-                var hostname = $('#port-test-hostname').val().trim();
-                if (!hostname) { alert('Enter a hostname first'); return; }
-
-                var $btn = $(this);
-                var $spinner = $('#port-test-spinner');
-                var $results = $('#port-test-results');
-
-                $btn.prop('disabled', true);
-                $spinner.addClass('is-active');
-                $results.hide();
-
-                $.post(ajaxurl, {
-                    action: 'ofast_smtp_port_test',
-                    nonce: ofastSMTP.port_test_nonce,
-                    hostname: hostname,
-                    ports: [25, 465, 587]
-                }, function(response) {
-                    $btn.prop('disabled', false);
-                    $spinner.removeClass('is-active');
-
-                    if (!response.success) {
-                        $results.html('<div style="padding:12px;background:#fee2e2;border-radius:8px;color:#991b1b;">'+response.data+'</div>').show();
-                        return;
-                    }
-
-                    var portLabels = {25: 'Port 25 (Plain)', 465: 'Port 465 (SSL)', 587: 'Port 587 (TLS)'};
-                    var portOrder = [587, 465, 25];
-                    var tabs = '';
-                    var panels = {};
-                    var firstPort = null;
-
-                    $.each(portOrder, function(i, port) {
-                        var r = response.data.results[port];
-                        if (!r) return;
-                        if (!firstPort) firstPort = port;
-
-                        var statusDot = r.open ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;margin-right:6px;"></span>' : '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:6px;"></span>';
-                        var isActive = (port == firstPort);
-
-                        tabs += '<button type="button" class="port-tab" data-port="' + port + '" style="padding: 10px 20px; border: none; background: ' + (isActive ? '#f8fafc' : 'transparent') + '; cursor: pointer; font-weight: ' + (isActive ? '600' : '400') + '; font-size: 13px; color: ' + (isActive ? '#6366f1' : '#64748b') + '; border-bottom: 2px solid ' + (isActive ? '#6366f1' : 'transparent') + '; margin-bottom: -2px; transition: all 0.2s;">' + statusDot + (portLabels[port] || 'Port ' + port) + '</button>';
-
-                        var panel = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">';
-                        panel += '<div style="background: ' + (r.open ? '#f0fdf4' : '#fef2f2') + '; border: 1px solid ' + (r.open ? '#bbf7d0' : '#fecaca') + '; border-radius: 10px; padding: 16px;">';
-                        panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px;">Status</div>';
-                        panel += '<div style="font-size: 18px; font-weight: 700; color: ' + (r.open ? '#059669' : '#dc2626') + ';">' + (r.open ? 'Open' : 'Closed') + '</div>';
-                        panel += '</div>';
-
-                        if (r.open) {
-                            panel += '<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">';
-                            panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px;">Security</div>';
-                            var secItems = [];
-                            if (r.secure) secItems.push('🔒 Encrypted');
-                            if (r.starttls) secItems.push('↗ STARTTLS');
-                            if (!r.secure && !r.starttls) secItems.push('⚠ No encryption');
-                            panel += '<div style="font-weight: 600;">' + secItems.join(' &nbsp;·&nbsp; ') + '</div>';
-                            panel += '</div>';
-
-                            var auths = [];
-                            if (r.auth_login) auths.push('LOGIN');
-                            if (r.auth_plain) auths.push('PLAIN');
-                            if (r.auth_crammd5) auths.push('CRAM-MD5');
-                            if (r.auth_xoauth) auths.push('XOAUTH2');
-                            if (auths.length) {
-                                panel += '<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">';
-                                panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px;">Auth Methods</div>';
-                                panel += '<div style="display: flex; gap: 6px; flex-wrap: wrap;">';
-                                $.each(auths, function(j, a) {
-                                    panel += '<span style="background: #eef2ff; color: #4338ca; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500;">' + a + '</span>';
-                                });
-                                panel += '</div></div>';
-                            }
-
-                            if (r.mitm) {
-                                panel += '<div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 16px;">';
-                                panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #92400e; margin-bottom: 8px;">⚠ MITM Warning</div>';
-                                panel += '<div style="color: #92400e; font-weight: 500;">' + (r.mitm_detail || 'Certificate hostname mismatch detected') + '</div>';
-                                panel += '</div>';
-                            }
-                        } else if (r.error) {
-                            panel += '<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 16px;">';
-                            panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px;">Error</div>';
-                            panel += '<div style="color: #991b1b; font-size: 13px;">' + r.error.substring(0, 120) + '</div>';
-                            panel += '</div>';
-                        }
-                        panel += '</div>';
-                        panels[port] = panel;
-                    });
-
-                    $('#port-tabs').html(tabs);
-                    $('#port-tab-content').html(panels[firstPort] || '');
-                    $results.show();
-
-                    // Tab switching
-                    $('#port-tabs').off('click', '.port-tab').on('click', '.port-tab', function() {
-                        var port = $(this).data('port');
-                        $('#port-tabs .port-tab').css({ background: 'transparent', fontWeight: '400', color: '#64748b', borderBottom: '2px solid transparent' });
-                        $(this).css({ background: '#f8fafc', fontWeight: '600', color: '#6366f1', borderBottom: '2px solid #6366f1' });
-                        $('#port-tab-content').html(panels[port] || '');
-                    });
-                });
-            });
-        });
-        </script>
-
-        <!-- DNS Checker Section -->
-        <div style="margin-top: 30px;">
-            <h2>Email Authentication (DNS)</h2>
-            <?php
-            if (file_exists(OFAST_X_PLUGIN_DIR . 'modules/smtp/class-ofast-smtp-dns.php')) {
-                require_once OFAST_X_PLUGIN_DIR . 'modules/smtp/class-ofast-smtp-dns.php';
-                Ofast_X_SMTP_DNS::get_instance()->render_checker_ui();
-            }
-            ?>
         </div>
         <?php
     }

@@ -99,6 +99,139 @@ class Ofast_X_Snippets_Validator
         );
     }
 
+    // =========================================================================
+    // TOKEN-AWARE HELPERS — Used for accurate code analysis
+    // =========================================================================
+
+    /**
+     * Extract function call tokens from PHP code.
+     * Returns only actual function call identifiers, ignoring names that
+     * appear inside strings, comments, class methods, or as declarations.
+     *
+     * @param string $code PHP code (without <?php wrapper).
+     * @return array List of lowercase function names that are called.
+     */
+    private function get_function_call_tokens($code)
+    {
+        $test_code = '<?php ' . $code;
+        $old_error_reporting = error_reporting(0);
+        $tokens = @token_get_all($test_code);
+        error_reporting($old_error_reporting);
+
+        if ($tokens === false) {
+            return array();
+        }
+
+        $calls = array();
+        $count = count($tokens);
+        $skip_next_string = false;
+
+        for ($i = 0; $i < $count; $i++) {
+            $token = $tokens[$i];
+
+            // Skip non-array tokens (single chars like (, ), {, }, etc.)
+            if (!is_array($token)) {
+                continue;
+            }
+
+            // If this is a function/class declaration keyword, skip the next T_STRING
+            if ($token[0] === T_FUNCTION || $token[0] === T_CLASS || $token[0] === T_INTERFACE || $token[0] === T_TRAIT) {
+                $skip_next_string = true;
+                continue;
+            }
+
+            // Skip object operator -> and static :: (method calls are not global function calls)
+            if ($token[0] === T_OBJECT_OPERATOR || $token[0] === T_DOUBLE_COLON || $token[0] === T_PAAMAYIM_NEKUDOTAYIM) {
+                $skip_next_string = true;
+                continue;
+            }
+
+            // Only interested in T_STRING tokens (function/constant names)
+            if ($token[0] !== T_STRING) {
+                // Reset skip flag for whitespace/comments but not for them
+                if ($token[0] !== T_WHITESPACE && $token[0] !== T_COMMENT && $token[0] !== T_DOC_COMMENT) {
+                    $skip_next_string = false;
+                }
+                continue;
+            }
+
+            // This is a T_STRING token
+            if ($skip_next_string) {
+                $skip_next_string = false;
+                continue;
+            }
+
+            // Look ahead for ( to confirm this is a function call
+            for ($j = $i + 1; $j < $count; $j++) {
+                $next = $tokens[$j];
+                if (is_array($next) && ($next[0] === T_WHITESPACE || $next[0] === T_COMMENT)) {
+                    continue; // Skip whitespace/comments between name and (
+                }
+                if ($next === '(') {
+                    $calls[] = strtolower($token[1]);
+                }
+                break; // Only check the first non-whitespace token after the name
+            }
+        }
+
+        return $calls;
+    }
+
+    /**
+     * Strip string literals and comments from PHP code for safe pattern matching.
+     * Returns code with all strings replaced by empty quotes and comments removed.
+     *
+     * @param string $code PHP code (without <?php wrapper).
+     * @return string Code with strings/comments stripped.
+     */
+    private function strip_strings_and_comments($code)
+    {
+        $test_code = '<?php ' . $code;
+        $old_error_reporting = error_reporting(0);
+        $tokens = @token_get_all($test_code);
+        error_reporting($old_error_reporting);
+
+        if ($tokens === false) {
+            return $code;
+        }
+
+        $result = '';
+        foreach ($tokens as $token) {
+            if (is_array($token)) {
+                switch ($token[0]) {
+                    case T_COMMENT:
+                    case T_DOC_COMMENT:
+                        // Replace comments with whitespace to preserve line structure
+                        $result .= str_repeat("\n", substr_count($token[1], "\n"));
+                        break;
+                    case T_CONSTANT_ENCAPSED_STRING:
+                        // Replace string literals with empty quotes
+                        $result .= "''";
+                        break;
+                    case T_ENCAPSED_AND_WHITESPACE:
+                        // Inside double-quoted strings — replace with empty
+                        $result .= '';
+                        break;
+                    case T_OPEN_TAG:
+                    case T_OPEN_TAG_WITH_ECHO:
+                        // Skip the <?php we added
+                        break;
+                    default:
+                        $result .= $token[1];
+                        break;
+                }
+            } else {
+                $result .= $token;
+            }
+        }
+
+        return $result;
+    }
+
+    // =========================================================================
+    // MAIN VALIDATION METHODS
+    // =========================================================================
+
     /**
      * Validate code based on its language.
      *
@@ -125,11 +258,15 @@ class Ofast_X_Snippets_Validator
     }
 
     /**
-     * Validate PHP code syntax and security.
+     * Validate PHP code for activation.
+     *
+     * Following Code Snippets plugin philosophy: NO hard blocks.
+     * All issues are Tier 2 warnings (admin confirms) or Tier 3 info.
+     * Real syntax errors are caught by test_snippet_code() at activation
+     * via PHP's own parser (try/catch ParseError).
      *
      * Returns:
-     *   true   — valid, no issues
-     *   string — hard error (Tier 1 block, syntax error, or crash prevention)
+     *   true   — valid, no issues found
      *   array  — Tier 2/3 advisory: ['tier' => 2|3, 'message' => '...', 'functions' => [...]]
      */
     public function validate_php_code($code)
@@ -141,129 +278,127 @@ class Ofast_X_Snippets_Validator
             return true;
         }
 
-        // ── TIER 1: CRITICAL — Hard block, no override ──────────────────────
+        // ── SECURITY SCANNING — Token-aware, Tier 2 warnings ────────────────
+        // Following Code Snippets plugin approach: no hard blocks on security.
+        // Admin confirms risky functions. Real safety net is test_snippet_code()
+        // which catches actual PHP errors at runtime via try/catch.
+        $called_functions = $this->get_function_call_tokens($code);
+        $tier2 = $this->get_tier2_functions();
+        $tier2_found = array();
+
+        // Tier 1 functions → now Tier 2 warnings (admin confirms)
         $tier1 = $this->get_tier1_functions();
-        foreach ($tier1 as $func => $reason) {
-            $pattern = '/\b' . preg_quote($func, '/') . '\s*\(/i';
-            if (preg_match($pattern, $code)) {
-                return "\xF0\x9F\x9A\xA8 Security blocked: '{$func}()' is not allowed. Reason: {$reason}";
+        foreach ($called_functions as $called) {
+            if (isset($tier1[$called])) {
+                $tier2_found[$called] = '⚠️ ' . $tier1[$called] . ' — requires confirmation';
             }
         }
 
-        // ── DANGEROUS SQL — Hard block ───────────────────────────────────────
-        $dangerous_sql = array(
-            '/\bDROP\s+(TABLE|DATABASE|INDEX)/i' => 'DROP TABLE/DATABASE - Destroys data permanently',
-            '/\bTRUNCATE\s+TABLE/i' => 'TRUNCATE TABLE - Deletes all data from table',
-            '/\bDELETE\s+FROM\s+\w+\s*(;|$)/i' => 'DELETE without WHERE - Deletes all rows',
-            '/\bALTER\s+TABLE/i' => 'ALTER TABLE - Can break database structure',
-            '/\bCREATE\s+(TABLE|DATABASE)/i' => 'CREATE TABLE/DATABASE - Should use WordPress dbDelta()',
-            '/\$wpdb\s*->\s*query\s*\(\s*["\']?\s*DELETE/i' => 'Raw DELETE query - Use $wpdb->delete() instead',
-        );
-
-        foreach ($dangerous_sql as $pattern => $reason) {
-            if (preg_match($pattern, $code)) {
-                return "Database protection: {$reason}";
-            }
-        }
-
-        // ── UNLIMITED SELECT — Hard block ────────────────────────────────────
-        if (preg_match('/\$wpdb\s*->\s*get_results\s*\(\s*["\'][^"\']*SELECT\s+\*\s+FROM[^"\']*["\'](?![^)]*LIMIT)/i', $code)) {
-            return "Database protection: SELECT * FROM without LIMIT can crash your site on large tables. Add LIMIT clause (e.g., LIMIT 100).";
-        }
-        if (preg_match('/["\']SELECT\s+\*\s+FROM\s+\w+["\']\s*(?!.*LIMIT)/i', $code)) {
-            if (!preg_match('/LIMIT\s+\d+/i', $code)) {
-                return "Database protection: SELECT * FROM without LIMIT can crash your site on large tables. Add LIMIT clause.";
-            }
-        }
-
-        // ── INFINITE LOOP DETECTION — Hard block ─────────────────────────────
-        $infinite_loop_patterns = array(
-            '/while\s*\(\s*true\s*\)/i' => 'while(true) infinite loop',
-            '/while\s*\(\s*1\s*\)/i' => 'while(1) infinite loop',
-            '/while\s*\(\s*!\s*false\s*\)/i' => 'while(!false) infinite loop',
-            '/for\s*\(\s*;\s*;\s*\)/' => 'for(;;) infinite loop',
-            '/while\s*\(\s*\$[a-z_]+\s*=\s*\$[a-z_]+\s*\)/i' => 'Self-referential while condition',
-        );
-
-        foreach ($infinite_loop_patterns as $pattern => $reason) {
-            if (preg_match($pattern, $code)) {
-                return "Crash prevention: {$reason} detected. This would freeze or crash your site.";
-            }
-        }
-
-        // ── MEMORY EXHAUSTION — Hard block ───────────────────────────────────
-        $memory_patterns = array(
-            '/str_repeat\s*\(.{0,50}\d{6,}/i' => 'str_repeat with very large number can exhaust memory',
-            '/array_fill\s*\(.{0,50}\d{6,}/i' => 'array_fill with very large number can exhaust memory',
-            '/range\s*\(.{0,30}\d{7,}/i' => 'range() with large numbers can exhaust memory',
-        );
-
-        foreach ($memory_patterns as $pattern => $reason) {
-            if (preg_match($pattern, $code)) {
-                return "Memory protection: {$reason}";
-            }
-        }
-
-        // ── SYNTAX VALIDATION — Hard block ───────────────────────────────────
+        // ── SYNTAX VALIDATION — Bracket balance as Tier 2 warning ────────────
+        // Real syntax errors are caught by test_snippet_code() at activation.
+        // Bracket imbalance is informational — some snippets may be fragments.
         $test_code = '<?php ' . $code;
         $old_error_reporting = error_reporting(0);
         $tokens = @token_get_all($test_code);
         error_reporting($old_error_reporting);
 
-        if ($tokens === false) {
-            return 'Invalid PHP syntax detected';
+        if ($tokens !== false) {
+            $open_paren = 0;
+            $open_bracket = 0;
+            $open_brace = 0;
+
+            foreach ($tokens as $token) {
+                if (is_string($token)) {
+                    if ($token === '(') $open_paren++;
+                    if ($token === ')') $open_paren--;
+                    if ($token === '[') $open_bracket++;
+                    if ($token === ']') $open_bracket--;
+                    if ($token === '{') $open_brace++;
+                    if ($token === '}') $open_brace--;
+                }
+            }
+
+            if ($open_paren != 0) $tier2_found['syntax_paren'] = 'Unbalanced parentheses ( ) — may cause a parse error';
+            if ($open_bracket != 0) $tier2_found['syntax_bracket'] = 'Unbalanced brackets [ ] — may cause a parse error';
+            if ($open_brace != 0) $tier2_found['syntax_brace'] = 'Unbalanced braces { } — may cause a parse error';
         }
 
-        $open_paren = 0;
-        $open_bracket = 0;
-        $open_brace = 0;
-
-        foreach ($tokens as $token) {
-            if (is_string($token)) {
-                if ($token === '(') $open_paren++;
-                if ($token === ')') $open_paren--;
-                if ($token === '[') $open_bracket++;
-                if ($token === ']') $open_bracket--;
-                if ($token === '{') $open_brace++;
-                if ($token === '}') $open_brace--;
+        // Token-aware Tier 2 function scanning (ignores strings/comments)
+        foreach ($called_functions as $called) {
+            if (isset($tier2[$called])) {
+                $tier2_found[$called] = $tier2[$called];
             }
         }
 
-        if ($open_paren != 0) return 'Unclosed parenthesis ( ) detected';
-        if ($open_bracket != 0) return 'Unclosed bracket [ ] detected';
-        if ($open_brace != 0) return 'Unclosed brace { } detected';
+        // ── SQL PATTERNS — Tier 2 warning (moved from hard block) ───────────
+        // Uses stripped code to avoid matching SQL keywords inside strings
+        // that are arguments to dbDelta() or documentation comments.
+        $stripped = $this->strip_strings_and_comments($code);
 
-        // Semicolon check — only for standalone function calls, NOT after } or inside class/function bodies
-        $last_tokens = array_slice($tokens, -5);
-        $has_semicolon = false;
-        $ends_with_brace = false;
+        $sql_warnings = array(
+            '/\bDROP\s+(TABLE|DATABASE|INDEX)/i'           => 'DROP TABLE/DATABASE — destructive operation',
+            '/\bTRUNCATE\s+TABLE/i'                        => 'TRUNCATE TABLE — deletes all data from table',
+            '/\bDELETE\s+FROM\s+\w+\s*(;|$)/i'             => 'DELETE without WHERE — deletes all rows',
+            '/\bALTER\s+TABLE/i'                           => 'ALTER TABLE — can modify database structure',
+        );
 
-        foreach ($last_tokens as $token) {
-            if ($token === ';') $has_semicolon = true;
-            if ($token === '}') $ends_with_brace = true;
-        }
-
-        if (!$has_semicolon && !$ends_with_brace && (strpos($code, 'add_action') !== false || strpos($code, 'add_filter') !== false)) {
-            return 'Missing semicolon ; at the end of function call';
-        }
-
-        // ── TIER 2: WARNING — Collect, don't block ──────────────────────────
-        $tier2 = $this->get_tier2_functions();
-        $tier2_found = array();
-
-        foreach ($tier2 as $func => $reason) {
-            $pattern = '/\b' . preg_quote($func, '/') . '\s*\(/i';
-            if (preg_match($pattern, $code)) {
-                $tier2_found[$func] = $reason;
+        foreach ($sql_warnings as $pattern => $reason) {
+            if (preg_match($pattern, $stripped)) {
+                $tier2_found['sql_pattern'] = "SQL: {$reason}";
             }
         }
 
-        // RECURSIVE FUNCTION DETECTION — Tier 2 warning (not hard block)
+        // CREATE TABLE — only warn if NOT inside a dbDelta() call
+        if (preg_match('/\bCREATE\s+(TABLE|DATABASE)/i', $stripped)) {
+            // Check if dbDelta is also called — if so, this is the WordPress-approved pattern
+            if (!in_array('dbdelta', $called_functions, true)) {
+                $tier2_found['sql_create'] = 'CREATE TABLE/DATABASE detected — consider using WordPress dbDelta() for safe table creation';
+            }
+        }
+
+        // Unlimited SELECT — Tier 2 warning (moved from hard block)
+        if (preg_match('/\$wpdb\s*->\s*get_results/i', $stripped)) {
+            if (preg_match('/SELECT\s+\*\s+FROM/i', $code) && !preg_match('/LIMIT\s+\d+/i', $code)) {
+                $tier2_found['sql_unlimited'] = 'SELECT * FROM without LIMIT — may cause performance issues on large tables';
+            }
+        }
+
+        // ── INFINITE LOOP — Tier 2 warning (improved with break/return detection) ─
+        $loop_patterns = array(
+            '/while\s*\(\s*true\s*\)/i'      => 'while(true)',
+            '/while\s*\(\s*1\s*\)/i'          => 'while(1)',
+            '/while\s*\(\s*!\s*false\s*\)/i'  => 'while(!false)',
+            '/for\s*\(\s*;\s*;\s*\)/'         => 'for(;;)',
+        );
+
+        foreach ($loop_patterns as $pattern => $label) {
+            if (preg_match($pattern, $stripped)) {
+                // Check if there's a break/return inside the loop body (safe pattern)
+                if (!preg_match('/\b(break|return)\b/i', $code)) {
+                    $tier2_found['infinite_loop'] = "{$label} loop without break/return — may freeze your site";
+                }
+            }
+        }
+
+        // ── MEMORY EXHAUSTION — Tier 2 warning ──────────────────────────────
+        $memory_patterns = array(
+            '/str_repeat\s*\(.{0,50}\d{6,}/i'  => 'str_repeat with very large number can exhaust memory',
+            '/array_fill\s*\(.{0,50}\d{6,}/i'  => 'array_fill with very large number can exhaust memory',
+            '/range\s*\(.{0,30}\d{7,}/i'       => 'range() with large numbers can exhaust memory',
+        );
+
+        foreach ($memory_patterns as $pattern => $reason) {
+            if (preg_match($pattern, $stripped)) {
+                $tier2_found['memory'] = $reason;
+            }
+        }
+
+        // RECURSIVE FUNCTION DETECTION — Tier 2 warning
         if (preg_match_all('/function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/i', $code, $func_matches)) {
             foreach ($func_matches[1] as $func_name) {
                 $self_call_pattern = '/function\s+' . preg_quote($func_name, '/') . '\s*\([^)]*\)\s*\{[^}]*' . preg_quote($func_name, '/') . '\s*\(/is';
                 if (preg_match($self_call_pattern, $code)) {
-                    $safe_recursion = '/function\s+' . preg_quote($func_name, '/') . '\s*\([^)]*\)\s*\{[^}]*(if\s*\([^)]+\)\s*\{?\s*return|if\s*\([^)]+\)\s*return|switch\s*\(|while\s*\(.*\)\s*\{[^}]*return)/is';
+                    $safe_recursion = '/function\s+' . preg_quote($func_name, '/') . '\s*\([^)]*\)\s*\{[^}]*(if\s*\([^)]+\)\s*\{?\s*return|if\s*\([^)]+\)\s*return|switch\s*\(|while\s*\(.*\)\s*\{[^}]*return|break)/is';
                     if (!preg_match($safe_recursion, $code)) {
                         $tier2_found['recursive:' . $func_name] = "Function '{$func_name}' appears recursive. If it worked in your source plugin, it likely has proper exit conditions that our parser can't detect.";
                     }
@@ -272,14 +407,9 @@ class Ofast_X_Snippets_Validator
         }
 
         if (!empty($tier2_found)) {
-            $func_list = array_keys($tier2_found);
-            $messages = array();
-            foreach ($tier2_found as $func => $reason) {
-                $messages[] = "{$func}: {$reason}";
-            }
             return array(
                 'tier'      => 2,
-                'message'   => 'This snippet uses functions that require confirmation: ' . implode(', ', $func_list),
+                'message'   => 'This snippet uses functions that require confirmation: ' . implode(', ', array_keys($tier2_found)),
                 'functions' => $tier2_found,
             );
         }
@@ -289,14 +419,15 @@ class Ofast_X_Snippets_Validator
         $tier3_found = array();
 
         foreach ($tier3 as $func => $reason) {
-            // include/require are language constructs — work with or without parentheses
-            if (in_array($func, array('include', 'include_once', 'require', 'require_once'), true)) {
-                $pattern = '/\b' . preg_quote($func, '/') . '\s*[\(\'"]/i';
-            } else {
-                $pattern = '/\b' . preg_quote($func, '/') . '\s*\(/i';
-            }
-            if (preg_match($pattern, $code)) {
+            if (in_array(strtolower($func), $called_functions, true)) {
                 $tier3_found[$func] = $reason;
+            }
+            // include/require are language constructs — check with token types too
+            if (in_array($func, array('include', 'include_once', 'require', 'require_once'), true)) {
+                $pattern = '/\b' . preg_quote($func, '/') . '\s*[\(\'\"]/i';
+                if (preg_match($pattern, $stripped)) {
+                    $tier3_found[$func] = $reason;
+                }
             }
         }
 
@@ -312,8 +443,61 @@ class Ofast_X_Snippets_Validator
     }
 
     /**
+     * Lenient validation for import operations.
+     * Only checks Tier 1 security (token-aware) — never blocks on syntax,
+     * SQL patterns, or Tier 2/3. Returns validation notes for display.
+     *
+     * @param string $code PHP code to validate.
+     * @return array ['importable' => true, 'notes' => [...]] Always importable.
+     */
+    public function validate_for_import($code)
+    {
+        $code = $this->core->normalize_php_code($code);
+        $result = array('importable' => true, 'notes' => array());
+
+        if (empty($code)) {
+            return $result;
+        }
+
+        // Only check Tier 1 security — but don't block, just note
+        $tier1 = $this->get_tier1_functions();
+        $called_functions = $this->get_function_call_tokens($code);
+
+        foreach ($called_functions as $called) {
+            if (isset($tier1[$called])) {
+                $result['notes'][] = "\xe2\x9a\xa0 Contains {$called}() — review before activating";
+            }
+        }
+
+        // Quick bracket check — informational only
+        $test_code = '<?php ' . $code;
+        $old_error_reporting = error_reporting(0);
+        $tokens = @token_get_all($test_code);
+        error_reporting($old_error_reporting);
+
+        if ($tokens !== false) {
+            $open_paren = 0;
+            $open_brace = 0;
+            foreach ($tokens as $token) {
+                if (is_string($token)) {
+                    if ($token === '(') $open_paren++;
+                    if ($token === ')') $open_paren--;
+                    if ($token === '{') $open_brace++;
+                    if ($token === '}') $open_brace--;
+                }
+            }
+            if ($open_paren != 0) $result['notes'][] = 'May have unbalanced parentheses — review code';
+            if ($open_brace != 0) $result['notes'][] = 'May have unbalanced braces — review code';
+        }
+
+        return $result;
+    }
+
+    /**
      * Check if a validation result is a hard error (blocks activation).
-     * Tier 1 blocks and syntax errors return strings. Tier 2/3 return arrays.
+     * With the Code Snippets-inspired approach, PHP validation no longer
+     * returns hard errors (strings). This method exists for backward
+     * compatibility — real errors are caught by test_snippet_code() at runtime.
      *
      * @param mixed $result Return value from validate_php_code() or validate_code()
      * @return bool True if the result is a hard block.
@@ -367,7 +551,7 @@ class Ofast_X_Snippets_Validator
 
     /**
      * Validate JavaScript code syntax (basic bracket balance check)
-     * Returns true if valid, error message if invalid
+     * Returns true if valid, Tier 2 warning array if issues found
      */
     public function validate_js_code($code)
     {
@@ -427,22 +611,31 @@ class Ofast_X_Snippets_Validator
             if ($char === '{') $open_brace++;
             if ($char === '}') $open_brace--;
 
-            if ($open_paren < 0) return 'Extra closing parenthesis ) detected';
-            if ($open_bracket < 0) return 'Extra closing bracket ] detected';
-            if ($open_brace < 0) return 'Extra closing brace } detected';
+            if ($open_paren < 0) return array('tier' => 2, 'message' => 'Extra closing parenthesis ) detected — may cause a syntax error', 'functions' => array('syntax' => 'Extra closing parenthesis )'));
+            if ($open_bracket < 0) return array('tier' => 2, 'message' => 'Extra closing bracket ] detected — may cause a syntax error', 'functions' => array('syntax' => 'Extra closing bracket ]'));
+            if ($open_brace < 0) return array('tier' => 2, 'message' => 'Extra closing brace } detected — may cause a syntax error', 'functions' => array('syntax' => 'Extra closing brace }'));
         }
 
-        if ($open_paren != 0) return 'Unclosed parenthesis ( ) detected';
-        if ($open_bracket != 0) return 'Unclosed bracket [ ] detected';
-        if ($open_brace != 0) return 'Unclosed brace { } detected';
-        if ($in_string) return 'Unclosed string detected';
+        $warnings = array();
+        if ($open_paren != 0) $warnings['syntax_paren'] = 'Unbalanced parentheses ( ) — may cause a syntax error';
+        if ($open_bracket != 0) $warnings['syntax_bracket'] = 'Unbalanced brackets [ ] — may cause a syntax error';
+        if ($open_brace != 0) $warnings['syntax_brace'] = 'Unbalanced braces { } — may cause a syntax error';
+        if ($in_string) $warnings['syntax_string'] = 'Unclosed string detected — may cause a syntax error';
+
+        if (!empty($warnings)) {
+            return array(
+                'tier' => 2,
+                'message' => 'This snippet may have syntax issues: ' . implode(', ', array_keys($warnings)),
+                'functions' => $warnings,
+            );
+        }
 
         return true;
     }
 
     /**
      * Validate CSS code syntax (basic structure check)
-     * Returns true if valid, error message if invalid
+     * Returns true if valid, Tier 2 warning array if issues found
      */
     public function validate_css_code($code)
     {
@@ -487,19 +680,28 @@ class Ofast_X_Snippets_Validator
             if ($char === '(') $open_paren++;
             if ($char === ')') $open_paren--;
 
-            if ($open_brace < 0) return 'Extra closing brace } detected';
-            if ($open_paren < 0) return 'Extra closing parenthesis ) detected';
+            if ($open_brace < 0) return array('tier' => 2, 'message' => 'Extra closing brace } detected', 'functions' => array('syntax' => 'Extra closing brace }'));
+            if ($open_paren < 0) return array('tier' => 2, 'message' => 'Extra closing parenthesis ) detected', 'functions' => array('syntax' => 'Extra closing parenthesis )'));
         }
 
-        if ($open_brace != 0) return 'Unclosed brace { } detected';
-        if ($open_paren != 0) return 'Unclosed parenthesis ( ) detected';
+        $warnings = array();
+        if ($open_brace != 0) $warnings['syntax_brace'] = 'Unbalanced braces { } — may cause a syntax error';
+        if ($open_paren != 0) $warnings['syntax_paren'] = 'Unbalanced parentheses ( ) — may cause a syntax error';
+
+        if (!empty($warnings)) {
+            return array(
+                'tier' => 2,
+                'message' => 'This CSS may have syntax issues: ' . implode(', ', array_keys($warnings)),
+                'functions' => $warnings,
+            );
+        }
 
         return true;
     }
 
     /**
      * Validate HTML code syntax (basic tag balance check)
-     * Returns true if valid, error message if invalid
+     * Returns true if valid, Tier 2 warning array if issues found
      */
     public function validate_html_code($code)
     {
@@ -524,11 +726,11 @@ class Ofast_X_Snippets_Validator
 
                 if ($is_closing) {
                     if (empty($tag_stack)) {
-                        return "Extra closing tag </{$tag}> without matching opening tag";
+                        return array('tier' => 2, 'message' => "Extra closing tag </{$tag}> without matching opening tag", 'functions' => array('syntax' => "Extra closing </{$tag}> tag"));
                     }
                     $expected = array_pop($tag_stack);
                     if ($expected !== $tag) {
-                        return "Mismatched tags: expected </{$expected}> but found </{$tag}>";
+                        return array('tier' => 2, 'message' => "Mismatched tags: expected </{$expected}> but found </{$tag}>", 'functions' => array('syntax' => "Mismatched </{$expected}> vs </{$tag}>"));
                     }
                 } else {
                     $tag_stack[] = $tag;
@@ -538,7 +740,7 @@ class Ofast_X_Snippets_Validator
 
         if (!empty($tag_stack)) {
             $unclosed = $tag_stack[count($tag_stack) - 1];
-            return "Unclosed <{$unclosed}> tag detected";
+            return array('tier' => 2, 'message' => "Unclosed <{$unclosed}> tag detected", 'functions' => array('syntax' => "Unclosed <{$unclosed}> tag"));
         }
 
         return true;
@@ -653,33 +855,104 @@ class Ofast_X_Snippets_Validator
     {
         $code = $this->core->normalize_php_code($code);
 
-        // Extract function names from the code
-        $function_names = array();
-
-        // Match "function function_name(" patterns
-        if (preg_match_all('/function\s+([a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*)\s*\(/i', $code, $matches)) {
-            $function_names = $matches[1];
+        if (empty(trim($code))) {
+            return true;
         }
 
-        if (empty($function_names)) {
-            return true; // No named functions = no conflicts possible
+        // Token-based parsing to extract ONLY global function names.
+        // Class methods are skipped — they can't conflict with global functions.
+        // This matches the Code Snippets plugin approach (class-validator.php).
+        $test_code = '<?php ' . $code;
+        $old_error_reporting = error_reporting(0);
+        $tokens = @token_get_all($test_code);
+        error_reporting($old_error_reporting);
+
+        if ($tokens === false) {
+            return true; // Can't parse — let test_snippet_code() handle it
         }
 
-        // Detect guarded declarations: function_exists() / class_exists() checks.
-        // If a function is wrapped in `if (!function_exists('func'))`, skip it.
+        // Collect function_exists() / class_exists() guards (exceptions)
         $guarded_names = array();
-        if (preg_match_all('/(?:function_exists|class_exists)\s*\(\s*[\'"]([a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*)[\'"]\s*\)/i', $code, $guard_matches)) {
-            $guarded_names = array_map('strtolower', $guard_matches[1]);
+        $count = count($tokens);
+        for ($i = 0; $i < $count; $i++) {
+            $token = $tokens[$i];
+            if (!is_array($token)) continue;
+            if ($token[0] === T_STRING && ($token[1] === 'function_exists' || $token[1] === 'class_exists')) {
+                // Look ahead for the string argument
+                for ($j = $i + 1; $j < $count; $j++) {
+                    $next = $tokens[$j];
+                    if (is_array($next) && $next[0] === T_CONSTANT_ENCAPSED_STRING) {
+                        $guarded_names[] = strtolower(trim($next[1], "\"'"));
+                        break;
+                    }
+                    if (!is_array($next) && $next === ')') break;
+                }
+            }
         }
 
-        $conflicts = array();
-        foreach ($function_names as $func_name) {
-            // Skip if this function has a function_exists() guard
-            if (in_array(strtolower($func_name), $guarded_names, true)) {
+        // Walk tokens to find global function declarations (skip class bodies)
+        $global_functions = array();
+        $class_depth = 0;
+        $in_class = false;
+        $expect_function_name = false;
+
+        for ($i = 0; $i < $count; $i++) {
+            $token = $tokens[$i];
+
+            // Track class/interface/trait bodies — skip function declarations inside them
+            if (is_array($token) && ($token[0] === T_CLASS || $token[0] === T_INTERFACE || $token[0] === T_TRAIT)) {
+                for ($j = $i + 1; $j < $count; $j++) {
+                    if ($tokens[$j] === '{') {
+                        $in_class = true;
+                        $class_depth = 1;
+                        $i = $j;
+                        break;
+                    }
+                }
                 continue;
             }
 
-            // Check if function already exists
+            // If inside a class body, track brace depth until we exit
+            if ($in_class) {
+                if ($token === '{') $class_depth++;
+                if ($token === '}') {
+                    $class_depth--;
+                    if ($class_depth === 0) {
+                        $in_class = false;
+                    }
+                }
+                continue;
+            }
+
+            // Look for 'function' keyword at global scope
+            if (is_array($token) && $token[0] === T_FUNCTION) {
+                $expect_function_name = true;
+                continue;
+            }
+
+            // Get the function name after 'function' keyword
+            if ($expect_function_name) {
+                if (is_array($token) && $token[0] === T_WHITESPACE) {
+                    continue;
+                }
+                if (is_array($token) && $token[0] === T_STRING) {
+                    $global_functions[] = $token[1];
+                }
+                $expect_function_name = false;
+                continue;
+            }
+        }
+
+        if (empty($global_functions)) {
+            return true;
+        }
+
+        // Check each global function against existing definitions
+        $conflicts = array();
+        foreach ($global_functions as $func_name) {
+            if (in_array(strtolower($func_name), $guarded_names, true)) {
+                continue;
+            }
             if (function_exists($func_name)) {
                 $conflicts[] = $func_name;
             }
@@ -687,7 +960,8 @@ class Ofast_X_Snippets_Validator
 
         if (!empty($conflicts)) {
             $conflict_list = implode(', ', $conflicts);
-            return "Function conflict detected! These functions already exist: {$conflict_list}. This may be caused by another plugin (Code Snippets, WPCode, etc.) or another active snippet using the same function names. Deactivate the conflicting snippet/plugin first, or rename the functions in this code. Tip: Wrap your function in if (!function_exists('name')) { } to prevent this.";
+            $tip_name = $conflicts[0];
+            return "Function conflict detected! These functions already exist: {$conflict_list}. This may be caused by another plugin or WordPress core. Tip: Wrap your function in if (!function_exists('{$tip_name}')) { } to prevent this.";
         }
 
         return true;

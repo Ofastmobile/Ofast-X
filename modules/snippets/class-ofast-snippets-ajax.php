@@ -88,28 +88,9 @@ class Ofast_X_Snippets_Ajax
                 return;
             }
 
-            // Check syntax for ALL languages
-            $validation = $this->core->validator->validate_code($candidate_code, $lang);
-
-            if ($this->core->validator->is_hard_error($validation)) {
-                // TIER 1 or syntax error — hard block, no override
-                wp_send_json_error('Cannot activate: ' . $validation);
-                return;
-            }
-
-            if ($this->core->validator->is_tier2_warning($validation) && !$force_activate) {
-                // TIER 2 — return confirm_required so frontend shows modal
-                wp_send_json_success(array(
-                    'confirm_required' => true,
-                    'tier' => 2,
-                    'message' => 'This snippet uses functions that may have side effects:',
-                    'functions' => $validation['functions'],
-                    'snippet_id' => $id,
-                ));
-                return;
-            }
-
-            // TIER 3 — info only, allow activation (message sent in response below)
+            // ── Code Snippets plugin approach: no pre-validation gates ────────
+            // Real safety net is test_snippet_code() which catches actual PHP
+            // parse errors at runtime via try/catch. If PHP can parse it, let it run.
 
             // PHP-specific checks: function conflicts & duplicate conflicts
             if ($lang === 'php') {
@@ -337,11 +318,7 @@ class Ofast_X_Snippets_Ajax
         }
 
         $runtime_code = $this->core->normalize_php_code($snippet->code);
-        $validation = $this->core->validator->validate_php_code($runtime_code);
-        if ($this->core->validator->is_hard_error($validation)) {
-            wp_send_json_error('Cannot run: ' . $validation);
-        }
-        // Tier 2/3: allow Run Now — admin explicitly chose to execute
+        // No pre-validation — let PHP catch real errors at runtime (try/catch below)
 
         $output = '';
         $snippet_file = $this->core->write_snippet_file($runtime_code, $snippet->id);
@@ -544,17 +521,8 @@ class Ofast_X_Snippets_Ajax
 
                     if ($snippet->language === 'php' || empty($snippet->language)) {
                         $candidate_code = $this->core->normalize_php_code($snippet->code);
-                        $validation = $this->core->validator->validate_php_code($candidate_code);
-                        if ($this->core->validator->is_hard_error($validation)) {
-                            $blocked++;
-                            $blocked_details[] = array(
-                                'id' => (int) $snippet->id,
-                                'name' => (string) $snippet->name,
-                                'reason' => (string) $validation
-                            );
-                            break;
-                        }
-                        // Tier 2/3: allow bulk activate — admin explicitly chose to activate
+
+                        // Only check function conflicts (same as Code Snippets plugin)
 
                         $conflict_check = $this->core->validator->check_function_conflicts($candidate_code);
                         if ($conflict_check !== true) {

@@ -243,7 +243,7 @@ class Ofast_X_Snippets_Import
                 continue;
             }
 
-            // Validate PHP code if language is PHP
+            // Normalize code based on language
             $language = $this->core->normalize_snippet_language(isset($snippet['language']) ? $snippet['language'] : 'php');
             $snippet_code = isset($snippet['code']) ? (string) $snippet['code'] : '';
             if ($language === 'php') {
@@ -251,14 +251,14 @@ class Ofast_X_Snippets_Import
             }
             $priority = isset($snippet['priority']) ? intval($snippet['priority']) : 10;
             $priority = max(1, min(9999, $priority));
+
+            // Lenient validation — never blocks import, only collects notes
+            $import_notes = '';
             if ($language === 'php' && $snippet_code !== '') {
-                $validation = $this->core->validator->validate_php_code($snippet_code);
-                if ($this->core->validator->is_hard_error($validation)) {
-                    $errors[] = $snippet['name'] . ': ' . $validation;
-                    $skipped++;
-                    continue;
+                $import_check = $this->core->validator->validate_for_import($snippet_code);
+                if (!empty($import_check['notes'])) {
+                    $import_notes = ' [Review: ' . implode('; ', $import_check['notes']) . ']';
                 }
-                // Tier 2/3: import normally as inactive — admin can review and activate later
             }
 
             // DUPLICATE CODE CHECK: Skip if exact code already exists
@@ -275,9 +275,9 @@ class Ofast_X_Snippets_Import
             // Insert snippet (always as INACTIVE for safety)
             $insert_data = array(
                 'name' => sanitize_text_field($snippet['name']) . ' (imported)',
-                'description' => isset($snippet['description'])
+                'description' => (isset($snippet['description'])
                     ? sanitize_textarea_field($snippet['description'])
-                    : (isset($snippet['desc']) ? sanitize_textarea_field($snippet['desc']) : ''),
+                    : (isset($snippet['desc']) ? sanitize_textarea_field($snippet['desc']) : '')) . $import_notes,
                 'code' => $snippet_code,
                 'language' => $language,
                 'scope' => isset($snippet['scope']) ? sanitize_text_field($snippet['scope']) : 'global',
@@ -359,13 +359,12 @@ class Ofast_X_Snippets_Import
                     $snippet_code = $this->core->normalize_php_code($snippet_code);
                 }
 
-                // Validate code — only hard-block Tier 1 for PHP
+                // Lenient validation — never blocks import, only collects notes
+                $import_notes = '';
                 if ($mapped['language'] === 'php' && $snippet_code !== '') {
-                    $validation = $this->core->validator->validate_php_code($snippet_code);
-                    if ($this->core->validator->is_hard_error($validation)) {
-                        $errors[] = $snippet->name . ': ' . $validation;
-                        $skipped++;
-                        continue;
+                    $import_check = $this->core->validator->validate_for_import($snippet_code);
+                    if (!empty($import_check['notes'])) {
+                        $import_notes = ' [Review: ' . implode('; ', $import_check['notes']) . ']';
                     }
                 }
 
@@ -386,7 +385,7 @@ class Ofast_X_Snippets_Import
 
                 $insert_data = array(
                     'name' => sanitize_text_field($snippet->name) . ' (from Code Snippets)',
-                    'description' => isset($snippet->desc) ? sanitize_textarea_field($snippet->desc) : '',
+                    'description' => (isset($snippet->desc) ? sanitize_textarea_field($snippet->desc) : '') . $import_notes,
                     'code' => $snippet_code,
                     'language' => $mapped['language'],
                     'scope' => $mapped['scope'],
@@ -438,15 +437,13 @@ class Ofast_X_Snippets_Import
                     $code = $this->core->normalize_php_code($code);
                 }
 
-                // Validate PHP code — only hard-block Tier 1
+                // Lenient validation — never blocks import, only collects notes
+                $import_notes = '';
                 if ($language === 'php' && !empty($code)) {
-                    $validation = $this->core->validator->validate_php_code($code);
-                    if ($this->core->validator->is_hard_error($validation)) {
-                        $errors[] = $post->post_title . ': ' . $validation;
-                        $skipped++;
-                        continue;
+                    $import_check = $this->core->validator->validate_for_import($code);
+                    if (!empty($import_check['notes'])) {
+                        $import_notes = ' [Review: ' . implode('; ', $import_check['notes']) . ']';
                     }
-                    // Tier 2/3: import normally as inactive
                 }
 
                 // DUPLICATE CODE CHECK: Skip if exact code already exists
@@ -462,7 +459,7 @@ class Ofast_X_Snippets_Import
 
                 $wpdb->insert($table, array(
                     'name' => sanitize_text_field($post->post_title) . ' (from WPCode)',
-                    'description' => sanitize_textarea_field($post->post_excerpt),
+                    'description' => sanitize_textarea_field($post->post_excerpt) . $import_notes,
                     'code' => $code,
                     'language' => $language,
                     'scope' => 'global',
@@ -701,13 +698,12 @@ class Ofast_X_Snippets_Import
                     $snippet_code = $this->core->normalize_php_code($snippet_code);
                 }
 
-                // Validate PHP code — only hard-block Tier 1
+                // Lenient validation — never blocks import, only collects notes
+                $import_notes = '';
                 if ($mapped['language'] === 'php' && $snippet_code !== '') {
-                    $validation = $this->core->validator->validate_php_code($snippet_code);
-                    if ($this->core->validator->is_hard_error($validation)) {
-                        $errors[] = $snippet->name . ': ' . $validation;
-                        $skipped++;
-                        continue;
+                    $import_check = $this->core->validator->validate_for_import($snippet_code);
+                    if (!empty($import_check['notes'])) {
+                        $import_notes = ' [Review: ' . implode('; ', $import_check['notes']) . ']';
                     }
                 }
 
@@ -728,7 +724,7 @@ class Ofast_X_Snippets_Import
 
                 $insert_data = array(
                     'name' => sanitize_text_field($snippet->name) . ' (from Code Snippets)',
-                    'description' => isset($snippet->desc) ? sanitize_textarea_field($snippet->desc) : '',
+                    'description' => (isset($snippet->desc) ? sanitize_textarea_field($snippet->desc) : '') . $import_notes,
                     'code' => $snippet_code,
                     'language' => $mapped['language'],
                     'scope' => $mapped['scope'],
@@ -779,15 +775,13 @@ class Ofast_X_Snippets_Import
                     $code = $this->core->normalize_php_code($code);
                 }
 
-                // Validate PHP code — only hard-block Tier 1
+                // Lenient validation — never blocks import, only collects notes
+                $import_notes = '';
                 if ($language === 'php' && !empty($code)) {
-                    $validation = $this->core->validator->validate_php_code($code);
-                    if ($this->core->validator->is_hard_error($validation)) {
-                        $errors[] = $post->post_title . ': ' . $validation;
-                        $skipped++;
-                        continue;
+                    $import_check = $this->core->validator->validate_for_import($code);
+                    if (!empty($import_check['notes'])) {
+                        $import_notes = ' [Review: ' . implode('; ', $import_check['notes']) . ']';
                     }
-                    // Tier 2/3: import normally as inactive
                 }
 
                 // Duplicate check
@@ -803,7 +797,7 @@ class Ofast_X_Snippets_Import
 
                 $wpdb->insert($table, array(
                     'name' => sanitize_text_field($post->post_title) . ' (from WPCode)',
-                    'description' => sanitize_textarea_field($post->post_excerpt),
+                    'description' => sanitize_textarea_field($post->post_excerpt) . $import_notes,
                     'code' => $code,
                     'language' => $language,
                     'scope' => 'global',

@@ -62,11 +62,7 @@ class Ofast_X_Snippets_Validator
             'fputs'                      => 'Writes to file handle',
             'fopen'                      => 'Opens files — also used for reading',
             'curl_exec'                  => 'Makes external HTTP requests — use wp_remote_get/post when possible',
-            'header'                     => 'Sends HTTP headers — use wp_redirect() when possible',
             'setcookie'                  => 'Sets cookies — can cause "headers already sent" if used late',
-            'ob_start'                   => 'Output buffering — very common in WordPress development',
-            'ob_end_clean'               => 'Ends output buffering',
-            'ob_end_flush'               => 'Flushes output buffer',
             'ini_set'                    => 'Modifies PHP configuration at runtime',
             'set_time_limit'             => 'Changes execution time limit — needed for long tasks',
             'sleep'                      => 'Pauses execution — can cause timeouts if misused',
@@ -96,6 +92,10 @@ class Ofast_X_Snippets_Validator
             'mail'          => 'Consider using wp_mail() instead for better compatibility',
             'define'        => 'Defines constants — extremely common in WordPress',
             'constant'      => 'Reads constant values — harmless read-only operation',
+            'ob_start'      => 'Output buffering — very common in WordPress development',
+            'ob_end_clean'  => 'Ends output buffering — standard pattern',
+            'ob_end_flush'  => 'Flushes output buffer — standard pattern',
+            'header'        => 'Sends HTTP headers — use wp_redirect() when possible',
         );
     }
 
@@ -113,7 +113,12 @@ class Ofast_X_Snippets_Validator
      */
     private function get_function_call_tokens($code)
     {
-        $test_code = '<?php ' . $code;
+        // Don't double-prepend <?php if code already starts with one (mixed PHP/HTML)
+        if (preg_match('/^\s*<' . '\?/i', $code)) {
+            $test_code = $code;
+        } else {
+            $test_code = '<' . '?php ' . $code;
+        }
         $old_error_reporting = error_reporting(0);
         $tokens = @token_get_all($test_code);
         error_reporting($old_error_reporting);
@@ -186,7 +191,12 @@ class Ofast_X_Snippets_Validator
      */
     private function strip_strings_and_comments($code)
     {
-        $test_code = '<?php ' . $code;
+        // Don't double-prepend <?php if code already starts with one (mixed PHP/HTML)
+        if (preg_match('/^\s*<' . '\?/i', $code)) {
+            $test_code = $code;
+        } else {
+            $test_code = '<' . '?php ' . $code;
+        }
         $old_error_reporting = error_reporting(0);
         $tokens = @token_get_all($test_code);
         error_reporting($old_error_reporting);
@@ -297,30 +307,43 @@ class Ofast_X_Snippets_Validator
         // ── SYNTAX VALIDATION — Bracket balance as Tier 2 warning ────────────
         // Real syntax errors are caught by test_snippet_code() at activation.
         // Bracket imbalance is informational — some snippets may be fragments.
-        $test_code = '<?php ' . $code;
-        $old_error_reporting = error_reporting(0);
-        $tokens = @token_get_all($test_code);
-        error_reporting($old_error_reporting);
+        // SKIP for mixed PHP/HTML content — bracket counting across PHP blocks
+        // is inherently unreliable and produces false positives.
+        $open_tag_pattern = '/<' . '\\?(?:php|=)/i';
+        $is_mixed_content = preg_match_all($open_tag_pattern, $code) > 1
+            || preg_match('/\\?' . '>\s*\S/', $code);
 
-        if ($tokens !== false) {
-            $open_paren = 0;
-            $open_bracket = 0;
-            $open_brace = 0;
-
-            foreach ($tokens as $token) {
-                if (is_string($token)) {
-                    if ($token === '(') $open_paren++;
-                    if ($token === ')') $open_paren--;
-                    if ($token === '[') $open_bracket++;
-                    if ($token === ']') $open_bracket--;
-                    if ($token === '{') $open_brace++;
-                    if ($token === '}') $open_brace--;
-                }
+        if (!$is_mixed_content) {
+            // Don't double-prepend <?php if code already starts with one
+            if (preg_match('/^\s*<' . '\?/i', $code)) {
+                $test_code = $code;
+            } else {
+                $test_code = '<' . '?php ' . $code;
             }
+            $old_error_reporting = error_reporting(0);
+            $tokens = @token_get_all($test_code);
+            error_reporting($old_error_reporting);
 
-            if ($open_paren != 0) $tier2_found['syntax_paren'] = 'Unbalanced parentheses ( ) — may cause a parse error';
-            if ($open_bracket != 0) $tier2_found['syntax_bracket'] = 'Unbalanced brackets [ ] — may cause a parse error';
-            if ($open_brace != 0) $tier2_found['syntax_brace'] = 'Unbalanced braces { } — may cause a parse error';
+            if ($tokens !== false) {
+                $open_paren = 0;
+                $open_bracket = 0;
+                $open_brace = 0;
+
+                foreach ($tokens as $token) {
+                    if (is_string($token)) {
+                        if ($token === '(') $open_paren++;
+                        if ($token === ')') $open_paren--;
+                        if ($token === '[') $open_bracket++;
+                        if ($token === ']') $open_bracket--;
+                        if ($token === '{') $open_brace++;
+                        if ($token === '}') $open_brace--;
+                    }
+                }
+
+                if ($open_paren != 0) $tier2_found['syntax_paren'] = 'Unbalanced parentheses ( ) — may cause a parse error';
+                if ($open_bracket != 0) $tier2_found['syntax_bracket'] = 'Unbalanced brackets [ ] — may cause a parse error';
+                if ($open_brace != 0) $tier2_found['syntax_brace'] = 'Unbalanced braces { } — may cause a parse error';
+            }
         }
 
         // Token-aware Tier 2 function scanning (ignores strings/comments)
@@ -444,53 +467,19 @@ class Ofast_X_Snippets_Validator
 
     /**
      * Lenient validation for import operations.
-     * Only checks Tier 1 security (token-aware) — never blocks on syntax,
-     * SQL patterns, or Tier 2/3. Returns validation notes for display.
+     * Following Code Snippets plugin approach: imports ALWAYS succeed.
+     * No security checks, no syntax checks during import.
+     * Real safety is handled at activation time by test_snippet_code().
      *
      * @param string $code PHP code to validate.
      * @return array ['importable' => true, 'notes' => [...]] Always importable.
      */
     public function validate_for_import($code)
     {
-        $code = $this->core->normalize_php_code($code);
-        $result = array('importable' => true, 'notes' => array());
-
-        if (empty($code)) {
-            return $result;
-        }
-
-        // Only check Tier 1 security — but don't block, just note
-        $tier1 = $this->get_tier1_functions();
-        $called_functions = $this->get_function_call_tokens($code);
-
-        foreach ($called_functions as $called) {
-            if (isset($tier1[$called])) {
-                $result['notes'][] = "\xe2\x9a\xa0 Contains {$called}() — review before activating";
-            }
-        }
-
-        // Quick bracket check — informational only
-        $test_code = '<?php ' . $code;
-        $old_error_reporting = error_reporting(0);
-        $tokens = @token_get_all($test_code);
-        error_reporting($old_error_reporting);
-
-        if ($tokens !== false) {
-            $open_paren = 0;
-            $open_brace = 0;
-            foreach ($tokens as $token) {
-                if (is_string($token)) {
-                    if ($token === '(') $open_paren++;
-                    if ($token === ')') $open_paren--;
-                    if ($token === '{') $open_brace++;
-                    if ($token === '}') $open_brace--;
-                }
-            }
-            if ($open_paren != 0) $result['notes'][] = 'May have unbalanced parentheses — review code';
-            if ($open_brace != 0) $result['notes'][] = 'May have unbalanced braces — review code';
-        }
-
-        return $result;
+        // Code Snippets plugin approach: no validation during import.
+        // Safety is enforced at activation via test_snippet_code() (try/catch)
+        // and at runtime via auto-deactivation on Throwable.
+        return array('importable' => true, 'notes' => array());
     }
 
     /**

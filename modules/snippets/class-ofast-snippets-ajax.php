@@ -60,6 +60,7 @@ class Ofast_X_Snippets_Ajax
         $id = intval($_POST['id']);
         $current_active = intval($_POST['active']);
         $new_active = $current_active ? 0 : 1;
+        $activation_warning = '';
 
         global $wpdb;
         $table = $wpdb->prefix . 'ofast_snippets';
@@ -115,6 +116,10 @@ class Ofast_X_Snippets_Ajax
                 // Pre-activation test: execute the code in a sandbox to catch runtime errors
                 // before actually activating. Prevents admin lockouts from broken snippets.
                 $test_result = $this->core->test_snippet_code($candidate_code, $snippet->id);
+                if ($test_result !== true && strpos($test_result, 'Runtime error:') === 0) {
+                    $activation_warning = 'Activation warning: ' . $test_result . ' The snippet was activated anyway to stay compatible with Code Snippets-style behavior. If the issue happens during real execution, Ofast will auto-deactivate it.';
+                    $test_result = true;
+                }
                 if ($test_result !== true) {
                     wp_send_json_error('Cannot activate — code test failed: ' . $test_result);
                     return;
@@ -155,6 +160,9 @@ class Ofast_X_Snippets_Ajax
         $response = array('active' => $new_active);
         if ($dependency_warning) {
             $response['dependency_warning'] = $dependency_warning;
+        }
+        if ($activation_warning) {
+            $response['activation_warning'] = $activation_warning;
         }
 
         wp_send_json_success($response);

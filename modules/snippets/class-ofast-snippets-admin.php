@@ -151,9 +151,11 @@ class Ofast_X_Snippets_Admin
         echo '<tbody>';
 
         foreach ($snippets as $snippet) {
-            // Validate snippet code
-            $validation_result = $this->core->validator->validate_php_code($snippet->code);
-            $has_error = ($validation_result !== true);
+            $language = $this->core->normalize_snippet_language(isset($snippet->language) ? $snippet->language : 'php');
+            $validation_result = $this->core->validator->validate_code($snippet->code, $language);
+            $has_error = $this->core->validator->is_hard_error($validation_result);
+            $has_warning = !$has_error && $validation_result !== true;
+            $validation_message = $this->core->validator->get_validation_message($validation_result);
 
             // Check for duplicate conflicts
             $dup_info = $this->core->validator->get_potential_duplicates($snippet->id, $snippet->name, $snippet->code);
@@ -162,7 +164,14 @@ class Ofast_X_Snippets_Admin
             $active_class = $snippet->active ? 'button-primary' : '';
 
             // Add error indicator if validation fails
+            if ($has_warning) {
+                $has_error = false;
+            }
             $error_indicator = $has_error ? ' <span style="color: red; font-size: 16px;" title="' . esc_attr($validation_result) . '">● </span>' : '';
+
+            if ($has_warning) {
+                $error_indicator = ' <span style="color: #d97706; font-size: 16px;" title="' . esc_attr($validation_message) . '">â— </span>';
+            }
 
             // Add duplicate indicator
             $dup_indicator = '';
@@ -176,7 +185,10 @@ class Ofast_X_Snippets_Admin
             echo '<tr>';
             echo '<td>' . $error_indicator . $dup_indicator . '<strong>' . esc_html($snippet->name) . '</strong>';
             if ($has_error) {
-                echo '<br><small style="color: #dc3545;">' . esc_html($validation_result) . '</small>';
+                echo '<br><small style="color: #dc3545;">' . esc_html($validation_message) . '</small>';
+            }
+            if ($has_warning) {
+                echo '<br><small style="color: #b45309;">' . esc_html($validation_message) . '</small>';
             }
             if ($dup_description) {
                 echo '<br><small style="color: #dc3545;">' . esc_html($dup_description) . '</small>';
@@ -294,6 +306,9 @@ class Ofast_X_Snippets_Admin
                             $btn.data('active', newActive);
                             $btn.html(newActive ? 'ON' : 'OFF');
                             $btn.toggleClass('button-primary', newActive);
+                            if (response.data.activation_warning) {
+                                alert(response.data.activation_warning);
+                            }
                         } else {
                             var msg = response.data || 'Unknown error';
                             if (msg.indexOf('duplicate conflict') !== -1) {
@@ -2054,6 +2069,9 @@ class Ofast_X_Snippets_Admin
                             // Show dependency warning if present
                             if (response.data.dependency_warning) {
                                 alert(response.data.dependency_warning + '\n\nThe snippet was deactivated, but the dependent snippet(s) listed above may stop working.');
+                            }
+                            if (response.data.activation_warning) {
+                                alert(response.data.activation_warning);
                             }
                         } else {
                             // Revert checkbox on error

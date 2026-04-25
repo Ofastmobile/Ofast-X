@@ -63,7 +63,9 @@ class Ofast_X_Snippets
         // Execute active snippets on plugins_loaded (priority 99) — late enough for
         // Ofast-X to be fully loaded, but early enough that snippet-registered hooks
         // (e.g. add_action('init', ...)) still fire at their default priority.
-        add_action('plugins_loaded', array($this, 'execute_snippets'), 99);
+        // Run snippets early enough that they can still attach later
+        // plugins_loaded callbacks, matching Code Snippets behavior more closely.
+        add_action('plugins_loaded', array($this, 'execute_snippets'), 1);
 
         // Auto-purge trashed snippets via daily cron
         add_action('ofast_purge_trashed_snippets', array($this, 'purge_old_trashed_snippets'));
@@ -132,26 +134,28 @@ class Ofast_X_Snippets
             return '';
         }
 
-        // Detect mixed PHP/HTML content (has <?php ... ?> blocks with HTML between them).
-        // If more than one PHP open tag, or closing ?> followed by non-whitespace (HTML),
+        // Detect mixed PHP/HTML content (has open/close PHP tag blocks with HTML between them).
+        // If more than one PHP open tag, or closing tag followed by non-whitespace (HTML),
         // this is mixed content — preserve as-is to avoid corrupting embedded PHP blocks.
-        $php_open_count = preg_match_all('/<\?(?:php|=)/i', $code);
-        $has_closing_with_html = preg_match('/\?>\s*\S/', $code);
+        $open_tag_pattern = '/<' . '\?(?:php|=)/i';
+        $close_tag_pattern = '/\?' . '>\s*\S/';
+        $php_open_count = preg_match_all($open_tag_pattern, $code);
+        $has_closing_with_html = preg_match($close_tag_pattern, $code);
 
         if ($php_open_count > 1 || $has_closing_with_html) {
-            // Mixed PHP/HTML — preserve as-is, ensure it starts with <?php
-            if (!preg_match('/^\s*<\?/i', $code)) {
-                $code = "<?php\n" . $code;
+            // Mixed PHP/HTML — preserve as-is, ensure it starts with an open PHP tag
+            if (!preg_match('/^\s*<' . '\?/i', $code)) {
+                $code = '<' . '?php' . "\n" . $code;
             }
             return trim($code);
         }
 
         // Convert short echo syntax wrapper to plain PHP expression.
-        $code = preg_replace('/^\s*\<\?=\s*/i', 'echo ', $code);
+        $code = preg_replace('/^\s*<' . '\?=\s*/i', 'echo ', $code);
 
         // Strip a single outer PHP wrapper if present.
-        $code = preg_replace('/^\s*\<\?(?:php)?\s*/i', '', $code);
-        $code = preg_replace('/\s*\?\>\s*$/', '', $code);
+        $code = preg_replace('/^\s*<' . '\?(?:php)?\s*/i', '', $code);
+        $code = preg_replace('/\s*\?' . '>\s*$/', '', $code);
 
         return trim($code);
     }
@@ -452,12 +456,12 @@ class Ofast_X_Snippets
         }
         $file = $dir . '/' . $filename;
 
-        // If code already starts with <?php (mixed PHP/HTML), write as-is.
-        // Otherwise prepend <?php for pure PHP snippets.
-        if (preg_match('/^\s*<\?/i', $code)) {
+        // If code already starts with a PHP open tag (mixed PHP/HTML), write as-is.
+        // Otherwise prepend the open tag for pure PHP snippets.
+        if (preg_match('/^\s*<' . '\?/i', $code)) {
             $file_content = $code;
         } else {
-            $file_content = "<?php\n" . $code;
+            $file_content = '<' . '?php' . "\n" . $code;
         }
 
         $written = @file_put_contents($file, $file_content);

@@ -252,14 +252,8 @@ class Ofast_X_Snippets_Import
             $priority = isset($snippet['priority']) ? intval($snippet['priority']) : 10;
             $priority = max(1, min(9999, $priority));
 
-            // Lenient validation — never blocks import, only collects notes
-            $import_notes = '';
-            if ($language === 'php' && $snippet_code !== '') {
-                $import_check = $this->core->validator->validate_for_import($snippet_code);
-                if (!empty($import_check['notes'])) {
-                    $import_notes = ' [Review: ' . implode('; ', $import_check['notes']) . ']';
-                }
-            }
+            // Lenient import — no validation gates.
+            // Safety is enforced at activation time by test_snippet_code().
 
             // DUPLICATE CODE CHECK: Skip if exact code already exists
             $code_hash = md5(trim($snippet_code));
@@ -277,7 +271,7 @@ class Ofast_X_Snippets_Import
                 'name' => sanitize_text_field($snippet['name']) . ' (imported)',
                 'description' => (isset($snippet['description'])
                     ? sanitize_textarea_field($snippet['description'])
-                    : (isset($snippet['desc']) ? sanitize_textarea_field($snippet['desc']) : '')) . $import_notes,
+                    : (isset($snippet['desc']) ? sanitize_textarea_field($snippet['desc']) : '')),
                 'code' => $snippet_code,
                 'language' => $language,
                 'scope' => isset($snippet['scope']) ? sanitize_text_field($snippet['scope']) : 'global',
@@ -385,7 +379,7 @@ class Ofast_X_Snippets_Import
 
                 $insert_data = array(
                     'name' => sanitize_text_field($snippet->name) . ' (from Code Snippets)',
-                    'description' => (isset($snippet->desc) ? sanitize_textarea_field($snippet->desc) : '') . $import_notes,
+                    'description' => (isset($snippet->desc) ? sanitize_textarea_field($snippet->desc) : ''),
                     'code' => $snippet_code,
                     'language' => $mapped['language'],
                     'scope' => $mapped['scope'],
@@ -459,7 +453,7 @@ class Ofast_X_Snippets_Import
 
                 $wpdb->insert($table, array(
                     'name' => sanitize_text_field($post->post_title) . ' (from WPCode)',
-                    'description' => sanitize_textarea_field($post->post_excerpt) . $import_notes,
+                    'description' => sanitize_textarea_field($post->post_excerpt),
                     'code' => $code,
                     'language' => $language,
                     'scope' => 'global',
@@ -484,7 +478,7 @@ class Ofast_X_Snippets_Import
 
         $message = "Imported {$imported} snippet(s) from {$plugin}";
         if ($skipped > 0) {
-            $message .= ", skipped {$skipped} (security/syntax issues)";
+            $message .= ", skipped {$skipped} (duplicates)";
         }
 
         wp_send_json_success(array('message' => $message, 'imported' => $imported, 'skipped' => $skipped, 'errors' => array_slice($errors, 0, 5)));
@@ -535,24 +529,11 @@ class Ofast_X_Snippets_Import
                     $status = 'active';
                 }
 
-                // Validate with tiered security (only for PHP snippets)
+                // Code Snippets plugin approach: no validation during import preview.
+                // Safety is enforced at activation time by test_snippet_code().
                 $is_safe = true;
                 $security_tier = 0;
                 $error_message = null;
-                if ($mapped['language'] === 'php' && $normalized_preview_code !== '') {
-                    $validation = $this->core->validator->validate_php_code($normalized_preview_code);
-                    if ($this->core->validator->is_hard_error($validation)) {
-                        $is_safe = false;
-                        $security_tier = 1;
-                        $error_message = $validation;
-                    } elseif ($this->core->validator->is_tier2_warning($validation)) {
-                        $security_tier = 2;
-                        $error_message = $this->core->validator->get_validation_message($validation);
-                    } elseif ($this->core->validator->is_tier3_info($validation)) {
-                        $security_tier = 3;
-                        $error_message = $this->core->validator->get_validation_message($validation);
-                    }
-                }
 
                 $snippets[] = array(
                     'id' => $s->id,
@@ -612,24 +593,11 @@ class Ofast_X_Snippets_Import
                     $status = 'active';
                 }
 
-                // Validate with tiered security (only for PHP snippets)
+                // Code Snippets plugin approach: no validation during import preview.
+                // Safety is enforced at activation time by test_snippet_code().
                 $is_safe = true;
                 $security_tier = 0;
                 $error_message = null;
-                if ($language === 'php' && !empty($code)) {
-                    $validation = $this->core->validator->validate_php_code($code);
-                    if ($this->core->validator->is_hard_error($validation)) {
-                        $is_safe = false;
-                        $security_tier = 1;
-                        $error_message = $validation;
-                    } elseif ($this->core->validator->is_tier2_warning($validation)) {
-                        $security_tier = 2;
-                        $error_message = $this->core->validator->get_validation_message($validation);
-                    } elseif ($this->core->validator->is_tier3_info($validation)) {
-                        $security_tier = 3;
-                        $error_message = $this->core->validator->get_validation_message($validation);
-                    }
-                }
 
                 $snippets[] = array(
                     'id' => $post->ID,
@@ -724,7 +692,7 @@ class Ofast_X_Snippets_Import
 
                 $insert_data = array(
                     'name' => sanitize_text_field($snippet->name) . ' (from Code Snippets)',
-                    'description' => (isset($snippet->desc) ? sanitize_textarea_field($snippet->desc) : '') . $import_notes,
+                    'description' => (isset($snippet->desc) ? sanitize_textarea_field($snippet->desc) : ''),
                     'code' => $snippet_code,
                     'language' => $mapped['language'],
                     'scope' => $mapped['scope'],
@@ -797,7 +765,7 @@ class Ofast_X_Snippets_Import
 
                 $wpdb->insert($table, array(
                     'name' => sanitize_text_field($post->post_title) . ' (from WPCode)',
-                    'description' => sanitize_textarea_field($post->post_excerpt) . $import_notes,
+                    'description' => sanitize_textarea_field($post->post_excerpt),
                     'code' => $code,
                     'language' => $language,
                     'scope' => 'global',
@@ -822,7 +790,7 @@ class Ofast_X_Snippets_Import
 
         $message = "Imported {$imported} snippet(s) from {$plugin}";
         if ($skipped > 0) {
-            $message .= ", skipped {$skipped} (duplicates/errors)";
+            $message .= ", skipped {$skipped} (duplicates)";
         }
 
         wp_send_json_success(array('message' => $message, 'imported' => $imported, 'skipped' => $skipped));

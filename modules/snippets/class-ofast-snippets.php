@@ -60,11 +60,12 @@ class Ofast_X_Snippets
             add_filter('home_url', array($this, 'add_safe_mode_query_var'));
         }
 
-        // Execute active snippets on plugins_loaded (priority 99) — late enough for
-        // Ofast-X to be fully loaded, but early enough that snippet-registered hooks
-        // (e.g. add_action('init', ...)) still fire at their default priority.
-        // Run snippets early enough that they can still attach later
-        // plugins_loaded callbacks, matching Code Snippets behavior more closely.
+        // Execute active snippets on plugins_loaded at priority 1.
+        // WARNING: Priority 1 runs snippets very early — before many plugins are
+        // fully loaded. This can cause fatal errors if snippets depend on other
+        // plugins (e.g., function_exists/class_exists checks may fail).
+        // Consider raising the priority (e.g., 99) or adding defensive checks
+        // in execute_snippets (function_exists/class_exists guards) if needed.
         add_action('plugins_loaded', array($this, 'execute_snippets'), 1);
 
         // Auto-purge trashed snippets via daily cron

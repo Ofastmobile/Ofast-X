@@ -164,10 +164,7 @@ class Ofast_X_Snippets_Admin
             $active_class = $snippet->active ? 'button-primary' : '';
 
             // Add error indicator if validation fails
-            if ($has_warning) {
-                $has_error = false;
-            }
-            $error_indicator = $has_error ? ' <span style="color: red; font-size: 16px;" title="' . esc_attr($validation_result) . '">● </span>' : '';
+            $error_indicator = $has_error ? ' <span style="color: red; font-size: 16px;" title="' . esc_attr($validation_message) . '">● </span>' : '';
 
             if ($has_warning) {
                 $error_indicator = ' <span style="color: #d97706; font-size: 16px;" title="' . esc_attr($validation_message) . '">â— </span>';

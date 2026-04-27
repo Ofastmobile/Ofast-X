@@ -186,12 +186,16 @@ class Ofast_X_Setup_Wizard {
 
         $settings = $detected[$source];
 
+        if (!class_exists('Ofast_X_SMTP')) {
+            require_once OFAST_X_PLUGIN_DIR . 'modules/smtp/class-ofast-smtp.php';
+        }
+
         // Save to Ofast SMTP options
         update_option('ofast_smtp_enabled', 1);
         update_option('ofast_smtp_host', $settings['host']);
         update_option('ofast_smtp_port', $settings['port']);
         update_option('ofast_smtp_username', $settings['username']);
-        update_option('ofast_smtp_password', $settings['password']);
+        update_option('ofast_smtp_password', Ofast_X_SMTP::encrypt_password($settings['password']));
         update_option('ofast_smtp_encryption', $settings['encryption']);
         update_option('ofast_smtp_from_email', $settings['from_email']);
         update_option('ofast_smtp_from_name', $settings['from_name']);

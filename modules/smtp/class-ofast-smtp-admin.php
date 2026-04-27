@@ -1020,8 +1020,9 @@ class Ofast_X_SMTP_Admin
             $html .= '<td>' . esc_html($log->to_email) . '</td>';
             $html .= '<td>' . esc_html($log->subject) . '</td>';
             $html .= '<td>';
-            if (in_array($status, array('success', 'sent'), true)) {
-                $html .= '<span style="background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 3px; font-size: 11px;">SUCCESS</span>';
+            if (in_array($status, array('success', 'sent', 'resent'), true)) {
+                $label = $status === 'resent' ? 'RESENT' : 'SUCCESS';
+                $html .= '<span style="background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 3px; font-size: 11px;">' . $label . '</span>';
             } elseif ($status === 'failed') {
                 $html .= '<span style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 3px; font-size: 11px;">FAILED</span>';
             } elseif ($status === 'rate_limited') {
@@ -1037,9 +1038,12 @@ class Ofast_X_SMTP_Admin
             } else {
                 $html .= '<span style="color: #6b7280; font-style: italic;">No content stored</span>';
             }
-            if ($status === 'failed' && !empty($log->body)) {
+            // Resend: available for failed and delivered rows (when body is stored).
+            // Pending is excluded — the row may still be in-flight and resending would duplicate it.
+            $can_resend = in_array($status, array('failed', 'success', 'sent', 'resent'), true);
+            if ($can_resend && !empty($log->body)) {
                 $html .= ' <a href="' . wp_nonce_url(admin_url('admin.php?page=ofast-smtp&tab=log&resend=' . $log->id), 'resend_email') . '" class="button button-small">Resend</a>';
-            } elseif ($status === 'failed') {
+            } elseif ($can_resend) {
                 $html .= '<span style="color: #6b7280; font-style: italic; margin-left: 8px;">Resend unavailable</span>';
             }
             $html .= '</td>';
@@ -2359,10 +2363,10 @@ class Ofast_X_SMTP_Admin
         add_action('wp_mail_failed', array($smtp_instance, 'mark_email_failed'), 10, 1);
 
         if ($result) {
-            // Update original log entry status to 'resent' instead of creating a new entry
+            // Mark as 'resent' so it's visually distinguishable from the original successful send
             $wpdb->update(
                 $table_name,
-                array('status' => 'success', 'error_message' => 'Resent successfully'),
+                array('status' => 'resent', 'error_message' => 'Manually resent by admin'),
                 array('id' => $log_id)
             );
             Ofast_X_Toast::add('Email resent successfully to ' . esc_html($log->to_email), 'success');

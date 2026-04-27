@@ -89,6 +89,12 @@ class Ofast_X_SMTP
             wp_schedule_event(time(), 'daily', 'ofast_smtp_cleanup_logs');
         }
         add_action('ofast_smtp_cleanup_logs', array($this, 'cleanup_old_logs'));
+
+        // Hourly sweep to close stale pending rows (requests that died before hooks fired)
+        if (!wp_next_scheduled('ofast_smtp_sweep_pending')) {
+            wp_schedule_event(time(), 'hourly', 'ofast_smtp_sweep_pending');
+        }
+        add_action('ofast_smtp_sweep_pending', array($this, 'sweep_stale_pending'));
     }
 
     /**
@@ -149,6 +155,7 @@ class Ofast_X_SMTP
         $phpmailer->isSMTP();
         $phpmailer->Host = $this->get_smtp_option('host', '');
         $phpmailer->Port = $this->get_smtp_option('port', 587);
+        $phpmailer->Timeout = 10;
         $phpmailer->SMTPAuth = true;
         $phpmailer->Username = $this->get_smtp_option('username', '');
         $phpmailer->Password = $this->decrypt_password($this->get_smtp_option('password', ''));
@@ -295,6 +302,7 @@ class Ofast_X_SMTP
             $mail->isSMTP();
             $mail->Host = $host;
             $mail->Port = $port;
+            $mail->Timeout = 10;
             $mail->SMTPAuth = true;
             $mail->Username = $username;
             $mail->Password = $password;
@@ -503,11 +511,14 @@ class Ofast_X_SMTP
         // Get recipient(s) as string
         $to = is_array($args['to']) ? implode(', ', $args['to']) : $args['to'];
 
+        $log_body_content = (bool) get_option('ofast_smtp_log_body_content', false);
+
         // Insert log entry
         $wpdb->insert($table_name, array(
             'to_email' => sanitize_text_field($to),
             'subject' => sanitize_text_field($args['subject']),
-            'body' => $args['message'],
+            // Respect the content logging setting and omit bodies when disabled.
+            'body' => $log_body_content ? $args['message'] : '',
             'headers' => is_array($args['headers']) ? serialize($args['headers']) : $args['headers'],
             'status' => 'pending',
             'sent_at' => current_time('mysql')
@@ -692,7 +703,33 @@ class Ofast_X_SMTP
     }
 
     /**
-     * Cleanup old SMTP logs to prevent database bloat.
+     * Sweep stale pending rows — runs hourly.
+     * Marks pending log rows older than the configured timeout as failed,
+     * covering requests that died or timed out before the success/fail hook fired.
+     */
+    public function sweep_stale_pending()
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_smtp_log';
+        $pending_timeout_minutes = (int) apply_filters('ofast_smtp_pending_timeout_minutes', 10);
+
+        if ($pending_timeout_minutes <= 0) {
+            return;
+        }
+
+        $wpdb->query($wpdb->prepare(
+            "UPDATE {$table}
+            SET status = 'failed',
+                error_message = %s
+            WHERE status = 'pending'
+            AND sent_at < DATE_SUB(NOW(), INTERVAL %d MINUTE)",
+            sprintf('Marked failed: remained pending for more than %d minutes (request likely timed out or was aborted).', $pending_timeout_minutes),
+            $pending_timeout_minutes
+        ));
+    }
+
+    /**
+     * Cleanup old SMTP logs to prevent database bloat — runs daily.
      */
     public function cleanup_old_logs()
     {

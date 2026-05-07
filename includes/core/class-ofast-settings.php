@@ -21,8 +21,7 @@ class Ofast_X_Settings
         add_action('admin_init', array($this, 'handle_save'));
         add_action('admin_init', array($this, 'handle_reset'));
 
-        // Add Chat Us menu at very end (priority 9999)
-        add_action('admin_menu', array($this, 'add_chat_menu'), 9999);
+
         
         // Reorder Ofast X submenus alphabetically (after all menus added)
         add_action('admin_menu', array($this, 'reorder_ofast_submenus'), 99999);
@@ -136,51 +135,11 @@ class Ofast_X_Settings
         exit;
     }
 
-    /**
-     * Add Chat Us menu at the very end
-     */
-    public function add_chat_menu()
-    {
-        global $submenu;
-        $whatsapp_number = '2348069727836';
-        $message = urlencode('Hello! I need help with Ofast X plugin.');
-        $whatsapp_url = 'https://wa.me/' . $whatsapp_number . '?text=' . $message;
 
-        $submenu['ofast-dashboard'][] = array(
-            'Chat Us',
-            'read',
-            $whatsapp_url
-        );
-        add_action('admin_head', array($this, 'chat_button_styles'));
-    }
-
-    /**
-     * Chat Button Styles
-     */
-    public function chat_button_styles()
-    {
-    ?>
-        <style>
-            #adminmenu .toplevel_page_ofast-dashboard ul.wp-submenu a[href*="wa.me"] {
-                background: #25D366 !important;
-                color: #fff !important;
-                border-radius: 10px !important;
-                padding: 8px 12px !important;
-                margin: 5px 10px !important;
-                display: inline-block !important;
-                transition: all 0.3s ease !important;
-            }
-            #adminmenu .toplevel_page_ofast-dashboard ul.wp-submenu a[href*="wa.me"]:hover {
-                background: #128C7E !important;
-                transform: scale(1.05) !important;
-            }
-        </style>
-    <?php
-    }
 
     /**
      * Reorder Ofast X submenus alphabetically
-     * Settings stays at top, Chat Us stays at bottom
+     * Settings stays at top
      */
     public function reorder_ofast_submenus()
     {
@@ -194,20 +153,14 @@ class Ofast_X_Settings
         
         // Extract special items
         $settings_item = null;
-        $chat_item = null;
         $other_items = array();
         
         foreach ($ofast_submenu as $key => $item) {
-            $menu_title = $item[0] ?? '';
             $menu_slug = $item[2] ?? '';
             
             // Settings is first submenu (same slug as parent)
             if ($menu_slug === 'ofast-dashboard') {
                 $settings_item = $item;
-            }
-            // Chat Us has WhatsApp URL
-            elseif (strpos($menu_slug, 'wa.me') !== false) {
-                $chat_item = $item;
             }
             else {
                 $other_items[] = $item;
@@ -219,7 +172,7 @@ class Ofast_X_Settings
             return strcasecmp($a[0], $b[0]);
         });
         
-        // Rebuild submenu: Settings first, sorted items, Chat Us last
+        // Rebuild submenu: Settings first, sorted items
         $new_submenu = array();
         
         if ($settings_item) {
@@ -228,10 +181,6 @@ class Ofast_X_Settings
         
         foreach ($other_items as $item) {
             $new_submenu[] = $item;
-        }
-        
-        if ($chat_item) {
-            $new_submenu[] = $chat_item;
         }
         
         $submenu['ofast-dashboard'] = $new_submenu;

@@ -1052,10 +1052,10 @@ class Ofast_X_Email_Admin
                         <h3 style="margin: 0 0 15px 0; font-size: 16px;">Template Style</h3>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;" id="ofast-style-selector">
                             <label class="ofast-style-label"
-                                style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'modern' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'modern' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;">
+                                style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'modern' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: <?php echo ofast_toolkit_is_pro() ? 'pointer' : 'not-allowed'; ?>; background: <?php echo $style === 'modern' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;<?php echo ! ofast_toolkit_is_pro() ? ' opacity: 0.6;' : ''; ?>">
                                 <input type="radio" name="template_style" value="modern" <?php checked($style, 'modern'); ?>
-                                    style="display: none;">
-                                <div style="font-weight: 600;">Modern</div>
+                                    style="display: none;" <?php ofast_toolkit_pro_disabled(); ?>>
+                                <div style="font-weight: 600;">Modern <?php ofast_toolkit_pro_badge(); ?></div>
                                 <small style="color: #64748b;">Gradient header</small>
                             </label>
                             <label class="ofast-style-label"
@@ -1073,10 +1073,10 @@ class Ofast_X_Email_Admin
                                 <small style="color: #64748b;">Clean, no header</small>
                             </label>
                             <label class="ofast-style-label"
-                                style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'custom' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'custom' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;">
+                                style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'custom' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: <?php echo ofast_toolkit_is_pro() ? 'pointer' : 'not-allowed'; ?>; background: <?php echo $style === 'custom' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;<?php echo ! ofast_toolkit_is_pro() ? ' opacity: 0.6;' : ''; ?>">
                                 <input type="radio" name="template_style" value="custom" <?php checked($style, 'custom'); ?>
-                                    style="display: none;">
-                                <div style="font-weight: 600;">Custom</div>
+                                    style="display: none;" <?php ofast_toolkit_pro_disabled(); ?>>
+                                <div style="font-weight: 600;">Custom <?php ofast_toolkit_pro_badge(); ?></div>
                                 <small style="color: #64748b;">Your own HTML</small>
                             </label>
                         </div>
@@ -3151,9 +3151,9 @@ class Ofast_X_Email_Admin
                                                         <h3 style="margin: 0 0 15px 0; font-size: 14px;">Template Style</h3>
                                                         <div style="display: flex; gap: 10px;">
                                                             <label
-                                                                style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'modern' ? '#6366f1' : '#ddd'; ?>; border-radius: 8px; cursor: pointer; background: <?php echo $style === 'modern' ? '#f0f6fc' : '#fff'; ?>;">
-                                                                <input type="radio" name="template_style" value="modern" <?php checked($style, 'modern'); ?> style="display: none;">
-                                                                <div style="font-weight: 600;">Modern</div>
+                                                                style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'modern' ? '#6366f1' : '#ddd'; ?>; border-radius: 8px; cursor: <?php echo ofast_toolkit_is_pro() ? 'pointer' : 'not-allowed'; ?>; background: <?php echo $style === 'modern' ? '#f0f6fc' : '#fff'; ?>;<?php echo ! ofast_toolkit_is_pro() ? ' opacity: 0.6;' : ''; ?>">
+                                                                <input type="radio" name="template_style" value="modern" <?php checked($style, 'modern'); ?> style="display: none;" <?php ofast_toolkit_pro_disabled(); ?>>
+                                                                <div style="font-weight: 600;">Modern <?php ofast_toolkit_pro_badge(); ?></div>
                                                                 <small style="color: #666;">Gradient header</small>
                                                             </label>
                                                             <label
@@ -3594,7 +3594,12 @@ class Ofast_X_Email_Admin
      */
     private function save_template_settings()
     {
-        update_option('ofast_email_template_style', sanitize_text_field($_POST['template_style'] ?? 'modern'));
+        // Server-side Pro guard: force 'classic' for free users trying to use Pro templates
+        $template_style = sanitize_text_field($_POST['template_style'] ?? 'modern');
+        if ( ! ofast_toolkit_is_pro() && in_array($template_style, array('modern', 'custom'), true)) {
+            $template_style = 'classic';
+        }
+        update_option('ofast_email_template_style', $template_style);
         update_option('ofast_email_primary_color', sanitize_hex_color($_POST['primary_color'] ?? '#6366f1'));
         update_option('ofast_email_accent_color', sanitize_hex_color($_POST['accent_color'] ?? '#10b981'));
         update_option('ofast_email_bg_color', sanitize_hex_color($_POST['bg_color'] ?? '#f8fafc'));

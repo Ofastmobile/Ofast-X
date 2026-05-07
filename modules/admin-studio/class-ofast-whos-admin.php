@@ -663,6 +663,45 @@ class Ofast_X_Whos_Admin
             wp_die('Insufficient permissions');
         }
 
+        // Pro gate — show upgrade notice for free users
+        if (!ofast_toolkit_is_pro()) {
+            ?>
+            <div class="wrap">
+                <div style="max-width:700px;margin:40px auto;background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.10);overflow:hidden;">
+                    <div style="background:linear-gradient(135deg,#6366f1 0%,#4f46e5 100%);padding:36px 40px;text-align:center;">
+                        <span class="dashicons dashicons-lock" style="font-size:48px;width:48px;height:48px;color:#fff;opacity:.9;"></span>
+                        <h2 style="margin:16px 0 8px;color:#fff;font-size:26px;font-weight:700;">White Label — Premium Feature</h2>
+                        <p style="margin:0;color:rgba(255,255,255,.85);font-size:15px;">Customize your brand identity, admin footer, and more.</p>
+                    </div>
+                    <div style="padding:36px 40px;">
+                        <ul style="list-style:none;margin:0 0 28px;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <?php foreach ([
+                                ['dashicons-businessperson', 'Designer Details branding'],
+                                ['dashicons-editor-kitchensink', 'Custom admin footer text'],
+                                ['dashicons-update', 'Plugin update control'],
+                                ['dashicons-lock', 'Admin page protection'],
+                                ['dashicons-menu-alt3', 'Menu editor'],
+                                ['dashicons-admin-generic', 'Dark/Light mode toggle'],
+                            ] as $item): ?>
+                            <li style="display:flex;align-items:center;gap:10px;background:#f8fafc;border-radius:10px;padding:12px 14px;">
+                                <span class="dashicons <?php echo esc_attr($item[0]); ?>" style="color:#6366f1;font-size:18px;width:18px;height:18px;"></span>
+                                <span style="font-size:13px;font-weight:500;color:#374151;"><?php echo esc_html($item[1]); ?></span>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <div style="text-align:center;">
+                            <a href="<?php echo esc_url(function_exists('ofast_x_fs') ? ofast_x_fs()->get_upgrade_url() : '#'); ?>"
+                               style="display:inline-block;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;padding:14px 36px;border-radius:30px;font-weight:600;font-size:15px;text-decoration:none;box-shadow:0 4px 14px rgba(99,102,241,.35);transition:all .2s;">
+                                Upgrade to Pro &rarr;
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php
+            return;
+        }
+
         $name = get_option('ofast_designer_name', '');
         $email = get_option('ofast_designer_email', '');
         $website = get_option('ofast_designer_website', '');
@@ -939,18 +978,7 @@ class Ofast_X_Whos_Admin
                                     <?php esc_html_e('Menu Editor', 'ofast-x'); ?>
                                 </button>
 
-                                <div class="ofast-subtab-nav-actions"
-                                    style="margin-top: auto; padding-top: 16px; border-top: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 8px;">
-                                    <button type="submit" name="ofast_white_label_save" class="ofast-btn-primary"
-                                        style="width: 100%; justify-content: center;">
-                                        Save Settings
-                                    </button>
-                                    <button type="submit" name="ofast_white_label_reset" class="ofast-btn-reset"
-                                        style="width: 100%; justify-content: center;"
-                                        onclick="return confirm('Reset ALL White Label settings to defaults?');">
-                                        Reset to Default
-                                    </button>
-                                </div>
+                                <!-- Save/Reset buttons moved below subtab layout for full visibility on all screens -->
                             </nav>
 
                             <!-- Right: sub-tab content panels -->
@@ -1262,6 +1290,17 @@ class Ofast_X_Whos_Admin
 
                             </div><!-- .ofast-subtab-panels -->
                         </div><!-- .ofast-subtab-layout -->
+
+                        <div class="ofast-form-actions"
+                            style="margin-top: 24px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                            <button type="submit" name="ofast_white_label_save" class="ofast-btn-primary">
+                                Save Settings
+                            </button>
+                            <button type="submit" name="ofast_white_label_reset" class="ofast-btn-reset"
+                                onclick="return confirm('Reset ALL White Label settings to defaults?');">
+                                Reset to Default
+                            </button>
+                        </div>
 
                     </div>
 

@@ -375,11 +375,16 @@ class Ofast_X_Spam_Protection
             update_option('ofast_spam_protect_login', isset($_POST['protect_login']) ? 1 : 0);
 
             // New extended options
-            update_option('ofast_spam_force_all_forms', isset($_POST['force_all_forms']) ? 1 : 0);
-            update_option('ofast_spam_honeypot_enabled', isset($_POST['honeypot_enabled']) ? 1 : 0);
+            // Server-side Pro guard: force honeypot always on, block Pro settings for free users
+            if ( ! ofast_toolkit_is_pro() ) {
+                update_option('ofast_spam_honeypot_enabled', 1);
+            } else {
+                update_option('ofast_spam_force_all_forms', isset($_POST['force_all_forms']) ? 1 : 0);
+                update_option('ofast_spam_honeypot_enabled', isset($_POST['honeypot_enabled']) ? 1 : 0);
+                update_option('ofast_spam_fail_open', isset($_POST['spam_fail_open']) ? 1 : 0);
+            }
             update_option('ofast_spam_protect_woocommerce', isset($_POST['protect_woocommerce']) ? 1 : 0);
             update_option('ofast_spam_protect_tutor', isset($_POST['protect_tutor']) ? 1 : 0);
-            update_option('ofast_spam_fail_open', isset($_POST['spam_fail_open']) ? 1 : 0);
 
             // Save Math CAPTCHA settings
             if (class_exists('Ofast_X_Math_Captcha')) {
@@ -781,7 +786,7 @@ class Ofast_X_Spam_Protection
                         
                         <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;">
                         
-                        <h2>Advanced Protection</h2>
+                        <h2>Advanced Protection <?php ofast_toolkit_pro_badge(); ?></h2>
                         <table class="form-table">
                             <tr>
                                 <th>
@@ -789,10 +794,10 @@ class Ofast_X_Spam_Protection
                                 </th>
                                 <td>
                                     <label class="ofast-toggle">
-                                        <input type="checkbox" name="force_all_forms" value="1" <?php checked($force_all_forms); ?>>
+                                        <input type="checkbox" name="force_all_forms" value="1" <?php checked($force_all_forms); ?> <?php ofast_toolkit_pro_disabled(); ?>>
                                         <span class="ofast-slider"></span>
                                     </label>
-                                    <span class="description" style="vertical-align: middle;"><strong>Universal protection</strong> - Injects into ALL login/registration forms (WooCommerce, Tutor LMS, BuddyPress, MemberPress, etc.)</span>
+                                    <span class="description" style="vertical-align: middle;"><strong>Universal protection</strong> - Injects into ALL login/registration forms (WooCommerce, Tutor LMS, BuddyPress, MemberPress, etc.) <?php ofast_toolkit_pro_badge(); ?></span>
                                     <p class="description" style="margin-top: 8px; color: #666;">Uses JavaScript injection to add protection to any form, even from plugins that don't have native integration.</p>
                                 </td>
                             </tr>
@@ -802,10 +807,10 @@ class Ofast_X_Spam_Protection
                                 </th>
                                 <td>
                                     <label class="ofast-toggle">
-                                        <input type="checkbox" name="honeypot_enabled" value="1" <?php checked($honeypot_enabled); ?>>
+                                        <input type="checkbox" name="honeypot_enabled" value="1" checked disabled>
                                         <span class="ofast-slider"></span>
                                     </label>
-                                    <span class="description" style="vertical-align: middle;">Enable honeypot as backup protection</span>
+                                    <span class="description" style="vertical-align: middle;">Honeypot protection is always enabled</span>
                                     <p class="description" style="margin-top: 8px; color: #666;">Adds invisible fields that only bots fill. Works when Turnstile/reCAPTCHA fails (network issues, blocked, etc.)</p>
                                 </td>
                             </tr>
@@ -815,10 +820,10 @@ class Ofast_X_Spam_Protection
                                 </th>
                                 <td>
                                     <label class="ofast-toggle">
-                                        <input type="checkbox" name="spam_fail_open" value="1" <?php checked($fail_open); ?>>
+                                        <input type="checkbox" name="spam_fail_open" value="1" <?php checked($fail_open); ?> <?php ofast_toolkit_pro_disabled(); ?>>
                                         <span class="ofast-slider"></span>
                                     </label>
-                                    <span class="description" style="vertical-align: middle;">Allow submissions when provider API is unreachable</span>
+                                    <span class="description" style="vertical-align: middle;">Allow submissions when provider API is unreachable <?php ofast_toolkit_pro_badge(); ?></span>
                                     <p class="description" style="margin-top: 8px; color: #666;">
                                         If disabled, forms will be blocked when Turnstile/reCAPTCHA cannot be verified due to network/API errors.
                                     </p>

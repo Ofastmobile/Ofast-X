@@ -511,7 +511,7 @@ class Ofast_X_SMTP
         // Get recipient(s) as string
         $to = is_array($args['to']) ? implode(', ', $args['to']) : $args['to'];
 
-        $log_body_content = (bool) get_option('ofast_smtp_log_body_content', false);
+        $log_body_content = (bool) get_option('ofast_smtp_log_body_content', true);
 
         // Insert log entry
         $wpdb->insert($table_name, array(

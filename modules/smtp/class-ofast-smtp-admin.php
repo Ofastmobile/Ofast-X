@@ -595,7 +595,7 @@ class Ofast_X_SMTP_Admin
                             </div>
                         </div>
 
-                        <a href="https://ofastshop.com/ofast-x" target="_blank"
+                        <a href="<?php echo esc_url( function_exists('ofast_x_fs') ? ofast_x_fs()->get_upgrade_url() : '#' ); ?>"
                             style="display: inline-block; background: #f59e0b; color: #fff; padding: 12px 30px; border-radius: 30px; font-weight: 600; text-decoration: none; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3);">Get
                             Ofast Toolkit Pro &rarr;</a>
                     </div>
@@ -989,7 +989,7 @@ class Ofast_X_SMTP_Admin
                         style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
                 </div>
 
-                <?php if (get_option('ofast_smtp_log_body_content', false)): ?>
+                <?php if (get_option('ofast_smtp_log_body_content', true)): ?>
                     <div
                         style="padding: 10px 20px; background: #fffbeb; border-bottom: 1px solid #f59e0b; color: #92400e; font-size: 13px;">
                         <strong>🔒 Security Notice:</strong> Sensitive patterns (passwords, tokens, API keys) have been
@@ -1034,7 +1034,7 @@ class Ofast_X_SMTP_Admin
             $html .= '<td>' . esc_html($log->sent_at) . '</td>';
             $html .= '<td>';
             if (!empty($log->body)) {
-                $html .= '<button type="button" class="button button-small preview-email" data-id="' . esc_attr($log->id) . '" data-content="' . esc_attr(base64_encode($log->body)) . '">Preview</button>';
+                $html .= '<button type="button" class="button button-small preview-email" style="border-radius: 25px;" data-id="' . esc_attr($log->id) . '" data-content="' . esc_attr(base64_encode($log->body)) . '">Preview</button>';
             } else {
                 $html .= '<span style="color: #6b7280; font-style: italic;">No content stored</span>';
             }
@@ -1042,7 +1042,7 @@ class Ofast_X_SMTP_Admin
             // Pending is excluded — the row may still be in-flight and resending would duplicate it.
             $can_resend = in_array($status, array('failed', 'success', 'sent', 'resent'), true);
             if ($can_resend && !empty($log->body)) {
-                $html .= ' <a href="' . wp_nonce_url(admin_url('admin.php?page=ofast-smtp&tab=log&resend=' . $log->id), 'resend_email') . '" class="button button-small">Resend</a>';
+                $html .= ' <a href="' . wp_nonce_url(admin_url('admin.php?page=ofast-smtp&tab=log&resend=' . $log->id), 'resend_email') . '" class="button button-small" style="border-radius: 25px;">Resend</a>';
             } elseif ($can_resend) {
                 $html .= '<span style="color: #6b7280; font-style: italic; margin-left: 8px;">Resend unavailable</span>';
             }
@@ -1546,10 +1546,10 @@ class Ofast_X_SMTP_Admin
                             <th>Enable Rate Limiting</th>
                             <td>
                                 <label class="ofast-toggle">
-                                    <input type="checkbox" name="rate_limit_enabled" value="1" <?php checked(get_option('ofast_smtp_rate_limit_enabled', true)); ?>>
+                                    <input type="checkbox" name="rate_limit_enabled" value="1" <?php checked(get_option('ofast_smtp_rate_limit_enabled', true)); ?> <?php ofast_toolkit_pro_disabled(); ?>>
                                     <span class="ofast-slider"></span>
                                 </label>
-                                <span style="vertical-align: middle;">Limit emails per minute</span>
+                                <span style="vertical-align: middle;">Limit emails per minute <?php ofast_toolkit_pro_badge(); ?></span>
                             </td>
                         </tr>
                         <tr>
@@ -1576,17 +1576,16 @@ class Ofast_X_SMTP_Admin
                     <tr>
                         <th>Log Email Content</th>
                         <td>
-                            <?php $log_body = get_option('ofast_smtp_log_body_content', false); ?>
+                            <?php $log_body = get_option('ofast_smtp_log_body_content', true); ?>
                             <label class="ofast-toggle">
-                                <input type="checkbox" name="log_body_content" value="1" <?php checked($log_body); ?>>
+                                <input type="checkbox" name="log_body_content" value="1" <?php checked($log_body); ?> <?php ofast_toolkit_pro_disabled(); ?>>
                                 <span class="ofast-slider"></span>
                             </label>
-                            <span style="vertical-align: middle;">Store email body content in logs</span>
+                            <span style="vertical-align: middle;">Store email body content in logs <?php ofast_toolkit_pro_badge(); ?></span>
                             <p class="description">
-                                <strong>Recommended: Leave off</strong> — Only metadata (to, subject, status, timestamp)
-                                will be logged.<br>
+                                <strong>Enabled by default</strong> — Email body content is stored for Preview &amp; Resend functionality.<br>
                                 When enabled, sensitive patterns (passwords, tokens, API keys) are automatically filtered before
-                                storage.
+                                storage. Disable to log only metadata (to, subject, status, timestamp).
                             </p>
                         </td>
                     </tr>
@@ -1616,10 +1615,10 @@ class Ofast_X_SMTP_Admin
                         <th>Enable Fallback</th>
                         <td>
                             <label class="ofast-toggle">
-                                <input type="checkbox" name="fallback_enabled" id="fallback_enabled" value="1" <?php checked(get_option('ofast_smtp_fallback_enabled', false)); ?>>
+                                <input type="checkbox" name="fallback_enabled" id="fallback_enabled" value="1" <?php checked(get_option('ofast_smtp_fallback_enabled', false)); ?> <?php ofast_toolkit_pro_disabled(); ?>>
                                 <span class="ofast-slider"></span>
                             </label>
-                            <span style="color: #64748b;">Automatically retry failed emails via backup server</span>
+                            <span style="color: #64748b;">Automatically retry failed emails via backup server <?php ofast_toolkit_pro_badge(); ?></span>
                         </td>
                     </tr>
                 </table>
@@ -1689,10 +1688,10 @@ class Ofast_X_SMTP_Admin
                         <th>Enable Health Reports</th>
                         <td>
                             <label class="ofast-toggle">
-                                <input type="checkbox" name="health_report_enabled" value="1" <?php checked(get_option('ofast_smtp_health_report_enabled', false)); ?>>
+                                <input type="checkbox" name="health_report_enabled" value="1" <?php checked(get_option('ofast_smtp_health_report_enabled', false)); ?> <?php ofast_toolkit_pro_disabled(); ?>>
                                 <span class="ofast-slider"></span>
                             </label>
-                            <span style="color: #64748b;">Send digest email to admin</span>
+                            <span style="color: #64748b;">Send digest email to admin <?php ofast_toolkit_pro_badge(); ?></span>
                         </td>
                     </tr>
                     <tr>
@@ -2110,48 +2109,52 @@ class Ofast_X_SMTP_Admin
             }
         }
 
-        // Rate limiting settings
-        update_option('ofast_smtp_rate_limit_enabled', isset($_POST['rate_limit_enabled']) ? 1 : 0);
-        update_option('ofast_smtp_rate_limit', max(1, intval($_POST['rate_limit'] ?? 60)));
+        // ── Pro-only settings (skip saving if not licensed) ──
+        if (ofast_toolkit_is_pro()) {
+            // Rate limiting settings
+            update_option('ofast_smtp_rate_limit_enabled', isset($_POST['rate_limit_enabled']) ? 1 : 0);
+            update_option('ofast_smtp_rate_limit', max(1, intval($_POST['rate_limit'] ?? 60)));
 
-        // Email logging security settings
-        $log_body_content = isset($_POST['log_body_content']) ? 1 : 0;
-        update_option('ofast_smtp_log_body_content', $log_body_content);
+            // Email logging security settings
+            $log_body_content = isset($_POST['log_body_content']) ? 1 : 0;
+            update_option('ofast_smtp_log_body_content', $log_body_content);
 
-        // Log retention settings
+            // Fallback SMTP settings
+            update_option('ofast_smtp_fallback_enabled', isset($_POST['fallback_enabled']) ? 1 : 0);
+            update_option('ofast_smtp_fallback_host', sanitize_text_field(wp_unslash($_POST['fallback_host'] ?? '')));
+            update_option('ofast_smtp_fallback_port', intval($_POST['fallback_port'] ?? 587));
+            update_option('ofast_smtp_fallback_encryption', sanitize_text_field(wp_unslash($_POST['fallback_encryption'] ?? 'tls')));
+            update_option('ofast_smtp_fallback_username', sanitize_text_field(wp_unslash($_POST['fallback_username'] ?? '')));
+            update_option('ofast_smtp_fallback_from_email', sanitize_email(wp_unslash($_POST['fallback_from_email'] ?? '')));
+            update_option('ofast_smtp_fallback_from_name', sanitize_text_field(wp_unslash($_POST['fallback_from_name'] ?? '')));
+
+            // Fallback password (same mask-detection as primary)
+            $fallback_password = wp_unslash($_POST['fallback_password'] ?? '');
+            if (!empty($fallback_password) && $fallback_password !== '••••••••') {
+                $encrypted_fb = Ofast_X_SMTP::encrypt_password($fallback_password);
+                update_option('ofast_smtp_fallback_password', $encrypted_fb);
+            }
+
+            // Health report settings
+            update_option('ofast_smtp_health_report_enabled', isset($_POST['health_report_enabled']) ? 1 : 0);
+            $valid_hr_intervals = array('daily', 'weekly', 'monthly');
+            $hr_interval = sanitize_text_field($_POST['health_report_interval'] ?? 'weekly');
+            if (!in_array($hr_interval, $valid_hr_intervals)) {
+                $hr_interval = 'weekly';
+            }
+            update_option('ofast_smtp_health_report_interval', $hr_interval);
+
+            // Notify listeners when body logging is enabled (for optional auditing).
+            if ($log_body_content) {
+                do_action('ofast_smtp_body_logging_enabled', get_current_user_id(), current_time('mysql'));
+            }
+        }
+
+        // Log retention settings (free feature)
         $retention_days = intval($_POST['log_retention_days'] ?? 90);
         $retention_days = max(0, min(3650, $retention_days));
         update_option('ofast_smtp_log_retention_days', $retention_days);
 
-        // Fallback SMTP settings
-        update_option('ofast_smtp_fallback_enabled', isset($_POST['fallback_enabled']) ? 1 : 0);
-        update_option('ofast_smtp_fallback_host', sanitize_text_field(wp_unslash($_POST['fallback_host'] ?? '')));
-        update_option('ofast_smtp_fallback_port', intval($_POST['fallback_port'] ?? 587));
-        update_option('ofast_smtp_fallback_encryption', sanitize_text_field(wp_unslash($_POST['fallback_encryption'] ?? 'tls')));
-        update_option('ofast_smtp_fallback_username', sanitize_text_field(wp_unslash($_POST['fallback_username'] ?? '')));
-        update_option('ofast_smtp_fallback_from_email', sanitize_email(wp_unslash($_POST['fallback_from_email'] ?? '')));
-        update_option('ofast_smtp_fallback_from_name', sanitize_text_field(wp_unslash($_POST['fallback_from_name'] ?? '')));
-
-        // Fallback password (same mask-detection as primary)
-        $fallback_password = wp_unslash($_POST['fallback_password'] ?? '');
-        if (!empty($fallback_password) && $fallback_password !== '••••••••') {
-            $encrypted_fb = Ofast_X_SMTP::encrypt_password($fallback_password);
-            update_option('ofast_smtp_fallback_password', $encrypted_fb);
-        }
-
-        // Health report settings
-        update_option('ofast_smtp_health_report_enabled', isset($_POST['health_report_enabled']) ? 1 : 0);
-        $valid_hr_intervals = array('daily', 'weekly', 'monthly');
-        $hr_interval = sanitize_text_field($_POST['health_report_interval'] ?? 'weekly');
-        if (!in_array($hr_interval, $valid_hr_intervals)) {
-            $hr_interval = 'weekly';
-        }
-        update_option('ofast_smtp_health_report_interval', $hr_interval);
-
-        // Notify listeners when body logging is enabled (for optional auditing).
-        if ($log_body_content) {
-            do_action('ofast_smtp_body_logging_enabled', get_current_user_id(), current_time('mysql'));
-        }
         Ofast_X_Toast::add('SMTP settings saved successfully!', 'success');
     }
 

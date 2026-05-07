@@ -418,6 +418,11 @@ class Ofast_X_Admin_Tweaks
             return;
         }
 
+        // Server-side Pro guard: block entire Admin Studio saves for free users
+        if ( ! ofast_toolkit_is_pro() ) {
+            return;
+        }
+
         $settings = array(
             'show_post_id' => isset($_POST['ofast_show_post_id']) ? 1 : 0,
             'infinity_media' => isset($_POST['ofast_infinity_media']) ? 1 : 0,
@@ -684,7 +689,18 @@ class Ofast_X_Admin_Tweaks
                 </div>
             </div>
 
-            <form method="post" action="">
+            <?php if ( ! ofast_toolkit_is_pro() ): ?>
+                <div class="ofast-card" style="text-align: center; padding: 60px 40px; margin-bottom: 20px;">
+                    <span class="dashicons dashicons-lock" style="font-size: 48px; width: 48px; height: 48px; color: #6366f1; margin-bottom: 15px;"></span>
+                    <h2 style="margin: 0 0 10px;">Admin Studio is a Pro Feature <?php ofast_toolkit_pro_badge(); ?></h2>
+                    <p style="color: #64748b; max-width: 500px; margin: 0 auto 20px;">Upgrade to Ofast Toolkit Pro to customize your WordPress admin dashboard, security settings, and modules.</p>
+                    <?php if ( function_exists('ofast_toolkit_fs') ): ?>
+                        <a href="<?php echo ofast_toolkit_fs()->get_upgrade_url(); ?>" class="button button-primary button-large">Upgrade to Pro</a>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+
+            <form method="post" action="" <?php echo ! ofast_toolkit_is_pro() ? 'style="opacity: 0.5; pointer-events: none;"' : ''; ?>>
                 <?php wp_nonce_field('ofast_admin_tweaks_save', 'admin_tweaks_nonce'); ?>
                 <?php wp_nonce_field('ofast_admin_url_change_' . get_current_user_id(), 'admin_url_nonce'); ?>
                 

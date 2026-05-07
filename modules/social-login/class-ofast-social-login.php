@@ -761,6 +761,11 @@ class Ofast_X_Social_Login
 
         $secret_save_failed = false;
 
+        // Server-side Pro guard: block entire Social Login saves for free users
+        if ( ! ofast_toolkit_is_pro() ) {
+            return;
+        }
+
         // Enable/disable
         update_option('ofast_social_login_enabled', isset($_POST['social_login_enabled']));
 
@@ -1030,7 +1035,18 @@ class Ofast_X_Social_Login
 
             <?php settings_errors('ofast_social_login'); ?>
 
-            <form method="post">
+            <?php if ( ! ofast_toolkit_is_pro() ): ?>
+                <div class="ofast-card" style="text-align: center; padding: 60px 40px; margin-bottom: 20px;">
+                    <span class="dashicons dashicons-lock" style="font-size: 48px; width: 48px; height: 48px; color: #6366f1; margin-bottom: 15px;"></span>
+                    <h2 style="margin: 0 0 10px;">Social Login is a Pro Feature <?php ofast_toolkit_pro_badge(); ?></h2>
+                    <p style="color: #64748b; max-width: 500px; margin: 0 auto 20px;">Upgrade to Ofast Toolkit Pro to enable Google and Facebook social login on your site.</p>
+                    <?php if ( function_exists('ofast_toolkit_fs') ): ?>
+                        <a href="<?php echo ofast_toolkit_fs()->get_upgrade_url(); ?>" class="button button-primary button-large">Upgrade to Pro</a>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+
+            <form method="post" <?php echo ! ofast_toolkit_is_pro() ? 'style="opacity: 0.5; pointer-events: none;"' : ''; ?>>
                 <?php wp_nonce_field('ofast_social_login_settings', 'ofast_social_nonce'); ?>
 
                 <!-- Tabs Navigation -->

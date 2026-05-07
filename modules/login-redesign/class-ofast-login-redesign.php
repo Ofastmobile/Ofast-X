@@ -260,6 +260,11 @@ class Ofast_X_Login_Redesign
 
         // Common settings
         update_option('ofast_login_redesign_enabled', isset($post['enabled']));
+
+        // Server-side Pro guard: force 'simple' template for free users
+        if ( ! ofast_toolkit_is_pro() && in_array($template, array('two-column', 'modern-dark'), true)) {
+            $template = 'simple';
+        }
         update_option('ofast_login_template', $template);
         update_option('ofast_login_logo_url', esc_url_raw($post['logo_url'] ?? ''));
         update_option('ofast_login_logo_width', absint($post['logo_width'] ?? 84));
@@ -1009,21 +1014,21 @@ class Ofast_X_Login_Redesign
                         </label>
 
                         <!-- Two-Column Template -->
-                        <label class="ofast-template-card <?php echo $current_template === 'two-column' ? 'active' : ''; ?>">
-                            <input type="radio" name="template" value="two-column" <?php checked($current_template, 'two-column'); ?> style="display:none;">
+                        <label class="ofast-template-card <?php echo $current_template === 'two-column' ? 'active' : ''; ?><?php echo ! ofast_toolkit_is_pro() ? ' ofast-pro-locked' : ''; ?>" <?php echo ! ofast_toolkit_is_pro() ? 'style="opacity:0.6;cursor:not-allowed;"' : ''; ?>>
+                            <input type="radio" name="template" value="two-column" <?php checked($current_template, 'two-column'); ?> style="display:none;" <?php ofast_toolkit_pro_disabled(); ?>>
                             <div class="preview-box" style="display: flex; padding: 0;">
                                 <div style="width: 50%; height: 100%; background: linear-gradient(135deg, #6366f1 0%, #764ba2 100%);"></div>
                                 <div style="width: 50%; height: 100%; background: #fff; display: flex; align-items: center; justify-content: center;">
                                     <div style="width: 30px; height: 40px; background: #f1f5f9; border-radius: 3px; border: 1px solid #e2e8f0;"></div>
                                 </div>
                             </div>
-                            <strong>Two-Column</strong>
+                            <strong>Two-Column <?php ofast_toolkit_pro_badge(); ?></strong>
                             <p>Modern split-screen with side panel</p>
                         </label>
 
                         <!-- Modern Dark Template -->
-                        <label class="ofast-template-card <?php echo $current_template === 'modern-dark' ? 'active' : ''; ?>">
-                            <input type="radio" name="template" value="modern-dark" <?php checked($current_template, 'modern-dark'); ?> style="display:none;">
+                        <label class="ofast-template-card <?php echo $current_template === 'modern-dark' ? 'active' : ''; ?><?php echo ! ofast_toolkit_is_pro() ? ' ofast-pro-locked' : ''; ?>" <?php echo ! ofast_toolkit_is_pro() ? 'style="opacity:0.6;cursor:not-allowed;"' : ''; ?>>
+                            <input type="radio" name="template" value="modern-dark" <?php checked($current_template, 'modern-dark'); ?> style="display:none;" <?php ofast_toolkit_pro_disabled(); ?>>
                             <div class="preview-box" style="background: #0f172a; border: 1px solid #334155; position: relative; display: flex; align-items: center; justify-content: center;">
                                 <div style="width: 60px; height: 80px; background: rgba(30, 41, 59, 0.8); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; align-items: center; justify-content: center;">
                                     <div style="width: 20px; height: 2px; background: #3b82f6; margin-bottom: 4px; border-radius: 2px;"></div>
@@ -1032,7 +1037,7 @@ class Ofast_X_Login_Redesign
                                     <div style="width: 30px; height: 6px; background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%); border-radius: 2px;"></div>
                                 </div>
                             </div>
-                            <strong>Modern Dark</strong>
+                            <strong>Modern Dark <?php ofast_toolkit_pro_badge(); ?></strong>
                             <p>Glassmorphism on dark background</p>
                         </label>
                     </div>

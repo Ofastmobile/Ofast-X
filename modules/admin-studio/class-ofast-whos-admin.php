@@ -690,7 +690,7 @@ class Ofast_X_Whos_Admin
                             <?php endforeach; ?>
                         </ul>
                         <div style="text-align:center;">
-                            <a href="<?php echo esc_url(function_exists('ofast_x_fs') ? ofast_x_fs()->get_upgrade_url() : '#'); ?>"
+                            <a href="<?php echo esc_url(ofast_toolkit_get_upgrade_url()); ?>" target="_blank"
                                style="display:inline-block;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;padding:14px 36px;border-radius:30px;font-weight:600;font-size:15px;text-decoration:none;box-shadow:0 4px 14px rgba(99,102,241,.35);transition:all .2s;">
                                 Upgrade to Pro &rarr;
                             </a>

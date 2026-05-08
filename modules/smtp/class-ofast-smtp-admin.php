@@ -418,7 +418,8 @@ class Ofast_X_SMTP_Admin
                         style="color: #16a34a; font-size: 22px; width: 22px; height: 22px;"></span>
                     <div>
                         <div style="font-size: 20px; font-weight: 700; color: #15803d;">
-                            <?php echo number_format($lifetime['success']); ?></div>
+                            <?php echo number_format($lifetime['success']); ?>
+                        </div>
                         <div style="font-size: 12px; color: #4ade80;">Lifetime Delivered</div>
                     </div>
                 </div>
@@ -428,7 +429,8 @@ class Ofast_X_SMTP_Admin
                         style="color: #dc2626; font-size: 22px; width: 22px; height: 22px;"></span>
                     <div>
                         <div style="font-size: 20px; font-weight: 700; color: #b91c1c;">
-                            <?php echo number_format($lifetime['failed']); ?></div>
+                            <?php echo number_format($lifetime['failed']); ?>
+                        </div>
                         <div style="font-size: 12px; color: #f87171;">Lifetime Failed</div>
                     </div>
                 </div>
@@ -439,7 +441,8 @@ class Ofast_X_SMTP_Admin
                             style="color: #d97706; font-size: 22px; width: 22px; height: 22px;"></span>
                         <div>
                             <div style="font-size: 20px; font-weight: 700; color: #b45309;">
-                                <?php echo number_format($lifetime['fallback_used']); ?></div>
+                                <?php echo number_format($lifetime['fallback_used']); ?>
+                            </div>
                             <div style="font-size: 12px; color: #fbbf24;">Fallback Recoveries</div>
                         </div>
                     </div>
@@ -536,7 +539,8 @@ class Ofast_X_SMTP_Admin
                                 <div
                                     style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;">
                                     <span class="dashicons dashicons-clock"
-                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span>
+                                </div>
                                 <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Email Scheduling<br>Quota
                                     Management</span>
                             </div>
@@ -544,7 +548,8 @@ class Ofast_X_SMTP_Admin
                                 <div
                                     style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;">
                                     <span class="dashicons dashicons-chart-pie"
-                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span>
+                                </div>
                                 <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Email Report<br>and
                                     Tracking</span>
                             </div>
@@ -552,7 +557,8 @@ class Ofast_X_SMTP_Admin
                                 <div
                                     style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;">
                                     <span class="dashicons dashicons-paperclip"
-                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span>
+                                </div>
                                 <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Email
                                     Log<br>Attachment</span>
                             </div>
@@ -560,14 +566,16 @@ class Ofast_X_SMTP_Admin
                                 <div
                                     style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;">
                                     <span class="dashicons dashicons-smartphone"
-                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span>
+                                </div>
                                 <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">SMS<br>Notification</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <div
                                     style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;">
                                     <span class="dashicons dashicons-update-alt"
-                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span>
+                                </div>
                                 <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Auto Resend<br>Failed
                                     Emails</span>
                             </div>
@@ -575,7 +583,8 @@ class Ofast_X_SMTP_Admin
                                 <div
                                     style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;">
                                     <span class="dashicons dashicons-email"
-                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span>
+                                </div>
                                 <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Microsoft 365 /<br>Office
                                     365</span>
                             </div>
@@ -583,19 +592,21 @@ class Ofast_X_SMTP_Admin
                                 <div
                                     style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;">
                                     <span class="dashicons dashicons-cloud"
-                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span>
+                                </div>
                                 <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Amazon SES<br>Support</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <div
                                     style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px; display: flex;">
                                     <span class="dashicons dashicons-email-alt"
-                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span></div>
+                                        style="color: #fbbf24; font-size: 16px; width: 16px; height: 16px;"></span>
+                                </div>
                                 <span style="font-size: 12px; font-weight: 500; line-height: 1.3;">Zoho Mail<br>Support</span>
                             </div>
                         </div>
 
-                        <a href="<?php echo esc_url( function_exists('ofast_x_fs') ? ofast_x_fs()->get_upgrade_url() : '#' ); ?>"
+                        <a href="<?php echo esc_url(ofast_toolkit_get_upgrade_url()); ?>" target="_blank"
                             style="display: inline-block; background: #f59e0b; color: #fff; padding: 12px 30px; border-radius: 30px; font-weight: 600; text-decoration: none; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3);">Get
                             Ofast Toolkit Pro &rarr;</a>
                     </div>
@@ -1546,10 +1557,11 @@ class Ofast_X_SMTP_Admin
                             <th>Enable Rate Limiting</th>
                             <td>
                                 <label class="ofast-toggle">
-                                    <input type="checkbox" name="rate_limit_enabled" value="1" <?php checked(get_option('ofast_smtp_rate_limit_enabled', true)); ?> <?php ofast_toolkit_pro_disabled(); ?>>
+                                    <input type="checkbox" name="rate_limit_enabled" value="1" <?php checked(get_option('ofast_smtp_rate_limit_enabled', true)); ?>         <?php ofast_toolkit_pro_disabled(); ?>>
                                     <span class="ofast-slider"></span>
                                 </label>
-                                <span style="vertical-align: middle;">Limit emails per minute <?php ofast_toolkit_pro_badge(); ?></span>
+                                <span style="vertical-align: middle;">Limit emails per minute
+                                    <?php ofast_toolkit_pro_badge(); ?></span>
                             </td>
                         </tr>
                         <tr>
@@ -1578,12 +1590,13 @@ class Ofast_X_SMTP_Admin
                         <td>
                             <?php $log_body = get_option('ofast_smtp_log_body_content', true); ?>
                             <label class="ofast-toggle">
-                                <input type="checkbox" name="log_body_content" value="1" <?php checked($log_body); ?> <?php ofast_toolkit_pro_disabled(); ?>>
+                                <input type="checkbox" name="log_body_content" value="1" <?php checked($log_body); ?>>
                                 <span class="ofast-slider"></span>
                             </label>
-                            <span style="vertical-align: middle;">Store email body content in logs <?php ofast_toolkit_pro_badge(); ?></span>
+                            <span style="vertical-align: middle;">Store email body content in logs</span>
                             <p class="description">
-                                <strong>Enabled by default</strong> — Email body content is stored for Preview &amp; Resend functionality.<br>
+                                <strong>Enabled by default</strong> — Email body content is stored for Preview &amp; Resend
+                                functionality.<br>
                                 When enabled, sensitive patterns (passwords, tokens, API keys) are automatically filtered before
                                 storage. Disable to log only metadata (to, subject, status, timestamp).
                             </p>
@@ -1615,10 +1628,11 @@ class Ofast_X_SMTP_Admin
                         <th>Enable Fallback</th>
                         <td>
                             <label class="ofast-toggle">
-                                <input type="checkbox" name="fallback_enabled" id="fallback_enabled" value="1" <?php checked(get_option('ofast_smtp_fallback_enabled', false)); ?> <?php ofast_toolkit_pro_disabled(); ?>>
+                                <input type="checkbox" name="fallback_enabled" id="fallback_enabled" value="1" <?php checked(get_option('ofast_smtp_fallback_enabled', false)); ?>         <?php ofast_toolkit_pro_disabled(); ?>>
                                 <span class="ofast-slider"></span>
                             </label>
-                            <span style="color: #64748b;">Automatically retry failed emails via backup server <?php ofast_toolkit_pro_badge(); ?></span>
+                            <span style="color: #64748b;">Automatically retry failed emails via backup server
+                                <?php ofast_toolkit_pro_badge(); ?></span>
                         </td>
                     </tr>
                 </table>
@@ -1688,7 +1702,7 @@ class Ofast_X_SMTP_Admin
                         <th>Enable Health Reports</th>
                         <td>
                             <label class="ofast-toggle">
-                                <input type="checkbox" name="health_report_enabled" value="1" <?php checked(get_option('ofast_smtp_health_report_enabled', false)); ?> <?php ofast_toolkit_pro_disabled(); ?>>
+                                <input type="checkbox" name="health_report_enabled" value="1" <?php checked(get_option('ofast_smtp_health_report_enabled', false)); ?>         <?php ofast_toolkit_pro_disabled(); ?>>
                                 <span class="ofast-slider"></span>
                             </label>
                             <span style="color: #64748b;">Send digest email to admin <?php ofast_toolkit_pro_badge(); ?></span>

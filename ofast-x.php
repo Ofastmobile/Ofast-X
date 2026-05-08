@@ -21,49 +21,9 @@ if (!defined('ABSPATH')) {
 }
 
 // ========================================================================================
-// FREEMIUS INTEGRATION
+// LICENSING: Self-hosted licensing via ofastshop.com API
+// (loaded in ofast_x_init_plugin → class-ofast-licensing.php)
 // ========================================================================================
-if ( ! function_exists( 'ofast_x_fs' ) ) {
-    // Create a helper function for easy SDK access.
-    function ofast_x_fs() {
-        global $ofast_x_fs;
-
-        if ( ! isset( $ofast_x_fs ) ) {
-            // Include Freemius SDK.
-            require_once dirname( __FILE__ ) . '/freemius/start.php';
-
-            $ofast_x_fs = fs_dynamic_init( array(
-                'id'                  => '28554',
-                'slug'                => 'ofast-toolkit',
-                'type'                => 'plugin',
-                'public_key'          => 'pk_a858c5af50c20fafb178ef5e16241',
-                'is_premium'          => true,
-                'premium_suffix'      => 'Premium',
-                // If your plugin is a serviceware, set this option to false.
-                'has_premium_version' => true,
-                'has_addons'          => false,
-                'has_paid_plans'      => true,
-                'is_org_compliant'    => false,
-                'trial'               => array(
-                    'days'               => 3,
-                    'is_require_payment' => false,
-                ),
-                'menu'                => array(
-                    'slug'           => 'ofast-dashboard',
-                    'first-path'     => 'admin.php?page=ofast-setup-wizard',
-                    'support'        => false,
-                ),
-            ) );
-        }
-
-        return $ofast_x_fs;
-    }
-
-    // Init Freemius.
-    ofast_x_fs();
-    // Signal that SDK was initiated.
-    do_action( 'ofast_x_fs_loaded' );
-}
 
 /**
  * Plugin Constants
@@ -73,6 +33,11 @@ define('OFAST_X_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('OFAST_X_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('OFAST_X_PLUGIN_BASENAME', plugin_basename(__FILE__));
 define('OFAST_X_PLUGIN_FILE', __FILE__);
+
+// License API endpoint (can be overridden in wp-config.php)
+if (!defined('OFAST_LICENSE_API_URL')) {
+    define('OFAST_LICENSE_API_URL', 'https://ofastshop.com/wp-json/ofast-license/v1');
+}
 
 
 /**

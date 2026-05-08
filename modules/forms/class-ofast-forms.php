@@ -804,13 +804,13 @@ class Ofast_X_Forms
             </div>
 
             <nav class="ofast-tabs-nav">
-                <a href="#" class="ofast-tab <?php echo $current_tab === 'all-forms' ? 'active' : ''; ?>" data-tab="all-forms">
+                <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-forms&tab=all-forms')); ?>" class="ofast-tab <?php echo $current_tab === 'all-forms' ? 'active' : ''; ?>">
                     <span class="dashicons dashicons-list-view"></span> All Forms
                 </a>
-                <a href="#" class="ofast-tab <?php echo $current_tab === 'add-new' ? 'active' : ''; ?>" data-tab="add-new">
+                <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-forms&tab=add-new')); ?>" class="ofast-tab <?php echo $current_tab === 'add-new' ? 'active' : ''; ?>">
                     <span class="dashicons dashicons-plus-alt2"></span> Add New
                 </a>
-                <a href="#" class="ofast-tab <?php echo $current_tab === 'submissions' ? 'active' : ''; ?>" data-tab="submissions">
+                <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-forms&tab=submissions')); ?>" class="ofast-tab <?php echo $current_tab === 'submissions' ? 'active' : ''; ?>">
                     <span class="dashicons dashicons-email-alt"></span> Submissions
                 </a>
             </nav>
@@ -833,41 +833,7 @@ class Ofast_X_Forms
             </div>
         </div>
 
-        <script>
-            jQuery(document).ready(function($) {
-                // Tab Switching
-                $('.ofast-tab').on('click', function(e) {
-                    e.preventDefault();
-                    var target = $(this).data('tab');
-                    
-                    $('.ofast-tab').removeClass('active');
-                    $(this).addClass('active');
-                    
-                    $('.ofast-tab-content').removeClass('active');
-                    $('#tab-' + target).addClass('active');
-                    
-                    var url = new URL(window.location);
-                    url.searchParams.set('tab', target);
-                    window.history.pushState({}, '', url);
-                });
-
-                // Handle external links to tabs (e.g., Edit links)
-                $('body').on('click', '.ofast-switch-tab', function(e) {
-                    var target = $(this).data('tab');
-                    if(target) {
-                        e.preventDefault();
-                        $('.ofast-tab[data-tab="' + target + '"]').click();
-                    }
-                });
-
-                // Handle browser back button
-                window.onpopstate = function() {
-                    var urlParams = new URLSearchParams(window.location.search);
-                    var tab = urlParams.get('tab') || 'all-forms';
-                    $('.ofast-tab[data-tab="' + tab + '"]').click();
-                };
-            });
-        </script>        <?php
+        <?php
     }
 
     /**
@@ -880,8 +846,16 @@ class Ofast_X_Forms
         <!-- Replaced content for tabbed view -->
         <div class="ofast-forms-list">
             <?php if (empty($forms)): ?>
-                <div style="padding: 40px; text-align: center;">
-                    <?php echo Ofast_X_Toast::render('No forms yet. <a href="#" class="ofast-switch-tab" data-tab="add-new">Create your first form</a>', 'info'); ?>
+                <div style="padding: 60px 40px; text-align: center;">
+                    <div style="width: 64px; height: 64px; margin: 0 auto 20px; background: #f1f5f9; border-radius: 16px; display: flex; align-items: center; justify-content: center;">
+                        <span class="dashicons dashicons-feedback" style="font-size: 32px; width: 32px; height: 32px; color: #94a3b8;"></span>
+                    </div>
+                    <h3 style="margin: 0 0 8px; color: #1e293b; font-size: 18px; font-weight: 600;">No forms yet</h3>
+                    <p style="margin: 0 0 20px; color: #64748b; font-size: 14px;">Create your first contact form to start collecting submissions.</p>
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-forms&tab=add-new')); ?>" class="button button-primary">
+                        <span class="dashicons dashicons-plus-alt2" style="margin-right: 4px; font-size: 14px; width: 14px; height: 14px; line-height: 22px;"></span>
+                        Create Form
+                    </a>
                 </div>
             <?php else: ?>
                 <!-- Scrollable Table Container -->
@@ -903,12 +877,7 @@ class Ofast_X_Forms
                                     <td style="font-weight: 500; color: #1e293b;">
                                         <?php echo esc_html($form->title); ?>
                                         <div class="row-actions">
-                                            <a href="#" class="ofast-switch-tab" data-tab="add-new" onclick="
-                                                var url = new URL(window.location);
-                                                url.searchParams.set('form_id', '<?php echo $form->id; ?>');
-                                                window.history.pushState({}, '', url);
-                                                location.reload(); 
-                                            ">Edit</a> | 
+                                            <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-forms&tab=add-new&id=' . $form->id)); ?>" style="color:#6366f1;">Edit</a> |
                                             <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-forms&action=delete&id=' . $form->id), 'delete_form_' . $form->id); ?>" 
                                                class="delete" onclick="return confirm('Are you sure?');">Delete</a>
                                         </div>
@@ -940,8 +909,9 @@ class Ofast_X_Forms
                                     </td>
                                     <td style="color: #64748b;"><?php echo date('M j, Y', strtotime($form->created_at)); ?></td>
                                     <td>
-                                        <a href="<?php echo admin_url('admin.php?page=ofast-forms&tab=add-new&id=' . $form->id); ?>" style="color:#6366f1; font-weight:500;">Edit</a> |
-                                        <a href="#" class="delete-form" data-id="<?php echo $form->id; ?>" style="color:#ef4444;">Delete</a>
+                                        <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-forms&tab=add-new&id=' . $form->id)); ?>" style="color:#6366f1; font-weight:500;">Edit</a> |
+                                        <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-forms&action=delete&id=' . $form->id), 'delete_form_' . $form->id); ?>" 
+                                           class="delete" onclick="return confirm('Delete this form? This cannot be undone.')">Delete</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

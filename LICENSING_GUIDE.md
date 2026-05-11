@@ -1,73 +1,71 @@
 # Ofast Toolkit: Licensing & Pro-Feature Strategy
 
-This guide outlines how to implement a professional "Granular Licensing" model for Ofast Toolkit. 
+This guide outlines the "Freemium" licensing model for Ofast Toolkit.
 
 ## 1. The Strategy: "Single Binary"
 Instead of two plugins, we use one plugin that "unlocks" features based on a license key.
-*   **Standard Users:** See all modules but can only use basic features.
-*   **Pro Users:** Unlock advanced settings, automation, and premium UI.
+*   **Free Users:** See all modules but can only use basic features.
+*   **Pro Users:** Enter a license key purchased from ofastshop.com to unlock premium features.
 
 ---
 
 ## 2. Technical Architecture
 
 ### A. The Central "Gatekeeper"
-Every licensing check should go through a single, central helper function. This makes it easy to swap Freemius for another system later if needed.
+Every licensing check goes through `ofast_toolkit_is_pro()` in `includes/core/class-ofast-licensing.php`.
 
 ```php
 /**
  * Check if the user has a valid Pro license.
- * 
- * @return boolean True if Pro, False if Free.
+ * Freemium model: Free features always available, Pro requires a license key.
+ *
+ * @return boolean True if Pro (licensed), False if free.
  */
 function ofast_toolkit_is_pro() {
-    // This is the "Master Switch"
-    // In development, we can force this to true for testing.
-    return false; 
+    if ( ofast_toolkit_has_valid_license() ) {
+        return true;
+    }
+    return false;
 }
 ```
 
 ### B. UI Layer: The "Padlock" Pattern
 For features inside a module that are Pro-only, follow this pattern:
 1.  **Visible but Disabled:** Show the setting so users know it exists (and want it!).
-2.  **The Padlock:** Add a dashicon-lock next to the label.
-3.  **The Upsell:** If they try to click it, show a sleek modal or a "Get Pro" link.
+2.  **The Padlock:** Use `ofast_toolkit_pro_badge()` next to the label.
+3.  **The Disabled Attribute:** Use `ofast_toolkit_pro_disabled()` on the input/select.
 
 **Example (HTML/PHP):**
 ```html
 <label>
     Auto-Resend Failed Emails
-    <?php if ( ! ofast_toolkit_is_pro() ) : ?>
-        <span class="dashicons dashicons-lock ofast-pro-badge"></span>
-    <?php endif; ?>
+    <?php ofast_toolkit_pro_badge(); ?>
 </label>
-<input type="checkbox" <?php disabled( ! ofast_toolkit_is_pro() ); ?>>
+<input type="checkbox" <?php ofast_toolkit_pro_disabled(); ?>>
 ```
 
 ### C. Logic Layer: Guarding Actions
-Never trust the UI alone. You must also "lock" the backend logic so a hacker can't just bypass the locked button.
+Never trust the UI alone. You must also guard the backend save handler so a crafted POST can't bypass the locked button.
 
 ```php
 public function handle_save() {
-    // Only save the Pro setting if the user actually has Pro
-    if ( isset( $_POST['pro_feature_x'] ) && ! ofast_toolkit_is_pro() ) {
-        return; 
+    // Block entire save if module is Pro-only and user is Free
+    if ( ! ofast_toolkit_is_pro() ) {
+        return;
     }
 }
 ```
 
 ---
 
-## 3. Recommended "Pro" Boundaries
+## 3. Licensing Flow
 
-Based on your current modules, here is the suggested "Granular" split:
-
-| Module | Free Version Includes | Pro Version Adds |
-| :--- | :--- | :--- |
-| **SMTP** | Basic SMTP, Email Log (7 days) | Auto-Resend, Email Attachments, Email Reporting |
-| **Forms** | Simple Fields, Basic Email Notification | Multi-step Forms, Conditional Logic, File Uploads |
-| **Security** | Honeypot, Standard CAPTCHA | Advanced Hardening, Emergency Access Lock |
-| **Admin** | Basic Admin Tweaks | **FULL White Label**, Custom Login URL |
+1.  **Purchase:** User buys on ofastshop.com → license key auto-generated and emailed.
+2.  **Activate:** User enters key in WP Admin → Ofast Toolkit → License page.
+3.  **Server Validates:** Key is checked against `ofastshop.com/wp-json/ofast-license/v1/activate`.
+4.  **Pro Unlocked:** `ofast_toolkit_is_pro()` returns `true`, all Pro features available.
+5.  **Periodic Re-validation:** Monthly cron re-validates the license against the server.
+6.  **One Key = One Site:** Deactivate from one site before activating on another.
 
 ---
 
@@ -75,10 +73,21 @@ Based on your current modules, here is the suggested "Granular" split:
 *   **Ease of Management:** 100% of your code is in one folder.
 *   **Frictionless Upgrade:** Users don't have to delete the free plugin to install the Pro one. They just "unlock" it.
 *   **Marketing:** Having "locked" features in the free version is the best way to get users to upgrade.
+*   **Security:** Server-side HMAC signature + domain binding prevents forgery and sharing.
 
 ---
 
-## 5. Next Implementation Steps
-1.  **Helper File:** Create `includes/core/class-ofast-licensing.php`.
-2.  **Initialize SDK:** Add the Freemius SDK hooks.
-3.  **Audit UI:** Scroll through every settings page and add "Padlock" checks to the Pro candidates.
+## 5. Recommended "Pro" Boundaries
+
+| Module | Free Features | Pro Features |
+| :--- | :--- | :--- |
+| **SMTP** | Basic SMTP, Email Log | Rate Limiting, Fallback Host, Health Reports |
+| **Spam Protection** | Honeypot, Basic CAPTCHA | Force All Forms, Fail Open |
+| **Login Redesign** | Simple Template | Two-Column, Modern Dark templates |
+| **Email Template** | Classic, Minimal styles | Modern, Custom styles |
+| **Admin Studio** | — | Entire module (Admin Tweaks) |
+| **White Label** | — | Entire module |
+| **Social Login** | — | Entire module |
+| **Forms** | Full access | — |
+| **Redirects** | Full access | — |
+| **Snippets** | Full access | — |

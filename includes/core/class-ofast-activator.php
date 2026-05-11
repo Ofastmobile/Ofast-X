@@ -39,9 +39,6 @@ class Ofast_X_Activator
 
         // Set redirect flag for first-time activation
         add_option('ofast_x_do_activation_redirect', true);
-
-        // Start 7-day trial on first activation (add_option = only sets if not exists)
-        add_option('ofast_trial_started', time());
     }
 
     /**

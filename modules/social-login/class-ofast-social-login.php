@@ -1021,6 +1021,43 @@ class Ofast_X_Social_Login
             }
         </style>
 
+        <?php if ( ! ofast_toolkit_is_pro() ): ?>
+            <div class="wrap">
+                <div style="max-width:700px;margin:40px auto;background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.10);overflow:hidden;">
+                    <div style="background:linear-gradient(135deg,#6366f1 0%,#4f46e5 100%);padding:36px 40px;text-align:center;">
+                        <span class="dashicons dashicons-lock" style="font-size:48px;width:48px;height:48px;color:#fff;opacity:.9;"></span>
+                        <h2 style="margin:16px 0 8px;color:#fff;font-size:26px;font-weight:700;">Social Login — Premium Feature</h2>
+                        <p style="margin:0;color:rgba(255,255,255,.85);font-size:15px;">Let users sign in with their existing social accounts.</p>
+                    </div>
+                    <div style="padding:36px 40px;">
+                        <ul style="list-style:none;margin:0 0 28px;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <?php foreach ([
+                                ['dashicons-google', 'Google OAuth sign-in'],
+                                ['dashicons-facebook', 'Facebook Login integration'],
+                                ['dashicons-admin-users', 'Auto-register new users'],
+                                ['dashicons-admin-links', 'Link social to existing accounts'],
+                                ['dashicons-admin-customizer', 'Customizable login buttons'],
+                                ['dashicons-shield', 'Secure token-based auth'],
+                            ] as $item): ?>
+                            <li style="display:flex;align-items:center;gap:10px;background:#f8fafc;border-radius:10px;padding:12px 14px;">
+                                <span class="dashicons <?php echo esc_attr($item[0]); ?>" style="color:#6366f1;font-size:18px;width:18px;height:18px;"></span>
+                                <span style="font-size:13px;font-weight:500;color:#374151;"><?php echo esc_html($item[1]); ?></span>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <div style="text-align:center;">
+                            <a href="<?php echo esc_url(ofast_toolkit_get_upgrade_url()); ?>" target="_blank"
+                               style="display:inline-block;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;padding:14px 36px;border-radius:30px;font-weight:600;font-size:15px;text-decoration:none;box-shadow:0 4px 14px rgba(99,102,241,.35);transition:all .2s;">
+                                Upgrade to Pro &rarr;
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php
+            return;
+        endif; ?>
+
         <div class="wrap">
             <!-- Header -->
             <div class="ofast-header">
@@ -1035,18 +1072,7 @@ class Ofast_X_Social_Login
 
             <?php settings_errors('ofast_social_login'); ?>
 
-            <?php if ( ! ofast_toolkit_is_pro() ): ?>
-                <div class="ofast-card" style="text-align: center; padding: 60px 40px; margin-bottom: 20px;">
-                    <span class="dashicons dashicons-lock" style="font-size: 48px; width: 48px; height: 48px; color: #6366f1; margin-bottom: 15px;"></span>
-                    <h2 style="margin: 0 0 10px;">Social Login is a Pro Feature <?php ofast_toolkit_pro_badge(); ?></h2>
-                    <p style="color: #64748b; max-width: 500px; margin: 0 auto 20px;">Upgrade to Ofast Toolkit Pro to enable Google and Facebook social login on your site.</p>
-                    <?php if ( function_exists('ofast_toolkit_fs') ): ?>
-                        <a href="<?php echo ofast_toolkit_fs()->get_upgrade_url(); ?>" class="button button-primary button-large">Upgrade to Pro</a>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
-
-            <form method="post" <?php echo ! ofast_toolkit_is_pro() ? 'style="opacity: 0.5; pointer-events: none;"' : ''; ?>>
+            <form method="post">
                 <?php wp_nonce_field('ofast_social_login_settings', 'ofast_social_nonce'); ?>
 
                 <!-- Tabs Navigation -->

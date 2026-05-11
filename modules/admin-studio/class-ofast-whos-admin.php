@@ -205,6 +205,11 @@ class Ofast_X_Whos_Admin
                 wp_die('Insufficient permissions');
             }
 
+            // Pro guard: White Label is a Pro-only module
+            if ( ! ofast_toolkit_is_pro() ) {
+                return;
+            }
+
             // Reset all White Label settings
             delete_option('ofast_designer_name');
             delete_option('ofast_designer_email');
@@ -247,6 +252,11 @@ class Ofast_X_Whos_Admin
 
         if (!current_user_can('manage_options')) {
             wp_die('Insufficient permissions');
+        }
+
+        // Pro guard: White Label is a Pro-only module
+        if ( ! ofast_toolkit_is_pro() ) {
+            return;
         }
 
         // Save Designer Details

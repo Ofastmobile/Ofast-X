@@ -47,17 +47,11 @@ The repository requires that EVERY function, class, and global variable be uniqu
 
 ------------------------------------------
 PATH RECOMMENDATION:
-- Create a "Lite" version for the Repo.
-- Keep the "Full" version private for sale via Freemius.
+- Single binary: One plugin with Free + Pro features.
+- Pro features unlocked via license key from ofastshop.com.
+- See LICENSING_GUIDE.md for full architecture details.
 ------------------------------------------
 
 
 
 
-
-***dont use this, its for pro version***
-if ( ofast_is_pro() ) {
-    // Show the "White Label" and "Advanced Forms"
-} else {
-    // Show a "Locked" icon and a "Upgrade to Pro" button
-}

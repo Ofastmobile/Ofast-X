@@ -786,7 +786,8 @@ class Ofast_X_Email_Admin
         $showing_end = min($offset + $per_page, $total);
         ?>
         <div class="ofast-card">
-            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px;">
+            <div
+                style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px;">
                 <div>
                     <h2 style="margin: 0 0 4px 0;">Email History</h2>
                     <p style="margin: 0; color: #64748b; font-size: 13px;">View sent emails and preview their content.</p>
@@ -851,7 +852,8 @@ class Ofast_X_Email_Admin
                 <!-- Pagination Bar -->
                 <div class="ofast-pagination">
                     <div class="ofast-pagination-info">
-                        Showing <strong><?php echo esc_html($showing_start); ?>–<?php echo esc_html($showing_end); ?></strong> of <strong><?php echo esc_html($total); ?></strong> emails
+                        Showing <strong><?php echo esc_html($showing_start); ?>–<?php echo esc_html($showing_end); ?></strong> of
+                        <strong><?php echo esc_html($total); ?></strong> emails
                     </div>
                     <?php if ($total_pages > 1): ?>
                         <div class="ofast-pagination-pages">
@@ -894,7 +896,8 @@ class Ofast_X_Email_Admin
                     <h3 id="modal-subject" style="margin:0;">Preview</h3>
                     <button type="button" id="close-history-modal" class="button">Close</button>
                 </div>
-                <iframe id="modal-content" style="width:100%; height:500px; border:1px solid #e5e7eb; border-radius:8px;"></iframe>
+                <iframe id="modal-content"
+                    style="width:100%; height:500px; border:1px solid #e5e7eb; border-radius:8px;"></iframe>
             </div>
         </div>
 
@@ -1052,7 +1055,7 @@ class Ofast_X_Email_Admin
                         <h3 style="margin: 0 0 15px 0; font-size: 16px;">Template Style</h3>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;" id="ofast-style-selector">
                             <label class="ofast-style-label"
-                                style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'modern' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: <?php echo ofast_toolkit_is_pro() ? 'pointer' : 'not-allowed'; ?>; background: <?php echo $style === 'modern' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;<?php echo ! ofast_toolkit_is_pro() ? ' opacity: 0.6;' : ''; ?>">
+                                style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'modern' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: <?php echo ofast_toolkit_is_pro() ? 'pointer' : 'not-allowed'; ?>; background: <?php echo $style === 'modern' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;<?php echo !ofast_toolkit_is_pro() ? ' opacity: 0.6;' : ''; ?>">
                                 <input type="radio" name="template_style" value="modern" <?php checked($style, 'modern'); ?>
                                     style="display: none;" <?php ofast_toolkit_pro_disabled(); ?>>
                                 <div style="font-weight: 600;">Modern <?php ofast_toolkit_pro_badge(); ?></div>
@@ -1073,7 +1076,7 @@ class Ofast_X_Email_Admin
                                 <small style="color: #64748b;">Clean, no header</small>
                             </label>
                             <label class="ofast-style-label"
-                                style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'custom' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: <?php echo ofast_toolkit_is_pro() ? 'pointer' : 'not-allowed'; ?>; background: <?php echo $style === 'custom' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;<?php echo ! ofast_toolkit_is_pro() ? ' opacity: 0.6;' : ''; ?>">
+                                style="flex: 1; min-width: 100px; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'custom' ? '#6366f1' : '#e2e8f0'; ?>; border-radius: 8px; cursor: <?php echo ofast_toolkit_is_pro() ? 'pointer' : 'not-allowed'; ?>; background: <?php echo $style === 'custom' ? '#eff6ff' : '#fff'; ?>; transition: all 0.2s;<?php echo !ofast_toolkit_is_pro() ? ' opacity: 0.6;' : ''; ?>">
                                 <input type="radio" name="template_style" value="custom" <?php checked($style, 'custom'); ?>
                                     style="display: none;" <?php ofast_toolkit_pro_disabled(); ?>>
                                 <div style="font-weight: 600;">Custom <?php ofast_toolkit_pro_badge(); ?></div>
@@ -1085,7 +1088,8 @@ class Ofast_X_Email_Admin
                         <div id="ofast-custom-template-wrap"
                             style="margin-top: 15px; display: <?php echo $style === 'custom' ? 'block' : 'none'; ?>;">
                             <p class="description" style="margin: 0 0 10px;">Paste your custom HTML email template below. Use
-                                <code>{{content}}</code> as the placeholder where your email body will be inserted.</p>
+                                <code>{{content}}</code> as the placeholder where your email body will be inserted.
+                            </p>
                             <textarea name="custom_template" id="ofast_custom_template" rows="14"
                                 style="width: 100%; font-family: monospace; font-size: 13px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; background: #1e293b; color: #e2e8f0; resize: vertical;"><?php echo esc_textarea(get_option('ofast_email_custom_template', '')); ?></textarea>
                             <p class="description" style="margin: 8px 0 0; color: #94a3b8;">Tip: Include full HTML structure
@@ -2166,12 +2170,24 @@ class Ofast_X_Email_Admin
 
                     <!-- Right Column - Sidebar -->
                     <div class="ofast-form-sidebar">
-                        <div class="ofast-sidebar-card" style="padding: 0; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer;">
-                            <div id="ofast-emailer-video-wrapper" style="height: 200px; position: relative; display: flex; align-items: center; justify-content: center; background-color: #0f172a; overflow: hidden; margin: 0; padding: 0;" class="ofast-emailer-video-container" data-video-id="0dcd5bLtYs8" tabindex="0" role="button" aria-label="Play setup video">
-                                <img src="https://img.youtube.com/vi/0dcd5bLtYs8/maxresdefault.jpg" onerror="this.src='https://img.youtube.com/vi/0dcd5bLtYs8/hqdefault.jpg';" alt="Emailer Setup Video" style="position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0.7; transition: opacity 0.3s ease;">
-                                <div style="position: absolute; width: 100%; height: 100%; background: linear-gradient(135deg, rgba(30,27,75,0.4) 0%, rgba(76,29,149,0.4) 100%); pointer-events: none;"></div>
-                                <div style="width: 64px; height: 64px; background: #8b5cf6; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 2; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); transition: transform 0.2s ease, background 0.2s ease;" class="ofast-emailer-play-btn">
-                                    <div style="width: 0; height: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-left: 16px solid #fff; margin-left: 6px;"></div>
+                        <div class="ofast-sidebar-card"
+                            style="padding: 0; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer;">
+                            <div id="ofast-emailer-video-wrapper"
+                                style="height: 200px; position: relative; display: flex; align-items: center; justify-content: center; background-color: #0f172a; overflow: hidden; margin: 0; padding: 0;"
+                                class="ofast-emailer-video-container" data-video-id="0dcd5bLtYs8" tabindex="0" role="button"
+                                aria-label="Play setup video">
+                                <img src="https://img.youtube.com/vi/0dcd5bLtYs8/maxresdefault.jpg"
+                                    onerror="this.src='https://img.youtube.com/vi/0dcd5bLtYs8/hqdefault.jpg';"
+                                    alt="Emailer Setup Video"
+                                    style="position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0.7; transition: opacity 0.3s ease;">
+                                <div
+                                    style="position: absolute; width: 100%; height: 100%; background: linear-gradient(135deg, rgba(30,27,75,0.4) 0%, rgba(76,29,149,0.4) 100%); pointer-events: none;">
+                                </div>
+                                <div style="width: 64px; height: 64px; background: #8b5cf6; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 2; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); transition: transform 0.2s ease, background 0.2s ease;"
+                                    class="ofast-emailer-play-btn">
+                                    <div
+                                        style="width: 0; height: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-left: 16px solid #fff; margin-left: 6px;">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2181,6 +2197,7 @@ class Ofast_X_Email_Admin
                             .ofast-emailer-video-container:focus img {
                                 opacity: 0.9 !important;
                             }
+
                             .ofast-emailer-video-container:hover .ofast-emailer-play-btn,
                             .ofast-emailer-video-container:focus .ofast-emailer-play-btn {
                                 transform: scale(1.1);
@@ -2189,8 +2206,8 @@ class Ofast_X_Email_Admin
                         </style>
 
                         <script>
-                            jQuery(document).ready(function($) {
-                                var playVideo = function() {
+                            jQuery(document).ready(function ($) {
+                                var playVideo = function () {
                                     var videoId = $(this).data('video-id');
                                     var iframe = $('<iframe/>', {
                                         'src': 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&rel=0',
@@ -2209,7 +2226,7 @@ class Ofast_X_Email_Admin
                                     $(this).empty().append(iframe);
                                 };
                                 $('#ofast-emailer-video-wrapper').on('click', playVideo);
-                                $('#ofast-emailer-video-wrapper').on('keydown', function(e) {
+                                $('#ofast-emailer-video-wrapper').on('keydown', function (e) {
                                     if (e.keyCode === 13 || e.keyCode === 32) {
                                         e.preventDefault();
                                         playVideo.call(this);
@@ -2252,14 +2269,19 @@ class Ofast_X_Email_Admin
                     <h3 style="margin-top: 0; margin-bottom: 15px;">Select Users Manually (Optional)</h3>
 
                     <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; margin-bottom: 15px;">
-                        <label style="display: flex; align-items: center; gap: 6px; color: #374151; font-size: 13px; font-weight: 500;">
-                            <span class="dashicons dashicons-search" style="font-size: 16px; width: 16px; height: 16px; color: #6366f1;"></span>
-                            <input type="text" id="user-search" placeholder="Search users..." style="border: 1px solid #d1d5db; border-radius: 8px; padding: 7px 12px; font-size: 13px; min-width: 180px;">
+                        <label
+                            style="display: flex; align-items: center; gap: 6px; color: #374151; font-size: 13px; font-weight: 500;">
+                            <span class="dashicons dashicons-search"
+                                style="font-size: 16px; width: 16px; height: 16px; color: #6366f1;"></span>
+                            <input type="text" id="user-search" placeholder="Search users..."
+                                style="border: 1px solid #d1d5db; border-radius: 8px; padding: 7px 12px; font-size: 13px; min-width: 180px;">
                         </label>
 
-                        <label style="display: flex; align-items: center; gap: 6px; color: #374151; font-size: 13px; font-weight: 500;">
+                        <label
+                            style="display: flex; align-items: center; gap: 6px; color: #374151; font-size: 13px; font-weight: 500;">
                             Show
-                            <select id="rows-per-page" style="border: 1px solid #d1d5db; border-radius: 8px; padding: 6px 10px; font-size: 13px; background: #fff; cursor: pointer;">
+                            <select id="rows-per-page"
+                                style="border: 1px solid #d1d5db; border-radius: 8px; padding: 6px 10px; font-size: 13px; background: #fff; cursor: pointer;">
                                 <option value="10">10</option>
                                 <option value="20">20</option>
                                 <option value="50">50</option>
@@ -2270,18 +2292,26 @@ class Ofast_X_Email_Admin
                         </label>
 
                         <!-- Row Range Selector -->
-                        <div style="display: flex; align-items: center; gap: 6px; margin-left: auto; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 8px;">
-                            <span class="dashicons dashicons-screenoptions" style="font-size: 16px; width: 16px; height: 16px; color: #6366f1;"></span>
-                            <input type="text" id="row-range-input" placeholder="e.g. 1-50" style="border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 10px; font-size: 13px; width: 110px; background: #fff;">
-                            <button type="button" id="row-range-select" style="background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s;">
+                        <div
+                            style="display: flex; align-items: center; gap: 6px; margin-left: auto; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 5px 8px;">
+                            <span class="dashicons dashicons-screenoptions"
+                                style="font-size: 16px; width: 16px; height: 16px; color: #6366f1;"></span>
+                            <input type="text" id="row-range-input" placeholder="e.g. 1-50"
+                                style="border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 10px; font-size: 13px; width: 110px; background: #fff;">
+                            <button type="button" id="row-range-select"
+                                style="background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s;">
                                 Select
                             </button>
-                            <button type="button" id="row-range-clear" style="background: #fff; color: #6b7280; border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 10px; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.2s;" title="Clear all selections">
+                            <button type="button" id="row-range-clear"
+                                style="background: #fff; color: #6b7280; border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 10px; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.2s;"
+                                title="Clear all selections">
                                 Clear
                             </button>
                         </div>
                     </div>
-                    <div id="row-range-feedback" style="display: none; margin-bottom: 10px; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; animation: ofastFadeIn 0.3s ease;"></div>
+                    <div id="row-range-feedback"
+                        style="display: none; margin-bottom: 10px; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; animation: ofastFadeIn 0.3s ease;">
+                    </div>
 
                     <div style="overflow-x:auto; margin-top:15px; margin-bottom:10px;">
                         <table class="wp-list-table widefat striped" id="user-table">
@@ -3151,9 +3181,10 @@ class Ofast_X_Email_Admin
                                                         <h3 style="margin: 0 0 15px 0; font-size: 14px;">Template Style</h3>
                                                         <div style="display: flex; gap: 10px;">
                                                             <label
-                                                                style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'modern' ? '#6366f1' : '#ddd'; ?>; border-radius: 8px; cursor: <?php echo ofast_toolkit_is_pro() ? 'pointer' : 'not-allowed'; ?>; background: <?php echo $style === 'modern' ? '#f0f6fc' : '#fff'; ?>;<?php echo ! ofast_toolkit_is_pro() ? ' opacity: 0.6;' : ''; ?>">
+                                                                style="flex: 1; text-align: center; padding: 15px 10px; border: 2px solid <?php echo $style === 'modern' ? '#6366f1' : '#ddd'; ?>; border-radius: 8px; cursor: <?php echo ofast_toolkit_is_pro() ? 'pointer' : 'not-allowed'; ?>; background: <?php echo $style === 'modern' ? '#f0f6fc' : '#fff'; ?>;<?php echo !ofast_toolkit_is_pro() ? ' opacity: 0.6;' : ''; ?>">
                                                                 <input type="radio" name="template_style" value="modern" <?php checked($style, 'modern'); ?> style="display: none;" <?php ofast_toolkit_pro_disabled(); ?>>
-                                                                <div style="font-weight: 600;">Modern <?php ofast_toolkit_pro_badge(); ?></div>
+                                                                <div style="font-weight: 600;">Modern
+                                                                    <?php ofast_toolkit_pro_badge(); ?></div>
                                                                 <small style="color: #666;">Gradient header</small>
                                                             </label>
                                                             <label
@@ -3596,7 +3627,7 @@ class Ofast_X_Email_Admin
     {
         // Server-side Pro guard: force 'classic' for free users trying to use Pro templates
         $template_style = sanitize_text_field($_POST['template_style'] ?? 'modern');
-        if ( ! ofast_toolkit_is_pro() && in_array($template_style, array('modern', 'custom'), true)) {
+        if (!ofast_toolkit_is_pro() && in_array($template_style, array('modern', 'custom'), true)) {
             $template_style = 'classic';
         }
         update_option('ofast_email_template_style', $template_style);

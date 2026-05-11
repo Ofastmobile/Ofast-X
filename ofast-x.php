@@ -39,6 +39,11 @@ if (!defined('OFAST_LICENSE_API_URL')) {
     define('OFAST_LICENSE_API_URL', 'https://ofastshop.com/wp-json/ofast-license/v1');
 }
 
+// Shared API client secret for license server authentication
+if (!defined('OFAST_API_CLIENT_SECRET')) {
+    define('OFAST_API_CLIENT_SECRET', 'ofast_api_2026_Xm9kR7pTn4vBf6yLc1hQd8sEa3uWz5j');
+}
+
 
 /**
  * Activation Hook

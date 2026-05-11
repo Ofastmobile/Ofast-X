@@ -418,10 +418,9 @@ class Ofast_X_Admin_Tweaks
             return;
         }
 
-        // Server-side Pro guard: block entire Admin Studio saves for free users
-        if ( ! ofast_toolkit_is_pro() ) {
-            return;
-        }
+        // Server-side Pro guard: block Modules tab settings for free users
+        // (Interface, Admin Bar, Security tabs are free)
+        $is_pro = ofast_toolkit_is_pro();
 
         $settings = array(
             'show_post_id' => isset($_POST['ofast_show_post_id']) ? 1 : 0,
@@ -438,14 +437,14 @@ class Ofast_X_Admin_Tweaks
             'obfuscate_author_slugs' => isset($_POST['ofast_obfuscate_author_slugs']) ? 1 : 0,
             'obfuscate_emails' => isset($_POST['ofast_obfuscate_emails']) ? 1 : 0,
             'show_registration_date' => isset($_POST['ofast_show_registration_date']) ? 1 : 0,
-            // Admin Modules
-            'enable_user_roles' => isset($_POST['ofast_enable_user_roles']) ? 1 : 0,
-            'enable_whos_admin' => isset($_POST['ofast_enable_whos_admin']) ? 1 : 0,
-            'enable_menu_editor' => isset($_POST['ofast_enable_menu_editor']) ? 1 : 0, // kept for backward compat with existing saved settings
-            'enable_content_ordering' => isset($_POST['ofast_enable_content_ordering']) ? 1 : 0,
-            'enable_admin_url' => isset($_POST['ofast_enable_admin_url']) ? 1 : 0,
-            'enable_admin_design' => isset($_POST['ofast_enable_admin_design']) ? 1 : 0,
-            'enable_content_duplicator' => isset($_POST['ofast_enable_content_duplicator']) ? 1 : 0,
+            // Admin Modules (Pro only — force to 0 for free users)
+            'enable_user_roles' => $is_pro && isset($_POST['ofast_enable_user_roles']) ? 1 : 0,
+            'enable_whos_admin' => $is_pro && isset($_POST['ofast_enable_whos_admin']) ? 1 : 0,
+            'enable_menu_editor' => $is_pro && isset($_POST['ofast_enable_menu_editor']) ? 1 : 0, // kept for backward compat with existing saved settings
+            'enable_content_ordering' => $is_pro && isset($_POST['ofast_enable_content_ordering']) ? 1 : 0,
+            'enable_admin_url' => $is_pro && isset($_POST['ofast_enable_admin_url']) ? 1 : 0,
+            'enable_admin_design' => $is_pro && isset($_POST['ofast_enable_admin_design']) ? 1 : 0,
+            'enable_content_duplicator' => $is_pro && isset($_POST['ofast_enable_content_duplicator']) ? 1 : 0,
         );
         
         // Save Interface Mode
@@ -689,18 +688,7 @@ class Ofast_X_Admin_Tweaks
                 </div>
             </div>
 
-            <?php if ( ! ofast_toolkit_is_pro() ): ?>
-                <div class="ofast-card" style="text-align: center; padding: 60px 40px; margin-bottom: 20px;">
-                    <span class="dashicons dashicons-lock" style="font-size: 48px; width: 48px; height: 48px; color: #6366f1; margin-bottom: 15px;"></span>
-                    <h2 style="margin: 0 0 10px;">Admin Studio is a Pro Feature <?php ofast_toolkit_pro_badge(); ?></h2>
-                    <p style="color: #64748b; max-width: 500px; margin: 0 auto 20px;">Upgrade to Ofast Toolkit Pro to customize your WordPress admin dashboard, security settings, and modules.</p>
-                    <?php if ( function_exists('ofast_toolkit_fs') ): ?>
-                        <a href="<?php echo ofast_toolkit_fs()->get_upgrade_url(); ?>" class="button button-primary button-large">Upgrade to Pro</a>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
-
-            <form method="post" action="" <?php echo ! ofast_toolkit_is_pro() ? 'style="opacity: 0.5; pointer-events: none;"' : ''; ?>>
+            <form method="post" action="">
                 <?php wp_nonce_field('ofast_admin_tweaks_save', 'admin_tweaks_nonce'); ?>
                 <?php wp_nonce_field('ofast_admin_url_change_' . get_current_user_id(), 'admin_url_nonce'); ?>
                 
@@ -725,7 +713,7 @@ class Ofast_X_Admin_Tweaks
                             <span class="dashicons dashicons-shield"></span> Security
                         </div>
                         <div class="ofast-studio-tab" data-target="tab-modules">
-                            <span class="dashicons dashicons-admin-plugins"></span> Modules
+                            <span class="dashicons dashicons-admin-plugins"></span> Modules <?php ofast_toolkit_pro_badge(); ?>
                         </div>
                         
                         <!-- Save Button in Sidebar -->
@@ -945,9 +933,16 @@ class Ofast_X_Admin_Tweaks
                             </div>
                         </div>
 
-                         <!-- TAB: MODULES -->
+                         <!-- TAB: MODULES (Pro Only) -->
                         <div id="tab-modules" class="ofast-tab-content">
-                            <div class="ofast-card">
+                        <?php if ( ! ofast_toolkit_is_pro() ): ?>
+                            <div class="ofast-card" style="text-align: center; padding: 50px 30px;">
+                                <span class="dashicons dashicons-lock" style="font-size: 40px; width: 40px; height: 40px; color: #6366f1; margin-bottom: 12px;"></span>
+                                <h2 style="margin: 0 0 8px;">Admin Modules is a Pro Feature <?php ofast_toolkit_pro_badge(); ?></h2>
+                                <p style="color: #64748b; max-width: 450px; margin: 0 auto 16px;">Upgrade to unlock White Label, User Roles, Content Ordering, Admin URL Security, and more.</p>
+                                <a href="<?php echo esc_url(ofast_toolkit_get_upgrade_url()); ?>" target="_blank" class="button button-primary button-large">Upgrade to Pro</a>
+                            </div>
+                        <?php else: ?>
                                 <div class="ofast-card-header">
                                     <h2>Admin Modules Downloads</h2>
                                 </div>
@@ -1042,7 +1037,7 @@ class Ofast_X_Admin_Tweaks
                                     </div>
 
                                 </div>
-                            </div>
+                        <?php endif; // end Pro check ?>
                         </div>
 
                     </div>

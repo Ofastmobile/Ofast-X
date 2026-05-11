@@ -1648,30 +1648,58 @@ class Ofast_X_Email_Admin
                             $result_message = Ofast_X_Toast::render('Recipient list limited to ' . $max_recipients . ' users.', 'warning', true);
                         }
 
-                        // Send all emails immediately
-                        // Note: For 100+ recipients, consider using third-party SMTP (SendGrid, Mailgun) 
-                        // which have their own queues built into their servers
+                        // Send emails with throttling to respect SMTP provider rate limits
                         $sent = 0;
+                        $failed = 0;
                         $headers = $this->get_email_headers();
                         $sample_body = '';
                         $total_count = count($total_ids);
 
-                        foreach (get_users(['include' => $total_ids]) as $user) {
-                            $message = $this->replace_placeholders($body, $user);
-                            $full_body = $this->get_email_template($message);
-                            if (empty($sample_body)) {
-                                $sample_body = $full_body;
+                        // Read throttle settings (configurable from Settings page)
+                        $send_delay  = max(0, intval(get_option('ofast_email_send_delay', 2)));     // seconds between each email
+                        $batch_size  = max(1, intval(get_option('ofast_email_batch_size', 50)));    // emails per batch
+                        $batch_pause = max(0, intval(get_option('ofast_email_batch_pause', 10)));   // seconds between batches
+
+                        $all_users  = get_users(['include' => $total_ids]);
+                        $batches    = array_chunk($all_users, $batch_size);
+                        $batch_num  = 0;
+
+                        foreach ($batches as $batch) {
+                            $batch_num++;
+                            foreach ($batch as $user) {
+                                $message = $this->replace_placeholders($body, $user);
+                                $full_body = $this->get_email_template($message);
+                                if (empty($sample_body)) {
+                                    $sample_body = $full_body;
+                                }
+                                if (wp_mail($user->user_email, $subject, $full_body, $headers)) {
+                                    $sent++;
+                                } else {
+                                    $failed++;
+                                    error_log('Ofast-X Email: Failed to send to ' . $user->user_email);
+                                }
+                                // Delay between individual emails (prevents per-minute rate limit)
+                                if ($send_delay > 0) {
+                                    sleep($send_delay);
+                                }
                             }
-                            if (wp_mail($user->user_email, $subject, $full_body, $headers)) {
-                                $sent++;
+                            // Pause between batches (except after the last batch)
+                            if ($batch_pause > 0 && $batch_num < count($batches)) {
+                                sleep($batch_pause);
                             }
                         }
 
-                        $this->log_email($subject, $sent, 'Immediate send', $sample_body);
+                        $this->log_email($subject, $sent, 'Immediate send - batched (' . count($batches) . ' batches)', $sample_body);
 
-                        if ($total_count >= 50 && $sent == $total_count) {
+                        if ($failed > 0) {
                             $result_message = Ofast_X_Toast::render(
-                                'Sent to all ' . $sent . ' users. For better reliability with large sends, consider using SMTP API (SendGrid, Mailgun, etc.)',
+                                'Sent to ' . $sent . ' of ' . $total_count . ' users. ' . $failed . ' failed — check SMTP logs.',
+                                'warning',
+                                true
+                            );
+                        } elseif ($total_count >= 50) {
+                            $result_message = Ofast_X_Toast::render(
+                                'Sent to all ' . $sent . ' users successfully! (' . count($batches) . ' batches)',
                                 'success',
                                 true
                             );
@@ -3786,19 +3814,47 @@ class Ofast_X_Email_Admin
                         $total_ids = array($current_user_id); // Fallback to admin
                     }
 
-                    $sent = 0;
+                    $sent   = 0;
+                    $failed = 0;
                     $headers = $this->get_email_headers();
-                    foreach (get_users(array('include' => $total_ids)) as $user) {
-                        $message = $this->replace_placeholders($draft->body, $user);
-                        $full_body = $this->get_email_template($message);
-                        if (wp_mail($user->user_email, $draft->subject, $full_body, $headers)) {
-                            $sent++;
+
+                    // Read throttle settings
+                    $send_delay  = max(0, intval(get_option('ofast_email_send_delay', 2)));
+                    $batch_size  = max(1, intval(get_option('ofast_email_batch_size', 50)));
+                    $batch_pause = max(0, intval(get_option('ofast_email_batch_pause', 10)));
+
+                    $all_users = get_users(array('include' => $total_ids));
+                    $batches   = array_chunk($all_users, $batch_size);
+                    $batch_num = 0;
+
+                    foreach ($batches as $batch) {
+                        $batch_num++;
+                        foreach ($batch as $user) {
+                            $message   = $this->replace_placeholders($draft->body, $user);
+                            $full_body = $this->get_email_template($message);
+                            if (wp_mail($user->user_email, $draft->subject, $full_body, $headers)) {
+                                $sent++;
+                            } else {
+                                $failed++;
+                                error_log('Ofast-X Email: Failed to send draft to ' . $user->user_email);
+                            }
+                            if ($send_delay > 0) {
+                                sleep($send_delay);
+                            }
+                        }
+                        if ($batch_pause > 0 && $batch_num < count($batches)) {
+                            sleep($batch_pause);
                         }
                     }
 
-                    $this->log_email($draft->subject, $sent, 'Sent from draft', $draft->body);
+                    $this->log_email($draft->subject, $sent, 'Sent from draft - batched (' . count($batches) . ' batches)', $draft->body);
                     $wpdb->delete($table, array('id' => $draft->id));
-                    echo Ofast_X_Toast::render("Sent {$sent} emails from draft!", 'success', true);
+
+                    if ($failed > 0) {
+                        echo Ofast_X_Toast::render("Sent {$sent} of " . count($total_ids) . " emails from draft. {$failed} failed — check SMTP logs.", 'warning', true);
+                    } else {
+                        echo Ofast_X_Toast::render("Sent {$sent} emails from draft successfully!", 'success', true);
+                    }
                 }
             }
         }

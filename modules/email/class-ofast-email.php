@@ -154,38 +154,56 @@ class Ofast_X_Email
             'fields' => 'all'
         ));
 
-        $sent_count = 0;
+        $sent_count  = 0;
+        $failed      = 0;
         $sample_body = '';
 
-        foreach ($users as $user) {
-            $final_body = $this->replace_placeholders($body, $user);
-            $email_html = Ofast_X_Email_Template::get_template($final_body);
+        // Read throttle settings — same options used by the admin send UI
+        $send_delay  = max(0, intval(get_option('ofast_email_send_delay', 2)));   // seconds between emails
+        $batch_size  = max(1, intval(get_option('ofast_email_batch_size', 50)));  // emails per batch
+        $batch_pause = max(0, intval(get_option('ofast_email_batch_pause', 10))); // pause between batches
 
-            if (empty($sample_body)) {
-                $sample_body = $email_html;
+        $batches   = array_chunk($users, $batch_size);
+        $batch_num = 0;
+
+        foreach ($batches as $batch) {
+            $batch_num++;
+            foreach ($batch as $user) {
+                $final_body = $this->replace_placeholders($body, $user);
+                $email_html = Ofast_X_Email_Template::get_template($final_body);
+
+                if (empty($sample_body)) {
+                    $sample_body = $email_html;
+                }
+
+                if (wp_mail($user->user_email, $subject, $email_html, $headers)) {
+                    $sent_count++;
+                } else {
+                    $failed++;
+                    error_log('Ofast-X Email Batch: Failed to send to ' . $user->user_email);
+                }
+
+                // Delay between each email
+                if ($send_delay > 0) {
+                    sleep($send_delay);
+                }
             }
 
-            if (wp_mail($user->user_email, $subject, $email_html, $headers)) {
-                $sent_count++;
-            } else {
-                error_log('Ofast-X Email Batch: Failed to send to ' . $user->user_email);
-            }
-
-            // Small delay between emails to prevent server overload
-            if (count($users) > 10) {
-                usleep(100000); // 0.1 second
+            // Pause between batches (except after the last batch)
+            if ($batch_pause > 0 && $batch_num < count($batches)) {
+                sleep($batch_pause);
             }
         }
 
         // Log the batch
         global $wpdb;
         $wpdb->insert($wpdb->prefix . 'ofast_email_logs', array(
-            'subject' => $subject,
-            'body' => $sample_body,
-            'sent_at' => current_time('mysql'),
+            'subject'         => $subject,
+            'body'            => $sample_body,
+            'sent_at'         => current_time('mysql'),
             'recipient_count' => $sent_count,
-            'status' => 'sent',
-            'notes' => 'Scheduled batch - ' . $sent_count . ' of ' . count($user_ids) . ' sent'
+            'status'          => $failed > 0 ? 'partial' : 'sent',
+            'notes'           => 'Scheduled batch - ' . $sent_count . ' sent, ' . $failed . ' failed (' . count($batches) . ' batches)'
         ));
 
         error_log('Ofast-X Email Batch: Successfully sent ' . $sent_count . ' of ' . count($user_ids) . ' emails');

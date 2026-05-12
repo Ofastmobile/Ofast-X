@@ -88,7 +88,8 @@ class Ofast_X_Email_Template
             'instagram' => '#e1306c',
             'linkedin' => '#0a66c2',
             'youtube' => '#ff0000',
-            'whatsapp' => '#25d366'
+            'whatsapp' => '#25d366',
+            'telegram' => '#26a5e4'
         );
 
         // Social platform display names
@@ -99,7 +100,8 @@ class Ofast_X_Email_Template
             'instagram' => 'Instagram',
             'linkedin' => 'LinkedIn',
             'youtube' => 'YouTube',
-            'whatsapp' => 'WhatsApp'
+            'whatsapp' => 'WhatsApp',
+            'telegram' => 'Telegram'
         );
 
         // Determine if header should show

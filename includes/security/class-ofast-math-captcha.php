@@ -327,13 +327,13 @@ class Ofast_X_Math_Captcha
         $problem = $this->generate_problem();
         
         $html = '<div class="ofast-math-captcha" style="margin: 15px 0;">';
-        $html .= '<label style="display: flex; align-items: center; gap: 10px; font-weight: 500; color: #334155;">';
-        $html .= '<span style="background: #6366f1; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 16px; font-weight: 600;">';
+        $html .= '<label style="display: flex; align-items: center; gap: 8px; font-weight: 500; color: #334155;">';
+        $html .= '<span style="background: #6366f1; color: #fff; padding: 4px 8px; border-radius: 5px; font-size: 13px; font-weight: 600;">';
         $html .= esc_html($problem['question']) . ' = ?';
         $html .= '</span>';
         $required = ($form_id === 'preview') ? '' : 'required';
         $html .= '<input type="number" name="ofast_math_answer" ' . $required . ' autocomplete="off" ';
-        $html .= 'style="width: 80px; padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 16px; text-align: center;" ';
+        $html .= 'style="width: 60px; padding: 4px 6px; border: 1.5px solid #e2e8f0; border-radius: 5px; font-size: 13px; text-align: center;" ';
         $html .= 'placeholder="?">';
         $html .= '</label>';
         $html .= '<input type="hidden" name="ofast_math_hash" value="' . esc_attr($problem['hash']) . '">';

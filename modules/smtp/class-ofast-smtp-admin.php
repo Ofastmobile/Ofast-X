@@ -161,6 +161,57 @@ class Ofast_X_SMTP_Admin
                     grid-template-columns: 1fr;
                 }
             }
+
+            /* Pro-locked section overlay */
+            .ofast-pro-locked-section {
+                position: relative;
+                overflow: hidden;
+                border-radius: 8px;
+            }
+            .ofast-pro-locked-section > .ofast-pro-overlay {
+                position: absolute;
+                inset: 0;
+                z-index: 10;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                background: rgba(255, 255, 255, 0.35);
+                backdrop-filter: blur(2.5px);
+                -webkit-backdrop-filter: blur(2.5px);
+                border-radius: 8px;
+            }
+            .ofast-pro-overlay .ofast-pro-lock-icon {
+                width: 44px; height: 44px;
+                background: rgba(99,102,241,0.12);
+                border-radius: 50%;
+                display: flex; align-items: center; justify-content: center;
+            }
+            .ofast-pro-overlay .ofast-pro-lock-icon .dashicons {
+                color: #6366f1; font-size: 22px; width: 22px; height: 22px;
+            }
+            .ofast-pro-overlay .ofast-pro-overlay-text {
+                font-size: 15px; font-weight: 600; color: #1e293b; text-align: center;
+            }
+            .ofast-pro-overlay .ofast-pro-overlay-desc {
+                font-size: 13px; font-weight: 400; color: #64748b; text-align: center;
+                max-width: 320px; line-height: 1.5;
+            }
+            .ofast-pro-overlay .ofast-pro-upgrade-btn {
+                display: inline-flex; align-items: center; gap: 6px;
+                padding: 10px 24px;
+                background: linear-gradient(135deg, #6366f1, #4f46e5);
+                color: #fff; font-size: 13px; font-weight: 600;
+                border-radius: 8px; text-decoration: none;
+                box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+                transition: transform 0.2s, box-shadow 0.2s;
+            }
+            .ofast-pro-overlay .ofast-pro-upgrade-btn:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 6px 16px rgba(99,102,241,0.4);
+                color: #fff;
+            }
         </style>
         <?php
     }
@@ -1000,7 +1051,7 @@ class Ofast_X_SMTP_Admin
                         style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
                 </div>
 
-                <?php if (get_option('ofast_smtp_log_body_content', true)): ?>
+                <?php if (get_option('ofast_smtp_log_body_content', false)): ?>
                     <div
                         style="padding: 10px 20px; background: #fffbeb; border-bottom: 1px solid #f59e0b; color: #92400e; font-size: 13px;">
                         <strong>🔒 Security Notice:</strong> Sensitive patterns (passwords, tokens, API keys) have been
@@ -1578,7 +1629,17 @@ class Ofast_X_SMTP_Admin
             </div>
 
             <!-- Email Logging Settings -->
-            <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 30px 0;">
+            <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 30px 0;"<?php echo ! ofast_toolkit_is_pro() ? ' class="ofast-pro-locked-section"' : ''; ?>>
+                <?php if ( ! ofast_toolkit_is_pro() ): ?>
+                <div class="ofast-pro-overlay">
+                    <div class="ofast-pro-lock-icon"><span class="dashicons dashicons-lock"></span></div>
+                    <div class="ofast-pro-overlay-text">Pro Feature</div>
+                    <div class="ofast-pro-overlay-desc">Control what email content is stored and set automatic log cleanup schedules.</div>
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-license')); ?>" class="ofast-pro-upgrade-btn">
+                        <span class="dashicons dashicons-star-filled" style="font-size:14px;width:14px;height:14px;"></span> Upgrade to Pro
+                    </a>
+                </div>
+                <?php endif; ?>
                 <h3 style="margin-top: 0;">Email Logging</h3>
                 <p style="color: #64748b;">
                     Control what data is stored in your email history logs.
@@ -1588,7 +1649,7 @@ class Ofast_X_SMTP_Admin
                     <tr>
                         <th>Log Email Content</th>
                         <td>
-                            <?php $log_body = get_option('ofast_smtp_log_body_content', true); ?>
+                            <?php $log_body = get_option('ofast_smtp_log_body_content', false); ?>
                             <label class="ofast-toggle">
                                 <input type="checkbox" name="log_body_content" value="1" <?php checked($log_body); ?>>
                                 <span class="ofast-slider"></span>
@@ -1618,7 +1679,17 @@ class Ofast_X_SMTP_Admin
             <!-- ============================================ -->
             <!-- Fallback SMTP Server -->
             <!-- ============================================ -->
-            <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 30px 0;">
+            <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 30px 0;"<?php echo ! ofast_toolkit_is_pro() ? ' class="ofast-pro-locked-section"' : ''; ?>>
+                <?php if ( ! ofast_toolkit_is_pro() ): ?>
+                <div class="ofast-pro-overlay">
+                    <div class="ofast-pro-lock-icon"><span class="dashicons dashicons-lock"></span></div>
+                    <div class="ofast-pro-overlay-text">Pro Feature</div>
+                    <div class="ofast-pro-overlay-desc">Automatically retry failed emails through a backup SMTP server for maximum deliverability.</div>
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-license')); ?>" class="ofast-pro-upgrade-btn">
+                        <span class="dashicons dashicons-star-filled" style="font-size:14px;width:14px;height:14px;"></span> Upgrade to Pro
+                    </a>
+                </div>
+                <?php endif; ?>
                 <h3 style="margin-top: 0;">Fallback SMTP Server</h3>
                 <p style="color: #64748b;">If your primary SMTP server fails, emails will automatically retry using this backup
                     server.</p>
@@ -1693,7 +1764,17 @@ class Ofast_X_SMTP_Admin
             <!-- ============================================ -->
             <!-- Email Health Reports -->
             <!-- ============================================ -->
-            <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 30px 0;">
+            <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 30px 0;"<?php echo ! ofast_toolkit_is_pro() ? ' class="ofast-pro-locked-section"' : ''; ?>>
+                <?php if ( ! ofast_toolkit_is_pro() ): ?>
+                <div class="ofast-pro-overlay">
+                    <div class="ofast-pro-lock-icon"><span class="dashicons dashicons-lock"></span></div>
+                    <div class="ofast-pro-overlay-text">Pro Feature</div>
+                    <div class="ofast-pro-overlay-desc">Get automated daily, weekly, or monthly email health digests sent to your inbox.</div>
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-license')); ?>" class="ofast-pro-upgrade-btn">
+                        <span class="dashicons dashicons-star-filled" style="font-size:14px;width:14px;height:14px;"></span> Upgrade to Pro
+                    </a>
+                </div>
+                <?php endif; ?>
                 <h3 style="margin-top: 0;">Email Health Reports</h3>
                 <p style="color: #64748b;">Receive automated email reports summarizing your send/fail statistics.</p>
 
@@ -1723,25 +1804,67 @@ class Ofast_X_SMTP_Admin
                 </table>
             </div>
 
+            <!-- ============================================ -->
+            <!-- Bulk Email Sending Throttle -->
+            <!-- ============================================ -->
+            <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 30px 0;"<?php echo ! ofast_toolkit_is_pro() ? ' class="ofast-pro-locked-section"' : ''; ?>>
+                <?php if ( ! ofast_toolkit_is_pro() ): ?>
+                <div class="ofast-pro-overlay">
+                    <div class="ofast-pro-lock-icon"><span class="dashicons dashicons-lock"></span></div>
+                    <div class="ofast-pro-overlay-text">Pro Feature</div>
+                    <div class="ofast-pro-overlay-desc">Fine-tune send delays, batch sizes, and pause intervals to prevent SMTP rate-limit errors.</div>
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-license')); ?>" class="ofast-pro-upgrade-btn">
+                        <span class="dashicons dashicons-star-filled" style="font-size:14px;width:14px;height:14px;"></span> Upgrade to Pro
+                    </a>
+                </div>
+                <?php endif; ?>
+                <h3 style="margin-top: 0;">Bulk Email Throttle</h3>
+                <p style="color: #64748b;">Control how fast bulk emails (from the Emailer) are sent. Prevents your SMTP provider from throttling or rejecting sends. Adjust based on your provider's rate limits.</p>
+
+                <?php
+                $email_delay  = intval(get_option('ofast_email_send_delay',  2));
+                $email_batch  = intval(get_option('ofast_email_batch_size',  50));
+                $email_pause  = intval(get_option('ofast_email_batch_pause', 10));
+                ?>
+
+                <table class="form-table">
+                    <tr>
+                        <th><label for="email_send_delay">Delay Between Emails (seconds)</label></th>
+                        <td>
+                            <input type="number" name="email_send_delay" id="email_send_delay"
+                                value="<?php echo esc_attr($email_delay); ?>" min="0" max="30" step="1" style="width: 80px;">
+                            <span class="description">0 = no delay. Most providers: use 2&ndash;3 s.</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><label for="email_batch_size">Emails Per Batch</label></th>
+                        <td>
+                            <input type="number" name="email_batch_size" id="email_batch_size"
+                                value="<?php echo esc_attr($email_batch); ?>" min="1" max="500" step="1" style="width: 80px;">
+                            <span class="description">How many emails to send before a longer pause. Default: 50.</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><label for="email_batch_pause">Pause Between Batches (seconds)</label></th>
+                        <td>
+                            <input type="number" name="email_batch_pause" id="email_batch_pause"
+                                value="<?php echo esc_attr($email_pause); ?>" min="0" max="120" step="1" style="width: 80px;">
+                            <span class="description">Extra rest between batches. Default: 10 s.</span>
+                        </td>
+                    </tr>
+                </table>
+
+                <div style="margin-top:12px; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; color:#475569;">
+                    <strong>Tip:</strong> Most free-tier SMTP providers (Brevo, SendGrid, Mailgun, etc.) have per-minute and daily limits. A 2&ndash;3 second delay between emails prevents rate-limit errors.
+                </div>
+            </div>
+
             <p class="submit">
                 <button type="submit" name="ofast_smtp_save" class="button button-primary button-large">Save SMTP
                     Settings</button>
             </p>
         </form>
 
-        <!-- Test Connection (outside form, uses saved settings) -->
-        <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 30px 0;">
-            <h3 style="margin-top: 0;">Test Connection</h3>
-            <p>Send a test email to verify your saved settings are working.</p>
-            <button type="button" id="test-smtp-btn" class="button button-secondary"
-                style="border-radius: 8px !important; padding: 8px 18px !important; font-weight: 500 !important; transition: all 0.2s !important; border: 1px solid #d7deea !important;">Send
-                Test Email to
-                <?php echo esc_html(get_option('admin_email')); ?></button>
-            <span id="test-result" style="margin-left: 15px;"></span>
-            <div id="test-details" style="margin-top: 15px; display: none;">
-                <pre style="background: #1e293b; color: #10b981; padding: 15px; border-radius: 8px; overflow-x: auto;"></pre>
-            </div>
-        </div>
 
         <script>
             jQuery(document).ready(function ($) {
@@ -1924,6 +2047,20 @@ class Ofast_X_SMTP_Admin
                 Ofast_X_SMTP_DNS::get_instance()->render_checker_ui();
             }
             ?>
+        </div>
+
+        <!-- Test Connection (uses saved settings) -->
+        <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 30px 0;">
+            <h3 style="margin-top: 0;">Test Connection</h3>
+            <p>Send a test email to verify your saved settings are working.</p>
+            <button type="button" id="test-smtp-btn" class="button button-secondary"
+                style="border-radius: 8px !important; padding: 8px 18px !important; font-weight: 500 !important; transition: all 0.2s !important; border: 1px solid #d7deea !important;">Send
+                Test Email to
+                <?php echo esc_html(get_option('admin_email')); ?></button>
+            <span id="test-result" style="margin-left: 15px;"></span>
+            <div id="test-details" style="margin-top: 15px; display: none;">
+                <pre style="background: #1e293b; color: #10b981; padding: 15px; border-radius: 8px; overflow-x: auto;"></pre>
+            </div>
         </div>
 
         <!-- Provider Setup Guides -->
@@ -2168,6 +2305,13 @@ class Ofast_X_SMTP_Admin
         $retention_days = intval($_POST['log_retention_days'] ?? 90);
         $retention_days = max(0, min(3650, $retention_days));
         update_option('ofast_smtp_log_retention_days', $retention_days);
+
+        // Bulk email throttle settings (Pro feature)
+        if (ofast_toolkit_is_pro()) {
+            update_option('ofast_email_send_delay',  max(0, intval($_POST['email_send_delay']  ?? 2)));
+            update_option('ofast_email_batch_size',  max(1, intval($_POST['email_batch_size']  ?? 50)));
+            update_option('ofast_email_batch_pause', max(0, intval($_POST['email_batch_pause'] ?? 10)));
+        }
 
         Ofast_X_Toast::add('SMTP settings saved successfully!', 'success');
     }

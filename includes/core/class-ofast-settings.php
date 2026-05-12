@@ -91,11 +91,6 @@ class Ofast_X_Settings
         $delete_data = isset($_POST['ofast_delete_data_on_uninstall']) ? intval($_POST['ofast_delete_data_on_uninstall']) : 0;
         update_option('ofast_delete_data_on_uninstall', $delete_data);
 
-        // Save email throttle settings
-        update_option('ofast_email_send_delay',  max(0, intval($_POST['ofast_email_send_delay']  ?? 2)));
-        update_option('ofast_email_batch_size',  max(1, intval($_POST['ofast_email_batch_size']  ?? 50)));
-        update_option('ofast_email_batch_pause', max(0, intval($_POST['ofast_email_batch_pause'] ?? 10)));
-
         // Redirect with success message
         wp_redirect(add_query_arg('settings_saved', '1', wp_get_referer()));
         exit;
@@ -129,11 +124,6 @@ class Ofast_X_Settings
 
         // Reset data management setting
         update_option('ofast_delete_data_on_uninstall', 0);
-
-        // Reset email throttle settings to defaults
-        update_option('ofast_email_send_delay',  2);
-        update_option('ofast_email_batch_size',  50);
-        update_option('ofast_email_batch_pause', 10);
 
         // Clear settings cache
         if (class_exists('Ofast_X_Core') && method_exists('Ofast_X_Core', 'clear_options_cache')) {
@@ -481,57 +471,9 @@ class Ofast_X_Settings
                     </div>
                 </div>
 
-                <!-- Email Sending Throttle Section -->
-                <div style="margin-top:30px; padding:25px; background:#fff; border:1px solid #e5e7eb; border-radius:12px;">
-                    <h2 style="margin:0 0 6px 0; font-size:18px; color:#1e293b;">
-                        <span class="dashicons dashicons-email-alt" style="color:#6366f1;vertical-align:middle;margin-right:6px;"></span>
-                        Email Sending Throttle
-                    </h2>
-                    <p style="color:#64748b; margin:0 0 20px 0; font-size:13px;">Control how fast bulk emails are sent to avoid hitting Brevo / SMTP rate limits. Defaults work well for Brevo free (300/day). Lower the delay or raise batch size if you have a paid plan.</p>
-
-                    <?php
-                    $email_delay  = intval(get_option('ofast_email_send_delay',  2));
-                    $email_batch  = intval(get_option('ofast_email_batch_size',  50));
-                    $email_pause  = intval(get_option('ofast_email_batch_pause', 10));
-                    ?>
-
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:20px;">
-
-                        <div>
-                            <label for="ofast_email_send_delay" style="display:block; font-weight:600; font-size:13px; color:#1e293b; margin-bottom:6px;">Delay Between Emails (seconds)</label>
-                            <input type="number" id="ofast_email_send_delay" name="ofast_email_send_delay"
-                                value="<?php echo esc_attr($email_delay); ?>" min="0" max="30" step="1"
-                                style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px;" />
-                            <p style="color:#94a3b8; font-size:12px; margin:5px 0 0;">0&nbsp;=&nbsp;no delay. Brevo free: use 2&ndash;3 s.</p>
-                        </div>
-
-                        <div>
-                            <label for="ofast_email_batch_size" style="display:block; font-weight:600; font-size:13px; color:#1e293b; margin-bottom:6px;">Emails Per Batch</label>
-                            <input type="number" id="ofast_email_batch_size" name="ofast_email_batch_size"
-                                value="<?php echo esc_attr($email_batch); ?>" min="1" max="500" step="1"
-                                style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px;" />
-                            <p style="color:#94a3b8; font-size:12px; margin:5px 0 0;">Emails sent before a batch pause. Default: 50.</p>
-                        </div>
-
-                        <div>
-                            <label for="ofast_email_batch_pause" style="display:block; font-weight:600; font-size:13px; color:#1e293b; margin-bottom:6px;">Pause Between Batches (seconds)</label>
-                            <input type="number" id="ofast_email_batch_pause" name="ofast_email_batch_pause"
-                                value="<?php echo esc_attr($email_pause); ?>" min="0" max="120" step="1"
-                                style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px;" />
-                            <p style="color:#94a3b8; font-size:12px; margin:5px 0 0;">Extra rest between batches. Default: 10 s.</p>
-                        </div>
-
-                    </div>
-
-                    <div style="margin-top:16px; padding:12px 16px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; font-size:13px; color:#1e40af;">
-                        <strong>Brevo Free Plan guide:</strong> 300 emails/day &nbsp;|&nbsp;
-                        Recommended: Delay&nbsp;=&nbsp;2s &nbsp;&bull;&nbsp; Batch&nbsp;=&nbsp;50 &nbsp;&bull;&nbsp; Pause&nbsp;=&nbsp;10s
-                    </div>
-                </div>
-
                 <p class="submit" style="margin-top: 30px; display: flex; gap: 15px; align-items: center;">
                     <button type="submit" name="ofast_save_settings" class="ofast-save-btn"> Save All Settings</button>
-                    <button type="submit" name="ofast_reset_settings" class="ofast-reset-btn" onclick="return confirm('Are you sure you want to reset all settings to defaults?\n\nThis will:\n&bull; Disable most modules\n&bull; Reset data management setting\n&bull; Reset email throttle to defaults\n\nYour DATA will NOT be deleted.');">Reset to Default</button>
+                    <button type="submit" name="ofast_reset_settings" class="ofast-reset-btn" onclick="return confirm('Are you sure you want to reset all settings to defaults?\n\nThis will:\n&bull; Disable most modules\n&bull; Reset data management setting\n\nYour DATA will NOT be deleted.');">Reset to Default</button>
                 </p>
             </form>
 

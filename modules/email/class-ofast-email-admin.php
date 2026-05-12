@@ -1224,7 +1224,7 @@ class Ofast_X_Email_Admin
                     <div class="ofast-card" style="padding: 20px; margin-bottom: 20px;">
                         <h3 style="margin: 0 0 15px 0; font-size: 16px;">Social Links</h3>
                         <?php
-                        $platforms = array('facebook', 'x', 'youtube', 'whatsapp', 'instagram', 'linkedin');
+                        $platforms = array('facebook', 'x', 'youtube', 'whatsapp', 'instagram', 'linkedin', 'telegram');
                         foreach ($platforms as $p) {
                             $val = $social[$p] ?? '';
                             echo '<div style="margin-bottom: 8px;"><label style="display: flex; align-items: center; gap: 8px;">';
@@ -1326,7 +1326,7 @@ class Ofast_X_Email_Admin
                 });
 
                 // Live Preview Updates
-                $('input, select').on('change input', updatePreview);
+                $('input, select, #ofast_custom_template').on('change input', updatePreview);
 
                 function updatePreview() {
                     // Gather settings
@@ -1361,7 +1361,8 @@ class Ofast_X_Email_Admin
                         'instagram': '#e4405f',
                         'linkedin': '#0a66c2',
                         'youtube': '#ff0000',
-                        'whatsapp': '#25d366'
+                        'whatsapp': '#25d366',
+                        'telegram': '#26a5e4'
                     };
                     var socialNames = {
                         'facebook': 'Facebook',
@@ -1369,7 +1370,8 @@ class Ofast_X_Email_Admin
                         'instagram': 'Instagram',
                         'linkedin': 'LinkedIn',
                         'youtube': 'YouTube',
-                        'whatsapp': 'WhatsApp'
+                        'whatsapp': 'WhatsApp',
+                        'telegram': 'Telegram'
                     };
                     $('input[name^="social["]').each(function () {
                         var platform = $(this).attr('name').match(/social\[(\w+)\]/)[1];
@@ -1394,6 +1396,29 @@ class Ofast_X_Email_Admin
                     var safeLogo = escapeAttribute(logo);
                     var safeCompany = escapeHtml(company);
                     var safeTagline = escapeHtml(tagline);
+
+                    // Custom template: render user's HTML with {{content}} replaced
+                    if (style === 'custom') {
+                        var customHtml = $('#ofast_custom_template').val() || '';
+                        if (customHtml.trim()) {
+                            var sampleContent = '<p style="margin:0 0 16px;"><strong>Hello John,</strong></p>'
+                                + '<p style="margin:0 0 16px;">This is a sample email to preview your custom template. The content you write in your emails will appear wherever you placed the <code>{{content}}</code> tag.</p>'
+                                + '<p style="margin:0;">Thank you for using Ofast Emailer!</p>';
+                            var renderedHtml = customHtml.replace(/\{\{content\}\}/gi, sampleContent);
+                            document.getElementById('template-preview').srcdoc = renderedHtml;
+                            return;
+                        }
+                        // Empty custom template — show a helpful placeholder
+                        var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>';
+                        html += '<body style="margin:0; padding:40px; font-family:Arial,sans-serif; background:#f8fafc; text-align:center; color:#64748b;">';
+                        html += '<div style="padding:40px; background:#fff; border-radius:12px; border:2px dashed #e2e8f0; max-width:500px; margin:0 auto;">';
+                        html += '<p style="font-size:32px; margin:0 0 12px;">✏️</p>';
+                        html += '<p style="font-size:16px; font-weight:600; color:#1e293b; margin:0 0 8px;">No Custom Template Yet</p>';
+                        html += '<p style="font-size:13px; margin:0;">Paste your HTML in the editor above. Use <code style="background:#f1f5f9; padding:2px 6px; border-radius:4px;">{{content}}</code> where the email body should appear.</p>';
+                        html += '</div></body></html>';
+                        document.getElementById('template-preview').srcdoc = html;
+                        return;
+                    }
 
                     // Build table-based HTML with inline styles
                     var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Email Preview</title></head>';
@@ -3374,7 +3399,7 @@ class Ofast_X_Email_Admin
                                                     <div class="postbox" style="padding: 15px; margin-bottom: 15px;">
                                                         <h3 style="margin: 0 0 15px 0; font-size: 14px;">Social Links</h3>
                                                         <?php
-                                                        $platforms = array('facebook', 'x', 'youtube', 'whatsapp', 'instagram', 'linkedin');
+                                                        $platforms = array('facebook', 'x', 'youtube', 'whatsapp', 'instagram', 'linkedin', 'telegram');
                                                         foreach ($platforms as $p) {
                                                             $val = $social[$p] ?? '';
                                                             echo '<div style="margin-bottom: 8px;"><label style="display: flex; align-items: center; gap: 8px;">';
@@ -3556,7 +3581,8 @@ class Ofast_X_Email_Admin
                                             'instagram': '#e1306c',
                                             'linkedin': '#0a66c2',
                                             'youtube': '#ff0000',
-                                            'whatsapp': '#25d366'
+                                            'whatsapp': '#25d366',
+                                            'telegram': '#26a5e4'
                                         };
                                         var socialNames = {
                                             'facebook': 'Facebook',
@@ -3564,7 +3590,8 @@ class Ofast_X_Email_Admin
                                             'instagram': 'Instagram',
                                             'linkedin': 'LinkedIn',
                                             'youtube': 'YouTube',
-                                            'whatsapp': 'WhatsApp'
+                                            'whatsapp': 'WhatsApp',
+                                            'telegram': 'Telegram'
                                         };
                                         $('input[name^="social["]').each(function () {
                                             var platform = $(this).attr('name').match(/social\[(\w+)\]/)[1];

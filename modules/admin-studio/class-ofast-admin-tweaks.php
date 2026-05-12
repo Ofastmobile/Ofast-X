@@ -936,15 +936,21 @@ class Ofast_X_Admin_Tweaks
                          <!-- TAB: MODULES (Pro Only) -->
                         <div id="tab-modules" class="ofast-tab-content">
                         <?php if ( ! ofast_toolkit_is_pro() ): ?>
-                            <div class="ofast-card" style="text-align: center; padding: 50px 30px;">
-                                <span class="dashicons dashicons-lock" style="font-size: 40px; width: 40px; height: 40px; color: #6366f1; margin-bottom: 12px;"></span>
-                                <h2 style="margin: 0 0 8px;">Admin Modules is a Pro Feature <?php ofast_toolkit_pro_badge(); ?></h2>
-                                <p style="color: #64748b; max-width: 450px; margin: 0 auto 16px;">Upgrade to unlock White Label, User Roles, Content Ordering, Admin URL Security, and more.</p>
-                                <a href="<?php echo esc_url(ofast_toolkit_get_upgrade_url()); ?>" target="_blank" class="button button-primary button-large">Upgrade to Pro</a>
+                        <div style="position: relative; overflow: hidden; border-radius: 16px;">
+                            <div style="position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(255,255,255,0.35); backdrop-filter: blur(2.5px); -webkit-backdrop-filter: blur(2.5px); border-radius: 16px;">
+                                <div style="width: 44px; height: 44px; background: rgba(99,102,241,0.12); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <span class="dashicons dashicons-lock" style="color: #6366f1; font-size: 22px; width: 22px; height: 22px;"></span>
+                                </div>
+                                <div style="font-size: 15px; font-weight: 600; color: #1e293b;">Pro Feature</div>
+                                <div style="font-size: 13px; color: #64748b; text-align: center; max-width: 320px; line-height: 1.5;">White Label, User Roles, Content Ordering, Admin URL Security, and Custom Admin Design.</div>
+                                <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-license')); ?>" style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 24px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; font-size: 13px; font-weight: 600; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">
+                                    <span class="dashicons dashicons-star-filled" style="font-size:14px;width:14px;height:14px;"></span> Upgrade to Pro
+                                </a>
                             </div>
-                        <?php else: ?>
+                        <?php endif; ?>
+                            <div class="ofast-card">
                                 <div class="ofast-card-header">
-                                    <h2>Admin Modules Downloads</h2>
+                                    <h2>Admin Modules</h2>
                                 </div>
                                 <div class="ofast-card-body">
                                     <p class="description" style="margin-top: 0; margin-bottom: 20px;">Enable additional admin features.</p>
@@ -1037,7 +1043,7 @@ class Ofast_X_Admin_Tweaks
                                     </div>
 
                                 </div>
-                        <?php endif; // end Pro check ?>
+                        <?php if ( ! ofast_toolkit_is_pro() ): ?></div><?php endif; ?>
                         </div>
 
                     </div>

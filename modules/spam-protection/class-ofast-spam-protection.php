@@ -78,6 +78,23 @@ class Ofast_X_Spam_Protection
             // Verify on authentication
             add_filter('authenticate', array($this, 'verify_login'), 30, 3);
         }
+
+        // Tutor LMS registration protection
+        $protect_tutor_reg = get_option('ofast_spam_protect_tutor_registration', false);
+        if ($protect_tutor_reg && $this->is_configured() && !$this->is_tutor_pro_spam_active()) {
+            // Set a flag so we know we're on a Tutor registration page
+            add_action('tutor_before_student_reg_form', array($this, 'flag_tutor_registration_page'));
+            add_action('tutor_before_instructor_reg_form', array($this, 'flag_tutor_registration_page'));
+
+            // Render widget via register_form hook (fires INSIDE the form, above submit)
+            add_action('register_form', array($this, 'render_tutor_registration_widget'));
+
+            // Validate on registration submission via WordPress registration_errors filter
+            add_filter('registration_errors', array($this, 'verify_tutor_registration'), 10, 3);
+
+            // Enqueue scripts on frontend
+            add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_script'));
+        }
     }
 
     /**
@@ -385,6 +402,7 @@ class Ofast_X_Spam_Protection
             }
             update_option('ofast_spam_protect_woocommerce', isset($_POST['protect_woocommerce']) ? 1 : 0);
             update_option('ofast_spam_protect_tutor', isset($_POST['protect_tutor']) ? 1 : 0);
+            update_option('ofast_spam_protect_tutor_registration', isset($_POST['protect_tutor_registration']) ? 1 : 0);
 
             // Save Math CAPTCHA settings
             if (class_exists('Ofast_X_Math_Captcha')) {
@@ -449,7 +467,9 @@ class Ofast_X_Spam_Protection
         $honeypot_enabled = get_option('ofast_spam_honeypot_enabled', true);
         $protect_woocommerce = get_option('ofast_spam_protect_woocommerce', false);
         $protect_tutor = get_option('ofast_spam_protect_tutor', false);
+        $protect_tutor_registration = get_option('ofast_spam_protect_tutor_registration', false);
         $fail_open = get_option('ofast_spam_fail_open', false);
+        $tutor_pro_spam_active = $this->is_tutor_pro_spam_active();
 
         // Current Tab
         $default_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'general';
@@ -774,18 +794,50 @@ class Ofast_X_Spam_Protection
                                 </td>
                             </tr>
                             <tr>
-                                <th>Tutor LMS</th>
+                                <th>Tutor LMS Registration</th>
                                 <td>
-                                    <span class="description" style="color: #94a3b8;">
-                                        <span class="dashicons dashicons-info-outline" style="font-size: 16px; vertical-align: text-bottom;"></span>
-                                        Requires <strong>Tutor LMS Pro</strong> - Use their built-in CAPTCHA settings
-                                    </span>
+                                    <?php if ($tutor_pro_spam_active): ?>
+                                        <label class="ofast-toggle">
+                                            <input type="checkbox" name="protect_tutor_registration" value="1" disabled>
+                                            <span class="ofast-slider"></span>
+                                        </label>
+                                        <span class="description" style="vertical-align: middle; color: #f59e0b;">
+                                            <span class="dashicons dashicons-warning" style="font-size: 16px; vertical-align: text-bottom; color: #f59e0b;"></span>
+                                            <strong>Tutor Pro's spam protection is active.</strong> Ofast X auto-skips to avoid duplicate CAPTCHAs.
+                                        </span>
+                                        <p class="description" style="margin-top: 8px; color: #666;">Disable Tutor Pro's Fraud Protection in <em>Tutor LMS → Settings → Authentication</em> to use Ofast X instead.</p>
+                                    <?php elseif (!class_exists('\TUTOR\Tutor')): ?>
+                                        <span class="description" style="color: #94a3b8;">
+                                            <span class="dashicons dashicons-info-outline" style="font-size: 16px; vertical-align: text-bottom;"></span>
+                                            Tutor LMS is not installed or active.
+                                        </span>
+                                    <?php else: ?>
+                                        <label class="ofast-toggle">
+                                            <input type="checkbox" name="protect_tutor_registration" value="1" <?php checked($protect_tutor_registration); ?>>
+                                            <span class="ofast-slider"></span>
+                                        </label>
+                                        <span class="description" style="vertical-align: middle;">Protect student & instructor registration forms</span>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         </table>
                         
                         <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;">
                         
+                        <?php if ( ! ofast_toolkit_is_pro() ): ?>
+                        <div style="position: relative; overflow: hidden; border-radius: 8px;">
+                            <div style="position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(255,255,255,0.35); backdrop-filter: blur(2.5px); -webkit-backdrop-filter: blur(2.5px); border-radius: 8px;">
+                                <div style="width: 44px; height: 44px; background: rgba(99,102,241,0.12); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <span class="dashicons dashicons-lock" style="color: #6366f1; font-size: 22px; width: 22px; height: 22px;"></span>
+                                </div>
+                                <div style="font-size: 15px; font-weight: 600; color: #1e293b;">Pro Feature</div>
+                                <div style="font-size: 13px; color: #64748b; text-align: center; max-width: 320px; line-height: 1.5;">Universal form injection, honeypot controls, and fail-open mode for provider outages.</div>
+                                <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-license')); ?>" style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 24px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; font-size: 13px; font-weight: 600; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">
+                                    <span class="dashicons dashicons-star-filled" style="font-size:14px;width:14px;height:14px;"></span> Upgrade to Pro
+                                </a>
+                            </div>
+                        <?php endif; ?>
+
                         <h2>Advanced Protection <?php ofast_toolkit_pro_badge(); ?></h2>
                         <table class="form-table">
                             <tr>
@@ -807,10 +859,10 @@ class Ofast_X_Spam_Protection
                                 </th>
                                 <td>
                                     <label class="ofast-toggle">
-                                        <input type="checkbox" name="honeypot_enabled" value="1" checked disabled>
+                                        <input type="checkbox" name="honeypot_enabled" value="1" <?php checked($honeypot_enabled); ?> <?php ofast_toolkit_pro_disabled(); ?>>
                                         <span class="ofast-slider"></span>
                                     </label>
-                                    <span class="description" style="vertical-align: middle;">Honeypot protection is always enabled</span>
+                                    <span class="description" style="vertical-align: middle;">Invisible honeypot fields that catch bots <?php ofast_toolkit_pro_badge(); ?></span>
                                     <p class="description" style="margin-top: 8px; color: #666;">Adds invisible fields that only bots fill. Works when Turnstile/reCAPTCHA fails (network issues, blocked, etc.)</p>
                                 </td>
                             </tr>
@@ -830,6 +882,8 @@ class Ofast_X_Spam_Protection
                                 </td>
                             </tr>
                         </table>
+
+                        <?php if ( ! ofast_toolkit_is_pro() ): ?></div><?php endif; ?>
                     </div>
                 </div>
 
@@ -1138,4 +1192,98 @@ class Ofast_X_Spam_Protection
 
         return '127.0.0.1';
     }
+
+    /**
+     * Check if Tutor Pro's built-in spam protection is active for registration.
+     */
+    private function is_tutor_pro_spam_active()
+    {
+        if (!function_exists('tutor_utils')) {
+            return false;
+        }
+        if (!class_exists('TutorPro\\Auth\\SpamProtection')) {
+            return false;
+        }
+        $enabled = tutor_utils()->get_option('enable_spam_protection', false);
+        if (!$enabled) {
+            return false;
+        }
+        $locations = tutor_utils()->get_option('spam_protection_location', array());
+        if (!is_array($locations)) {
+            $locations = array();
+        }
+        return in_array('tutor_registration', $locations, true);
+    }
+
+    /**
+     * Flag that we are on a Tutor registration page.
+     * Called by tutor_before_student_reg_form / tutor_before_instructor_reg_form.
+     */
+    public function flag_tutor_registration_page()
+    {
+        $GLOBALS['ofast_tutor_registration'] = true;
+    }
+
+    /**
+     * Render spam protection widget on Tutor LMS registration forms.
+     * Only renders when the Tutor registration flag is set.
+     */
+    public function render_tutor_registration_widget()
+    {
+        // Only render on Tutor registration pages (not wp-login.php)
+        if (empty($GLOBALS['ofast_tutor_registration'])) {
+            return;
+        }
+
+        $provider = $this->get_active_provider();
+        echo '<div class="ofast-tutor-spam-widget" style="margin: 15px 0;">';
+        if ($provider === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
+            echo Ofast_X_Turnstile::get_instance()->render_widget('tutor_registration');
+        } elseif ($provider === 'math_captcha' && class_exists('Ofast_X_Math_Captcha')) {
+            echo Ofast_X_Math_Captcha::get_instance()->render_widget('tutor_registration');
+        }
+        if (class_exists('Ofast_X_Honeypot') && get_option('ofast_spam_honeypot_enabled', true)) {
+            echo Ofast_X_Honeypot::get_field_html();
+        }
+        echo '</div>';
+    }
+
+    /**
+     * Verify spam protection on Tutor LMS registration submissions.
+     */
+    public function verify_tutor_registration($errors, $sanitized_user_login, $user_email)
+    {
+        $tutor_action = isset($_POST['tutor_action']) ? sanitize_text_field($_POST['tutor_action']) : '';
+        if (!in_array($tutor_action, array('tutor_register_student', 'tutor_register_instructor'), true)) {
+            return $errors;
+        }
+        if ($this->is_tutor_pro_spam_active()) {
+            return $errors;
+        }
+
+        $provider = $this->get_active_provider();
+
+        if ($provider === 'math_captcha') {
+            if (class_exists('Ofast_X_Math_Captcha')) {
+                $math_result = Ofast_X_Math_Captcha::get_instance()->verify();
+                if (!$math_result['success']) {
+                    $errors->add('ofast_spam_failed', '<strong>Security verification failed:</strong> ' . esc_html($math_result['error'] ?? 'Please solve the math problem.'));
+                }
+            }
+            return $errors;
+        }
+
+        $token = isset($_POST['cf-turnstile-response']) ? sanitize_text_field($_POST['cf-turnstile-response']) : '';
+        if (empty($token)) {
+            $token = isset($_POST['g-recaptcha-response']) ? sanitize_text_field($_POST['g-recaptcha-response']) : '';
+        }
+
+        $result = $this->verify_with_turnstile_honeypot_fallback($provider, $token);
+        if (!$result['success']) {
+            $errors->add('ofast_spam_failed', '<strong>Security verification failed:</strong> ' . esc_html($result['error'] ?? 'Please complete the spam protection challenge.'));
+        }
+
+        return $errors;
+    }
+
 }

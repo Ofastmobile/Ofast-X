@@ -49,6 +49,12 @@ class Ofast_X_Whos_Admin
             add_filter('pre_set_site_transient_update_plugins', array($this, 'disable_plugin_updates'));
         }
 
+        // Disable Plugin & Theme Editor if enabled
+        $footer_opts = get_option('ofast_admin_footer_settings', array());
+        if (!empty($footer_opts['disable_file_editor']) && !defined('DISALLOW_FILE_EDIT')) {
+            define('DISALLOW_FILE_EDIT', true);
+        }
+
         // Admin page protection
         if (get_option('ofast_page_protection_enabled', 0)) {
             add_action('admin_init', array($this, 'protect_admin_pages'), 1);
@@ -217,6 +223,7 @@ class Ofast_X_Whos_Admin
             delete_option('ofast_admin_footer_settings');
             delete_option('ofast_disable_plugin_updates');
             delete_option('ofast_disabled_plugins_list');
+            delete_option('ofast_disable_file_editor');
             delete_option('ofast_page_protection_enabled');
             delete_option('ofast_super_admin_username');
             delete_option('ofast_protection_password');
@@ -271,6 +278,7 @@ class Ofast_X_Whos_Admin
             'hide_wp_version' => isset($_POST['hide_wp_version']) ? 1 : 0,
             'enable_dark_mode' => isset($_POST['enable_dark_mode']) ? 1 : 0,
             'enable_custom_dashboard' => isset($_POST['enable_custom_dashboard']) ? 1 : 0,
+            'disable_file_editor' => isset($_POST['disable_file_editor']) ? 1 : 0,
         );
         update_option('ofast_admin_footer_settings', $footer_settings);
 
@@ -1026,6 +1034,18 @@ class Ofast_X_Whos_Admin
                                                             Feature</span>
                                                     </span>
                                                 </label>
+                                            </div>
+
+                                            <div class="ofast-form-group">
+                                                <label class="ofast-checkbox-label">
+                                                    <input type="checkbox" name="disable_file_editor" value="1" <?php checked(!empty($footer_settings['disable_file_editor'])); ?>>
+                                                    <span class="ofast-checkbox-custom"></span>
+                                                    <span class="ofast-checkbox-text">
+                                                        Disable Plugin & Theme Editor
+                                                        <span class="ofast-security-badge">Security Recommended</span>
+                                                    </span>
+                                                </label>
+                                                <span class="ofast-field-hint">Removes the built-in code editor from Plugins and Themes to prevent direct file modifications.</span>
                                             </div>
                                         </div>
                                     </div>

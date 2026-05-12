@@ -400,7 +400,7 @@ class Ofast_X_Spam_Protection
                 update_option('ofast_spam_honeypot_enabled', isset($_POST['honeypot_enabled']) ? 1 : 0);
                 update_option('ofast_spam_fail_open', isset($_POST['spam_fail_open']) ? 1 : 0);
             }
-            update_option('ofast_spam_protect_woocommerce', isset($_POST['protect_woocommerce']) ? 1 : 0);
+            update_option('ofast_spam_protect_woocommerce', (ofast_toolkit_is_pro() && isset($_POST['protect_woocommerce'])) ? 1 : 0);
             update_option('ofast_spam_protect_tutor', isset($_POST['protect_tutor']) ? 1 : 0);
             update_option('ofast_spam_protect_tutor_registration', isset($_POST['protect_tutor_registration']) ? 1 : 0);
 
@@ -786,11 +786,22 @@ class Ofast_X_Spam_Protection
                             <tr>
                                 <th>WooCommerce</th>
                                 <td>
-                                    <label class="ofast-toggle">
-                                        <input type="checkbox" name="protect_woocommerce" value="1" <?php checked($protect_woocommerce); ?>>
-                                        <span class="ofast-slider"></span>
-                                    </label>
-                                    <span class="description" style="vertical-align: middle;">Protect WooCommerce login & registration</span>
+                                    <?php if (ofast_toolkit_is_pro()): ?>
+                                        <label class="ofast-toggle">
+                                            <input type="checkbox" name="protect_woocommerce" value="1" <?php checked($protect_woocommerce); ?>>
+                                            <span class="ofast-slider"></span>
+                                        </label>
+                                        <span class="description" style="vertical-align: middle;">Protect WooCommerce login & registration</span>
+                                    <?php else: ?>
+                                        <label class="ofast-toggle">
+                                            <input type="checkbox" disabled>
+                                            <span class="ofast-slider"></span>
+                                        </label>
+                                        <span class="description" style="vertical-align: middle;">Protect WooCommerce login & registration</span>
+                                        <span style="display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; padding: 2px 8px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; font-size: 11px; font-weight: 600; border-radius: 4px; vertical-align: middle;">
+                                            <span class="dashicons dashicons-lock" style="font-size: 11px; width: 11px; height: 11px;"></span> PRO
+                                        </span>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                             <tr>

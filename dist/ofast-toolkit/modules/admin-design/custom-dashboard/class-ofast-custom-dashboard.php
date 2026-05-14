@@ -127,14 +127,17 @@ class Ofast_X_Custom_Dashboard
             $css_version
         );
 
-        // Chart.js for Analytics
-        wp_enqueue_script(
-            'chart-js', 
-            plugins_url('assets/vendor/chart.min.js', __FILE__), 
-            array(), 
-            '4.4.1', 
-            true
-        );
+        // Chart.js for Analytics (conditional — avoid duplicate if WooCommerce already registered it)
+        if (!wp_script_is('chart-js', 'registered')) {
+            wp_register_script(
+                'chart-js', 
+                plugins_url('assets/vendor/chart.min.js', __FILE__), 
+                array(), 
+                '4.4.1', 
+                true
+            );
+        }
+        wp_enqueue_script('chart-js');
 
         wp_enqueue_script(
             'ofast-custom-dashboard', 
@@ -146,6 +149,7 @@ class Ofast_X_Custom_Dashboard
         
         // Pass data to JS
         wp_localize_script('ofast-custom-dashboard', 'ofast_dashboard', array(
+            'mode'      => $this->mode,
             'nonce' => wp_create_nonce('ofast_dashboard_nonce'),
             'admin_url' => admin_url(), // Base admin URL for search redirect
             'analytics' => $this->get_analytics_trends(),
@@ -193,10 +197,13 @@ class Ofast_X_Custom_Dashboard
             return;
         }
         
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+
         $user = wp_get_current_user();
         $greeting = $this->get_greeting();
         $recent_activity = $this->get_recent_activity();
-        $update_count = count(get_plugin_updates());
         $form_count = $this->get_form_count();
         $user_counts = count_users();
         $total_users = isset($user_counts['total_users']) ? (int) $user_counts['total_users'] : 0;
@@ -350,6 +357,7 @@ class Ofast_X_Custom_Dashboard
                     </a>
                 <?php else : ?>
                     <!-- Updates -->
+                    <?php $update_count = count(get_plugin_updates()); ?>
                     <a href="<?php echo esc_url($updates_url); ?>" class="ofast-stat-card dark-card ofast-stat-card-link">
                         <div class="circle-progress" data-percent="<?php echo $update_count > 0 ? '100' : '0'; ?>" style="--c: #f59e0b;">
                              <svg viewBox="0 0 36 36"><path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="<?php echo $update_count > 0 ? '100, 100' : '0, 100'; ?>" /></svg>
@@ -770,10 +778,11 @@ class Ofast_X_Custom_Dashboard
     {
         check_admin_referer('ofast_switch_dashboard');
 
-        $mode = isset($_GET['mode']) && $_GET['mode'] === 'classic' ? 'classic' : 'modern';
+        $mode = sanitize_key(isset($_GET['mode']) ? $_GET['mode'] : '');
+        $mode = in_array($mode, array('classic', 'modern'), true) ? $mode : 'modern';
         update_user_meta(get_current_user_id(), 'ofast_dashboard_mode', $mode);
 
-        wp_redirect(admin_url('index.php'));
+        wp_safe_redirect(admin_url('index.php'));
         exit;
     }
 
@@ -837,7 +846,7 @@ class Ofast_X_Custom_Dashboard
     {
         check_ajax_referer('ofast_dashboard_nonce', 'nonce');
     
-        $query = sanitize_text_field($_POST['query']);
+        $query = isset($_POST['query']) ? sanitize_text_field(wp_unslash($_POST['query'])) : '';
         $results = array();
     
         if (empty($query)) {

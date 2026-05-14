@@ -11,12 +11,14 @@ jQuery(document).ready(function ($) {
     var profileLink = $('#wp-admin-bar-my-account > a').attr('href');
     var avatarHTML = $('#wp-admin-bar-my-account img').prop('outerHTML');
 
-    // Inject into footer
-    $('#ofast-sidebar-footer').html(`
-        <a href="${profileLink}" class="ofast-mini-profile">
-            ${avatarHTML}
-        </a>
-    `);
+    // Inject into footer (only if admin bar elements exist)
+    if (profileLink && avatarHTML) {
+        $('#ofast-sidebar-footer').html(`
+            <a href="${profileLink}" class="ofast-mini-profile">
+                ${avatarHTML}
+            </a>
+        `);
+    }
 
     // Add styles dynamically for this JS-injected element
     $('<style>')

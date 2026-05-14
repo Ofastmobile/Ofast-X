@@ -61,7 +61,7 @@ class Ofast_X_Spam_Protection
             add_filter('wpcf7_form_elements', array($this, 'add_cf7_widget'));
 
             // Validate CF7 submission
-            add_filter('wpcf7_validate', array($this, 'validate_cf7'), 20, 2);
+            add_filter('wpcf7_spam', array($this, 'check_cf7_spam'), 20);
 
             // Enqueue script on CF7 pages
             add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_script'));
@@ -76,7 +76,7 @@ class Ofast_X_Spam_Protection
             add_action('login_enqueue_scripts', array($this, 'enqueue_login_script'));
 
             // Verify on authentication
-            add_filter('authenticate', array($this, 'verify_login'), 30, 3);
+            add_filter('authenticate', array($this, 'verify_login'), 9, 3);
         }
 
         // Tutor LMS registration protection
@@ -254,11 +254,8 @@ class Ofast_X_Spam_Protection
             return $user;
         }
 
-        // Skip if already a credential error (wrong password, etc.)
-        // But still block if it's already a spam error
-        if (is_wp_error($user) && !in_array('spam_protection_failed', $user->get_error_codes())) {
-            return $user;
-        }
+        // FIX: No early return on credential errors — spam check must always run
+        // at priority 9 (before WP credential check at 20)
 
         $provider = $this->get_active_provider();
 
@@ -299,6 +296,9 @@ class Ofast_X_Spam_Protection
             if (function_exists('error_log')) {
                 error_log('Ofast Spam Protection: Login verification failed from IP ' . $this->get_client_ip() . ' - ' . ($result['error'] ?? 'Unknown error'));
             }
+
+            // FIX: Fire wp_login_failed so lockout plugins record this attempt
+            do_action('wp_login_failed', $username, new WP_Error('spam_protection_failed', $result['error'] ?? ''));
 
             return new WP_Error(
                 'spam_protection_failed',
@@ -382,7 +382,7 @@ class Ofast_X_Spam_Protection
         }
 
         // Handle POST Save
-        if (isset($_POST['ofast_save_recaptcha']) && wp_verify_nonce($_POST['recaptcha_nonce'], 'ofast_recaptcha_save')) {
+        if (isset($_POST['ofast_save_recaptcha']) && wp_verify_nonce(wp_unslash($_POST['recaptcha_nonce'] ?? ''), 'ofast_recaptcha_save')) {
             $secret_save_failed = false;
             update_option('ofast_spam_provider', sanitize_text_field($_POST['spam_provider']));
 
@@ -450,7 +450,7 @@ class Ofast_X_Spam_Protection
 
             // Redirect with success flag
             $redirect_args = $secret_save_failed ? array('settings_error' => 'secret_save_failed') : array('settings_saved' => '1');
-            wp_redirect(add_query_arg($redirect_args, wp_get_referer()));
+            wp_safe_redirect(add_query_arg($redirect_args, wp_get_referer()));
             exit;
         }
 
@@ -1177,31 +1177,33 @@ class Ofast_X_Spam_Protection
         return preg_match('/^[A-Za-z0-9_-]{20,120}$/', $value) === 1;
     }
 
-    /**
-     * Get client IP
+      /**
+     * Get client IP address.
+     *
+     * FIX: X-Forwarded-For removed — leftmost IP is client-controlled and
+     * trivially spoofable, bypassing rate limits. CF-Connecting-IP now rejects
+     * private/reserved IPs. Priority: CF-Connecting-IP → X-Real-IP → REMOTE_ADDR.
      */
     private function get_client_ip()
     {
-        $ip_headers = array(
-            'HTTP_CF_CONNECTING_IP',
-            'HTTP_X_FORWARDED_FOR',
-            'HTTP_X_REAL_IP',
-            'REMOTE_ADDR'
-        );
-
-        foreach ($ip_headers as $header) {
-            if (!empty($_SERVER[$header])) {
-                $ip = $_SERVER[$header];
-                if (strpos($ip, ',') !== false) {
-                    $ip = trim(explode(',', $ip)[0]);
-                }
-                if (filter_var($ip, FILTER_VALIDATE_IP)) {
-                    return $ip;
-                }
+        // CF-Connecting-IP: reject private/reserved IPs
+        if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+            $ip = trim($_SERVER['HTTP_CF_CONNECTING_IP']);
+            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                return $ip;
             }
         }
 
-        return '127.0.0.1';
+        // X-Real-IP: single-value header set by nginx
+        if (!empty($_SERVER['HTTP_X_REAL_IP'])) {
+            $ip = trim($_SERVER['HTTP_X_REAL_IP']);
+            if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
+        }
+
+        // REMOTE_ADDR: the only value that truly cannot be spoofed
+        return isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field($_SERVER['REMOTE_ADDR']) : '127.0.0.1';
     }
 
     /**

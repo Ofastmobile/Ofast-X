@@ -203,3 +203,11 @@ body.wp-admin {
         background-position: 100% 0%;
     }
 }
+
+/* Accessibility: Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    #adminmenu li.menu-top:hover > a::before,
+    #adminmenu .wp-submenu li > a:hover::after {
+        animation: none;
+    }
+}

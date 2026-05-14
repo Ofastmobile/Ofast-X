@@ -212,6 +212,7 @@ class Ofast_X_Admin_Url
         // Admin settings page
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'handle_save'));
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_url_assets'));
 
         // Only proceed with protection if custom slug is set
         if (empty($this->custom_slug)) {
@@ -725,6 +726,25 @@ a new key will be generated and emailed to you.
     }
 
     /**
+     * Enqueue admin URL CSS on the admin tweaks page.
+     *
+     * @param string $hook The current admin page hook.
+     */
+    public function enqueue_admin_url_assets($hook)
+    {
+        if (strpos($hook, 'ofast-admin-tweaks') === false) {
+            return;
+        }
+
+        wp_enqueue_style(
+            'ofast-admin-url',
+            plugins_url('assets/css/admin-url.css', __FILE__),
+            array(),
+            OFAST_X_VERSION
+        );
+    }
+
+    /**
      * Render settings page
      */
     public function render_settings_page()
@@ -754,202 +774,7 @@ a new key will be generated and emailed to you.
             }
         }
         ?>
-        <!-- Critical Admin Styles -->
-        <style>
-            /* Colors */
-            :root {
-                --ofast-primary: #6366f1;
-                --ofast-danger: #ef4444;
-                --ofast-warning-bg: #fef2f2;
-                --ofast-warning-border: #fee2e2;
-                --ofast-text: #1e293b;
-                --ofast-text-muted: #64748b;
-            }
-
-            /* Header Styles */
-            .ofast-header {
-                display: flex;
-                align-items: center;
-                gap: 20px;
-                background: #fff;
-                padding: 25px 30px;
-                border-radius: 12px;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-                margin-bottom: 30px;
-                margin-top: 20px;
-            }
-            .ofast-header-icon {
-                width: 56px;
-                height: 56px;
-                background: #fff;
-                border: 1px solid #e2e8f0;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-                border-radius: 16px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            .ofast-header-icon .dashicons {
-                font-size: 28px;
-                width: 28px;
-                height: 28px;
-                color: #6366f1;
-            }
-            .ofast-header-content h1 {
-                margin: 0 0 5px 0;
-                font-size: 24px;
-                font-weight: 700;
-                color: #1e293b;
-                display: block;
-                padding: 0;
-            }
-            .ofast-header-content p {
-                margin: 0;
-                color: #64748b;
-                font-size: 14px;
-            }
-
-            /* Card Styles */
-            .ofast-card {
-                background: #fff;
-                border-radius: 16px;
-                padding: 40px;
-                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-                border: 1px solid rgba(226, 232, 240, 0.6);
-            }
-            
-            /* Warning Box */
-            .ofast-warning-box {
-                background: #fff;
-                border: 1px solid var(--ofast-warning-border);
-                border-radius: 12px;
-                padding: 20px;
-                margin-bottom: 30px;
-            }
-            .ofast-warning-box h3 {
-                color: #000;
-                margin-top: 0;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                font-size: 16px;
-            }
-            .ofast-warning-box ul {
-                color: #000;
-                margin-bottom: 0;
-                padding-left: 20px;
-            }
-            
-            /* Inputs */
-            .ofast-input-group {
-                display: flex;
-                align-items: center;
-                gap: 5px;
-            }
-            .ofast-card input[type="text"],
-            .ofast-card input[type="number"],
-            .ofast-card textarea {
-                border: 1px solid #e2e8f0;
-                border-radius: 6px;
-                padding: 8px 12px;
-                font-size: 14px;
-                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-                transition: all 0.2s;
-            }
-            .ofast-card input:focus,
-            .ofast-card textarea:focus {
-                border-color: var(--ofast-primary);
-                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-                outline: none;
-            }
-
-            /* Button Override */
-            .button.button-primary {
-                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
-                border-color: #6366f1 !important;
-                text-shadow: none !important;
-                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
-                transition: all 0.3s ease !important;
-                padding: 10px 25px !important;
-                height: auto !important;
-                font-size: 15px !important;
-                border-radius: 8px !important;
-            }
-            .button.button-primary:hover {
-                background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
-            }
-            .button.button-primary:active {
-                transform: translateY(0);
-            }
-
-            /* Secondary Button Override (Outline Style) */
-            .ofast-card .button.button-small:not(.delete-btn),
-            .ofast-card .button:not(.button-primary):not(.delete-btn) {
-                color: var(--ofast-primary) !important;
-                border-color: var(--ofast-primary) !important;
-                background: #fff !important;
-                border-radius: 6px !important;
-                border-width: 1px !important;
-                transition: all 0.2s !important;
-            }
-            .ofast-card .button:not(.button-primary):not(.delete-btn):hover {
-                background: #eff6ff !important;
-                transform: translateY(-1px);
-            }
-            /* Explicitly exclude delete button from purple override if it doesn't have a specific class, 
-               but in the HTML it has inline styles. To be safe, adding a check or ensuring inline precedence works. 
-               The 'delete' button in HTML has inline style="color: #ef4444...", so !important here might break it.
-               I'll rely on the fact that inline !important (if used) overrides, but the inline style there doesn't have !important.
-               I should exclude it via attribute selector or add a class. 
-               Looking at HTML: <button ... style="color: #dc3545; ..."> 
-               I'll try to target only specific buttons or exclude by style attribute presence? No, CSS can't easily do that.
-               I will modify the HTML to add a class to the delete button in a separate step or just assume the inline style is sufficient? 
-               Wait, my CSS above uses !important `color: var(--ofast-primary) !important`. This WILL override inline styles.
-               I must be careful.
-               The delete button has `name="ofast_delete_custom_url"`.
-               I can use `.ofast-card .button[name="ofast_delete_custom_url"]` to reset it or exclude it.
-            */
-            .ofast-card .button[name="ofast_delete_custom_url"] {
-                color: var(--ofast-danger) !important;
-                border-color: var(--ofast-danger) !important;
-            }
-
-            /* Recovery Box */
-            .ofast-recovery-box {
-                background: #f8fafc;
-                border: 1px solid #e2e8f0;
-                border-radius: 12px;
-                padding: 25px;
-                margin-top: 40px;
-            }
-            .ofast-recovery-box h3 {
-                color: #1e293b;
-                margin-top: 0;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                font-size: 16px;
-                font-weight: 700;
-            }
-            .ofast-recovery-box p {
-                margin: 12px 0;
-                font-size: 13px;
-                color: #475569;
-                line-height: 1.5;
-            }
-            .ofast-recovery-box pre {
-                background: #fff;
-                padding: 12px;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                font-size: 12px;
-                color: #334155;
-                overflow-x: auto;
-                margin: 10px 0;
-            }
-        </style>
+        <!-- Styles loaded via wp_enqueue_style: assets/css/admin-url.css -->
 
         <div class="wrap">
             <!-- Header -->
@@ -1170,7 +995,7 @@ a new key will be generated and emailed to you.
         }
 
         $whitelisted_ips = array_filter(array_map('trim', explode("\n", $whitelist)));
-        return in_array($ip, $whitelisted_ips);
+        return in_array($ip, $whitelisted_ips, true);
     }
 
     /**

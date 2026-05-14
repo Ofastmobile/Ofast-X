@@ -34,10 +34,10 @@ jQuery(document).ready(function ($) {
                         label: 'Submissions',
                         data: data.submissions,
                         borderColor: '#6366f1',
-                        backgroundColor: 'transparent',
+                        backgroundColor: gradient,
                         borderWidth: 3,
                         tension: 0.4,
-                        fill: false,
+                        fill: true,
                         pointBackgroundColor: '#ffffff',
                         pointBorderColor: '#6366f1',
                         pointRadius: 4
@@ -217,7 +217,6 @@ jQuery(document).ready(function ($) {
     }
 
     function setMode(mode) {
-        var $legacyDashboard = $('#dashboard-widgets-wrap');
 
         cacheOriginalParents();
 
@@ -293,7 +292,7 @@ jQuery(document).ready(function ($) {
     }
 
     // Initial Load
-    var currentMode = localStorage.getItem('ofast_dashboard_mode') || 'modern';
+    var currentMode = ofast_dashboard.mode || 'modern';
     // Use requestAnimationFrame or a direct call instead of hardcoded setTimeout
     if (document.readyState === 'complete') {
         setMode(currentMode);

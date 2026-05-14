@@ -208,7 +208,7 @@ class Ofast_X_Redirects
         $this->clear_redirects_cache();
 
         // Redirect to avoid resubmission
-        wp_redirect(admin_url('admin.php?page=ofast-redirects'));
+        wp_safe_redirect(admin_url('admin.php?page=ofast-redirects'));
         exit;
     }
 
@@ -223,8 +223,8 @@ class Ofast_X_Redirects
             return;
         }
 
-        // Get current request URI
-        $request_uri = $_SERVER['REQUEST_URI'];
+        // Get current request URI (sanitized)
+        $request_uri = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '/';
         $request_path = parse_url($request_uri, PHP_URL_PATH);
 
         // PERFORMANCE: Get redirects from cache (5 minute TTL)
@@ -293,8 +293,6 @@ class Ofast_X_Redirects
                 $type = $this->normalize_redirect_type($redirect->type);
 
                 // Update hit counter atomically.
-                global $wpdb;
-                $table = $wpdb->prefix . 'ofast_redirects';
                 $wpdb->query($wpdb->prepare(
                     "UPDATE {$table} SET hits = hits + 1, last_accessed = %s WHERE id = %d",
                     current_time('mysql'),
@@ -418,7 +416,7 @@ class Ofast_X_Redirects
             wp_send_json_error('Unauthorized');
         }
 
-        $plugin = isset($_POST['plugin']) ? sanitize_text_field($_POST['plugin']) : '';
+        $plugin = isset($_POST['plugin']) ? sanitize_text_field(wp_unslash($_POST['plugin'])) : '';
         $imported = 0;
 
         global $wpdb;
@@ -428,7 +426,7 @@ class Ofast_X_Redirects
             case 'redirection':
                 // Import from Redirection plugin
                 $source_table = $wpdb->prefix . 'redirection_items';
-                if ($wpdb->get_var("SHOW TABLES LIKE '{$source_table}'") === $source_table) {
+                if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $source_table)) === $source_table) {
                     $items = $wpdb->get_results("SELECT url, action_data, regex FROM {$source_table} WHERE action_type = 'url'");
                     foreach ($items as $item) {
                         $insert_data = $this->prepare_redirect_insert_data(
@@ -516,6 +514,9 @@ class Ofast_X_Redirects
             case 'json':
                 // Import from JSON file
                 $json_data = isset($_POST['json_data']) ? wp_unslash($_POST['json_data']) : '';
+                if (strlen($json_data) > 500000) { // 500KB limit
+                    wp_send_json_error('Import file too large.');
+                }
                 $data = json_decode($json_data, true);
                 if ($data && isset($data['redirects']) && is_array($data['redirects'])) {
                     foreach ($data['redirects'] as $redirect) {
@@ -603,7 +604,7 @@ class Ofast_X_Redirects
 
         // Check Redirection plugin
         $redirection_table = $wpdb->prefix . 'redirection_items';
-        if ($wpdb->get_var("SHOW TABLES LIKE '{$redirection_table}'") === $redirection_table) {
+        if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $redirection_table)) === $redirection_table) {
             $count = $wpdb->get_var("SELECT COUNT(*) FROM {$redirection_table} WHERE action_type = 'url'");
             if ($count > 0) {
                 $sources['redirection'] = array(
@@ -691,7 +692,7 @@ class Ofast_X_Redirects
                             <?php wp_nonce_field('ofast_redirect_save', '_wpnonce'); ?>
 
                             <?php if ($editing): ?>
-                                <input type="hidden" name="redirect_id" value="<?php echo $editing; ?>">
+                                <input type="hidden" name="redirect_id" value="<?php echo esc_attr($editing); ?>">
                             <?php endif; ?>
 
                             <table class="form-table" style="margin-top: 0;">
@@ -849,7 +850,7 @@ class Ofast_X_Redirects
                                         </td>
                                         <td style="word-break: break-all; font-size: 12px;"><?php echo esc_html($redirect->target_url); ?></td>
                                         <td>
-                                            <span style="background: <?php echo $redirect->type == '301' ? '#d4edda' : '#fff3cd'; ?>; color: <?php echo $redirect->type == '301' ? '#155724' : '#856404'; ?>; padding: 2px 8px; border-radius: 3px; font-size: 11px;">
+                                            <span style="background: <?php echo esc_attr($redirect->type == '301' ? '#d4edda' : '#fff3cd'); ?>; color: <?php echo esc_attr($redirect->type == '301' ? '#155724' : '#856404'); ?>; padding: 2px 8px; border-radius: 3px; font-size: 11px;">
                                                 <?php echo esc_html($redirect->type); ?>
                                             </span>
                                         </td>
@@ -988,8 +989,8 @@ class Ofast_X_Redirects
         $original_recursion_limit = ini_get('pcre.recursion_limit');
         
         // Apply strict limits for validation
-        ini_set('pcre.backtrack_limit', '1000');  // Very low for testing
-        ini_set('pcre.recursion_limit', '100');
+        @ini_set('pcre.backtrack_limit', '1000');  // Very low for testing
+        @ini_set('pcre.recursion_limit', '100');
         
         $is_valid = false;
         $start_time = microtime(true);
@@ -1041,8 +1042,8 @@ class Ofast_X_Redirects
             restore_error_handler();
             
             // Restore original PCRE settings
-            ini_set('pcre.backtrack_limit', $original_backtrack_limit);
-            ini_set('pcre.recursion_limit', $original_recursion_limit);
+            @ini_set('pcre.backtrack_limit', $original_backtrack_limit);
+            @ini_set('pcre.recursion_limit', $original_recursion_limit);
         }
 
         return $is_valid;
@@ -1074,8 +1075,8 @@ class Ofast_X_Redirects
         $original_recursion_limit = ini_get('pcre.recursion_limit');
         
         // Apply strict runtime limits
-        ini_set('pcre.backtrack_limit', '10000');   // Lower limit for redirects
-        ini_set('pcre.recursion_limit', '500');     // Prevent deep recursion
+        @ini_set('pcre.backtrack_limit', '10000');   // Lower limit for redirects
+        @ini_set('pcre.recursion_limit', '500');     // Prevent deep recursion
         
         $start_time = microtime(true);
         $result = false;
@@ -1109,8 +1110,8 @@ class Ofast_X_Redirects
             restore_error_handler();
             
             // Restore original PCRE settings
-            ini_set('pcre.backtrack_limit', $original_backtrack_limit);
-            ini_set('pcre.recursion_limit', $original_recursion_limit);
+            @ini_set('pcre.backtrack_limit', $original_backtrack_limit);
+            @ini_set('pcre.recursion_limit', $original_recursion_limit);
         }
 
         $execution_time = microtime(true) - $start_time;
@@ -1268,7 +1269,8 @@ class Ofast_X_Redirects
         $strict = $this->is_strict_regex_mode();
 
         // 1. BASIC CONSTRAINTS
-        // Reasonable length limit to reduce ReDoS risk without breaking common patterns
+        // SECURITY: Length check must run first — it bounds backtracking in the
+        // pattern detection loop below. Do not move this check lower.
         $max_length = $strict ? 200 : 300;
         if (strlen($pattern) > $max_length) {
             return false;
@@ -1286,13 +1288,13 @@ class Ofast_X_Redirects
             '/\(\.\+\)\+/',                    // (.+)+
             '/\(\.\*\)\+/',                    // (.*)+
             '/\(\.\+\)\*/',                    // (.+)*
-            '/\([^)]*\+[^)]*\)\+/',            // (x+y)+
-            '/\([^)]*\*[^)]*\)\*/',            // (x*y)*
-            '/\([^)]*\+[^)]*\)\*/',            // (x+y)*
-            '/\([^)]*\*[^)]*\)\+/',            // (x*y)+
+            '/\([^)]*+\+[^)]*+\)\+/',           // (x+y)+
+            '/\([^)]*+\*[^)]*+\)\*/',           // (x*y)*
+            '/\([^)]*+\+[^)]*+\)\*/',           // (x+y)*
+            '/\([^)]*+\*[^)]*+\)\+/',           // (x*y)+
             
             // Nested group quantifiers 
-            '/\(\([^)]*[+*][^)]*\)[+*]\)/',    // ((x+)+) or ((x*)+)
+            '/\(\([^)]*+[+*][^)]*+\)[+*]\)/',   // ((x+)+) or ((x*)+)
             
             // Character class variants
             '/\(\[[^\]]*\]\+\)\+/',            // ([...]+)+
@@ -1313,7 +1315,7 @@ class Ofast_X_Redirects
             '/\(\?<[=!][^)]*[+*]/',            // (?<=...*) or (?<!...+)
             
             // Backreference amplification
-            '/\([^)]*\).*\\\\1[+*]/',          // (group)....\1+
+            '/\([^)]*+\).*\\\\1[+*]/',         // (group)....\1+
             
             // Recursive patterns
             '/\(\?R\)|\(\?[0-9]+\)/',          // (?R) or (?1) etc

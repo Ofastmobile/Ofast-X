@@ -1,15 +1,7 @@
 <?php
 
 /**
- * Ofast X - Code Snippets Module (Core)
- * Lean orchestrator: loads sub-classes, handles initialization,
- * snippet execution, shared utilities, schema, caching, and logging.
- *
- * Sub-classes:
- *  - Ofast_X_Snippets_Validator  → Validation, conflict & duplicate detection
- *  - Ofast_X_Snippets_Admin      → Admin page rendering, dashboard widget, CodeMirror
- *  - Ofast_X_Snippets_Ajax       → All AJAX handlers (toggle, delete, rename, bulk, etc.)
- *  - Ofast_X_Snippets_Import     → Import/export, plugin detection, selective import
+ * Ofast X - Code Snippets Module
  *
  * @since 1.0
  */

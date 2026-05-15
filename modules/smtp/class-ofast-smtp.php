@@ -403,10 +403,13 @@ class Ofast_X_SMTP
         }
 
         $key = hash('sha256', SECURE_AUTH_KEY);
-        $iv = substr(hash('sha256', AUTH_KEY), 0, 16);
+        
+        // Generate a random IV for each encryption operation
+        $iv = openssl_random_pseudo_bytes(16);
         $encrypted = openssl_encrypt($password, 'AES-256-CBC', $key, 0, $iv);
 
-        return base64_encode($encrypted);
+        // Store IV with ciphertext: IV (16 bytes) + encrypted data
+        return base64_encode($iv . $encrypted);
     }
 
     /**
@@ -423,10 +426,20 @@ class Ofast_X_SMTP
         }
 
         $key = hash('sha256', SECURE_AUTH_KEY);
-        $iv = substr(hash('sha256', AUTH_KEY), 0, 16);
         $decoded = base64_decode($encrypted);
 
-        return openssl_decrypt($decoded, 'AES-256-CBC', $key, 0, $iv);
+        // Check if this is old format (without random IV)
+        if (strlen($decoded) < 16) {
+            // Fallback: try old decryption method for backward compatibility
+            $iv = substr(hash('sha256', AUTH_KEY), 0, 16);
+            return openssl_decrypt($decoded, 'AES-256-CBC', $key, 0, $iv);
+        }
+
+        // Extract IV (first 16 bytes) and ciphertext (remaining bytes)
+        $iv = substr($decoded, 0, 16);
+        $ciphertext = substr($decoded, 16);
+
+        return openssl_decrypt($ciphertext, 'AES-256-CBC', $key, 0, $iv);
     }
 
     /**

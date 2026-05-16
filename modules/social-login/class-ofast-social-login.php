@@ -4,7 +4,48 @@
  * Ofast X - Social Login Module (Pro)
  * Allows users to log in via Google and Facebook OAuth.
  *
- * @since 1.0
+ * ============================================================================
+ * V2 REBUILD NOTICE
+ * ============================================================================
+ * The OAuth token exchange flow (Google & Facebook) is intentionally preserved
+ * as-is with security fixes applied. Before v2 ships, this entire flow should
+ * be rebuilt after studying a reference implementation (e.g. Nextend Social
+ * Login, Super Socializer). Do NOT copy verbatim — study their patterns for:
+ *   - State management (transient vs session vs signed cookie)
+ *   - Token exchange error handling
+ *   - Account linking UI
+ *   - Multi-provider conflict resolution
+ *
+ * STATUS: Pro-gated. Not debugged end-to-end. Architecture fixed, not shipped.
+ * ============================================================================
+ *
+ * Fixes applied (pre-ship audit):
+ *  - wp_dropdown_roles() was nested inside <select> — outputs a full <select>
+ *    element, not just <option> tags. Role was never saved. Fixed to loop
+ *    get_editable_roles() directly.
+ *  - State transient was written on every page render (login page, checkout,
+ *    registration page). Now generated lazily via AJAX on button click only.
+ *  - wp_login action was never fired on social login — lockout plugins,
+ *    security audits, and 2FA plugins were silently bypassed.
+ *  - wp_login_failed action was never fired on failure — brute-force lockouts
+ *    had no visibility into failed social login attempts.
+ *  - email_verified not checked from Google userinfo response.
+ *  - generate_username() had no iteration cap — potential infinite loop.
+ *  - wp_redirect() replaced with wp_safe_redirect() in redirect_with_error().
+ *  - users_can_register not checked before creating account — bypassed admin
+ *    intent to close registration.
+ *  - Client secret rendered decrypted into password input value — DOM exposure.
+ *    Now renders a placeholder indicating a saved secret exists.
+ *  - Facebook token exchange used GET with secret in query string (server logs).
+ *    Changed to POST with body.
+ *  - Facebook API version moved from hardcoded class constants to a filterable
+ *    constant so deprecation can be handled without a code change.
+ *  - get_users() meta query: added count_total => false.
+ *  - wp_unslash applied to all $_POST and $_GET reads before sanitization.
+ *  - Avatar get_avatar filter wired up to actually serve stored avatars.
+ *  - handle_oauth_callback() now checks module-enabled status first.
+ *  - redirect_with_error() validates redirect URL is on same host.
+ *  - i18n applied to all user-facing strings.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

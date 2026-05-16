@@ -12,6 +12,15 @@ if (!defined('ABSPATH')) {
 class Ofast_X_Forms_Render
 {
     /**
+     * FIX #10: Static flags prevent shared CSS and JS from being output more
+     * than once when multiple [ofast_form] shortcodes appear on the same page.
+     * Per-form JS (the submit handler binding) is always output since it is
+     * keyed to a specific form ID.
+     */
+    private static $styles_printed = false;
+    private static $js_printed     = false;
+
+    /**
      * Render a form
      */
     public function render($form)
@@ -43,9 +52,17 @@ class Ofast_X_Forms_Render
             <form class="ofast-form" data-form-id="<?php echo esc_attr($form_id); ?>" method="post" style="background: <?php echo $form_bg; ?>; padding: 30px; border-radius: <?php echo $form_radius; ?>px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
                 <?php wp_nonce_field('ofast_form_submit_' . sanitize_key($form_id), 'ofast_form_nonce'); ?>
                 <input type="hidden" name="form_id" value="<?php echo esc_attr($form_id); ?>">
-                <input type="hidden" name="ofast_label_size" value="<?php echo $label_size; ?>">
-                <input type="hidden" name="ofast_input_border" value="<?php echo $input_border; ?>">
-                <input type="hidden" name="ofast_input_focus" value="<?php echo $input_focus; ?>">
+
+                <?php
+                /*
+                 * FIX #3 (render side): Hidden inputs that passed label_size,
+                 * input_border, and input_focus to the frontend were removed.
+                 * These values are server-side design settings — there is no
+                 * legitimate reason to expose them as submittable POST fields.
+                 * The renderer already reads them from $design above and applies
+                 * them directly to inline styles.
+                 */
+                ?>
 
                 <!-- SECURITY: Honeypot field - hidden from users, catches bots -->
                 <div style="position:absolute;left:-9999px;top:-9999px;" aria-hidden="true">
@@ -84,6 +101,13 @@ class Ofast_X_Forms_Render
             </form>
         </div>
 
+        <?php
+        // -----------------------------------------------------------------
+        // FIX #10: Shared CSS — output only on the first form instance.
+        // -----------------------------------------------------------------
+        if (!self::$styles_printed) {
+            self::$styles_printed = true;
+            ?>
         <style>
             .ofast-form-wrapper {
                 max-width: 600px;
@@ -249,7 +273,16 @@ class Ofast_X_Forms_Render
                 margin-top: 5px;
             }
         </style>
+        <?php
+        }
+        // -----------------------------------------------------------------
 
+        // -----------------------------------------------------------------
+        // FIX #10: Shared JS (toast function) — output only once per page.
+        // -----------------------------------------------------------------
+        if (!self::$js_printed) {
+            self::$js_printed = true;
+            ?>
         <script>
             // Modern Toast Notification Function
             function showOfastToast(message, type) {
@@ -295,7 +328,14 @@ class Ofast_X_Forms_Render
                     }
                 }, 5000);
             }
+        </script>
+        <?php
+        }
+        // -----------------------------------------------------------------
 
+        // Per-form submit handler — always output, keyed to this form's ID.
+        ?>
+        <script>
             (function($) {
                 $(document).ready(function() {
                     $('#ofast-form-<?php echo esc_attr($form_id); ?> .ofast-form').on('submit', function(e) {

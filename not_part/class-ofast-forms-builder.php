@@ -11,60 +11,46 @@ if (!defined('ABSPATH')) {
 
 class Ofast_X_Forms_Builder
 {
-    private $form = null;
+    private $form    = null;
     private $form_id = 0;
 
-    /**
-     * Field types available
-     */
     private $field_types = array(
-        'text' => 'Text Input',
-        'email' => 'Email',
-        'phone' => 'Phone Number',
+        'text'     => 'Text Input',
+        'email'    => 'Email',
+        'phone'    => 'Phone Number',
         'textarea' => 'Text Area',
-        'select' => 'Dropdown Select',
-        'radio' => 'Radio Buttons',
+        'select'   => 'Dropdown Select',
+        'radio'    => 'Radio Buttons',
         'checkbox' => 'Checkboxes',
-        'number' => 'Number',
-        'date' => 'Date',
-        'url' => 'URL',
-        'hidden' => 'Hidden Field'
+        'number'   => 'Number',
+        'date'     => 'Date',
+        'url'      => 'URL',
+        'hidden'   => 'Hidden Field',
     );
 
-    /**
-     * Render the builder page
-     */
     public function render()
     {
-        // SECURITY: Verify user has admin capability
         if (!current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.'));
         }
 
-        // Check if editing existing form
         if (isset($_GET['id'])) {
             $this->form_id = absint($_GET['id']);
-            $forms = Ofast_X_Forms::get_instance();
-            $this->form = $forms->get_form($this->form_id, 'admin');
+            $forms         = Ofast_X_Forms::get_instance();
+            $this->form    = $forms->get_form($this->form_id, 'admin');
         }
 
-        // Handle save
         if (isset($_POST['ofast_save_form']) && wp_verify_nonce($_POST['form_nonce'], 'ofast_form_save')) {
             $this->save_form();
         }
 
-        $title = $this->form ? $this->form->title : '';
+        $title       = $this->form ? $this->form->title       : '';
         $description = $this->form ? $this->form->description : '';
-        $fields = $this->form ? $this->form->fields : array();
-        $settings = $this->form ? $this->form->settings : array();
-        $active = $this->form ? $this->form->active : 1;
-        // Content only for tabbed view
-        $is_edit = $this->form_id > 0;
-?>
+        $fields      = $this->form ? $this->form->fields      : array();
+        $settings    = $this->form ? $this->form->settings    : array();
+        $active      = $this->form ? $this->form->active      : 1;
+        ?>
         <div class="ofast-form-builder">
-            <!-- Header handled by main page tabs, but we can show section title if needed -->
-            <!-- <h2 style="margin-top:0;"><?php echo $this->form_id ? 'Edit Form' : 'Create New Form'; ?></h2> -->
-
             <form method="post" id="ofast-form-builder-form">
                 <?php wp_nonce_field('ofast_form_save', 'form_nonce'); ?>
                 <input type="hidden" name="form_id" value="<?php echo $this->form_id; ?>">
@@ -93,7 +79,6 @@ class Ofast_X_Forms_Builder
                         <div class="ofast-card">
                             <h2>Form Fields</h2>
                             <p class="description">Add and arrange your form fields. Drag to reorder.</p>
-
                             <div id="form-fields-container">
                                 <?php
                                 if (!empty($fields)) {
@@ -103,7 +88,6 @@ class Ofast_X_Forms_Builder
                                 }
                                 ?>
                             </div>
-
                             <div class="add-field-section">
                                 <select id="new-field-type">
                                     <?php foreach ($this->field_types as $type => $label): ?>
@@ -136,10 +120,8 @@ class Ofast_X_Forms_Builder
                         </div>
 
                         <div class="ofast-card">
-                            <h2>Design & Styling</h2>
-                            <?php
-                            $design = $settings['design'] ?? array();
-                            ?>
+                            <h2>Design &amp; Styling</h2>
+                            <?php $design = $settings['design'] ?? array(); ?>
                             <table class="form-table">
                                 <tr>
                                     <th>Form Width</th>
@@ -150,10 +132,9 @@ class Ofast_X_Forms_Builder
                                 </tr>
                                 <tr>
                                     <th>Label Font Size</th>
-                                    <td>
-                                        <input type="number" name="settings[design][label_size]" value="<?php echo esc_attr($design['label_size'] ?? 14); ?>" style="width:60px;" min="10" max="24"> px
-                                    </td>
+                                    <td><input type="number" name="settings[design][label_size]" value="<?php echo esc_attr($design['label_size'] ?? 14); ?>" style="width:60px;" min="10" max="24"> px</td>
                                 </tr>
+
                                 <?php
                                 /*
                                  * FIX #9 / #14: Color picker rows.
@@ -184,9 +165,18 @@ class Ofast_X_Forms_Builder
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
+
+                                <tr>
+                                    <th>Button Border Radius</th>
+                                    <td><input type="number" name="settings[design][btn_radius]" value="<?php echo esc_attr($design['btn_radius'] ?? 5); ?>" style="width:60px;" min="0" max="50"> px</td>
+                                </tr>
+                                <tr>
+                                    <th>Form Border Radius</th>
+                                    <td><input type="number" name="settings[design][form_radius]" value="<?php echo esc_attr($design['form_radius'] ?? 8); ?>" style="width:60px;" min="0" max="30"> px</td>
+                                </tr>
                             </table>
                         </div>
-                    </div>
+                    </div><!-- /.ofast-builder-main -->
 
                     <!-- Right: Sidebar -->
                     <div class="ofast-builder-sidebar">
@@ -194,7 +184,7 @@ class Ofast_X_Forms_Builder
                             <h3>Publish</h3>
                             <button type="submit" name="ofast_save_form" class="button button-primary button-large" style="width:100%;">Save Form</button>
                             <?php if ($this->form_id): ?>
-                                <p style="margin-top:10px;"><a href="#" class="ofast-switch-tab" data-tab="all-forms">Back to All Forms</a></p>
+                                <p style="margin-top:10px;"><a href="<?php echo esc_url(admin_url('admin.php?page=ofast-forms&tab=all-forms')); ?>">Back to All Forms</a></p>
                             <?php endif; ?>
                         </div>
 
@@ -210,10 +200,16 @@ class Ofast_X_Forms_Builder
                             <h3>Spam Protection</h3>
                             <?php
                             if (class_exists('Ofast_X_Spam_Protection')) {
-                                $spam = new Ofast_X_Spam_Protection();
+                                $spam     = new Ofast_X_Spam_Protection();
                                 $provider = $spam->get_active_provider();
-                                $labels = array('turnstile' => 'Turnstile', 'math_captcha' => 'Math CAPTCHA', 'recaptcha_v2' => 'reCAPTCHA v2', 'recaptcha_v3' => 'reCAPTCHA v3');
+                                $labels   = array(
+                                    'turnstile'    => 'Turnstile',
+                                    'math_captcha' => 'Math CAPTCHA',
+                                    'recaptcha_v2' => 'reCAPTCHA v2',
+                                    'recaptcha_v3' => 'reCAPTCHA v3',
+                                );
                                 $label = $labels[$provider] ?? ucfirst($provider);
+
                                 if ($spam->is_configured()) {
                                     echo '<p style="color:green;">' . esc_html($label) . ' is active</p>';
                                 } else {
@@ -230,155 +226,65 @@ class Ofast_X_Forms_Builder
                             <button type="button" id="preview-form-btn" class="button button-secondary" style="width:100%;">Preview Form</button>
                             <p class="description" style="margin-top:8px;">See how your form looks before publishing.</p>
                         </div>
-                    </div>
-                </div>
+                    </div><!-- /.ofast-builder-sidebar -->
+                </div><!-- /.ofast-builder-layout -->
             </form>
 
-            <!-- Field Template (hidden) -->
+            <!-- Field Row Template (hidden, used by JS cloning) -->
             <script type="text/html" id="field-row-template">
                 <?php $this->render_field_row(array(), '{{INDEX}}'); ?>
             </script>
-        </div>
+        </div><!-- /.ofast-form-builder -->
 
         <style>
-            .ofast-builder-layout {
-                display: grid;
-                grid-template-columns: 1fr 320px;
-                gap: 30px;
-            }
+            .ofast-builder-layout { display: grid; grid-template-columns: 1fr 320px; gap: 30px; }
+            @media screen and (max-width:1024px) { .ofast-builder-layout { grid-template-columns: 1fr; } }
 
-            @media screen and (max-width: 1024px) {
-                .ofast-builder-layout {
-                    grid-template-columns: 1fr;
-                }
-            }
-            
-            /* Remove old sidebar styles that might conflict */
-            .reset-sidebar-box { margin: 0; padding: 0; background: none; border: none; }
+            .ofast-form-builder .sidebar-box h3   { margin: 0 0 15px; font-size: 16px; font-weight: 600; }
+            #preview-form-btn                      { border-color: #6366f1; color: #6366f1; padding-top: 10px; padding-bottom: 10px; border-radius: 8px; }
+            #preview-form-btn:hover                { background: #f5f3ff; border-color: #4f46e5; color: #4f46e5; }
 
-            .ofast-form-builder .sidebar-box h3 {
-                margin: 0 0 15px 0;
-                font-size: 16px;
-                font-weight: 600;
-            }
-
-            #preview-form-btn {
-                border-color: #6366f1;
-                color: #6366f1;
-                padding-top: 10px;
-                padding-bottom: 10px;
-                border-radius: 8px;
-            }
-            #preview-form-btn:hover {
-                background: #f5f3ff;
-                border-color: #4f46e5;
-                color: #4f46e5;
-            }
-
-            .ofast-form-builder .field-row {
-                background: #f8fafc;
-                border: 1px solid #e2e8f0;
-                padding: 20px;
-                margin-bottom: 15px;
-                cursor: move;
-                border-radius: 8px;
-            }
-
-            .ofast-form-builder .field-row:hover {
-                border-color: #6366f1;
-            }
-            
-            .ofast-form-builder .field-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 15px;
-            }
-
-            .ofast-form-builder .field-type-badge {
-                background: #6366f1;
-                color: #fff;
-                padding: 4px 10px;
-                border-radius: 4px;
-                font-size: 11px;
-                font-weight: 600;
-                text-transform: uppercase;
-            }
-
-            .ofast-form-builder .field-content {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 10px;
-            }
-
-            .ofast-form-builder .field-options {
-                grid-column: 1 / -1;
-            }
-
-            .ofast-form-builder .add-field-section {
-                padding: 15px;
-                background: #f0f0f0;
-                display: flex;
-                gap: 10px;
-            }
-
-            .ofast-form-builder .field-actions {
-                display: flex;
-                gap: 10px;
-            }
-
-            .ofast-form-builder .duplicate-field {
-                color: #6366f1;
-                cursor: pointer;
-            }
-
-            .ofast-form-builder .duplicate-field:hover {
-                text-decoration: underline;
-            }
-
-            .ofast-form-builder .remove-field {
-                color: red;
-                cursor: pointer;
-            }
-
-            .ofast-form-builder .remove-field:hover {
-                text-decoration: underline;
-            }
+            .ofast-form-builder .field-row         { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; margin-bottom: 15px; cursor: move; border-radius: 8px; }
+            .ofast-form-builder .field-row:hover   { border-color: #6366f1; }
+            .ofast-form-builder .field-header      { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+            .ofast-form-builder .field-type-badge  { background: #6366f1; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+            .ofast-form-builder .field-content     { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+            .ofast-form-builder .field-options     { grid-column: 1 / -1; }
+            .ofast-form-builder .add-field-section { padding: 15px; background: #f0f0f0; display: flex; gap: 10px; }
+            .ofast-form-builder .field-actions     { display: flex; gap: 10px; }
+            .ofast-form-builder .duplicate-field   { color: #6366f1; cursor: pointer; }
+            .ofast-form-builder .duplicate-field:hover { text-decoration: underline; }
+            .ofast-form-builder .remove-field      { color: red; cursor: pointer; }
+            .ofast-form-builder .remove-field:hover { text-decoration: underline; }
         </style>
 
         <script>
             jQuery(function($) {
                 var fieldIndex = <?php echo count($fields); ?>;
 
-                // Add field
+                // --- Field management ---
+
                 $('#add-field-btn').on('click', function() {
-                    var type = $('#new-field-type').val();
+                    var type     = $('#new-field-type').val();
                     var template = $('#field-row-template').html();
-                    template = template.replace(/\{\{INDEX\}\}/g, fieldIndex);
-                    var $row = $(template);
-                    $row.find('.field-type-input').val(type);
-                    $row.find('.field-type-badge').text(type);
+                    template     = template.replace(/\{\{INDEX\}\}/g, fieldIndex);
+                    var $row     = $(template);
+                    $row.find('.field-type-input').val(type).trigger('change');
                     $('#form-fields-container').append($row);
                     fieldIndex++;
                 });
 
-                // Remove field
                 $(document).on('click', '.remove-field', function() {
                     $(this).closest('.field-row').remove();
                 });
 
-                // Duplicate field
                 $(document).on('click', '.duplicate-field', function() {
-                    var $row = $(this).closest('.field-row');
+                    var $row   = $(this).closest('.field-row');
                     var $clone = $row.clone();
-
-                    // Update all name attributes with new index
                     $clone.find('[name]').each(function() {
-                        var name = $(this).attr('name');
-                        name = name.replace(/\[\d+\]/, '[' + fieldIndex + ']');
+                        var name = $(this).attr('name').replace(/\[\d+\]/, '[' + fieldIndex + ']');
                         $(this).attr('name', name);
                     });
-
                     $row.after($clone);
                     fieldIndex++;
                 });
@@ -396,12 +302,11 @@ class Ofast_X_Forms_Builder
                     });
                 }
 
-                // Toggle options for select/radio/checkbox
                 $(document).on('change', '.field-type-input', function() {
-                    var type = $(this).val();
-                    var $row = $(this).closest('.field-row');
-                    var hasOptions = ['select', 'radio', 'checkbox'].includes(type);
-                    $row.find('.field-options').toggle(hasOptions);
+                    var type  = $(this).val();
+                    var $row  = $(this).closest('.field-row');
+                    var hasOpts = ['select', 'radio', 'checkbox'].includes(type);
+                    $row.find('.field-options').toggle(hasOpts);
                     $row.find('.field-type-badge').text(type);
                 });
 
@@ -422,39 +327,32 @@ class Ofast_X_Forms_Builder
                     }
                 });
 
-                // XSS Security: Escaping functions for safe HTML generation
+                // --- XSS-safe helpers used in preview ---
+
                 function escapeHtml(unsafe) {
-                    if (unsafe === null || unsafe === undefined) {
-                        return '';
-                    }
+                    if (unsafe === null || unsafe === undefined) return '';
                     return String(unsafe)
-                        .replace(/&/g, '&amp;')
-                        .replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;')
-                        .replace(/"/g, '&quot;')
-                        .replace(/'/g, '&#x27;')
-                        .replace(/\//g, '&#x2F;');
+                        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#x27;').replace(/\//g, '&#x2F;');
                 }
 
                 function escapeAttribute(unsafe) {
-                    if (unsafe === null || unsafe === undefined) {
-                        return '';
-                    }
-                    var safe = escapeHtml(unsafe);
-                    return safe
-                        .replace(/`/g, '&#x60;')
-                        .replace(/=/g, '&#x3D;');
+                    if (unsafe === null || unsafe === undefined) return '';
+                    return escapeHtml(unsafe).replace(/`/g, '&#x60;').replace(/=/g, '&#x3D;');
                 }
 
                 function sanitizeInputType(type) {
-                    var allowedTypes = ['text', 'email', 'password', 'number', 'tel', 'url', 'date', 'time', 'datetime-local', 'month', 'week', 'color', 'range', 'file', 'hidden', 'search', 'checkbox', 'radio'];
-                    return allowedTypes.includes(type) ? type : 'text';
+                    var allowed = ['text','email','password','number','tel','url','date','time',
+                        'datetime-local','month','week','color','range','file',
+                        'hidden','search','checkbox','radio'];
+                    return allowed.includes(type) ? type : 'text';
                 }
 
-                // Preview functionality
+                // --- Preview modal ---
+
                 $('#preview-form-btn').on('click', function() {
-                    var previewHtml = generatePreview();
-                    $('#preview-content').html(previewHtml);
+                    $('#preview-content').html(generatePreview());
                     $('#preview-modal').show();
                 });
 
@@ -463,37 +361,34 @@ class Ofast_X_Forms_Builder
                 });
 
                 function generatePreview() {
-                    // Get design settings
-                    var formWidth = $('input[name="settings[design][form_width]"]').val() || 600;
-                    var labelSize = $('input[name="settings[design][label_size]"]').val() || 14;
-                    var btnBg = $('input[name="settings[design][btn_bg]"]').val() || '#6366f1';
-                    var btnText = $('input[name="settings[design][btn_text]"]').val() || '#ffffff';
-                    var btnRadius = $('input[name="settings[design][btn_radius]"]').val() || 5;
-                    var formBg = $('input[name="settings[design][form_bg]"]').val() || '#ffffff';
+                    var formWidth  = $('input[name="settings[design][form_width]"]').val()  || 600;
+                    var labelSize  = $('input[name="settings[design][label_size]"]').val()  || 14;
+                    var btnBg      = $('input[name="settings[design][btn_bg]"]').val()      || '#6366f1';
+                    var btnText    = $('input[name="settings[design][btn_text]"]').val()    || '#ffffff';
+                    var btnRadius  = $('input[name="settings[design][btn_radius]"]').val()  || 5;
+                    var formBg     = $('input[name="settings[design][form_bg]"]').val()     || '#ffffff';
                     var formRadius = $('input[name="settings[design][form_radius]"]').val() || 8;
-                    var inputBorder = $('input[name="settings[design][input_border]"]').val() || '#dddddd';
-                    var inputFocus = $('input[name="settings[design][input_focus]"]').val() || '#6366f1';
-                    var submitText = $('input[name="settings[submit_text]"]').val() || 'Send Message';
+                    var inputBorder= $('input[name="settings[design][input_border]"]').val()|| '#dddddd';
+                    var submitText = $('input[name="settings[submit_text]"]').val()          || 'Send Message';
+                    var successMsg = $('input[name="settings[success_message]"]').val()      || 'Thank you! Your message has been sent.';
 
                     var html = '<div style="max-width:' + formWidth + 'px;margin:0 auto;">';
-                    html += '<div style="background:' + formBg + ';padding:30px;border-radius:' + formRadius + 'px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">';
+                    html    += '<div style="background:' + formBg + ';padding:30px;border-radius:' + formRadius + 'px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">';
+                    html    += '<div style="display:flex;flex-wrap:wrap;gap:0 20px;">';
 
-                    // Fields container with flex
-                    html += '<div style="display:flex;flex-wrap:wrap;gap:0 20px;">';
-
-                    // Generate fields
                     $('#form-fields-container .field-row').each(function() {
-                        var label = $(this).find('input[name*="[label]"]').val() || '';
+                        var label       = $(this).find('input[name*="[label]"]').val() || '';
                         var placeholder = $(this).find('input[name*="[placeholder]"]').val() || '';
-                        var type = $(this).find('.field-type-input').val() || 'text';
-                        var required = $(this).find('input[name*="[required]"]').is(':checked');
-                        var options = $(this).find('textarea[name*="[options]"]').val() || '';
-                        var width = $(this).find('select[name*="[width]"]').val() || 'full';
+                        var type        = $(this).find('.field-type-input').val() || 'text';
+                        var required    = $(this).find('input[name*="[required]"]').is(':checked');
+                        var options     = $(this).find('textarea[name*="[options]"]').val() || '';
+                        var width       = $(this).find('select[name*="[width]"]').val() || 'full';
 
                         if (type === 'hidden') return;
 
                         var fieldWidth = width === 'half' ? 'calc(50% - 10px)' : '100%';
                         html += '<div style="margin-bottom:20px;width:' + fieldWidth + ';flex:0 0 ' + fieldWidth + ';box-sizing:border-box;">';
+
                         if (label) {
                             html += '<label style="display:block;font-weight:600;font-size:' + labelSize + 'px;margin-bottom:8px;">';
                             html += escapeHtml(label);
@@ -509,26 +404,16 @@ class Ofast_X_Forms_Builder
                                 break;
                             case 'select':
                                 html += '<select style="' + inputStyle + '"><option>' + escapeHtml(placeholder || 'Select an option') + '</option>';
-                                if (options) {
-                                    options.split('\n').forEach(function(opt) {
-                                        opt = opt.trim();
-                                        if (opt) html += '<option>' + escapeHtml(opt) + '</option>';
-                                    });
-                                }
+                                if (options) options.split('\n').forEach(function(opt) { opt = opt.trim(); if (opt) html += '<option>' + escapeHtml(opt) + '</option>'; });
                                 html += '</select>';
                                 break;
                             case 'radio':
                             case 'checkbox':
                                 html += '<div style="display:flex;flex-direction:column;gap:8px;">';
-                                if (options) {
-                                    options.split('\n').forEach(function(opt) {
-                                        opt = opt.trim();
-                                        if (opt) {
-                                            html += '<label style="font-weight:normal;display:flex;align-items:center;gap:8px;">';
-                                            html += '<input type="' + sanitizeInputType(type) + '"> ' + escapeHtml(opt) + '</label>';
-                                        }
-                                    });
-                                }
+                                if (options) options.split('\n').forEach(function(opt) {
+                                    opt = opt.trim();
+                                    if (opt) html += '<label style="font-weight:normal;display:flex;align-items:center;gap:8px;"><input type="' + sanitizeInputType(type) + '"> ' + escapeHtml(opt) + '</label>';
+                                });
                                 html += '</div>';
                                 break;
                             default:
@@ -538,34 +423,21 @@ class Ofast_X_Forms_Builder
                         html += '</div>';
                     });
 
-                    // Close fields container
                     html += '</div>';
-
-                    // Submit button
-                    var successMsg = $('input[name="settings[success_message]"]').val() || 'Thank you! Your message has been sent.';
-                    html += '<div style="margin-top:20px;">';
-                    html += '<button type="button" id="preview-submit-btn" style="background:' + btnBg + ';color:' + btnText + ';border:none;padding:14px 30px;font-size:16px;font-weight:600;border-radius:' + btnRadius + 'px;cursor:pointer;transition:background 0.2s;">' + escapeHtml(submitText) + '</button>';
-                    html += '</div>';
-
-                    // Success message (hidden)
+                    html += '<div style="margin-top:20px;"><button type="button" id="preview-submit-btn" style="background:' + btnBg + ';color:' + btnText + ';border:none;padding:14px 30px;font-size:16px;font-weight:600;border-radius:' + btnRadius + 'px;cursor:pointer;">' + escapeHtml(submitText) + '</button></div>';
                     html += '<div id="preview-success-msg" style="display:none;padding:12px 15px;border-radius:5px;margin-top:20px;font-size:14px;background:#d4edda;color:#155724;border:1px solid #c3e6cb;">' + escapeHtml(successMsg) + '</div>';
-
                     html += '</div></div>';
                     return html;
                 }
 
-                // Fake submit in preview
                 $(document).on('click', '#preview-submit-btn', function() {
                     var $btn = $(this);
-                    var originalText = $btn.text();
+                    var orig = $btn.text();
                     $btn.text('Sending...').prop('disabled', true);
-
                     setTimeout(function() {
-                        $btn.text(originalText).prop('disabled', false);
+                        $btn.text(orig).prop('disabled', false);
                         $('#preview-success-msg').fadeIn();
-                        setTimeout(function() {
-                            $('#preview-success-msg').fadeOut();
-                        }, 3000);
+                        setTimeout(function() { $('#preview-success-msg').fadeOut(); }, 3000);
                     }, 1000);
                 });
             });
@@ -582,7 +454,7 @@ class Ofast_X_Forms_Builder
                 <div id="preview-content" style="padding:30px;"></div>
             </div>
         </div>
-    <?php
+        <?php
     }
 
     /**
@@ -590,14 +462,14 @@ class Ofast_X_Forms_Builder
      */
     private function render_field_row($field, $index)
     {
-        $type = $field['type'] ?? 'text';
-        $label = $field['label'] ?? '';
-        $placeholder = $field['placeholder'] ?? '';
-        $required = !empty($field['required']);
-        $options = $field['options'] ?? '';
-        $width = $field['width'] ?? 'full';
+        $type         = $field['type']        ?? 'text';
+        $label        = $field['label']       ?? '';
+        $placeholder  = $field['placeholder'] ?? '';
+        $required     = !empty($field['required']);
+        $options      = $field['options']     ?? '';
+        $width        = $field['width']       ?? 'full';
         $show_options = in_array($type, array('select', 'radio', 'checkbox'));
-    ?>
+        ?>
         <div class="field-row">
             <div class="field-header">
                 <span class="field-type-badge"><?php echo esc_html($type); ?></span>
@@ -607,7 +479,7 @@ class Ofast_X_Forms_Builder
                 </div>
             </div>
             <div class="field-content">
-                <div style="display:flex; gap:10px;">
+                <div style="display:flex;gap:10px;">
                     <div style="flex:2;">
                         <label>Label</label>
                         <input type="text" name="fields[<?php echo $index; ?>][label]" value="<?php echo esc_attr($label); ?>" class="widefat" placeholder="Field Label">
@@ -624,7 +496,7 @@ class Ofast_X_Forms_Builder
                     <label>Placeholder</label>
                     <input type="text" name="fields[<?php echo $index; ?>][placeholder]" value="<?php echo esc_attr($placeholder); ?>" class="widefat" placeholder="Placeholder text">
                 </div>
-                <div style="display:flex; gap:10px;">
+                <div style="display:flex;gap:10px;">
                     <div style="flex:2;">
                         <label>Type</label>
                         <select name="fields[<?php echo $index; ?>][type]" class="field-type-input widefat">
@@ -633,7 +505,7 @@ class Ofast_X_Forms_Builder
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div style="flex:1; display:flex; align-items:flex-end; padding-bottom:5px;">
+                    <div style="flex:1;display:flex;align-items:flex-end;padding-bottom:5px;">
                         <label><input type="checkbox" name="fields[<?php echo $index; ?>][required]" value="1" <?php checked($required); ?>> Required</label>
                     </div>
                 </div>
@@ -643,7 +515,7 @@ class Ofast_X_Forms_Builder
                 </div>
             </div>
         </div>
-<?php
+        <?php
     }
 
     /**
@@ -654,12 +526,12 @@ class Ofast_X_Forms_Builder
         $forms = Ofast_X_Forms::get_instance();
 
         $data = array(
-            'id' => absint($_POST['form_id'] ?? 0),
-            'title' => wp_unslash($_POST['title'] ?? ''),
+            'id'          => absint($_POST['form_id'] ?? 0),
+            'title'       => wp_unslash($_POST['title'] ?? ''),
             'description' => wp_unslash($_POST['description'] ?? ''),
-            'fields' => wp_unslash($_POST['fields'] ?? array()),
-            'settings' => wp_unslash($_POST['settings'] ?? array()),
-            'active' => isset($_POST['active'])
+            'fields'      => wp_unslash($_POST['fields'] ?? array()),
+            'settings'    => wp_unslash($_POST['settings'] ?? array()),
+            'active'      => isset($_POST['active']),
         );
 
         $form_id = $forms->save_form($data);
@@ -669,6 +541,8 @@ class Ofast_X_Forms_Builder
             return;
         }
 
+        // FIX #2: New form creation now redirects with ?saved=1 and main page
+        // renders the admin notice. Existing flow unchanged.
         if ($form_id && !$this->form_id) {
             wp_redirect(admin_url('admin.php?page=ofast-forms&tab=add-new&id=' . $form_id . '&saved=1'));
             exit;

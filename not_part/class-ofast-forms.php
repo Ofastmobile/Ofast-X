@@ -31,34 +31,27 @@ class Ofast_X_Forms
      */
     private function init_hooks()
     {
-        // Only load if module is enabled in Ofast X settings
         $enabled = get_option('ofastx_modules_enabled', array());
         if (empty($enabled['forms'])) {
             return;
         }
 
-        // Register after Ofast Settings creates the parent menu.
         add_action('admin_menu', array($this, 'add_admin_menu'), 20);
 
         // AJAX handlers
-        add_action('wp_ajax_ofast_save_form', array($this, 'ajax_save_form'));
-        add_action('wp_ajax_ofast_delete_form', array($this, 'ajax_delete_form'));
-        add_action('wp_ajax_ofast_submit_form', array($this, 'ajax_submit_form'));
-        add_action('wp_ajax_nopriv_ofast_submit_form', array($this, 'ajax_submit_form'));
+        add_action('wp_ajax_ofast_save_form',           array($this, 'ajax_save_form'));
+        add_action('wp_ajax_ofast_delete_form',         array($this, 'ajax_delete_form'));
+        add_action('wp_ajax_ofast_submit_form',         array($this, 'ajax_submit_form'));
+        add_action('wp_ajax_nopriv_ofast_submit_form',  array($this, 'ajax_submit_form'));
         // FIX #8: Export handler was implemented but never wired up.
-        add_action('wp_ajax_ofast_export_submissions', array($this, 'ajax_export_submissions'));
+        add_action('wp_ajax_ofast_export_submissions',  array($this, 'ajax_export_submissions'));
 
-        // Shortcode
         add_shortcode('ofast_form', array($this, 'render_shortcode'));
 
-        // Enqueue scripts
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
-        add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_scripts'));
+        add_action('wp_enqueue_scripts',    array($this, 'enqueue_frontend_scripts'));
     }
 
-    /**
-     * Add admin menu
-     */
     /**
      * Add admin menu
      */
@@ -96,8 +89,8 @@ class Ofast_X_Forms
             return null;
         }
 
-        $form->fields = json_decode($form->fields, true) ?: array();
-        $form->settings = json_decode($form->settings, true) ?: array();
+        $form->fields        = json_decode($form->fields, true) ?: array();
+        $form->settings      = json_decode($form->settings, true) ?: array();
         $form->notifications = json_decode($form->notifications, true) ?: array();
 
         return $this->filter_form_data($form, $context);
@@ -128,7 +121,7 @@ class Ofast_X_Forms
         ));
 
         foreach ($forms as &$form) {
-            $form->fields = json_decode($form->fields, true) ?: array();
+            $form->fields   = json_decode($form->fields, true) ?: array();
             $form->settings = json_decode($form->settings, true) ?: array();
         }
 
@@ -150,34 +143,32 @@ class Ofast_X_Forms
             return false;
         }
 
-        $description = sanitize_textarea_field($data['description'] ?? '');
-        $description = $this->truncate_string($description, 1000);
-        $fields = $this->validate_and_sanitize_fields($data['fields'] ?? array());
-        $settings = $this->validate_and_sanitize_settings($data['settings'] ?? array());
+        $description   = sanitize_textarea_field($data['description'] ?? '');
+        $description   = $this->truncate_string($description, 1000);
+        $fields        = $this->validate_and_sanitize_fields($data['fields'] ?? array());
+        $settings      = $this->validate_and_sanitize_settings($data['settings'] ?? array());
         $notifications = $this->validate_and_sanitize_notifications(
             $data['notifications'] ?? $this->get_existing_notifications($data['id'] ?? 0)
         );
 
         $form_data = array(
-            'title' => $title,
-            'description' => $description,
-            'fields' => wp_json_encode($fields),
-            'settings' => wp_json_encode($settings),
+            'title'         => $title,
+            'description'   => $description,
+            'fields'        => wp_json_encode($fields),
+            'settings'      => wp_json_encode($settings),
             'notifications' => wp_json_encode($notifications),
-            'active' => isset($data['active']) ? 1 : 0,
-            'updated_at' => current_time('mysql')
+            'active'        => isset($data['active']) ? 1 : 0,
+            'updated_at'    => current_time('mysql'),
         );
 
         if (!empty($data['id'])) {
-            // Update existing
             $wpdb->update($table, $form_data, array('id' => absint($data['id'])));
             return absint($data['id']);
-        } else {
-            // Insert new
-            $form_data['created_at'] = current_time('mysql');
-            $wpdb->insert($table, $form_data);
-            return $wpdb->insert_id;
         }
+
+        $form_data['created_at'] = current_time('mysql');
+        $wpdb->insert($table, $form_data);
+        return $wpdb->insert_id;
     }
 
     /**
@@ -192,12 +183,10 @@ class Ofast_X_Forms
         switch ($context) {
             case 'admin':
                 return current_user_can('manage_options');
-
             case 'submission':
             case 'public':
             case 'shortcode':
                 return !empty($form->active);
-
             default:
                 return false;
         }
@@ -211,10 +200,8 @@ class Ofast_X_Forms
         switch ($context) {
             case 'admin':
                 return $form;
-
             case 'submission':
                 return $this->filter_submission_form_data($form);
-
             case 'public':
             case 'shortcode':
             default:
@@ -222,19 +209,16 @@ class Ofast_X_Forms
         }
     }
 
-    /**
-     * Keep only the form data needed for frontend rendering.
-     */
     private function filter_public_form_data($form)
     {
-        $filtered = new stdClass();
-        $filtered->id = $form->id;
-        $filtered->title = $form->title;
+        $filtered              = new stdClass();
+        $filtered->id          = $form->id;
+        $filtered->title       = $form->title;
         $filtered->description = $form->description ?? '';
-        $filtered->active = $form->active;
-        $filtered->fields = $this->filter_fields_for_public($form->fields ?? array());
+        $filtered->active      = $form->active;
+        $filtered->fields      = $this->filter_fields_for_public($form->fields ?? array());
+        $filtered->settings    = array();
 
-        $filtered->settings = array();
         foreach (array('submit_text', 'design') as $key) {
             if (isset($form->settings[$key])) {
                 $filtered->settings[$key] = $form->settings[$key];
@@ -244,27 +228,19 @@ class Ofast_X_Forms
         return $filtered;
     }
 
-    /**
-     * Keep only the form data needed to validate and process submissions.
-     */
     private function filter_submission_form_data($form)
     {
         $filtered = $this->filter_public_form_data($form);
 
-        if (!empty($form->settings['success_message'])) {
-            $filtered->settings['success_message'] = $form->settings['success_message'];
-        }
-
-        if (!empty($form->settings['redirect_url'])) {
-            $filtered->settings['redirect_url'] = $form->settings['redirect_url'];
+        foreach (array('success_message', 'redirect_url') as $key) {
+            if (!empty($form->settings[$key])) {
+                $filtered->settings[$key] = $form->settings[$key];
+            }
         }
 
         return $filtered;
     }
 
-    /**
-     * Keep only field properties that the frontend renderer and validator need.
-     */
     private function filter_fields_for_public($fields)
     {
         if (!is_array($fields)) {
@@ -272,7 +248,7 @@ class Ofast_X_Forms
         }
 
         $filtered_fields = array();
-        $allowed_props = array('type', 'label', 'placeholder', 'options', 'width', 'required');
+        $allowed_props   = array('type', 'label', 'placeholder', 'options', 'width', 'required');
 
         foreach ($fields as $field) {
             if (!is_array($field)) {
@@ -294,9 +270,6 @@ class Ofast_X_Forms
         return $filtered_fields;
     }
 
-    /**
-     * Sanitize field configuration from the admin builder.
-     */
     private function validate_and_sanitize_fields($fields)
     {
         if (!is_array($fields)) {
@@ -304,8 +277,8 @@ class Ofast_X_Forms
         }
 
         $allowed_field_types = array('text', 'email', 'phone', 'textarea', 'select', 'radio', 'checkbox', 'number', 'date', 'url', 'hidden');
-        $allowed_widths = array('full', 'half');
-        $sanitized_fields = array();
+        $allowed_widths      = array('full', 'half');
+        $sanitized_fields    = array();
 
         foreach ($fields as $field) {
             if (!is_array($field)) {
@@ -323,21 +296,18 @@ class Ofast_X_Forms
             }
 
             $sanitized_fields[] = array(
-                'type' => $type,
-                'label' => $this->truncate_string(sanitize_text_field($field['label'] ?? ''), 100),
+                'type'        => $type,
+                'label'       => $this->truncate_string(sanitize_text_field($field['label'] ?? ''), 100),
                 'placeholder' => $this->truncate_string(sanitize_text_field($field['placeholder'] ?? ''), 200),
-                'options' => $this->truncate_string(sanitize_textarea_field($field['options'] ?? ''), 2000),
-                'width' => $width,
-                'required' => !empty($field['required']),
+                'options'     => $this->truncate_string(sanitize_textarea_field($field['options'] ?? ''), 2000),
+                'width'       => $width,
+                'required'    => !empty($field['required']),
             );
         }
 
         return array_slice($sanitized_fields, 0, 50);
     }
 
-    /**
-     * Sanitize form settings used by the frontend.
-     */
     private function validate_and_sanitize_settings($settings)
     {
         if (!is_array($settings)) {
@@ -365,17 +335,14 @@ class Ofast_X_Forms
         return $sanitized_settings;
     }
 
-    /**
-     * Sanitize design-related numeric and color values.
-     */
     private function validate_and_sanitize_design_settings($design)
     {
         $sanitized_design = array();
-        $numeric_fields = array(
-            'form_width' => array('min' => 200, 'max' => 1200, 'default' => 600),
-            'label_size' => array('min' => 10, 'max' => 24, 'default' => 14),
-            'btn_radius' => array('min' => 0, 'max' => 50, 'default' => 5),
-            'form_radius' => array('min' => 0, 'max' => 30, 'default' => 8),
+        $numeric_fields   = array(
+            'form_width'  => array('min' => 200, 'max' => 1200, 'default' => 600),
+            'label_size'  => array('min' => 10,  'max' => 24,   'default' => 14),
+            'btn_radius'  => array('min' => 0,   'max' => 50,   'default' => 5),
+            'form_radius' => array('min' => 0,   'max' => 30,   'default' => 8),
         );
         // FIX #9 / #14: Only authoritative color keys are stored.
         // The builder UI uses mirror text inputs for UX, but those inputs no
@@ -384,7 +351,7 @@ class Ofast_X_Forms
 
         foreach ($numeric_fields as $field => $limits) {
             if (isset($design[$field])) {
-                $value = absint($design[$field]);
+                $value                    = absint($design[$field]);
                 $sanitized_design[$field] = max($limits['min'], min($limits['max'], $value));
             }
         }
@@ -401,39 +368,32 @@ class Ofast_X_Forms
         return $sanitized_design;
     }
 
-    /**
-     * Sanitize nested notification settings without dropping existing data on edit.
-     */
     private function validate_and_sanitize_notifications($notifications)
     {
         if (!is_array($notifications)) {
             return array();
         }
 
-        $sanitized_notifications = array();
+        $sanitized = array();
 
         foreach ($notifications as $key => $value) {
             $sanitized_key = sanitize_key($key);
-
             if ($sanitized_key === '') {
                 continue;
             }
 
             if (is_array($value)) {
-                $sanitized_notifications[$sanitized_key] = $this->validate_and_sanitize_notifications($value);
+                $sanitized[$sanitized_key] = $this->validate_and_sanitize_notifications($value);
             } elseif (is_bool($value)) {
-                $sanitized_notifications[$sanitized_key] = $value;
+                $sanitized[$sanitized_key] = $value;
             } elseif (is_scalar($value)) {
-                $sanitized_notifications[$sanitized_key] = $this->truncate_string(sanitize_text_field((string) $value), 500);
+                $sanitized[$sanitized_key] = $this->truncate_string(sanitize_text_field((string) $value), 500);
             }
         }
 
-        return $sanitized_notifications;
+        return $sanitized;
     }
 
-    /**
-     * Preserve stored notifications when the builder does not submit them.
-     */
     private function get_existing_notifications($form_id)
     {
         $form_id = absint($form_id);
@@ -449,17 +409,11 @@ class Ofast_X_Forms
         return $existing_form->notifications;
     }
 
-    /**
-     * Return a string length with an mbstring fallback.
-     */
     private function string_length($value)
     {
         return function_exists('mb_strlen') ? mb_strlen($value, 'UTF-8') : strlen($value);
     }
 
-    /**
-     * Truncate text safely with an mbstring fallback.
-     */
     private function truncate_string($value, $max_length)
     {
         if ($this->string_length($value) <= $max_length) {
@@ -480,9 +434,6 @@ class Ofast_X_Forms
         return $wpdb->delete($table, array('id' => absint($form_id)));
     }
 
-    /**
-     * Get submission count for a form
-     */
     public function get_submission_count($form_id)
     {
         global $wpdb;
@@ -494,9 +445,6 @@ class Ofast_X_Forms
         ));
     }
 
-    /**
-     * Get unread submission count
-     */
     public function get_unread_count($form_id = null)
     {
         global $wpdb;
@@ -517,9 +465,7 @@ class Ofast_X_Forms
      */
     public function render_shortcode($atts)
     {
-        $atts = shortcode_atts(array(
-            'id' => 0
-        ), $atts);
+        $atts = shortcode_atts(array('id' => 0), $atts);
 
         if (empty($atts['id'])) {
             return '<p>Please specify a form ID.</p>';
@@ -530,7 +476,6 @@ class Ofast_X_Forms
             return '<p>Form not found.</p>';
         }
 
-        // Load renderer
         require_once OFAST_X_PLUGIN_DIR . 'modules/forms/class-ofast-forms-render.php';
         $renderer = new Ofast_X_Forms_Render();
 
@@ -633,7 +578,7 @@ class Ofast_X_Forms
 
         wp_localize_script('ofast-forms-admin', 'ofastForms', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('ofast_forms_nonce')
+            'nonce'   => wp_create_nonce('ofast_forms_nonce'),
         ));
     }
 
@@ -686,182 +631,75 @@ class Ofast_X_Forms
         $current_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'all-forms';
         ?>
         <style>
-            /* Consolidated Admin Styles matching Email Module */
-            :root {
-                --ofast-primary: #6366f1;
-            }
+            :root { --ofast-primary: #6366f1; }
 
-            /* Header Styles */
             .ofast-header {
-                display: flex;
-                align-items: center;
-                gap: 20px;
-                background: #fff;
-                padding: 25px 30px;
-                border-radius: 12px;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-                margin-bottom: 25px;
-                margin-top: 20px;
+                display: flex; align-items: center; gap: 20px; background: #fff;
+                padding: 25px 30px; border-radius: 12px;
+                box-shadow: 0 4px 6px -1px rgba(0,0,0,.05);
+                margin-bottom: 25px; margin-top: 20px;
             }
             .ofast-header-icon {
-                width: 56px;
-                height: 56px;
-                background: #fff;
-                border: 1px solid #e2e8f0;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-                border-radius: 16px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+                width: 56px; height: 56px; background: #fff;
+                border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,.02);
+                border-radius: 16px; display: flex; align-items: center; justify-content: center;
             }
-            .ofast-header-icon .dashicons {
-                font-size: 28px;
-                width: 28px;
-                height: 28px;
-                color: #6366f1;
-            }
-            .ofast-header-content h1 {
-                margin: 0 0 5px 0;
-                font-size: 24px;
-                font-weight: 700;
-                color: #1e293b;
-                display: block;
-                padding: 0;
-            }
-            .ofast-header-content p {
-                margin: 0;
-                color: #64748b;
-                font-size: 14px;
-            }
+            .ofast-header-icon .dashicons { font-size: 28px; width: 28px; height: 28px; color: #6366f1; }
+            .ofast-header-content h1 { margin: 0 0 5px; font-size: 24px; font-weight: 700; color: #1e293b; display: block; padding: 0; }
+            .ofast-header-content p  { margin: 0; color: #64748b; font-size: 14px; }
 
-            /* Tabs Navigation */
             .ofast-tabs-nav {
-                display: flex;
-                flex-wrap: nowrap;
-                gap: 8px;
-                margin-bottom: 25px;
-                padding: 10px 12px;
-                background: #fff;
-                border-radius: 12px;
-                border: 1px solid rgba(226, 232, 240, 0.6);
-                position: sticky;
-                top: 40px;
-                z-index: 99;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-                -ms-overflow-style: none;
-                scrollbar-width: none;
+                display: flex; flex-wrap: nowrap; gap: 8px; margin-bottom: 25px;
+                padding: 10px 12px; background: #fff; border-radius: 12px;
+                border: 1px solid rgba(226,232,240,.6); position: sticky; top: 40px;
+                z-index: 99; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05);
+                overflow-x: auto; -webkit-overflow-scrolling: touch;
+                -ms-overflow-style: none; scrollbar-width: none;
             }
-            .ofast-tabs-nav::-webkit-scrollbar {
-                display: none;
-            }
+            .ofast-tabs-nav::-webkit-scrollbar { display: none; }
             .ofast-tab {
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                padding: 12px 20px;
-                background: transparent;
-                border: none;
-                border-radius: 8px;
-                color: #64748b;
-                font-size: 14px;
-                font-weight: 500;
-                text-decoration: none;
-                cursor: pointer;
-                transition: all 0.2s ease;
-                white-space: nowrap;
+                display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px;
+                background: transparent; border: none; border-radius: 8px; color: #64748b;
+                font-size: 14px; font-weight: 500; text-decoration: none; cursor: pointer;
+                transition: all .2s ease; white-space: nowrap;
             }
-            .ofast-tab:hover {
-                background: #f1f5f9;
-                color: #1e293b;
-            }
-            .ofast-tab.active {
-                background: var(--ofast-primary);
-                color: #fff;
-                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-            }
-            .ofast-tab .dashicons {
-                font-size: 16px;
-                width: 16px;
-                height: 16px;
-                line-height: 16px;
-            }
+            .ofast-tab:hover  { background: #f1f5f9; color: #1e293b; }
+            .ofast-tab.active { background: var(--ofast-primary); color: #fff; box-shadow: 0 4px 12px rgba(99,102,241,.3); }
+            .ofast-tab .dashicons { font-size: 16px; width: 16px; height: 16px; line-height: 16px; }
 
-            /* Tab Content Visibility */
-            .ofast-tab-content { display: none; }
-            .ofast-tab-content.active { display: block; animation: ofastFadeIn 0.3s ease; }
-            @keyframes ofastFadeIn {
-                from { opacity: 0; transform: translateY(10px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
+            .ofast-tab-content        { display: none; }
+            .ofast-tab-content.active { display: block; animation: ofastFadeIn .3s ease; }
+            @keyframes ofastFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-            /* Card Styling */
             .ofast-card {
-                background: #fff;
-                border-radius: 16px;
-                padding: 30px;
-                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-                border: 1px solid rgba(226, 232, 240, 0.6);
-                margin-bottom: 20px;
+                background: #fff; border-radius: 16px; padding: 30px;
+                box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -2px rgba(0,0,0,.05);
+                border: 1px solid rgba(226,232,240,.6); margin-bottom: 20px;
             }
             .ofast-card h2 { margin-top: 0; }
+            .ofast-card .wp-list-table { border: none; box-shadow: none; }
+            .ofast-card .wp-list-table th { padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #475569; }
+            .ofast-card .wp-list-table td { padding: 15px 20px; vertical-align: middle; }
+            .ofast-card .wp-list-table tr:hover td { background: #f8fafc; }
 
-            /* Table Styles Override within Card */
-            .ofast-card .wp-list-table {
-                border: none;
-                box-shadow: none;
-            }
-            .ofast-card .wp-list-table th {
-                padding: 15px 20px;
-                background: #f8fafc;
-                border-bottom: 1px solid #e2e8f0;
-                font-weight: 600;
-                color: #475569;
-            }
-            .ofast-card .wp-list-table td {
-                padding: 15px 20px;
-                vertical-align: middle;
-            }
-            .ofast-card .wp-list-table tr:hover td {
-                background: #f8fafc;
-            }
-            
-            /* Button Override */
             .button.button-primary {
-                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
-                border-color: #6366f1 !important;
-                text-shadow: none !important;
-                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
-                transition: all 0.3s ease !important;
-                padding: 10px 24px !important;
-                height: auto !important;
-                border-radius: 8px !important;
-                font-size: 14px !important;
+                background: linear-gradient(135deg,#6366f1 0%,#4f46e5 100%) !important;
+                border-color: #6366f1 !important; text-shadow: none !important;
+                box-shadow: 0 4px 15px rgba(99,102,241,.3) !important;
+                transition: all .3s ease !important; padding: 10px 24px !important;
+                height: auto !important; border-radius: 8px !important; font-size: 14px !important;
             }
-            .button.button-primary:hover {
-                background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
-            }
+            .button.button-primary:hover { background: linear-gradient(135deg,#4f46e5 0%,#4338ca 100%) !important; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99,102,241,.4) !important; }
             .button.button-primary:active { transform: translateY(0); }
-            
-            .page-title-action { display: none; } /* Hide default WP Add New */
-            
-            /* Checkbox Styling Overrides */
+            .page-title-action { display: none; }
             .ofast-card input[type="checkbox"]:checked {
-                background-color: #fff;
-                border-color: #6366f1;
+                background-color: #fff; border-color: #6366f1;
                 background-image: url("data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2020%2020%27%3E%3Cpath%20d%3D%27M14.83%204.89l1.34.94-5.81%208.38H9.02L5.78%209.67l1.34-1.25%202.57%202.4z%27%20fill%3D%27%236366f1%27%2F%3E%3C%2Fsvg%3E");
             }
-            .ofast-card input[type="checkbox"]:focus {
-                border-color: #6366f1;
-                box-shadow: 0 0 0 1px #6366f1;
-            }
+            .ofast-card input[type="checkbox"]:focus { border-color: #6366f1; box-shadow: 0 0 0 1px #6366f1; }
         </style>
 
         <div class="wrap">
-            <!-- Header -->
             <div class="ofast-header">
                 <div class="ofast-header-icon">
                     <span class="dashicons dashicons-feedback"></span>
@@ -901,7 +739,6 @@ class Ofast_X_Forms
             </div>
 
             <div id="tab-add-new" class="ofast-tab-content <?php echo $current_tab === 'add-new' ? 'active' : ''; ?>">
-                <!-- Content here manages its own cards -->
                 <?php $this->render_builder_page(); ?>
             </div>
 
@@ -911,7 +748,6 @@ class Ofast_X_Forms
                 </div>
             </div>
         </div>
-
         <?php
     }
 
@@ -921,25 +757,23 @@ class Ofast_X_Forms
     public function render_forms_page()
     {
         $forms = $this->get_all_forms();
-?>
-        <!-- Replaced content for tabbed view -->
+        ?>
         <div class="ofast-forms-list">
             <?php if (empty($forms)): ?>
-                <div style="padding: 60px 40px; text-align: center;">
-                    <div style="width: 64px; height: 64px; margin: 0 auto 20px; background: #f1f5f9; border-radius: 16px; display: flex; align-items: center; justify-content: center;">
-                        <span class="dashicons dashicons-feedback" style="font-size: 32px; width: 32px; height: 32px; color: #94a3b8;"></span>
+                <div style="padding:60px 40px;text-align:center;">
+                    <div style="width:64px;height:64px;margin:0 auto 20px;background:#f1f5f9;border-radius:16px;display:flex;align-items:center;justify-content:center;">
+                        <span class="dashicons dashicons-feedback" style="font-size:32px;width:32px;height:32px;color:#94a3b8;"></span>
                     </div>
-                    <h3 style="margin: 0 0 8px; color: #1e293b; font-size: 18px; font-weight: 600;">No forms yet</h3>
-                    <p style="margin: 0 0 20px; color: #64748b; font-size: 14px;">Create your first contact form to start collecting submissions.</p>
+                    <h3 style="margin:0 0 8px;color:#1e293b;font-size:18px;font-weight:600;">No forms yet</h3>
+                    <p style="margin:0 0 20px;color:#64748b;font-size:14px;">Create your first contact form to start collecting submissions.</p>
                     <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-forms&tab=add-new')); ?>" class="button button-primary">
-                        <span class="dashicons dashicons-plus-alt2" style="margin-right: 4px; font-size: 14px; width: 14px; height: 14px; line-height: 22px;"></span>
+                        <span class="dashicons dashicons-plus-alt2" style="margin-right:4px;font-size:14px;width:14px;height:14px;line-height:22px;"></span>
                         Create Form
                     </a>
                 </div>
             <?php else: ?>
-                <!-- Scrollable Table Container -->
-                <div style="overflow-x: auto; max-width: 100%;">
-                    <table class="wp-list-table widefat fixed striped" style="min-width: 800px; margin: 0; box-shadow: none;">
+                <div style="overflow-x:auto;max-width:100%;">
+                    <table class="wp-list-table widefat fixed striped" style="min-width:800px;margin:0;box-shadow:none;">
                         <thead>
                             <tr>
                                 <th>Title</th>
@@ -953,44 +787,45 @@ class Ofast_X_Forms
                         <tbody>
                             <?php foreach ($forms as $form): ?>
                                 <tr>
-                                    <td style="font-weight: 500; color: #1e293b;">
+                                    <td style="font-weight:500;color:#1e293b;">
                                         <?php echo esc_html($form->title); ?>
                                         <div class="row-actions">
                                             <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-forms&tab=add-new&id=' . $form->id)); ?>" style="color:#6366f1;">Edit</a> |
-                                            <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-forms&action=delete&id=' . $form->id), 'delete_form_' . $form->id); ?>" 
-                                               class="delete" onclick="return confirm('Are you sure?');">Delete</a>
+                                            <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin.php?page=ofast-forms&action=delete&id=' . $form->id), 'delete_form_' . $form->id)); ?>"
+                                               class="delete" onclick="return confirm('Delete this form? This cannot be undone.');">Delete</a>
                                         </div>
                                     </td>
                                     <td>
-                                        <code style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; color: #6366f1; white-space: nowrap;">[ofast_form id="<?php echo $form->id; ?>"]</code>
-                                        <span class="dashicons dashicons-admin-page" title="Copy Shortcode" style="cursor:pointer; color:#94a3b8; font-size:16px; margin-left:5px;" onclick="navigator.clipboard.writeText('[ofast_form id=&quot;<?php echo $form->id; ?>&quot;]'); alert('Copied!');"></span>
+                                        <code style="background:#f1f5f9;padding:4px 8px;border-radius:4px;color:#6366f1;white-space:nowrap;">[ofast_form id="<?php echo $form->id; ?>"]</code>
+                                        <span class="dashicons dashicons-admin-page" title="Copy Shortcode" style="cursor:pointer;color:#94a3b8;font-size:16px;margin-left:5px;"
+                                              onclick="navigator.clipboard.writeText('[ofast_form id=&quot;<?php echo $form->id; ?>&quot;]');alert('Copied!');"></span>
                                     </td>
                                     <td>
                                         <?php
-                                        $count = $this->get_submission_count($form->id);
+                                        $count  = $this->get_submission_count($form->id);
                                         $unread = $this->get_unread_count($form->id);
                                         echo $count;
                                         if ($unread > 0) {
-                                            echo ' <span class="count-bubble" style="background:#6366f1; color:white; padding:2px 6px; border-radius:10px; font-size:10px; margin-left:5px;">' . $unread . ' new</span>';
+                                            echo ' <span style="background:#6366f1;color:white;padding:2px 6px;border-radius:10px;font-size:10px;margin-left:5px;">' . $unread . ' new</span>';
                                         }
                                         ?>
                                     </td>
                                     <td>
                                         <?php if ($form->active): ?>
-                                            <span style="display:inline-flex; align-items:center; gap:4px; padding: 4px 10px; border-radius: 20px; background: #dcfce7; color: #15803d; font-size: 12px; font-weight: 500;">
-                                                <span style="width:6px; height:6px; background:#15803d; border-radius:50%;"></span> Active
+                                            <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;background:#dcfce7;color:#15803d;font-size:12px;font-weight:500;">
+                                                <span style="width:6px;height:6px;background:#15803d;border-radius:50%;"></span> Active
                                             </span>
                                         <?php else: ?>
-                                            <span style="display:inline-flex; align-items:center; gap:4px; padding: 4px 10px; border-radius: 20px; background: #f1f5f9; color: #64748b; font-size: 12px; font-weight: 500;">
-                                                <span style="width:6px; height:6px; background:#64748b; border-radius:50%;"></span> Inactive
+                                            <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;background:#f1f5f9;color:#64748b;font-size:12px;font-weight:500;">
+                                                <span style="width:6px;height:6px;background:#64748b;border-radius:50%;"></span> Inactive
                                             </span>
                                         <?php endif; ?>
                                     </td>
-                                    <td style="color: #64748b;"><?php echo date('M j, Y', strtotime($form->created_at)); ?></td>
+                                    <td style="color:#64748b;"><?php echo esc_html(date('M j, Y', strtotime($form->created_at))); ?></td>
                                     <td>
-                                        <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-forms&tab=add-new&id=' . $form->id)); ?>" style="color:#6366f1; font-weight:500;">Edit</a> |
-                                        <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=ofast-forms&action=delete&id=' . $form->id), 'delete_form_' . $form->id); ?>" 
-                                           class="delete" onclick="return confirm('Delete this form? This cannot be undone.')">Delete</a>
+                                        <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-forms&tab=add-new&id=' . $form->id)); ?>" style="color:#6366f1;font-weight:500;">Edit</a> |
+                                        <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin.php?page=ofast-forms&action=delete&id=' . $form->id), 'delete_form_' . $form->id)); ?>"
+                                           class="delete" onclick="return confirm('Delete this form? This cannot be undone.');">Delete</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -999,29 +834,9 @@ class Ofast_X_Forms
                 </div>
             <?php endif; ?>
         </div>
-        <script>
-            jQuery(function($) {
-                $('.delete-form').on('click', function(e) {
-                    e.preventDefault();
-                    if (!confirm('Delete this form? This cannot be undone.')) return;
-
-                    var $row = $(this).closest('tr');
-                    $.post(ajaxurl, {
-                        action: 'ofast_delete_form',
-                        form_id: $(this).data('id'),
-                        nonce: '<?php echo wp_create_nonce('ofast_forms_nonce'); ?>'
-                    }, function() {
-                        $row.fadeOut();
-                    });
-                });
-            });
-        </script>
-<?php
+        <?php
     }
 
-    /**
-     * Render form builder page
-     */
     public function render_builder_page()
     {
         require_once OFAST_X_PLUGIN_DIR . 'modules/forms/class-ofast-forms-builder.php';
@@ -1029,9 +844,6 @@ class Ofast_X_Forms
         $builder->render();
     }
 
-    /**
-     * Render submissions page
-     */
     public function render_submissions_page()
     {
         require_once OFAST_X_PLUGIN_DIR . 'modules/forms/class-ofast-forms-submissions.php';
@@ -1040,5 +852,4 @@ class Ofast_X_Forms
     }
 }
 
-// Initialize
 Ofast_X_Forms::get_instance();

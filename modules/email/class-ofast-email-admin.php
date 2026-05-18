@@ -25,6 +25,25 @@ class Ofast_X_Email_Admin
 
         // Auto-repair table on admin init (runs once)
         add_action('admin_init', array($this, 'maybe_repair_table'));
+
+        // SECURITY: Send HTTP security headers on our admin pages
+        add_action('admin_init', array($this, 'send_security_headers'));
+    }
+
+    /**
+     * Send HTTP security headers on plugin admin pages
+     */
+    public function send_security_headers()
+    {
+        if (!isset($_GET['page'])) return;
+        $page = sanitize_key($_GET['page']);
+        if ($page !== 'ofast-emailer') return;
+
+        if (!headers_sent()) {
+            header('X-Content-Type-Options: nosniff');
+            header('X-Frame-Options: SAMEORIGIN');
+            header('Referrer-Policy: strict-origin-when-cross-origin');
+        }
     }
 
     /**
@@ -43,7 +62,7 @@ class Ofast_X_Email_Admin
         $table = $wpdb->prefix . 'ofast_email_logs';
 
         // Check if table exists
-        if ($wpdb->get_var("SHOW TABLES LIKE '$table'") !== $table) {
+        if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table)) !== $table) {
             $charset = $wpdb->get_charset_collate();
             $sql = "CREATE TABLE $table (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,

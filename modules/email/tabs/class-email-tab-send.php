@@ -207,7 +207,7 @@ class Ofast_Email_Tab_Send
                     if ($include_contacts) {
                         global $wpdb;
                         $contacts_table = $wpdb->prefix . 'ofast_email_contacts';
-                        if ($wpdb->get_var("SHOW TABLES LIKE '{$contacts_table}'") === $contacts_table) {
+                        if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $contacts_table)) === $contacts_table) {
                             $crm_emails = $wpdb->get_col("SELECT email FROM {$contacts_table} WHERE status = 'subscribed'");
                             if ($crm_emails) {
                                 $manual_emails = array_merge($manual_emails, $crm_emails);
@@ -251,14 +251,9 @@ class Ofast_Email_Tab_Send
                         $headers = $this->admin->get_email_headers();
                         $sample_body = '';
                         $total_count = count($total_ids) + count($manual_emails);
-
-                        // Read throttle settings (configurable from Settings page)
-                        $send_delay  = max(0, intval(get_option('ofast_email_send_delay', 2)));     // seconds between each email
-                        $batch_size  = max(1, intval(get_option('ofast_email_batch_size', 50)));    // emails per batch
-                        $batch_pause = max(0, intval(get_option('ofast_email_batch_pause', 10)));   // seconds between batches
-
+                        // Build combined user list
                         $all_users = empty($total_ids) ? array() : get_users(['include' => $total_ids]);
-                        
+
                         // Add manual emails as dummy user objects
                         foreach ($manual_emails as $em) {
                             $dummy_user = new stdClass();
@@ -271,31 +266,19 @@ class Ofast_Email_Tab_Send
                             $all_users[] = $dummy_user;
                         }
 
-                        $batches    = array_chunk($all_users, $batch_size);
-                        $batch_num  = 0;
-
-                        foreach ($batches as $batch) {
-                            $batch_num++;
-                            foreach ($batch as $user) {
-                                $message = $this->admin->replace_placeholders($body, $user);
-                                $full_body = $this->admin->get_email_template($message);
-                                if (empty($sample_body)) {
-                                    $sample_body = $full_body;
-                                }
-                                if (wp_mail($user->user_email, $subject, $full_body, $headers)) {
-                                    $sent++;
-                                } else {
-                                    $failed++;
-                                    error_log('Ofast-X Email: Failed to send to ' . $user->user_email);
-                                }
-                                // Delay between individual emails (prevents per-minute rate limit)
-                                if ($send_delay > 0) {
-                                    sleep($send_delay);
-                                }
+                        // V1: Simple direct send (no throttle delays — suitable for ≤50 recipients)
+                        // V2 will use wp-cron queue for larger lists
+                        foreach ($all_users as $user) {
+                            $message = $this->admin->replace_placeholders($body, $user);
+                            $full_body = $this->admin->get_email_template($message);
+                            if (empty($sample_body)) {
+                                $sample_body = $full_body;
                             }
-                            // Pause between batches (except after the last batch)
-                            if ($batch_pause > 0 && $batch_num < count($batches)) {
-                                sleep($batch_pause);
+                            if (wp_mail($user->user_email, $subject, $full_body, $headers)) {
+                                $sent++;
+                            } else {
+                                $failed++;
+                                error_log('Ofast-X Email: Failed to send to ' . $user->user_email);
                             }
                         }
 
@@ -308,7 +291,7 @@ class Ofast_Email_Tab_Send
                             $log_target_roles[] = '_manual_emails';
                         }
 
-                        $this->admin->log_email($subject, $sent, 'Immediate send - batched (' . count($batches) . ' batches)', $sample_body, 'sent', $log_target_roles);
+                        $this->admin->log_email($subject, $sent, 'Immediate send — ' . $sent . ' sent, ' . $failed . ' failed', $sample_body, 'sent', $log_target_roles);
 
                         if ($failed > 0) {
                             $result_message = Ofast_X_Toast::render(
@@ -318,7 +301,7 @@ class Ofast_Email_Tab_Send
                             );
                         } elseif ($total_count >= 50) {
                             $result_message = Ofast_X_Toast::render(
-                                'Sent to all ' . $sent . ' users successfully! (' . count($batches) . ' batches)',
+                                'Sent to all ' . $sent . ' users successfully!',
                                 'success',
                                 true
                             );
@@ -601,7 +584,8 @@ class Ofast_Email_Tab_Send
                             <tbody>
                                 <?php
 
-                                $users = get_users();
+                                // Cap at 500 users to prevent memory issues on large sites
+                                $users = get_users(['number' => 500, 'orderby' => 'ID', 'order' => 'ASC']);
                                 $i = 1;
                                 foreach ($users as $user) {
                                     $userdata = get_userdata($user->ID);

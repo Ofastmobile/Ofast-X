@@ -22,6 +22,42 @@ class Ofast_X_SMTP_Admin
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_head', array($this, 'admin_head_styles'));
         add_action('wp_ajax_ofast_smtp_fetch_logs', array($this, 'ajax_fetch_logs'));
+
+        // SECURITY: Send HTTP security headers on our admin pages
+        add_action('admin_init', array($this, 'send_security_headers'));
+
+        // SECURITY: Move CSV export to admin_init (before output)
+        add_action('admin_init', array($this, 'handle_csv_export'));
+    }
+
+    /**
+     * Send HTTP security headers on plugin admin pages
+     */
+    public function send_security_headers()
+    {
+        if (!isset($_GET['page'])) return;
+        $page = sanitize_key($_GET['page']);
+        if ($page !== 'ofast-smtp') return;
+
+        if (!headers_sent()) {
+            header('X-Content-Type-Options: nosniff');
+            header('X-Frame-Options: SAMEORIGIN');
+            header('Referrer-Policy: strict-origin-when-cross-origin');
+        }
+    }
+
+    /**
+     * Handle CSV export on admin_init (before any output)
+     */
+    public function handle_csv_export()
+    {
+        if (!isset($_GET['page'], $_GET['export_csv'], $_GET['_wpnonce'])) return;
+        if (sanitize_key($_GET['page']) !== 'ofast-smtp') return;
+        if (!current_user_can('manage_options')) return;
+        if (!wp_verify_nonce(sanitize_text_field($_GET['_wpnonce']), 'export_smtp_logs')) return;
+
+        $this->create_log_table();
+        $this->export_logs_csv();
     }
 
     /**
@@ -801,14 +837,7 @@ class Ofast_X_SMTP_Admin
         }
 
         // Resend is handled in handle_resend() on admin_init (before output)
-
-        // Handle export CSV
-        if (isset($_GET['export_csv']) && isset($_GET['_wpnonce'])) {
-            if (wp_verify_nonce(sanitize_text_field($_GET['_wpnonce']), 'export_smtp_logs')) {
-                $this->export_logs_csv();
-                return;
-            }
-        }
+        // CSV export is handled in handle_csv_export() on admin_init (before output)
 
         // Handle clear logs
         if (isset($_POST['clear_logs']) && isset($_POST['_wpnonce'])) {

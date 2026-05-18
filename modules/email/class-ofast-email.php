@@ -52,8 +52,9 @@ class Ofast_X_Email
         add_action('ofast_send_email_batch', array($this, 'process_email_batch'), 10, 1);
 
         // Apply template to WordPress emails based on settings
+        // Values saved by template UI: 'emailer', 'notifications', 'woocommerce', 'all_wp'
         $apply_to = get_option('ofast_email_apply_to', array('emailer'));
-        if (in_array('wordpress', $apply_to) || in_array('all', $apply_to)) {
+        if (array_intersect(array('notifications', 'woocommerce', 'all_wp'), (array) $apply_to)) {
             add_filter('wp_mail', array($this, 'apply_template_to_wp_mail'), 999, 1);
         }
 

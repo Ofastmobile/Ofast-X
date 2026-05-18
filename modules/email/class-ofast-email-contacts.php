@@ -21,7 +21,7 @@ class Ofast_X_Email_Contacts
     private function maybe_create_table()
     {
         global $wpdb;
-        if ($wpdb->get_var("SHOW TABLES LIKE '{$this->table_name}'") !== $this->table_name) {
+        if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $this->table_name)) !== $this->table_name) {
             $charset = $wpdb->get_charset_collate();
             $sql = "CREATE TABLE {$this->table_name} (
                 id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -146,6 +146,9 @@ class Ofast_X_Email_Contacts
 
     private function handle_delete()
     {
+        if (!current_user_can('manage_options')) {
+            return;
+        }
         if (!isset($_GET['_wpnonce']) || !wp_verify_nonce($_GET['_wpnonce'], 'delete_contact_' . $_GET['contact_id'])) {
             return;
         }
@@ -170,14 +173,19 @@ class Ofast_X_Email_Contacts
             $where = $wpdb->prepare(" WHERE email LIKE %s OR first_name LIKE %s OR last_name LIKE %s", '%' . $wpdb->esc_like($search) . '%', '%' . $wpdb->esc_like($search) . '%', '%' . $wpdb->esc_like($search) . '%');
         }
 
-        $total_items = $wpdb->get_var("SELECT COUNT(*) FROM {$this->table_name} {$where}");
+        // $where is already safely built from $wpdb->prepare(), so direct concat is safe
+        $total_items = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$this->table_name}" . $where);
         $total_pages = ceil($total_items / $per_page);
         if ($current_page > $total_pages && $total_pages > 0) {
             $current_page = $total_pages;
         }
         $offset = ($current_page - 1) * $per_page;
 
-        $contacts = $wpdb->get_results("SELECT * FROM {$this->table_name} {$where} ORDER BY created_at DESC LIMIT {$per_page} OFFSET {$offset}");
+        $contacts = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$this->table_name}" . $where . " ORDER BY created_at DESC LIMIT %d OFFSET %d",
+            $per_page,
+            $offset
+        ));
 
         ?>
         <div class="ofast-email-form-layout" style="margin-top: 20px;">

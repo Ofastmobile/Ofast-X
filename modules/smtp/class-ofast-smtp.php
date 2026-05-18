@@ -278,8 +278,8 @@ class Ofast_X_SMTP
         $username = sanitize_text_field($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
 
-        // If password is placeholder, use saved password
-        if ($password === '••••••••' || empty($password)) {
+        // If password is empty (not submitted from form), use saved password
+        if (empty($password)) {
             $saved_password = get_option('ofast_smtp_password', '');
             if (!empty($saved_password)) {
                 $password = $this->decrypt_password($saved_password);
@@ -402,11 +402,13 @@ class Ofast_X_SMTP
             return base64_encode($password);
         }
 
-        $key = hash('sha256', SECURE_AUTH_KEY);
-        $iv = substr(hash('sha256', AUTH_KEY), 0, 16);
-        $encrypted = openssl_encrypt($password, 'AES-256-CBC', $key, 0, $iv);
+        // SECURITY FIX: Random IV per encryption (previously used deterministic IV)
+        $key = hash('sha256', SECURE_AUTH_KEY, true);
+        $iv  = random_bytes(16);
+        $encrypted = openssl_encrypt($password, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
 
-        return base64_encode($encrypted);
+        // Store as iv_b64:ciphertext_b64 so we can extract the IV on decrypt
+        return base64_encode($iv) . ':' . base64_encode($encrypted);
     }
 
     /**
@@ -422,10 +424,17 @@ class Ofast_X_SMTP
             return base64_decode($encrypted);
         }
 
-        $key = hash('sha256', SECURE_AUTH_KEY);
-        $iv = substr(hash('sha256', AUTH_KEY), 0, 16);
-        $decoded = base64_decode($encrypted);
+        // New format: iv_b64:ciphertext_b64 (random IV per encryption)
+        if (strpos($encrypted, ':') !== false) {
+            list($iv_b64, $ct_b64) = explode(':', $encrypted, 2);
+            $key = hash('sha256', SECURE_AUTH_KEY, true);
+            return openssl_decrypt(base64_decode($ct_b64), 'AES-256-CBC', $key, OPENSSL_RAW_DATA, base64_decode($iv_b64));
+        }
 
+        // Legacy fallback: deterministic IV format (auto-upgrades on next save)
+        $key = hash('sha256', SECURE_AUTH_KEY);
+        $iv  = substr(hash('sha256', AUTH_KEY), 0, 16);
+        $decoded = base64_decode($encrypted);
         return openssl_decrypt($decoded, 'AES-256-CBC', $key, 0, $iv);
     }
 

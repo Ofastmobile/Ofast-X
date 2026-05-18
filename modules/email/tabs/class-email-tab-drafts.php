@@ -18,7 +18,7 @@ class Ofast_Email_Tab_Drafts
         $current_user_id = get_current_user_id();
 
         // Create table if needed
-        if ($wpdb->get_var("SHOW TABLES LIKE '$table'") !== $table) {
+        if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table)) !== $table) {
             $charset = $wpdb->get_charset_collate();
             $sql = "CREATE TABLE $table (
                 id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,

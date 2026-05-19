@@ -32,6 +32,8 @@ class Ofast_X_Email
     {
         require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-template.php';
         require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-admin.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-campaign.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-processor.php';
     }
 
     /**
@@ -48,21 +50,198 @@ class Ofast_X_Email
      */
     private function setup_hooks()
     {
-        // Hook for batch email processing (used by queue system)
+        // Legacy cron batch hook (kept for backwards compatibility)
         add_action('ofast_send_email_batch', array($this, 'process_email_batch'), 10, 1);
 
+        // ── Queue System: Loopback worker (rapid SMTP strategy) ──────────────
+        // Called by non-blocking HTTP POST from Ofast_Email_Processor::fire_loopback().
+        // No login required — verified via shared worker_key instead.
+        add_action('wp_ajax_ofast_queue_worker',        array($this, 'ajax_queue_worker'));
+        add_action('wp_ajax_nopriv_ofast_queue_worker', array($this, 'ajax_queue_worker'));
+
+        // ── Queue System: Slow cron hook (PHP Mail / shared hosting strategy) ─
+        add_action('ofast_campaign_slow_batch',    array($this, 'cron_slow_batch'), 10, 1);
+        add_action('ofast_campaign_cron_fallback', array($this, 'cron_slow_batch'), 10, 1);
+
+        // ── Queue System: Progress polling (admin AJAX) ──────────────────────
+        add_action('wp_ajax_ofast_campaign_progress', array($this, 'ajax_campaign_progress'));
+
+        // ── Queue System: Pause / Resume / Cancel / Delete ───────────────────────────
+        add_action('wp_ajax_ofast_campaign_action', array($this, 'ajax_campaign_action'));
+        add_action('wp_ajax_ofast_campaign_delete', array($this, 'ajax_campaign_delete'));
+
+        // ── Queue System: Daily cleanup of old completed campaigns ───────────
+        if (!wp_next_scheduled('ofast_campaign_cleanup')) {
+            wp_schedule_event(time(), 'daily', 'ofast_campaign_cleanup');
+        }
+        add_action('ofast_campaign_cleanup', array($this, 'cleanup_old_campaigns'));
+
         // Apply template to WordPress emails based on settings
-        // Values saved by template UI: 'emailer', 'notifications', 'woocommerce', 'all_wp'
         $apply_to = get_option('ofast_email_apply_to', array('emailer'));
         if (array_intersect(array('notifications', 'woocommerce', 'all_wp'), (array) $apply_to)) {
             add_filter('wp_mail', array($this, 'apply_template_to_wp_mail'), 999, 1);
         }
 
-        // Daily cleanup
+        // Daily log cleanup
         if (!wp_next_scheduled('ofast_email_cleanup')) {
             wp_schedule_event(time(), 'daily', 'ofast_email_cleanup');
         }
         add_action('ofast_email_cleanup', array($this, 'cleanup_old_logs'));
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //  QUEUE AJAX & CRON HANDLERS
+    // ────────────────────────────────────────────────────────────────
+
+    /**
+     * AJAX: Loopback worker endpoint for the rapid queue strategy.
+     *
+     * Validates the shared worker key then delegates to the processor.
+     * Intentionally has no nonce (internal server-to-server call), but
+     * is protected by the rotating worker_key secret.
+     */
+    public function ajax_queue_worker()
+    {
+        // Validate internal worker key
+        $provided_key = isset($_POST['worker_key']) ? sanitize_text_field(wp_unslash($_POST['worker_key'])) : '';
+        if (empty($provided_key) || !hash_equals(Ofast_Email_Processor::get_worker_key(), $provided_key)) {
+            wp_send_json_error('Unauthorized', 403);
+            return;
+        }
+
+        $campaign_id = isset($_POST['campaign_id']) ? absint($_POST['campaign_id']) : null;
+
+        // Run one rapid batch — this may sleep() internally before firing the next loopback
+        Ofast_Email_Processor::run_rapid($campaign_id ?: null);
+
+        wp_send_json_success('batch_processed');
+    }
+
+    /**
+     * WP-Cron: Process one slow batch for a specific campaign.
+     *
+     * @param int $campaign_id
+     */
+    public function cron_slow_batch(int $campaign_id)
+    {
+        Ofast_Email_Processor::run_slow($campaign_id);
+
+        // Reschedule next batch if not done
+        $campaign = Ofast_Email_Campaign::get($campaign_id);
+        if ($campaign && $campaign->status === Ofast_Email_Campaign::STATUS_QUEUED) {
+            Ofast_Email_Processor::reschedule_slow_campaign($campaign_id, $campaign->next_run);
+        }
+    }
+
+    /**
+     * AJAX: Return progress data for a campaign (polled by the UI).
+     */
+    public function ajax_campaign_progress()
+    {
+        check_ajax_referer('ofast_campaign_progress', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized', 403);
+        }
+
+        $campaign_id = isset($_POST['campaign_id']) ? absint($_POST['campaign_id']) : 0;
+        if (!$campaign_id) {
+            wp_send_json_error('Invalid campaign ID');
+        }
+
+        $campaign = Ofast_Email_Campaign::get($campaign_id);
+        if (!$campaign) {
+            wp_send_json_error('Campaign not found');
+        }
+
+        wp_send_json_success(array(
+            'id'       => (int) $campaign->id,
+            'status'   => $campaign->status,
+            'strategy' => $campaign->strategy,
+            'total'    => (int) $campaign->total,
+            'sent'     => (int) $campaign->sent,
+            'failed'   => (int) $campaign->failed,
+            'position' => (int) $campaign->position,
+            'progress' => Ofast_Email_Campaign::get_progress($campaign),
+        ));
+    }
+
+    /**
+     * AJAX: Perform a pause / resume / cancel action on a campaign.
+     */
+    public function ajax_campaign_action()
+    {
+        check_ajax_referer('ofast_campaign_action', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized', 403);
+        }
+
+        $campaign_id = isset($_POST['campaign_id']) ? absint($_POST['campaign_id']) : 0;
+        $action      = isset($_POST['campaign_action']) ? sanitize_key($_POST['campaign_action']) : '';
+        $user_id     = get_current_user_id();
+
+        if (!$campaign_id || !$action) {
+            wp_send_json_error('Missing parameters');
+        }
+
+        $success = false;
+        switch ($action) {
+            case 'pause':
+                $success = Ofast_Email_Campaign::pause($campaign_id, $user_id);
+                break;
+            case 'resume':
+                $success = Ofast_Email_Campaign::resume($campaign_id, $user_id);
+                // For rapid campaigns that are resumed, fire loopback immediately
+                if ($success) {
+                    $campaign = Ofast_Email_Campaign::get($campaign_id);
+                    if ($campaign && $campaign->strategy === Ofast_Email_Campaign::STRATEGY_RAPID) {
+                        Ofast_Email_Processor::fire_loopback($campaign_id);
+                    }
+                }
+                break;
+            case 'cancel':
+                $success = Ofast_Email_Campaign::cancel($campaign_id, $user_id);
+                break;
+            default:
+                wp_send_json_error('Unknown action');
+        }
+
+        if ($success) {
+            wp_send_json_success(array('action' => $action, 'campaign_id' => $campaign_id));
+        } else {
+            wp_send_json_error('Action failed — campaign may already be in a terminal state');
+        }
+    }
+
+    /**
+     * Cron: Purge completed/cancelled campaigns older than 30 days.
+     */
+    public function cleanup_old_campaigns()
+    {
+        Ofast_Email_Campaign::cleanup_old(30);
+    }
+
+    /**
+     * AJAX: Permanently delete a terminal campaign row.
+     * Only allowed for completed / cancelled / failed campaigns.
+     */
+    public function ajax_campaign_delete()
+    {
+        check_ajax_referer('ofast_campaign_action', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized', 403);
+        }
+
+        $campaign_id = isset($_POST['campaign_id']) ? absint($_POST['campaign_id']) : 0;
+        if (!$campaign_id) {
+            wp_send_json_error('Invalid campaign ID');
+        }
+
+        $deleted = Ofast_Email_Campaign::delete($campaign_id);
+        if ($deleted) {
+            wp_send_json_success(array('deleted' => $campaign_id));
+        } else {
+            wp_send_json_error('Cannot delete — campaign may still be active');
+        }
     }
 
     /**
@@ -159,10 +338,16 @@ class Ofast_X_Email
         $failed      = 0;
         $sample_body = '';
 
-        // Read throttle settings — same options used by the admin send UI
-        $send_delay  = max(0, intval(get_option('ofast_email_send_delay', 2)));   // seconds between emails
-        $batch_size  = max(1, intval(get_option('ofast_email_batch_size', 50)));  // emails per batch
-        $batch_pause = max(0, intval(get_option('ofast_email_batch_pause', 10))); // pause between batches
+        // SMTP rate limiting — sleep() is SAFE here because this runs via WP-Cron
+        // in the background. It does NOT block the user's browser.
+        // Purpose: respect SMTP provider send rate limits (e.g. Gmail ~1/sec, Brevo ~10/sec).
+        //
+        // Values are capped to hard maximums to prevent runaway execution time:
+        //   - per-email delay: 0–5 seconds (default 1s)
+        //   - between-batch pause: 0–30 seconds (default 5s)
+        $send_delay  = min(5,  max(0, intval(get_option('ofast_email_send_delay', 1))));   // seconds between emails (hard cap: 5s)
+        $batch_size  = min(100, max(1, intval(get_option('ofast_email_batch_size', 50)))); // emails per batch (hard cap: 100)
+        $batch_pause = min(30, max(0, intval(get_option('ofast_email_batch_pause', 5))));  // pause between batches (hard cap: 30s)
 
         $batches   = array_chunk($users, $batch_size);
         $batch_num = 0;
@@ -184,13 +369,15 @@ class Ofast_X_Email
                     error_log('Ofast-X Email Batch: Failed to send to ' . $user->user_email);
                 }
 
-                // Delay between each email
+                // Rate limiting delay — paces sends to respect SMTP provider limits.
+                // Safe here: cron is background, user browser is NOT waiting.
                 if ($send_delay > 0) {
                     sleep($send_delay);
                 }
             }
 
-            // Pause between batches (except after the last batch)
+            // Pause between batches (except after the last batch).
+            // Gives SMTP server breathing room between large send bursts.
             if ($batch_pause > 0 && $batch_num < count($batches)) {
                 sleep($batch_pause);
             }

@@ -10,4 +10,4 @@ also, i want to ask will it be ok to allow import of emails, if it doesnt make s
 lastly how will history, draft, templates, and smtp especially log table handle proper records
 
 
- what if  we say smtp should record the log in this format;  the nomal way but the action on the table show only preview an iside the preview it shows total number of sent succefully, failed, pending, rate limit, failed in a table and under each table it displays the emails. will the db still be bloated ?
+ what if  we say smtp should record the log in this format;  the nomal way but the action on the table show only preview and inside the preview it shows total number of sent succefully, failed, pending, rate limit, failed in a table and under each table it displays the emails. will the db still be bloated ?

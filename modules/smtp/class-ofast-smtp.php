@@ -522,16 +522,29 @@ class Ofast_X_SMTP
 
         $log_body_content = ofast_toolkit_is_pro() ? (bool) get_option('ofast_smtp_log_body_content', false) : false;
 
+        // Read campaign context set by the processor (null for direct sends)
+        $campaign_id = isset( $GLOBALS['ofast_current_campaign_id'] )
+            ? ( $GLOBALS['ofast_current_campaign_id'] ? (int) $GLOBALS['ofast_current_campaign_id'] : null )
+            : null;
+
+        // Only include campaign_id if the column exists (guards against old schema)
+        // ensure_log_table() will have added it above, but use a transient double-check.
+        $include_campaign_id = (bool) get_transient( 'ofast_smtp_log_has_campaign_id' );
+
         // Insert log entry
-        $wpdb->insert($table_name, array(
+        $insert_data = array(
             'to_email' => sanitize_text_field($to),
-            'subject' => sanitize_text_field($args['subject']),
-            // Respect the content logging setting and omit bodies when disabled.
-            'body' => $log_body_content ? $args['message'] : '',
-            'headers' => is_array($args['headers']) ? serialize($args['headers']) : $args['headers'],
-            'status' => 'pending',
-            'sent_at' => current_time('mysql')
-        ));
+            'subject'  => sanitize_text_field($args['subject']),
+            'body'     => $log_body_content ? $args['message'] : '',
+            'headers'  => is_array($args['headers']) ? serialize($args['headers']) : $args['headers'],
+            'status'   => 'pending',
+            'sent_at'  => current_time('mysql'),
+        );
+        if ( $include_campaign_id ) {
+            $insert_data['campaign_id'] = $campaign_id;
+        }
+
+        $wpdb->insert( $table_name, $insert_data );
 
         // Store the log ID for later status update
         $this->current_log_id = $wpdb->insert_id;
@@ -672,43 +685,48 @@ class Ofast_X_SMTP
      */
     private function ensure_log_table()
     {
-        // Check cache first to avoid redundant DB queries
-        if (get_transient('ofast_smtp_log_table_exists')) {
-            return;
-        }
-
         global $wpdb;
         $table_name = $wpdb->prefix . 'ofast_smtp_log';
 
-        // Check if table exists using proper escaping
-        $table_exists = $wpdb->get_var($wpdb->prepare(
-            "SHOW TABLES LIKE %s",
-            $table_name
-        ));
+        // ── Step 1: Ensure the table exists ──────────────────────────────────
+        if ( ! get_transient( 'ofast_smtp_log_table_exists' ) ) {
+            $table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name ) );
 
-        if ($table_exists !== $table_name) {
-            $charset = $wpdb->get_charset_collate();
+            if ( $table_exists !== $table_name ) {
+                $charset = $wpdb->get_charset_collate();
+                $sql = "CREATE TABLE {$table_name} (
+                    id          bigint(20)   NOT NULL AUTO_INCREMENT,
+                    campaign_id bigint(20)   UNSIGNED NULL DEFAULT NULL,
+                    to_email    varchar(255) NOT NULL,
+                    subject     varchar(255) NOT NULL,
+                    body        longtext     NOT NULL,
+                    headers     text,
+                    status      varchar(20)  DEFAULT 'pending',
+                    error_message text,
+                    sent_at     datetime     DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (id),
+                    KEY idx_status      (status),
+                    KEY idx_sent_at     (sent_at),
+                    KEY idx_campaign_id (campaign_id)
+                ) {$charset};";
+                require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+                dbDelta( $sql );
+            }
 
-            $sql = "CREATE TABLE {$table_name} (
-                id bigint(20) NOT NULL AUTO_INCREMENT,
-                to_email varchar(255) NOT NULL,
-                subject varchar(255) NOT NULL,
-                body longtext NOT NULL,
-                headers text,
-                status varchar(20) DEFAULT 'pending',
-                error_message text,
-                sent_at datetime DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (id),
-                KEY status (status),
-                KEY sent_at (sent_at)
-            ) {$charset};";
-
-            require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-            dbDelta($sql);
+            set_transient( 'ofast_smtp_log_table_exists', true, DAY_IN_SECONDS );
         }
 
-        // Cache the result for 24 hours
-        set_transient('ofast_smtp_log_table_exists', true, DAY_IN_SECONDS);
+        // ── Step 2: Add campaign_id column to existing tables ─────────────────
+        // Uses its own transient so it only runs the DESCRIBE check once per day.
+        if ( ! get_transient( 'ofast_smtp_log_has_campaign_id' ) ) {
+            $cols = $wpdb->get_col( "DESCRIBE {$table_name}", 0 );
+            if ( ! in_array( 'campaign_id', $cols, true ) ) {
+                $wpdb->query( "ALTER TABLE {$table_name} ADD COLUMN campaign_id BIGINT(20) UNSIGNED NULL DEFAULT NULL AFTER id" );
+                $wpdb->query( "ALTER TABLE {$table_name} ADD INDEX idx_campaign_id (campaign_id)" );
+                error_log( 'Ofast X: Added campaign_id column to ofast_smtp_log' );
+            }
+            set_transient( 'ofast_smtp_log_has_campaign_id', true, DAY_IN_SECONDS );
+        }
     }
 
     /**

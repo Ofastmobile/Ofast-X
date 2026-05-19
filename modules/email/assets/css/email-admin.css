@@ -610,3 +610,393 @@
 .ofast-per-page-select {
     min-width: 70px !important;
 }
+
+/* ============================================
+   Campaigns Tab
+   ============================================ */
+
+/* Header */
+.ofast-campaigns-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.ofast-campaigns-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Empty State */
+.ofast-campaigns-empty {
+    background: linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%);
+    border-radius: 16px;
+    padding: 60px 40px;
+    text-align: center;
+    border: 1px solid #c7d2fe;
+}
+
+.ofast-campaigns-empty-icon {
+    font-size: 52px;
+    margin-bottom: 16px;
+    line-height: 1;
+}
+
+.ofast-campaigns-empty h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 10px 0;
+}
+
+.ofast-campaigns-empty p {
+    color: #64748b;
+    font-size: 14px;
+    margin: 0 0 24px 0;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Campaign Cards List */
+.ofast-campaigns-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Individual Campaign Card */
+.ofast-campaign-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 20px 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    transition: box-shadow 0.2s ease;
+}
+
+.ofast-campaign-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Status border accent */
+.ofast-campaign-card.ofast-status-queued,
+.ofast-campaign-card.ofast-status-processing {
+    border-left: 4px solid #6366f1;
+}
+
+.ofast-campaign-card.ofast-status-paused {
+    border-left: 4px solid #f59e0b;
+}
+
+.ofast-campaign-card.ofast-status-completed {
+    border-left: 4px solid #10b981;
+}
+
+.ofast-campaign-card.ofast-status-failed {
+    border-left: 4px solid #ef4444;
+}
+
+.ofast-campaign-card.ofast-status-cancelled {
+    border-left: 4px solid #94a3b8;
+    opacity: 0.75;
+}
+
+/* Top Row */
+.ofast-campaign-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.ofast-campaign-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.ofast-campaign-subject {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ofast-campaign-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.ofast-campaign-date {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+/* Strategy badge */
+.ofast-campaign-strategy {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+}
+
+.ofast-strategy-rapid {
+    background: #ede9fe;
+    color: #6d28d9;
+}
+
+.ofast-strategy-slow {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* Status Badge */
+.ofast-campaign-status-badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.ofast-status-queued    .ofast-campaign-status-badge,
+.ofast-campaign-status-badge.ofast-status-queued    { background: #ede9fe; color: #6d28d9; }
+
+.ofast-status-processing .ofast-campaign-status-badge,
+.ofast-campaign-status-badge.ofast-status-processing { background: #dbeafe; color: #1d4ed8; }
+
+.ofast-status-paused    .ofast-campaign-status-badge,
+.ofast-campaign-status-badge.ofast-status-paused    { background: #fef3c7; color: #92400e; }
+
+.ofast-status-completed .ofast-campaign-status-badge,
+.ofast-campaign-status-badge.ofast-status-completed { background: #d1fae5; color: #065f46; }
+
+.ofast-status-failed    .ofast-campaign-status-badge,
+.ofast-campaign-status-badge.ofast-status-failed    { background: #fee2e2; color: #991b1b; }
+
+.ofast-status-cancelled .ofast-campaign-status-badge,
+.ofast-campaign-status-badge.ofast-status-cancelled { background: #f1f5f9; color: #64748b; }
+
+/* Progress Bar */
+.ofast-campaign-progress-wrap {
+    margin-bottom: 14px;
+}
+
+.ofast-campaign-progress-bar {
+    background: #f1f5f9;
+    border-radius: 999px;
+    height: 10px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.ofast-campaign-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 2%;
+}
+
+/* Animated shimmer for active campaigns */
+@keyframes ofastProgressShimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.ofast-progress-animated {
+    background: linear-gradient(
+        90deg,
+        #6366f1 0%,
+        #8b5cf6 40%,
+        #a78bfa 50%,
+        #8b5cf6 60%,
+        #6366f1 100%
+    );
+    background-size: 200% 100%;
+    animation: ofastProgressShimmer 2s linear infinite;
+}
+
+.ofast-campaign-progress-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.ofast-failed-badge {
+    display: inline-block;
+    background: #fee2e2;
+    color: #dc2626;
+    padding: 1px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.ofast-progress-pct {
+    font-weight: 600;
+    color: #6366f1;
+}
+
+/* Action Buttons Row */
+.ofast-campaign-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.ofast-btn-cancel {
+    color: #dc2626 !important;
+    border-color: #fca5a5 !important;
+}
+
+.ofast-btn-cancel:hover {
+    background: #fef2f2 !important;
+    border-color: #ef4444 !important;
+}
+
+.ofast-btn-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.ofast-campaign-done-badge {
+    font-size: 13px;
+    color: #065f46;
+    font-weight: 500;
+}
+
+.ofast-cancelled-badge {
+    color: #64748b;
+}
+
+.ofast-failed-text {
+    color: #991b1b;
+}
+
+.ofast-next-run-info {
+    font-size: 12px;
+    color: #92400e;
+    background: #fef3c7;
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-left: auto;
+}
+
+.ofast-btn-delete {
+    color: #7f1d1d !important;
+    border-color: #fca5a5 !important;
+    background: #fff !important;
+    margin-left: auto !important;
+}
+
+.ofast-btn-delete:hover {
+    background: #fef2f2 !important;
+    border-color: #ef4444 !important;
+    color: #991b1b !important;
+}
+
+/* ============================================
+   Campaign Action Buttons — Equal Size
+   ============================================ */
+.ofast-campaign-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Base equaliser — every action button shares this */
+.ofast-campaign-btn.button {
+    display:     inline-flex !important;
+    align-items: center       !important;
+    gap:         5px          !important;
+    min-width:   90px         !important;
+    height:      32px         !important;
+    padding:     0 14px       !important;
+    font-size:   13px         !important;
+    font-weight: 500          !important;
+    border-radius: 6px        !important;
+    justify-content: center   !important;
+    line-height: 1            !important;
+    white-space: nowrap       !important;
+    transition: background 0.15s, border-color 0.15s, color 0.15s !important;
+    box-shadow: none          !important;
+}
+
+/* Pause — neutral grey */
+.ofast-campaign-btn.button.button-secondary {
+    background:   #f1f5f9 !important;
+    border-color: #cbd5e1 !important;
+    color:        #475569 !important;
+}
+.ofast-campaign-btn.button.button-secondary:hover {
+    background:   #e2e8f0 !important;
+    border-color: #94a3b8 !important;
+    color:        #1e293b !important;
+}
+
+/* Resume — green */
+.ofast-campaign-btn.button.button-primary {
+    background:   #10b981 !important;
+    border-color: #059669 !important;
+    color:        #fff    !important;
+}
+.ofast-campaign-btn.button.button-primary:hover {
+    background:   #059669 !important;
+    border-color: #047857 !important;
+}
+
+/* Cancel — red tint */
+.ofast-campaign-btn.ofast-btn-cancel {
+    background:   #fff5f5 !important;
+    border-color: #fca5a5 !important;
+    color:        #b91c1c !important;
+}
+.ofast-campaign-btn.ofast-btn-cancel:hover {
+    background:   #fee2e2 !important;
+    border-color: #ef4444 !important;
+    color:        #7f1d1d !important;
+}
+
+/* Delete — already red, keep in sync */
+.ofast-campaign-btn.ofast-btn-delete {
+    background:   #fff    !important;
+    border-color: #fca5a5 !important;
+    color:        #7f1d1d !important;
+    margin-left:  auto    !important;
+}
+.ofast-campaign-btn.ofast-btn-delete:hover {
+    background:   #fef2f2 !important;
+    border-color: #ef4444 !important;
+    color:        #991b1b !important;
+}
+
+/* Dashicon inside buttons */
+.ofast-campaign-btn .dashicons {
+    font-size: 14px !important;
+    width:     14px !important;
+    height:    14px !important;
+    line-height: 14px !important;
+}

@@ -20,6 +20,26 @@ class Ofast_Email_Tab_Send
     }
 
     /**
+     * Auto-detect which queue strategy to use based on the active mailer.
+     *
+     * - If Ofast SMTP is configured and enabled → 'rapid' (loopback batches, fast)
+     * - If default PHP Mail → 'slow' (WP-Cron, hourly batches, respects hosting limits)
+     *
+     * @return string 'rapid' | 'slow'
+     */
+    private function detect_strategy(): string
+    {
+        $smtp_enabled = get_option('ofast_smtp_enabled', false);
+        $smtp_host    = get_option('ofast_smtp_host', '');
+
+        if ($smtp_enabled && !empty($smtp_host)) {
+            return Ofast_Email_Campaign::STRATEGY_RAPID;
+        }
+
+        return Ofast_Email_Campaign::STRATEGY_SLOW;
+    }
+
+    /**
      * Render send email page (ALL 13 FIXES INTEGRATED)
      */
     public function render_send_page($content_only = false)
@@ -221,7 +241,7 @@ class Ofast_Email_Tab_Send
                         $message = $this->admin->replace_placeholders($body, $user);
                         $headers = $this->admin->get_email_headers();
                         wp_mail($user->user_email, $subject, $this->admin->get_email_template($message), $headers);
-                        $result_message = Ofast_X_Toast::render('Test email sent to ' . esc_html($user->user_email), 'success', true);
+                        $result_message = Ofast_X_Toast::render('Test email sent to ' . esc_html($user->user_email), 'success');
                     } else {
                         // Merge user IDs + roles
                         $total_ids = $selected_user_ids;
@@ -240,73 +260,121 @@ class Ofast_Email_Tab_Send
                         // SECURITY: Max recipient limit to prevent server overload
                         $max_recipients = apply_filters('ofast_email_max_recipients', 5000);
                         if (count($total_ids) + count($manual_emails) > $max_recipients) {
-                            $total_ids = array_slice($total_ids, 0, $max_recipients);
-                            $manual_emails = array(); // Drop manual if over limit for now
-                            $result_message = Ofast_X_Toast::render('Recipient list limited to ' . $max_recipients . ' total users.', 'warning', true);
+                            $total_ids     = array_slice($total_ids, 0, $max_recipients);
+                            $manual_emails = [];
                         }
 
-                        // Send emails with throttling to respect SMTP provider rate limits
-                        $sent = 0;
-                        $failed = 0;
-                        $headers = $this->admin->get_email_headers();
-                        $sample_body = '';
-                        $total_count = count($total_ids) + count($manual_emails);
-                        // Build combined user list
-                        $all_users = empty($total_ids) ? array() : get_users(['include' => $total_ids]);
+                        // Build the unified recipient list:
+                        //   - WP user IDs stay as integers (processor fetches user data + personalizes)
+                        //   - Manual/CRM emails stay as strings
+                        $all_recipients = array_merge(
+                            array_map('intval', $total_ids),
+                            $manual_emails
+                        );
+                        $total_count = count($all_recipients);
 
-                        // Add manual emails as dummy user objects
-                        foreach ($manual_emails as $em) {
-                            $dummy_user = new stdClass();
-                            $dummy_user->user_email = $em;
-                            $dummy_user->ID = 0;
-                            $dummy_user->first_name = '';
-                            $dummy_user->last_name = '';
-                            $dummy_user->display_name = '';
-                            $dummy_user->user_login = '';
-                            $all_users[] = $dummy_user;
-                        }
+                        // ── V2 Queue threshold ────────────────────────────────────────────
+                        // Default: 50 — configurable via filter.
+                        $queue_threshold = (int) apply_filters('ofast_queue_threshold', 50);
 
-                        // V1: Simple direct send (no throttle delays — suitable for ≤50 recipients)
-                        // V2 will use wp-cron queue for larger lists
-                        foreach ($all_users as $user) {
-                            $message = $this->admin->replace_placeholders($body, $user);
-                            $full_body = $this->admin->get_email_template($message);
-                            if (empty($sample_body)) {
-                                $sample_body = $full_body;
-                            }
-                            if (wp_mail($user->user_email, $subject, $full_body, $headers)) {
-                                $sent++;
+                        if ($total_count > $queue_threshold) {
+                            // ── QUEUE PATH: Insert campaign, fire worker, return campaign_id ──
+
+                            // Load queue classes (require_once is idempotent)
+                            require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-campaign.php';
+                            require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-processor.php';
+
+                            // Auto-detect strategy based on whether SMTP is active
+                            $strategy = $this->detect_strategy();
+
+                            $campaign_id = Ofast_Email_Campaign::create([
+                                'subject'       => $subject,
+                                'body'          => $body,
+                                'recipient_ids' => $all_recipients,
+                                'strategy'      => $strategy,
+                                'created_by'    => get_current_user_id(),
+                            ]);
+
+                            if ($campaign_id) {
+                                if ($strategy === Ofast_Email_Campaign::STRATEGY_RAPID) {
+                                    // Fire the first loopback worker immediately (non-blocking)
+                                    Ofast_Email_Processor::fire_loopback($campaign_id);
+                                    $result_message = Ofast_X_Toast::render(
+                                        'Campaign #' . $campaign_id . ' queued! Sending ' . $total_count . ' emails in background batches. Track progress in the Campaigns tab.',
+                                        'success'
+                                    );
+                                } else {
+                                    // Schedule WP-Cron for slow strategy
+                                    Ofast_Email_Processor::schedule_slow_campaign($campaign_id);
+                                    $result_message = Ofast_X_Toast::render(
+                                        'Campaign #' . $campaign_id . ' queued for slow delivery (' . $total_count . ' emails). Batches will send over the next few hours. Track progress in the Campaigns tab.',
+                                        'info'
+                                    );
+                                }
+
+                                // Log the campaign start
+                                $this->admin->log_email(
+                                    $subject,
+                                    $total_count,
+                                    'Campaign #' . $campaign_id . ' queued (' . $strategy . ' strategy) — ' . $total_count . ' recipients',
+                                    $body,
+                                    'scheduled',
+                                    $selected_roles
+                                );
                             } else {
-                                $failed++;
-                                error_log('Ofast-X Email: Failed to send to ' . $user->user_email);
+                                $result_message = Ofast_X_Toast::render('Failed to create campaign queue entry. Please try again.', 'error');
                             }
-                        }
 
-                        // Build target audience list for logging
-                        $log_target_roles = $selected_roles;
-                        if ($include_contacts) {
-                            $log_target_roles[] = '_imported_contacts';
-                        }
-                        if (!empty($manual_emails)) {
-                            $log_target_roles[] = '_manual_emails';
-                        }
-
-                        $this->admin->log_email($subject, $sent, 'Immediate send — ' . $sent . ' sent, ' . $failed . ' failed', $sample_body, 'sent', $log_target_roles);
-
-                        if ($failed > 0) {
-                            $result_message = Ofast_X_Toast::render(
-                                'Sent to ' . $sent . ' of ' . $total_count . ' users. ' . $failed . ' failed — check SMTP logs.',
-                                'warning',
-                                true
-                            );
-                        } elseif ($total_count >= 50) {
-                            $result_message = Ofast_X_Toast::render(
-                                'Sent to all ' . $sent . ' users successfully!',
-                                'success',
-                                true
-                            );
                         } else {
-                            $result_message = Ofast_X_Toast::render('Sent successfully to ' . $sent . ' user(s)', 'success', true);
+                            // ── DIRECT PATH: ≤50 recipients, send synchronously ──────────────
+                            $sent        = 0;
+                            $failed      = 0;
+                            $headers     = $this->admin->get_email_headers();
+                            $sample_body = '';
+
+                            // Build combined user list
+                            $all_users = empty($total_ids) ? [] : get_users(['include' => $total_ids]);
+
+                            // Add manual emails as dummy user objects
+                            foreach ($manual_emails as $em) {
+                                $dummy_user               = new stdClass();
+                                $dummy_user->user_email   = $em;
+                                $dummy_user->ID           = 0;
+                                $dummy_user->first_name   = '';
+                                $dummy_user->last_name    = '';
+                                $dummy_user->display_name = '';
+                                $dummy_user->user_login   = '';
+                                $all_users[] = $dummy_user;
+                            }
+
+                            foreach ($all_users as $user) {
+                                $message   = $this->admin->replace_placeholders($body, $user);
+                                $full_body = $this->admin->get_email_template($message);
+                                if (empty($sample_body)) {
+                                    $sample_body = $full_body;
+                                }
+                                if (wp_mail($user->user_email, $subject, $full_body, $headers)) {
+                                    $sent++;
+                                } else {
+                                    $failed++;
+                                    error_log('Ofast-X Email: Failed to send to ' . $user->user_email);
+                                }
+                            }
+
+                            $log_target_roles = $selected_roles;
+                            if ($include_contacts)   $log_target_roles[] = '_imported_contacts';
+                            if (!empty($manual_emails)) $log_target_roles[] = '_manual_emails';
+
+                            $this->admin->log_email($subject, $sent, 'Direct send — ' . $sent . ' sent, ' . $failed . ' failed', $sample_body, 'sent', $log_target_roles);
+
+                            if ($failed > 0) {
+                                $result_message = Ofast_X_Toast::render(
+                                    'Sent to ' . $sent . ' of ' . $total_count . ' users. ' . $failed . ' failed — check SMTP logs.',
+                                    'warning'
+                                );
+                            } else {
+                                $result_message = Ofast_X_Toast::render('Sent successfully to ' . $sent . ' user(s)', 'success');
+                            }
                         }
                     }
                 } // End rate limit else block

@@ -215,6 +215,9 @@ class Ofast_X_Email_Admin
                 <a href="#" class="ofast-tab <?php echo $active_tab === 'drafts' ? 'active' : ''; ?>" data-tab="drafts">
                     <span class="dashicons dashicons-edit"></span> Drafts
                 </a>
+                <a href="#" class="ofast-tab <?php echo $active_tab === 'campaigns' ? 'active' : ''; ?>" data-tab="campaigns">
+                    <span class="dashicons dashicons-rss"></span> Campaigns
+                </a>
                 <a href="#" class="ofast-tab <?php echo $active_tab === 'contacts' ? 'active' : ''; ?>" data-tab="contacts">
                     <span class="dashicons dashicons-groups"></span> Contacts
                 </a>
@@ -237,6 +240,11 @@ class Ofast_X_Email_Admin
             <!-- Drafts Tab -->
             <div id="tab-drafts" class="ofast-tab-content<?php echo $active_tab === 'drafts' ? ' active' : ''; ?>">
                 <?php $this->render_tab_drafts(); ?>
+            </div>
+
+            <!-- Campaigns Tab -->
+            <div id="tab-campaigns" class="ofast-tab-content<?php echo $active_tab === 'campaigns' ? ' active' : ''; ?>">
+                <?php $this->render_tab_campaigns(); ?>
             </div>
 
             <!-- Contacts Tab -->
@@ -269,6 +277,13 @@ class Ofast_X_Email_Admin
         require_once __DIR__ . '/tabs/class-email-tab-send.php';
         $tab = new Ofast_Email_Tab_Send($this);
         $tab->render_send_page(true);
+    }
+
+    private function render_tab_campaigns()
+    {
+        require_once __DIR__ . '/tabs/class-email-tab-campaigns.php';
+        $tab = new Ofast_Email_Tab_Campaigns();
+        $tab->render();
     }
 
     private function render_tab_contacts()

@@ -233,20 +233,48 @@ class Ofast_X_Activator
         ) {$charset_collate};";
         dbDelta($sql_email_drafts);
 
-        // 10. SMTP Log Table
+        // 10. Email Campaigns Queue Table
+        $table_campaigns = $wpdb->prefix . 'ofast_email_campaigns';
+        $sql_campaigns = "CREATE TABLE IF NOT EXISTS {$table_campaigns} (
+            id            bigint(20)   UNSIGNED NOT NULL AUTO_INCREMENT,
+            subject       varchar(255) NOT NULL,
+            body          longtext     NOT NULL,
+            recipient_ids longtext     NOT NULL,
+            status        varchar(20)  NOT NULL DEFAULT 'queued',
+            strategy      varchar(20)  NOT NULL DEFAULT 'rapid',
+            total         int(11)      NOT NULL DEFAULT 0,
+            sent          int(11)      NOT NULL DEFAULT 0,
+            failed        int(11)      NOT NULL DEFAULT 0,
+            position      int(11)      NOT NULL DEFAULT 0,
+            lock_expires  datetime     DEFAULT NULL,
+            next_run      datetime     DEFAULT NULL,
+            created_by    bigint(20)   UNSIGNED NOT NULL,
+            created_at    datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            started_at    datetime     DEFAULT NULL,
+            completed_at  datetime     DEFAULT NULL,
+            PRIMARY KEY (id),
+            KEY idx_status (status),
+            KEY idx_strategy (strategy),
+            KEY idx_next_run (next_run)
+        ) {$charset_collate};";
+        dbDelta($sql_campaigns);
+
+        // 11. SMTP Log Table
         $table_smtp_log = $wpdb->prefix . 'ofast_smtp_log';
         $sql_smtp_log = "CREATE TABLE IF NOT EXISTS {$table_smtp_log} (
-            id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-            to_email VARCHAR(255) NOT NULL DEFAULT '',
-            subject VARCHAR(255) NOT NULL DEFAULT '',
-            body LONGTEXT NULL,
-            headers LONGTEXT NULL,
-            status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            id          BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            campaign_id BIGINT(20) UNSIGNED NULL DEFAULT NULL,
+            to_email    VARCHAR(255) NOT NULL DEFAULT '',
+            subject     VARCHAR(255) NOT NULL DEFAULT '',
+            body        LONGTEXT NULL,
+            headers     LONGTEXT NULL,
+            status      VARCHAR(20) NOT NULL DEFAULT 'pending',
             error_message TEXT NULL,
-            sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            sent_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
-            KEY idx_sent_at (sent_at),
-            KEY idx_status (status)
+            KEY idx_sent_at    (sent_at),
+            KEY idx_status     (status),
+            KEY idx_campaign   (campaign_id)
         ) {$charset_collate};";
         dbDelta($sql_smtp_log);
     }
@@ -272,8 +300,8 @@ class Ofast_X_Activator
                 'woocommerce' => false,       // Coming soon
                 'learndash' => false          // Coming soon
             ),
-            'ofast_email_retention_days' => 90,
-            'ofast_smtp_log_retention_days' => 90,
+            'ofast_email_retention_days'     => 30,
+            'ofast_smtp_log_retention_days'  => 30,
             'ofast_spam_fail_open' => 0
         );
 
@@ -322,9 +350,18 @@ class Ofast_X_Activator
     }
 
     /**
+     * Public alias — lets other classes trigger table upgrades on demand.
+     * Called by the campaigns tab on first visit to migrate old schemas.
+     */
+    public static function run_upgrade_tables()
+    {
+        self::upgrade_tables();
+    }
+
+    /**
      * Upgrade tables - add missing columns for existing installations
      */
-    private static function upgrade_tables()
+    public static function upgrade_tables()
     {
         global $wpdb;
 
@@ -385,6 +422,89 @@ class Ofast_X_Activator
                 $redirect_columns[] = 'priority';
             }
             update_option('ofast_redirects_priority_schema', in_array('priority', $redirect_columns, true) ? '1' : '0', false);
+        }
+
+        // SMTP log table — add campaign_id column for existing installs
+        $table_smtp = $wpdb->prefix . 'ofast_smtp_log';
+        if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_smtp ) ) ) {
+            $smtp_cols = $wpdb->get_col( "DESCRIBE {$table_smtp}", 0 );
+
+            if ( ! in_array( 'campaign_id', $smtp_cols, true ) ) {
+                $wpdb->query( "ALTER TABLE {$table_smtp} ADD COLUMN campaign_id BIGINT(20) UNSIGNED NULL DEFAULT NULL AFTER id" );
+                $wpdb->query( "ALTER TABLE {$table_smtp} ADD INDEX idx_campaign (campaign_id)" );
+                error_log( 'Ofast X: Added campaign_id column to ofast_smtp_log' );
+            }
+        }
+
+        // Campaigns queue table — create if missing OR upgrade if columns are missing
+        $table_campaigns = $wpdb->prefix . 'ofast_email_campaigns';
+        $campaigns_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_campaigns ) );
+
+        if ( ! $campaigns_exists ) {
+            // Table does not exist — create it fresh
+            $charset_collate = $wpdb->get_charset_collate();
+            $sql_campaigns = "CREATE TABLE IF NOT EXISTS {$table_campaigns} (
+                id            bigint(20)   UNSIGNED NOT NULL AUTO_INCREMENT,
+                subject       varchar(255) NOT NULL,
+                body          longtext     NOT NULL,
+                recipient_ids longtext     NOT NULL DEFAULT '',
+                status        varchar(20)  NOT NULL DEFAULT 'queued',
+                strategy      varchar(20)  NOT NULL DEFAULT 'rapid',
+                total         int(11)      NOT NULL DEFAULT 0,
+                sent          int(11)      NOT NULL DEFAULT 0,
+                failed        int(11)      NOT NULL DEFAULT 0,
+                position      int(11)      NOT NULL DEFAULT 0,
+                lock_expires      datetime     DEFAULT NULL,
+                next_run          datetime     DEFAULT NULL,
+                created_by        bigint(20)   UNSIGNED NOT NULL DEFAULT 0,
+                created_at        datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                started_at        datetime     DEFAULT NULL,
+                completed_at      datetime     DEFAULT NULL,
+                failed_recipients longtext     DEFAULT NULL,
+                pending_recipients longtext    DEFAULT NULL,
+                PRIMARY KEY (id),
+                KEY idx_status (status),
+                KEY idx_strategy (strategy),
+                KEY idx_next_run (next_run)
+            ) {$charset_collate};";
+            require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+            dbDelta( $sql_campaigns );
+            error_log( 'Ofast X: Created ofast_email_campaigns table.' );
+        } else {
+            // Table exists — add any missing columns (handles old schema from previous build)
+            $camp_cols = $wpdb->get_col( "DESCRIBE {$table_campaigns}", 0 );
+
+            $missing_cols = array(
+                'recipient_ids' => "ALTER TABLE {$table_campaigns} ADD COLUMN recipient_ids longtext NOT NULL DEFAULT '' AFTER body",
+                'strategy'      => "ALTER TABLE {$table_campaigns} ADD COLUMN strategy varchar(20) NOT NULL DEFAULT 'rapid' AFTER status",
+                'total'         => "ALTER TABLE {$table_campaigns} ADD COLUMN total int(11) NOT NULL DEFAULT 0 AFTER strategy",
+                'sent'          => "ALTER TABLE {$table_campaigns} ADD COLUMN sent int(11) NOT NULL DEFAULT 0 AFTER total",
+                'failed'        => "ALTER TABLE {$table_campaigns} ADD COLUMN failed int(11) NOT NULL DEFAULT 0 AFTER sent",
+                'position'      => "ALTER TABLE {$table_campaigns} ADD COLUMN position int(11) NOT NULL DEFAULT 0 AFTER failed",
+                'lock_expires'  => "ALTER TABLE {$table_campaigns} ADD COLUMN lock_expires datetime DEFAULT NULL AFTER position",
+                'next_run'      => "ALTER TABLE {$table_campaigns} ADD COLUMN next_run datetime DEFAULT NULL AFTER lock_expires",
+                'created_by'    => "ALTER TABLE {$table_campaigns} ADD COLUMN created_by bigint(20) UNSIGNED NOT NULL DEFAULT 0 AFTER next_run",
+                'started_at'        => "ALTER TABLE {$table_campaigns} ADD COLUMN started_at datetime DEFAULT NULL AFTER created_at",
+                'completed_at'      => "ALTER TABLE {$table_campaigns} ADD COLUMN completed_at datetime DEFAULT NULL AFTER started_at",
+                'failed_recipients' => "ALTER TABLE {$table_campaigns} ADD COLUMN failed_recipients longtext DEFAULT NULL AFTER completed_at",
+                'pending_recipients'=> "ALTER TABLE {$table_campaigns} ADD COLUMN pending_recipients longtext DEFAULT NULL AFTER failed_recipients",
+            );
+
+            foreach ( $missing_cols as $col => $sql ) {
+                if ( ! in_array( $col, $camp_cols, true ) ) {
+                    $wpdb->query( $sql );
+                    error_log( "Ofast X: Added missing column '{$col}' to {$table_campaigns}" );
+                }
+            }
+
+            // Ensure idx_strategy and idx_next_run indexes exist
+            $indexes = $wpdb->get_col( "SHOW INDEX FROM {$table_campaigns} WHERE Key_name IN ('idx_strategy','idx_next_run')", 2 );
+            if ( ! in_array( 'idx_strategy', $indexes, true ) ) {
+                $wpdb->query( "ALTER TABLE {$table_campaigns} ADD INDEX idx_strategy (strategy)" );
+            }
+            if ( ! in_array( 'idx_next_run', $indexes, true ) ) {
+                $wpdb->query( "ALTER TABLE {$table_campaigns} ADD INDEX idx_next_run (next_run)" );
+            }
         }
     }
 

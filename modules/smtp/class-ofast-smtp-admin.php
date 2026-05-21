@@ -20,7 +20,6 @@ class Ofast_X_SMTP_Admin
         add_action('admin_init', array($this, 'handle_save'));
         add_action('admin_init', array($this, 'handle_resend'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
-        add_action('admin_head', array($this, 'admin_head_styles'));
         add_action('wp_ajax_ofast_smtp_fetch_logs', array($this, 'ajax_fetch_logs'));
 
         // SECURITY: Send HTTP security headers on our admin pages
@@ -58,198 +57,6 @@ class Ofast_X_SMTP_Admin
 
         $this->create_log_table();
         $this->export_logs_csv();
-    }
-
-    /**
-     * Output critical CSS in head (WooCommerce-style) - loads before body
-     */
-    public function admin_head_styles()
-    {
-        // Match by page slug instead of exact screen ID for compatibility
-        // across different admin parent menu slugs.
-        if (!isset($_GET['page']) || sanitize_key($_GET['page']) !== 'ofast-smtp') {
-            return;
-        }
-        ?>
-        <style id="ofast-smtp-critical-css">
-            /* Tab Navigation - WooCommerce style with sticky + glassmorphism */
-            .ofast-tabs-nav {
-                display: flex;
-                flex-wrap: nowrap;
-                gap: 8px;
-                margin-bottom: 25px;
-                padding: 10px 12px;
-                background: rgba(241, 245, 249, 0.85);
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
-                border-radius: 12px;
-                border: 1px solid rgba(255, 255, 255, 0.5);
-                position: sticky;
-                top: 47px;
-                z-index: 100;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
-            }
-
-            @media (max-width: 782px) {
-                .ofast-tabs-nav {
-                    position: sticky;
-                    top: 61px;
-                    overflow-x: auto;
-                    -webkit-overflow-scrolling: touch;
-                }
-            }
-
-            .ofast-tab {
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                padding: 12px 20px;
-                background: transparent;
-                border: none;
-                border-radius: 8px;
-                color: #64748b;
-                font-size: 14px;
-                font-weight: 500;
-                text-decoration: none;
-                cursor: pointer;
-                transition: all 0.2s ease;
-                flex-shrink: 0;
-                white-space: nowrap;
-            }
-
-            .ofast-tab:hover {
-                background: #fff;
-                color: #1e293b;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            }
-
-            .ofast-tab.active {
-                background: #6366f1;
-                color: #fff;
-                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-            }
-
-            .ofast-tab .dashicons {
-                font-size: 16px;
-                width: 16px;
-                height: 16px;
-                line-height: 16px;
-            }
-
-            .ofast-tab-content {
-                display: none;
-            }
-
-            .ofast-tab-content.active {
-                display: block;
-            }
-
-            /* Layout helpers used by dashboard cards/chart */
-            .ofast-grid-3 {
-                display: grid;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-                gap: 15px;
-            }
-
-            .ofast-grid-4 {
-                display: grid;
-                grid-template-columns: repeat(4, minmax(0, 1fr));
-                gap: 15px;
-            }
-
-            .ofast-flex-layout {
-                display: grid;
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 15px;
-                align-items: stretch;
-            }
-
-            .ofast-main {
-                min-width: 0;
-            }
-
-            .ofast-layout-sidebar {
-                display: grid;
-                grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-                gap: 20px;
-                align-items: start;
-            }
-
-            @media (max-width: 1200px) {
-                .ofast-grid-4 {
-                    grid-template-columns: repeat(2, minmax(0, 1fr));
-                }
-
-                .ofast-flex-layout {
-                    grid-template-columns: 1fr;
-                }
-
-                .ofast-layout-sidebar {
-                    grid-template-columns: 1fr;
-                }
-            }
-
-            @media (max-width: 782px) {
-
-                .ofast-grid-3,
-                .ofast-grid-4,
-                .ofast-flex-layout {
-                    grid-template-columns: 1fr;
-                }
-            }
-
-            /* Pro-locked section overlay */
-            .ofast-pro-locked-section {
-                position: relative;
-                overflow: hidden;
-                border-radius: 8px;
-            }
-            .ofast-pro-locked-section > .ofast-pro-overlay {
-                position: absolute;
-                inset: 0;
-                z-index: 10;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                gap: 10px;
-                background: rgba(255, 255, 255, 0.35);
-                backdrop-filter: blur(2.5px);
-                -webkit-backdrop-filter: blur(2.5px);
-                border-radius: 8px;
-            }
-            .ofast-pro-overlay .ofast-pro-lock-icon {
-                width: 44px; height: 44px;
-                background: rgba(99,102,241,0.12);
-                border-radius: 50%;
-                display: flex; align-items: center; justify-content: center;
-            }
-            .ofast-pro-overlay .ofast-pro-lock-icon .dashicons {
-                color: #6366f1; font-size: 22px; width: 22px; height: 22px;
-            }
-            .ofast-pro-overlay .ofast-pro-overlay-text {
-                font-size: 15px; font-weight: 600; color: #1e293b; text-align: center;
-            }
-            .ofast-pro-overlay .ofast-pro-overlay-desc {
-                font-size: 13px; font-weight: 400; color: #64748b; text-align: center;
-                max-width: 320px; line-height: 1.5;
-            }
-            .ofast-pro-overlay .ofast-pro-upgrade-btn {
-                display: inline-flex; align-items: center; gap: 6px;
-                padding: 10px 24px;
-                background: linear-gradient(135deg, #6366f1, #4f46e5);
-                color: #fff; font-size: 13px; font-weight: 600;
-                border-radius: 8px; text-decoration: none;
-                box-shadow: 0 4px 12px rgba(99,102,241,0.3);
-                transition: transform 0.2s, box-shadow 0.2s;
-            }
-            .ofast-pro-overlay .ofast-pro-upgrade-btn:hover {
-                transform: translateY(-1px);
-                box-shadow: 0 6px 16px rgba(99,102,241,0.4);
-                color: #fff;
-            }
-        </style>
-        <?php
     }
 
     /**
@@ -331,42 +138,6 @@ class Ofast_X_SMTP_Admin
             </div>
         </div>
 
-        <script>
-            jQuery(document).ready(function ($) {
-                // Tab switching without page reload
-                $('#smtp-tabs-nav .ofast-tab').on('click', function (e) {
-                    e.preventDefault();
-
-                    var tabId = $(this).data('tab');
-
-                    // Update active tab
-                    $('#smtp-tabs-nav .ofast-tab').removeClass('active');
-                    $(this).addClass('active');
-
-                    // Show/hide content with active class
-                    $('.ofast-tab-content').removeClass('active').hide();
-                    $('#smtp-tab-' + tabId).addClass('active').show();
-
-                    // Update URL without reload (for bookmarking)
-                    if (history.pushState) {
-                        var url = new URL(window.location);
-                        url.searchParams.set('tab', tabId);
-                        history.pushState({ tab: tabId }, '', url);
-                    }
-                });
-
-                // Handle browser back/forward
-                window.addEventListener('popstate', function (e) {
-                    if (e.state && e.state.tab) {
-                        var tabId = e.state.tab;
-                        $('#smtp-tabs-nav .ofast-tab').removeClass('active');
-                        $('#smtp-tabs-nav .ofast-tab[data-tab="' + tabId + '"]').addClass('active');
-                        $('.ofast-tab-content').removeClass('active').hide();
-                        $('#smtp-tab-' + tabId).addClass('active').show();
-                    }
-                });
-            });
-        </script>
         <?php
     }
 
@@ -730,39 +501,6 @@ class Ofast_X_SMTP_Admin
                     </div>
                 </div>
 
-                <style>
-                    .ofast-video-container:hover img {
-                        opacity: 0.9 !important;
-                    }
-
-                    .ofast-video-container:hover .ofast-play-btn {
-                        transform: scale(1.1);
-                        background: #7c3aed !important;
-                    }
-                </style>
-
-                <script>
-                    jQuery(document).ready(function ($) {
-                        $('#ofast-inline-video-wrapper').on('click', function () {
-                            var videoId = $(this).data('video-id');
-                            var iframe = $('<iframe/>', {
-                                'src': 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&rel=0',
-                                'frameborder': '0',
-                                'allow': 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
-                                'allowfullscreen': 'true',
-                                'css': {
-                                    'width': '100%',
-                                    'height': '100%',
-                                    'position': 'absolute',
-                                    'top': '0',
-                                    'left': '0',
-                                    'z-index': '10'
-                                }
-                            });
-                            $(this).empty().append(iframe);
-                        });
-                    });
-                </script>
 
                 <!-- Troubleshooting -->
                 <div
@@ -957,116 +695,13 @@ class Ofast_X_SMTP_Admin
         $showing_end = min($offset + $per_page, $total);
         ?>
 
-        <style>
-            /* Pagination styles loaded from shared ofast-pagination.css */
-            .ofast-smtp-loading {
-                position: relative;
-                pointer-events: none;
-            }
 
-            .ofast-smtp-loading::after {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(255, 255, 255, 0.7);
-                border-radius: inherit;
-            }
-        </style>
 
         <div id="ofast-smtp-pagination-wrap">
             <?php echo $this->render_pagination_bar($current_page, $total_pages, $total, $per_page, $show_all, $offset); ?>
         </div>
 
-        <script>
-            jQuery(document).ready(function ($) {
-                var smtpState = {
-                    page: <?php echo intval($current_page); ?>,
-                    perPage: '<?php echo esc_js($show_all ? 'all' : $per_page); ?>',
-                    nonce: '<?php echo esc_js($ajax_nonce); ?>'
-                };
 
-                function smtpFetchPage(page, perPage) {
-                    var $tbody = $('#ofast-smtp-log-tbody');
-                    var $paginationWrap = $('#ofast-smtp-pagination-wrap');
-                    $tbody.closest('table').addClass('ofast-smtp-loading');
-                    $paginationWrap.addClass('ofast-smtp-loading');
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_smtp_fetch_logs',
-                        nonce: smtpState.nonce,
-                        paged: page,
-                        per_page: perPage
-                    }, function (response) {
-                        if (response.success) {
-                            $tbody.html(response.data.rows_html);
-                            $paginationWrap.html(response.data.pagination_html);
-                            smtpState.page = response.data.current_page;
-                            smtpState.perPage = perPage;
-
-                            // Update per-page dropdown to stay in sync
-                            $('#ofast-smtp-per-page').val(perPage);
-
-                            // Update URL without reload (bookmarkable)
-                            var url = new URL(window.location);
-                            url.searchParams.set('paged', response.data.current_page);
-                            url.searchParams.set('per_page', perPage);
-                            url.searchParams.set('tab', 'log');
-                            history.replaceState(null, '', url.toString());
-
-                            // Re-bind preview buttons for new rows
-                            smtpBindPreview();
-                            // Re-bind pagination clicks
-                            smtpBindPagination();
-                        }
-                        $tbody.closest('table').removeClass('ofast-smtp-loading');
-                        $paginationWrap.removeClass('ofast-smtp-loading');
-                    }).fail(function () {
-                        $tbody.closest('table').removeClass('ofast-smtp-loading');
-                        $paginationWrap.removeClass('ofast-smtp-loading');
-                    });
-                }
-
-                function smtpBindPagination() {
-                    $('#ofast-smtp-pagination-wrap').off('click', '.ofast-page-btn').on('click', '.ofast-page-btn', function (e) {
-                        e.preventDefault();
-                        if ($(this).hasClass('disabled') || $(this).hasClass('active')) return;
-                        var page = $(this).data('page');
-                        if (page) smtpFetchPage(page, smtpState.perPage);
-                    });
-                }
-
-                function smtpBindPreview() {
-                    $('#ofast-smtp-log-tbody').off('click', '.preview-email').on('click', '.preview-email', function () {
-                        var content = atob($(this).data('content'));
-                        $('#email-preview-frame').remove();
-                        var iframe = $('<iframe id="email-preview-frame" style="width: 100%; height: 60vh; border: none;"></iframe>');
-                        iframe.attr('srcdoc', content);
-                        $('#email-preview-modal .ofast-smtp-modal-body').append(iframe);
-                        $('#email-preview-modal').fadeIn(200);
-                    });
-                }
-
-                // Per-page change → AJAX
-                $('#ofast-smtp-per-page').on('change', function () {
-                    smtpFetchPage(1, $(this).val());
-                });
-
-                // Initial bindings
-                smtpBindPagination();
-                smtpBindPreview();
-
-                // Close preview modal
-                $('#close-preview, #email-preview-modal').on('click', function (e) {
-                    if (e.target === this || $(this).attr('id') === 'close-preview') {
-                        $('#email-preview-modal').fadeOut(200);
-                        $('#email-preview-frame').remove();
-                    }
-                });
-            });
-        </script>
 
         <!-- Preview Modal -->
         <div id="email-preview-modal"
@@ -1260,236 +895,8 @@ class Ofast_X_SMTP_Admin
             echo Ofast_X_Dropdown::render_assets();
         }
         ?>
-        <style>
-            /* Ofast Toggle Switch */
-            .ofast-toggle {
-                position: relative;
-                display: inline-block;
-                width: 44px;
-                height: 24px;
-                vertical-align: middle;
-                margin-right: 10px;
-            }
 
-            .ofast-toggle input {
-                opacity: 0;
-                width: 0;
-                height: 0;
-            }
 
-            .ofast-slider {
-                position: absolute;
-                cursor: pointer;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background-color: #cbd5e1;
-                transition: .4s;
-                border-radius: 34px;
-            }
-
-            .ofast-slider:before {
-                position: absolute;
-                content: "";
-                height: 18px;
-                width: 18px;
-                left: 3px;
-                bottom: 3px;
-                background-color: white;
-                transition: .4s;
-                border-radius: 50%;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            }
-
-            input:checked+.ofast-slider {
-                background-color: #6366f1;
-            }
-
-            input:focus+.ofast-slider {
-                box-shadow: 0 0 1px #6366f1;
-            }
-
-            input:checked+.ofast-slider:before {
-                transform: translateX(20px);
-            }
-
-            /* Ofast Form Styling */
-            #ofast-smtp-form .form-table input[type="text"],
-            #ofast-smtp-form .form-table input[type="email"],
-            #ofast-smtp-form .form-table input[type="password"],
-            #ofast-smtp-form .form-table input[type="number"] {
-                border-radius: 8px;
-                border: 1px solid #d7deea;
-                padding: 8px 12px;
-                transition: border-color 0.2s, box-shadow 0.2s;
-            }
-
-            #ofast-smtp-form .form-table input[type="text"]:focus,
-            #ofast-smtp-form .form-table input[type="email"]:focus,
-            #ofast-smtp-form .form-table input[type="password"]:focus,
-            #ofast-smtp-form .form-table input[type="number"]:focus {
-                border-color: #6366f1;
-                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
-                outline: none;
-            }
-
-            /* Encryption Segmented Control */
-            .ofast-encryption-group {
-                display: inline-flex;
-                gap: 0;
-                border: 1px solid #d7deea;
-                border-radius: 8px;
-                overflow: hidden;
-            }
-
-            .ofast-encryption-group label {
-                padding: 8px 18px;
-                cursor: pointer;
-                font-size: 13px;
-                font-weight: 500;
-                color: #64748b;
-                background: #f8fafc;
-                border-right: 1px solid #d7deea;
-                transition: all 0.2s;
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-            }
-
-            .ofast-encryption-group label:last-child {
-                border-right: none;
-            }
-
-            .ofast-encryption-group input[type="radio"] {
-                display: none;
-            }
-
-            .ofast-encryption-group input[type="radio"]:checked+span {
-                /* handled via JS below */
-            }
-
-            .ofast-encryption-group label.active {
-                background: #6366f1;
-                color: #fff;
-            }
-
-            /* Ofast Button Styling */
-            #ofast-smtp-form .button.button-primary,
-            #ofast-smtp-form .button.ofast-btn-primary {
-                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
-                border-color: #6366f1 !important;
-                text-shadow: none !important;
-                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
-                transition: all 0.3s ease !important;
-                padding: 10px 24px !important;
-                height: auto !important;
-                border-radius: 8px !important;
-                font-weight: 600 !important;
-                font-size: 14px !important;
-            }
-
-            #ofast-smtp-form .button.button-primary:hover,
-            #ofast-smtp-form .button.ofast-btn-primary:hover {
-                background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
-            }
-
-            #ofast-smtp-form .button.button-secondary,
-            #ofast-smtp-form .button.ofast-btn-secondary {
-                border-radius: 8px !important;
-                padding: 8px 18px !important;
-                font-weight: 500 !important;
-                transition: all 0.2s !important;
-                border: 1px solid #d7deea !important;
-            }
-
-            #ofast-smtp-form .button.button-secondary:hover {
-                border-color: #6366f1 !important;
-                color: #6366f1 !important;
-            }
-
-            #ofast-smtp-form .button.button-small {
-                border-radius: 6px !important;
-                padding: 4px 12px !important;
-            }
-
-            /* Tooltip */
-            .ofast-tooltip-wrap {
-                position: relative;
-                display: inline-flex;
-                align-items: center;
-                margin-left: 8px;
-                vertical-align: middle;
-            }
-
-            .ofast-tooltip-icon {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                width: 24px;
-                height: 24px;
-                border-radius: 50%;
-                background: rgba(99, 102, 241, 0.1);
-                border: 1px solid rgba(99, 102, 241, 0.3);
-                color: #6366f1;
-                font-size: 13px;
-                font-weight: 700;
-                cursor: help;
-                transition: all 0.25s ease;
-            }
-
-            .ofast-tooltip-icon:hover {
-                background: #6366f1;
-                border-color: #6366f1;
-                color: #fff;
-                transform: scale(1.1);
-                box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
-            }
-
-            .ofast-tooltip-text {
-                visibility: hidden;
-                opacity: 0;
-                position: absolute;
-                bottom: calc(100% + 10px);
-                left: 50%;
-                transform: translateX(-50%) translateY(4px);
-                background: rgba(15, 23, 42, 0.85);
-                backdrop-filter: blur(16px);
-                -webkit-backdrop-filter: blur(16px);
-                color: #f1f5f9;
-                font-size: 13px;
-                font-weight: 400;
-                line-height: 1.6;
-                padding: 12px 16px;
-                border-radius: 12px;
-                border: 1px solid rgba(255, 255, 255, 0.12);
-                min-width: 280px;
-                max-width: 420px;
-                white-space: normal;
-                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255, 255, 255, 0.1) inset;
-                z-index: 1000;
-                transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
-                pointer-events: none;
-            }
-
-            .ofast-tooltip-text::after {
-                content: '';
-                position: absolute;
-                top: 100%;
-                left: 50%;
-                transform: translateX(-50%);
-                border: 6px solid transparent;
-                border-top-color: rgba(15, 23, 42, 0.85);
-            }
-
-            .ofast-tooltip-wrap:hover .ofast-tooltip-text {
-                visibility: visible;
-                opacity: 1;
-                transform: translateX(-50%) translateY(0);
-            }
-        </style>
 
 
         <form method="post" id="ofast-smtp-form">
@@ -1895,39 +1302,7 @@ class Ofast_X_SMTP_Admin
         </form>
 
 
-        <script>
-            jQuery(document).ready(function ($) {
-                // Encryption segmented control
-                $('.ofast-encryption-group label').on('click', function () {
-                    $(this).closest('.ofast-encryption-group').find('label').removeClass('active');
-                    $(this).addClass('active');
-                });
-            });
-        </script>
 
-
-        <script>
-            jQuery(document).ready(function ($) {
-                $('#smtp_mailer_type').on('change', function () {
-                    var isSmtp = $(this).val() === 'smtp';
-                    $('#smtp-credentials-section').toggle(isSmtp);
-                    $('#rate-limit-section').toggle(isSmtp);
-                    $('#mailer_note').text(isSmtp
-                        ? 'Requires SMTP server credentials. Better deliverability with providers like SendGrid, Mailgun.'
-                        : 'Uses your server\'s built-in mail function. Only From Email/Name needed. Best for most hosts.');
-                });
-
-                // Toggle fallback section
-                $('#fallback_enabled').on('change', function () {
-                    $('#fallback-smtp-fields').toggle(this.checked);
-                });
-
-                // Toggle health report fields visibility
-                $('input[name="health_report_enabled"]').on('change', function () {
-                    $('select[name="health_report_interval"]').closest('tr').toggle(this.checked);
-                });
-            });
-        </script>
 
 
 
@@ -1960,112 +1335,6 @@ class Ofast_X_SMTP_Admin
             </div>
         </div>
 
-        <script>
-            jQuery(document).ready(function ($) {
-                $('#ofast-run-port-test').on('click', function () {
-                    var hostname = $('#port-test-hostname').val().trim();
-                    if (!hostname) { alert('Enter a hostname first'); return; }
-
-                    var $btn = $(this);
-                    var $spinner = $('#port-test-spinner');
-                    var $results = $('#port-test-results');
-
-                    $btn.prop('disabled', true);
-                    $spinner.addClass('is-active');
-                    $results.hide();
-
-                    $.post(ajaxurl, {
-                        action: 'ofast_smtp_port_test',
-                        nonce: ofastSMTP.port_test_nonce,
-                        hostname: hostname,
-                        ports: [25, 465, 587]
-                    }, function (response) {
-                        $btn.prop('disabled', false);
-                        $spinner.removeClass('is-active');
-
-                        if (!response.success) {
-                            $results.html('<div style="padding:12px;background:#fee2e2;border-radius:8px;color:#991b1b;">' + response.data + '</div>').show();
-                            return;
-                        }
-
-                        var portLabels = { 25: 'Port 25 (Plain)', 465: 'Port 465 (SSL)', 587: 'Port 587 (TLS)' };
-                        var portOrder = [587, 465, 25];
-                        var tabs = '';
-                        var panels = {};
-                        var firstPort = null;
-
-                        $.each(portOrder, function (i, port) {
-                            var r = response.data.results[port];
-                            if (!r) return;
-                            if (!firstPort) firstPort = port;
-
-                            var statusDot = r.open ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;margin-right:6px;"></span>' : '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:6px;"></span>';
-                            var isActive = (port == firstPort);
-
-                            tabs += '<button type="button" class="port-tab" data-port="' + port + '" style="padding: 10px 20px; border: none; background: ' + (isActive ? '#f8fafc' : 'transparent') + '; cursor: pointer; font-weight: ' + (isActive ? '600' : '400') + '; font-size: 13px; color: ' + (isActive ? '#6366f1' : '#64748b') + '; border-bottom: 2px solid ' + (isActive ? '#6366f1' : 'transparent') + '; margin-bottom: -2px; transition: all 0.2s;">' + statusDot + (portLabels[port] || 'Port ' + port) + '</button>';
-
-                            var panel = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">';
-                            panel += '<div style="background: ' + (r.open ? '#f0fdf4' : '#fef2f2') + '; border: 1px solid ' + (r.open ? '#bbf7d0' : '#fecaca') + '; border-radius: 10px; padding: 16px;">';
-                            panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px;">Status</div>';
-                            panel += '<div style="font-size: 18px; font-weight: 700; color: ' + (r.open ? '#059669' : '#dc2626') + ';">' + (r.open ? 'Open' : 'Closed') + '</div>';
-                            panel += '</div>';
-
-                            if (r.open) {
-                                panel += '<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">';
-                                panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px;">Security</div>';
-                                var secItems = [];
-                                if (r.secure) secItems.push('🔒 Encrypted');
-                                if (r.starttls) secItems.push('↗ STARTTLS');
-                                if (!r.secure && !r.starttls) secItems.push('⚠ No encryption');
-                                panel += '<div style="font-weight: 600;">' + secItems.join(' &nbsp;·&nbsp; ') + '</div>';
-                                panel += '</div>';
-
-                                var auths = [];
-                                if (r.auth_login) auths.push('LOGIN');
-                                if (r.auth_plain) auths.push('PLAIN');
-                                if (r.auth_crammd5) auths.push('CRAM-MD5');
-                                if (r.auth_xoauth) auths.push('XOAUTH2');
-                                if (auths.length) {
-                                    panel += '<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">';
-                                    panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px;">Auth Methods</div>';
-                                    panel += '<div style="display: flex; gap: 6px; flex-wrap: wrap;">';
-                                    $.each(auths, function (j, a) {
-                                        panel += '<span style="background: #eef2ff; color: #4338ca; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500;">' + a + '</span>';
-                                    });
-                                    panel += '</div></div>';
-                                }
-
-                                if (r.mitm) {
-                                    panel += '<div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 16px;">';
-                                    panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #92400e; margin-bottom: 8px;">⚠ MITM Warning</div>';
-                                    panel += '<div style="color: #92400e; font-weight: 500;">' + (r.mitm_detail || 'Certificate hostname mismatch detected') + '</div>';
-                                    panel += '</div>';
-                                }
-                            } else if (r.error) {
-                                panel += '<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 16px;">';
-                                panel += '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px;">Error</div>';
-                                panel += '<div style="color: #991b1b; font-size: 13px;">' + r.error.substring(0, 120) + '</div>';
-                                panel += '</div>';
-                            }
-                            panel += '</div>';
-                            panels[port] = panel;
-                        });
-
-                        $('#port-tabs').html(tabs);
-                        $('#port-tab-content').html(panels[firstPort] || '');
-                        $results.show();
-
-                        // Tab switching
-                        $('#port-tabs').off('click', '.port-tab').on('click', '.port-tab', function () {
-                            var port = $(this).data('port');
-                            $('#port-tabs .port-tab').css({ background: 'transparent', fontWeight: '400', color: '#64748b', borderBottom: '2px solid transparent' });
-                            $(this).css({ background: '#f8fafc', fontWeight: '600', color: '#6366f1', borderBottom: '2px solid #6366f1' });
-                            $('#port-tab-content').html(panels[port] || '');
-                        });
-                    });
-                });
-            });
-        </script>
 
         <!-- DNS Checker Section -->
         <div style="margin-top: 30px;">
@@ -2185,19 +1454,36 @@ class Ofast_X_SMTP_Admin
             OFAST_X_VERSION
         );
 
+        // SMTP admin CSS (extracted from inline <style> blocks)
+        wp_enqueue_style(
+            'ofast-smtp-admin',
+            plugins_url('assets/css/smtp-admin.css', __FILE__),
+            array(),
+            OFAST_X_VERSION
+        );
+
+        // SMTP admin JS (extracted from inline <script> blocks)
         wp_enqueue_script(
             'ofast-smtp-admin',
-            plugins_url('assets/smtp-admin.js', __FILE__),
+            plugins_url('assets/js/smtp-admin.js', __FILE__),
             array('jquery'),
             OFAST_X_VERSION,
             true
         );
 
+        // Determine log pagination state for the JS
+        $current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
+        $per_page     = isset($_GET['per_page']) ? sanitize_text_field($_GET['per_page']) : '20';
+        $show_all     = ($per_page === 'all');
+
         wp_localize_script('ofast-smtp-admin', 'ofastSMTP', array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('ofast_test_smtp'),
+            'ajaxurl'         => admin_url('admin-ajax.php'),
+            'nonce'           => wp_create_nonce('ofast_test_smtp'),
             'port_test_nonce' => wp_create_nonce('ofast_port_test'),
-            'presets' => Ofast_X_SMTP::get_provider_presets()
+            'presets'         => Ofast_X_SMTP::get_provider_presets(),
+            'logPage'         => $current_page,
+            'logPerPage'      => $show_all ? 'all' : intval($per_page),
+            'logNonce'        => wp_create_nonce('ofast_smtp_logs_nonce'),
         ));
     }
 

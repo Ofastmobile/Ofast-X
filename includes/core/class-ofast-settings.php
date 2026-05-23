@@ -940,6 +940,14 @@ class Ofast_X_Settings
                 'admin_url' => 'admin.php?page=ofast-redirects',
             ),
             
+            // === CUSTOMIZATION (Pro) ===
+            'white-label' => array(
+                'name' => 'White Label',
+                'description' => 'Designer branding, footer text, plugin update control, page protection, and admin URL security',
+                'category' => 'customization',
+                'admin_url' => 'admin.php?page=ofast-white-label',
+            ),
+
             // === UTILITY ===
             'debug' => array(
                 'name' => 'Debug Indicator',

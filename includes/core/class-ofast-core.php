@@ -53,6 +53,9 @@ class Ofast_X_Core
      */
     private function load_modules()
     {
+        // One-time migration: promote White Label from admin-tweak toggle to standalone module
+        $this->maybe_migrate_white_label();
+
         // Load Dashboard first (creates main "Ofast X" menu)
         $this->load_dashboard();
 
@@ -75,7 +78,7 @@ class Ofast_X_Core
             $this->load_admin_design();
         }
 
-        if ($this->is_admin_tweak_enabled('enable_whos_admin')) {
+        if ($this->is_module_enabled('white-label')) {
             $this->load_whos_admin();
         }
 
@@ -85,10 +88,6 @@ class Ofast_X_Core
 
         if ($this->is_admin_tweak_enabled('enable_user_roles')) {
             $this->load_user_roles();
-        }
-
-        if ($this->is_admin_tweak_enabled('enable_admin_url')) {
-            $this->load_admin_url();
         }
 
         if ($this->is_module_enabled('redirects')) {
@@ -292,19 +291,6 @@ class Ofast_X_Core
     }
 
     /**
-     * Load Debug Indicator Module
-     */
-    private function load_debug_indicator()
-    {
-        require_once OFAST_X_PLUGIN_DIR . 'modules/debug-indicator/class-ofast-debug-indicator.php';
-
-        $debug_indicator = new Ofast_X_Debug_Indicator();
-        $debug_indicator->init();
-
-        $this->modules['debug'] = $debug_indicator;
-    }
-
-    /**
      * Load WP Admin Design Module
      */
     private function load_admin_design()
@@ -318,11 +304,12 @@ class Ofast_X_Core
     }
 
     /**
-     * Load Who's Admin Module
+     * Load White Label Module (formerly Who's Admin)
+     * Now a standalone module with its own toggle in Settings
      */
     private function load_whos_admin()
     {
-        // 1. Load White Label (Who's Admin)
+        // 1. Load White Label
         require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-whos-admin.php';
         $whos_admin = new Ofast_X_Whos_Admin();
         $whos_admin->init();
@@ -346,6 +333,46 @@ class Ofast_X_Core
         $custom_dashboard = new Ofast_X_Custom_Dashboard();
         $custom_dashboard->init();
         $this->modules['custom-dashboard'] = $custom_dashboard;
+
+        // 5. Load Admin URL settings/protection under White Label.
+        $admin_url = $this->load_admin_url();
+        $whos_admin->set_admin_url($admin_url);
+    }
+
+    /**
+     * Migrate White Label from Admin Studio sub-toggle to standalone module
+     * One-time migration for existing installs
+     */
+    private function maybe_migrate_white_label()
+    {
+        $modules = get_option('ofastx_modules_enabled', array());
+
+        // Skip if already migrated (white-label key exists)
+        if (isset($modules['white-label'])) {
+            return;
+        }
+
+        // Check if White Label was enabled via the old admin-tweak toggle
+        $admin_tweaks = get_option('ofast_admin_tweaks', array());
+        if (!empty($admin_tweaks['enable_whos_admin'])) {
+            $modules['white-label'] = true;
+        }
+
+        update_option('ofastx_modules_enabled', $modules);
+        self::$enabled_modules_cache = null; // clear cache
+    }
+
+    /**
+     * Load Debug Indicator Module
+     */
+    private function load_debug_indicator()
+    {
+        require_once OFAST_X_PLUGIN_DIR . 'modules/debug-indicator/class-ofast-debug-indicator.php';
+
+        $debug_indicator = new Ofast_X_Debug_Indicator();
+        $debug_indicator->init();
+
+        $this->modules['debug'] = $debug_indicator;
     }
 
     /**
@@ -384,6 +411,7 @@ class Ofast_X_Core
         $admin_url->init();
 
         $this->modules['admin-url'] = $admin_url;
+        return $admin_url;
     }
 
     /**

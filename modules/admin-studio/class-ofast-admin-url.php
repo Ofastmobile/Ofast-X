@@ -190,11 +190,20 @@ class Ofast_X_Admin_Url
      */
     private function get_return_url($args = array())
     {
-        $fallback = admin_url('admin.php?page=ofast-admin-tweaks');
+        $fallback = admin_url('admin.php?page=ofast-white-label&tab=updates');
         $referer = wp_get_referer();
         $base_url = $referer ? $referer : $fallback;
 
         return add_query_arg($args, $base_url);
+    }
+
+    /**
+     * Whether Admin URL protection is enabled from White Label settings.
+     */
+    private function is_enabled()
+    {
+        $admin_tweaks = get_option('ofast_admin_tweaks', array());
+        return !empty($admin_tweaks['enable_admin_url']);
     }
 
     /**
@@ -209,13 +218,12 @@ class Ofast_X_Admin_Url
         $this->custom_slug = get_option('ofast_admin_custom_slug', '');
         $this->emergency_key = get_option('ofast_admin_emergency_key', '');
 
-        // Admin settings page
-        add_action('admin_menu', array($this, 'add_admin_menu'));
+        // Admin settings are embedded inside White Label.
         add_action('admin_init', array($this, 'handle_save'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_url_assets'));
 
         // Only proceed with protection if custom slug is set
-        if (empty($this->custom_slug)) {
+        if (!$this->is_enabled() || empty($this->custom_slug)) {
             return;
         }
 
@@ -298,26 +306,21 @@ class Ofast_X_Admin_Url
     }
 
     /**
-     * Add admin menu
-     * NOTE: Submenu removed - Admin URL settings are now inline in Admin Tweaks page
-     */
-    public function add_admin_menu()
-    {
-        // Submenu removed - settings are inline in Admin Tweaks
-        // Keep this method for backward compatibility (hook still registered in init)
-    }
-
-    /**
      * Handle settings save
      */
     public function handle_save()
     {
         // Handle delete custom URL
         if (isset($_POST['ofast_delete_custom_url'])) {
-            check_admin_referer('ofast_admin_url_save', '_wpnonce');
+            $this->verify_admin_url_nonce();
             if (current_user_can('manage_options')) {
                 delete_option('ofast_admin_custom_slug');
                 delete_option('ofast_admin_emergency_key');
+                $admin_tweaks = get_option('ofast_admin_tweaks', array());
+                if (is_array($admin_tweaks)) {
+                    $admin_tweaks['enable_admin_url'] = 0;
+                    update_option('ofast_admin_tweaks', $admin_tweaks);
+                }
                 wp_safe_redirect($this->get_return_url(array('ofast_status' => 'deleted')));
                 exit;
             }
@@ -325,7 +328,7 @@ class Ofast_X_Admin_Url
 
         // Handle resend email
         if (isset($_POST['resend_email'])) {
-            check_admin_referer('ofast_admin_url_save', '_wpnonce');
+            $this->verify_admin_url_nonce();
             if (current_user_can('manage_options')) {
                 $custom_slug = get_option('ofast_admin_custom_slug', '');
                 $emergency_key = get_option('ofast_admin_emergency_key', '');
@@ -344,11 +347,18 @@ class Ofast_X_Admin_Url
             return;
         }
 
-        check_admin_referer('ofast_admin_url_save', '_wpnonce');
+        $this->verify_admin_url_nonce();
 
         if (!current_user_can('manage_options')) {
             return;
         }
+
+        $admin_tweaks = get_option('ofast_admin_tweaks', array());
+        if (!is_array($admin_tweaks)) {
+            $admin_tweaks = array();
+        }
+        $admin_tweaks['enable_admin_url'] = isset($_POST['enable_admin_url']) ? 1 : 0;
+        update_option('ofast_admin_tweaks', $admin_tweaks);
 
         $old_slug = get_option('ofast_admin_custom_slug', '');
         $new_slug = isset($_POST['custom_slug']) ? sanitize_title(wp_unslash($_POST['custom_slug'])) : '';
@@ -409,6 +419,21 @@ class Ofast_X_Admin_Url
 
         wp_safe_redirect($this->get_return_url(array('ofast_status' => 'saved')));
         exit;
+    }
+
+    /**
+     * Verify the Admin URL nonce. Supports the embedded White Label form.
+     */
+    private function verify_admin_url_nonce()
+    {
+        $nonce = isset($_POST['admin_url_nonce']) ? sanitize_text_field(wp_unslash($_POST['admin_url_nonce'])) : '';
+        if ($nonce === '' && isset($_POST['_wpnonce'])) {
+            $nonce = sanitize_text_field(wp_unslash($_POST['_wpnonce']));
+        }
+
+        if (!wp_verify_nonce($nonce, 'ofast_admin_url_save')) {
+            wp_die('Security check failed');
+        }
     }
 
     /**
@@ -726,13 +751,13 @@ a new key will be generated and emailed to you.
     }
 
     /**
-     * Enqueue admin URL CSS on the admin tweaks page.
+     * Enqueue admin URL CSS on the White Label page.
      *
      * @param string $hook The current admin page hook.
      */
     public function enqueue_admin_url_assets($hook)
     {
-        if (strpos($hook, 'ofast-admin-tweaks') === false) {
+        if (strpos($hook, 'ofast-white-label') === false) {
             return;
         }
 
@@ -742,6 +767,73 @@ a new key will be generated and emailed to you.
             array(),
             OFAST_X_VERSION
         );
+    }
+
+    /**
+     * Render Admin URL settings embedded inside the White Label form.
+     */
+    public function render_embedded_settings()
+    {
+        $custom_slug = get_option('ofast_admin_custom_slug', '');
+        $emergency_key = get_option('ofast_admin_emergency_key', '');
+        $site_url = home_url();
+        $max_attempts = get_option('ofast_security_max_attempts', 5);
+        $lockout_duration = get_option('ofast_security_lockout_duration', 15);
+        $ip_whitelist = get_option('ofast_security_ip_whitelist', '');
+        $is_enabled = $this->is_enabled();
+        ?>
+        <div class="ofast-card" style="margin-top: 20px;">
+            <div class="ofast-card-header">
+                <span class="dashicons dashicons-shield"></span>
+                <h2><?php esc_html_e('Admin URL Security', 'ofast-x'); ?></h2>
+            </div>
+            <div class="ofast-card-body">
+                <?php wp_nonce_field('ofast_admin_url_save', 'admin_url_nonce'); ?>
+                <input type="hidden" name="protection_enabled" value="<?php echo $is_enabled ? '1' : '0'; ?>">
+
+                <p class="ofast-field-hint" style="margin-top: 0;">
+                    <?php esc_html_e('When enabled, the default WordPress admin/login URLs are blocked and your custom login URL is used instead.', 'ofast-x'); ?>
+                </p>
+
+                <div class="ofast-form-group">
+                    <label for="ofast_custom_slug"><?php esc_html_e('Custom Login URL', 'ofast-x'); ?></label>
+                    <div style="display: flex; align-items: center; gap: 0; flex-wrap: wrap;">
+                        <span style="background: #f1f5f9; padding: 10px; border: 1px solid #e2e8f0; border-right: none; border-radius: 8px 0 0 8px; font-family: monospace; color: #64748b; font-size: 13px;"><?php echo esc_html(trailingslashit($site_url)); ?></span>
+                        <input type="text" name="custom_slug" id="ofast_custom_slug" value="<?php echo esc_attr($custom_slug); ?>" placeholder="my-secret-login" pattern="[a-z0-9\-]+" style="border-radius: 0 8px 8px 0; max-width: 220px;">
+                    </div>
+                    <span class="ofast-field-hint"><?php esc_html_e('Use lowercase letters, numbers, and hyphens. Leave empty to disable the custom URL.', 'ofast-x'); ?></span>
+                </div>
+
+                <?php if (!empty($custom_slug) && !empty($emergency_key)): ?>
+                    <div class="ofast-warning-box" style="margin: 16px 0;">
+                        <p><strong><?php esc_html_e('Custom Login URL:', 'ofast-x'); ?></strong> <code><?php echo esc_html(trailingslashit($site_url) . $custom_slug); ?></code></p>
+                        <p><strong><?php esc_html_e('Emergency Bypass:', 'ofast-x'); ?></strong> <code><?php echo esc_html(wp_login_url() . '?ofast_emergency=' . $emergency_key); ?></code></p>
+                        <button type="submit" name="resend_email" class="button"><?php esc_html_e('Resend Login Details', 'ofast-x'); ?></button>
+                        <button type="submit" name="ofast_delete_custom_url" class="button" onclick="return confirm('Disable custom URL protection?');"><?php esc_html_e('Delete & Disable', 'ofast-x'); ?></button>
+                    </div>
+                <?php endif; ?>
+
+                <div class="ofast-content-grid">
+                    <div class="ofast-form-group">
+                        <label for="ofast_max_attempts"><?php esc_html_e('Max Failed Attempts', 'ofast-x'); ?></label>
+                        <input type="number" name="max_attempts" id="ofast_max_attempts" value="<?php echo esc_attr($max_attempts); ?>" min="1" max="20">
+                    </div>
+                    <div class="ofast-form-group">
+                        <label for="ofast_lockout_duration"><?php esc_html_e('Lockout Duration (minutes)', 'ofast-x'); ?></label>
+                        <input type="number" name="lockout_duration" id="ofast_lockout_duration" value="<?php echo esc_attr($lockout_duration); ?>" min="1" max="1440">
+                    </div>
+                </div>
+
+                <div class="ofast-form-group">
+                    <label for="ofast_ip_whitelist"><?php esc_html_e('IP Whitelist', 'ofast-x'); ?></label>
+                    <textarea name="ip_whitelist" id="ofast_ip_whitelist" rows="4" class="large-text code" placeholder="192.168.1.1"><?php echo esc_textarea($ip_whitelist); ?></textarea>
+                    <span class="ofast-field-hint"><?php esc_html_e('One IP per line. These IPs bypass login lockout.', 'ofast-x'); ?></span>
+                </div>
+
+                <button type="submit" name="ofast_save_admin_url" class="button button-primary"><?php esc_html_e('Save Admin URL Settings', 'ofast-x'); ?></button>
+            </div>
+        </div>
+        <?php
     }
 
     /**

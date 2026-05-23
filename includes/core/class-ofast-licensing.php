@@ -21,6 +21,10 @@ if (!defined('ABSPATH')) {
  */
 function ofast_toolkit_is_pro()
 {
+    if (defined('OFAST_FORCE_PRO') && OFAST_FORCE_PRO) {
+        return true;
+    }
+
     if ( ofast_toolkit_has_valid_license() ) {
         return true;
     }

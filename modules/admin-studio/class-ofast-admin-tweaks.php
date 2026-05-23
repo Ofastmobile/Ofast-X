@@ -112,12 +112,35 @@ class Ofast_X_Admin_Tweaks
         // Add admin menu page
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'save_settings'));
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
         
         // AJAX handler for reset CSS
         add_action('wp_ajax_ofast_get_default_admin_css', array($this, 'ajax_get_default_css'));
-        
-        // AJAX handler for resending admin URL email
-        add_action('wp_ajax_ofast_resend_admin_url_email', array($this, 'ajax_resend_admin_url_email'));
+    }
+
+    /**
+     * Enqueue Admin Studio assets.
+     */
+    public function enqueue_assets($hook)
+    {
+        if (strpos($hook, 'ofast-admin-tweaks') === false) {
+            return;
+        }
+
+        wp_enqueue_style(
+            'ofast-admin-tweaks',
+            plugins_url('assets/css/admin-tweaks.css', __FILE__),
+            array(),
+            OFAST_X_VERSION
+        );
+
+        wp_enqueue_script(
+            'ofast-admin-tweaks',
+            plugins_url('assets/js/admin-tweaks.js', __FILE__),
+            array('jquery'),
+            OFAST_X_VERSION,
+            true
+        );
     }
 
     /**
@@ -418,10 +441,6 @@ class Ofast_X_Admin_Tweaks
             return;
         }
 
-        // Server-side Pro guard: block Modules tab settings for free users
-        // (Interface, Admin Bar, Security tabs are free)
-        $is_pro = ofast_toolkit_is_pro();
-
         $settings = array(
             'show_post_id' => isset($_POST['ofast_show_post_id']) ? 1 : 0,
             'infinity_media' => isset($_POST['ofast_infinity_media']) ? 1 : 0,
@@ -437,14 +456,12 @@ class Ofast_X_Admin_Tweaks
             'obfuscate_author_slugs' => isset($_POST['ofast_obfuscate_author_slugs']) ? 1 : 0,
             'obfuscate_emails' => isset($_POST['ofast_obfuscate_emails']) ? 1 : 0,
             'show_registration_date' => isset($_POST['ofast_show_registration_date']) ? 1 : 0,
-            // Admin Modules (Pro only — force to 0 for free users)
-            'enable_user_roles' => $is_pro && isset($_POST['ofast_enable_user_roles']) ? 1 : 0,
-            'enable_whos_admin' => $is_pro && isset($_POST['ofast_enable_whos_admin']) ? 1 : 0,
-            'enable_menu_editor' => $is_pro && isset($_POST['ofast_enable_menu_editor']) ? 1 : 0, // kept for backward compat with existing saved settings
-            'enable_content_ordering' => $is_pro && isset($_POST['ofast_enable_content_ordering']) ? 1 : 0,
-            'enable_admin_url' => $is_pro && isset($_POST['ofast_enable_admin_url']) ? 1 : 0,
-            'enable_admin_design' => $is_pro && isset($_POST['ofast_enable_admin_design']) ? 1 : 0,
-            'enable_content_duplicator' => $is_pro && isset($_POST['ofast_enable_content_duplicator']) ? 1 : 0,
+            // Admin Modules
+            'enable_user_roles' => isset($_POST['ofast_enable_user_roles']) ? 1 : 0,
+            'enable_menu_editor' => isset($_POST['ofast_enable_menu_editor']) ? 1 : 0,
+            'enable_content_ordering' => isset($_POST['ofast_enable_content_ordering']) ? 1 : 0,
+            'enable_admin_design' => isset($_POST['ofast_enable_admin_design']) ? 1 : 0,
+            'enable_content_duplicator' => isset($_POST['ofast_enable_content_duplicator']) ? 1 : 0,
         );
         
         // Save Interface Mode
@@ -457,16 +474,6 @@ class Ofast_X_Admin_Tweaks
 
         update_option('ofast_admin_tweaks', $settings);
 
-        // Save Admin URL settings if enabled with additional CSRF protection
-        if (!empty($settings['enable_admin_url']) && isset($_POST['ofast_admin_url_slug'])) {
-            // Additional CSRF verification for sensitive admin URL operations
-            if (!wp_verify_nonce($_POST['admin_url_nonce'] ?? '', 'ofast_admin_url_change_' . get_current_user_id())) {
-                wp_die('Security verification failed for admin URL change.');
-            }
-            
-            $this->handle_admin_url_settings($_POST);
-        }
-
         // Save Admin Design CSS if enabled
         if (!empty($settings['enable_admin_design']) && isset($_POST['ofast_admin_design_css'])) {
             // wp_unslash removes WP's automatic slashes, preventing backslash accumulation
@@ -478,110 +485,6 @@ class Ofast_X_Admin_Tweaks
         // Redirect with success flag
         wp_redirect(add_query_arg('settings_saved', '1', wp_get_referer()));
         exit;
-    }
-
-    /**
-     * Handle admin URL settings with enhanced security
-     */
-    private function handle_admin_url_settings($post_data)
-    {
-        $old_slug = get_option('ofast_admin_custom_slug', '');
-        $new_slug = sanitize_title($post_data['ofast_admin_url_slug'] ?? '');
-        
-        // Enhanced reserved slug validation
-        $reserved = $this->get_reserved_admin_slugs();
-        if (!empty($new_slug) && in_array($new_slug, $reserved, true)) {
-            wp_die('The specified admin URL slug is reserved and cannot be used.');
-        }
-        
-        // Validate slug format and security
-        if (!empty($new_slug)) {
-            if (!preg_match('/^[a-z0-9-]+$/', $new_slug)) {
-                wp_die('Admin URL slug can only contain lowercase letters, numbers, and hyphens.');
-            }
-            if (strlen($new_slug) < 6) {
-                wp_die('Admin URL slug must be at least 6 characters long for security.');
-            }
-        }
-        
-        // Handle slug changes with logging
-        if (!empty($new_slug) && $new_slug !== $old_slug) {
-            // Rate limiting: prevent rapid successive changes
-            $user_id = get_current_user_id();
-            $change_count = get_transient('ofast_admin_url_changes_' . $user_id) ?: 0;
-            if ($change_count >= 3) {
-                wp_die('Too many admin URL changes detected. Please wait one hour before making another change.');
-            }
-            
-            // Store previous slug for potential rollback
-            update_option('ofast_admin_previous_slug', $old_slug);
-            update_option('ofast_admin_slug_changed_at', time());
-            update_option('ofast_admin_custom_slug', $new_slug);
-            
-            // Increment rate limit counter
-            set_transient('ofast_admin_url_changes_' . $user_id, $change_count + 1, HOUR_IN_SECONDS);
-            
-            // Ensure emergency key exists and is fresh
-            $emergency_key = wp_generate_password(32, false, false);
-            update_option('ofast_admin_emergency_key', $emergency_key);
-            
-            // Security logging
-            error_log(sprintf(
-                '[Ofast Security] Admin URL changed from "%s" to "%s" by user %d (%s)',
-                $old_slug,
-                $new_slug,
-                $user_id,
-                wp_get_current_user()->user_login
-            ));
-            
-        } elseif (empty($new_slug) && !empty($old_slug)) {
-            // Disabling admin URL protection
-            delete_option('ofast_admin_custom_slug');
-            error_log(sprintf(
-                '[Ofast Security] Admin URL protection disabled by user %d (%s)',
-                get_current_user_id(),
-                wp_get_current_user()->user_login
-            ));
-        }
-        
-        // Save security settings with validation
-        if (isset($post_data['ofast_max_attempts'])) {
-            $max_attempts = max(1, min(20, intval($post_data['ofast_max_attempts'])));
-            update_option('ofast_security_max_attempts', $max_attempts);
-        }
-        if (isset($post_data['ofast_lockout_duration'])) {
-            $lockout_duration = max(1, min(1440, intval($post_data['ofast_lockout_duration'])));
-            update_option('ofast_security_lockout_duration', $lockout_duration);
-        }
-        if (isset($post_data['ofast_ip_whitelist'])) {
-            $ip_whitelist = sanitize_textarea_field($post_data['ofast_ip_whitelist']);
-            // Validate IP addresses
-            $ips = array_filter(array_map('trim', explode("\n", $ip_whitelist)));
-            $valid_ips = array();
-            foreach ($ips as $ip) {
-                if (filter_var($ip, FILTER_VALIDATE_IP)) {
-                    $valid_ips[] = $ip;
-                }
-            }
-            update_option('ofast_security_ip_whitelist', implode("\n", $valid_ips));
-        }
-    }
-
-    /**
-     * Get comprehensive list of reserved admin URL slugs
-     */
-    private function get_reserved_admin_slugs()
-    {
-        return array(
-            'wp-admin', 'wp-login', 'wp-login.php', 'admin', 'login', 
-            'dashboard', 'wp-content', 'wp-includes', 'wp-json',
-            'xmlrpc', 'xmlrpc.php', 'wp-cron', 'wp-cron.php',
-            'favicon.ico', 'robots.txt', 'sitemap', 'feed',
-            'comments', 'trackback', 'wp-mail', 'wp-mail.php',
-            'wp-config', 'wp-config.php', '.htaccess', 'index.php',
-            'readme.html', 'license.txt', 'wp-blog-header.php',
-            'wp-load.php', 'wp-settings.php'
-        );
     }
 
     /**
@@ -603,58 +506,6 @@ class Ofast_X_Admin_Tweaks
         }
         
         wp_send_json_success(array('css' => $css));
-    }
-
-    /**
-     * AJAX handler for resending admin URL login details email
-     */
-    public function ajax_resend_admin_url_email()
-    {
-        check_ajax_referer('ofast_resend_email_nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
-        }
-        
-        $custom_slug = get_option('ofast_admin_custom_slug', '');
-        $emergency_key = get_option('ofast_admin_emergency_key', '');
-        $admin_email = get_option('admin_email');
-        $site_name = get_bloginfo('name');
-        $site_url = home_url();
-        
-        if (empty($custom_slug)) {
-            wp_send_json_error('Admin URL protection is not active');
-        }
-        
-        // Prepare email
-        $login_url = trailingslashit($site_url) . $custom_slug;
-        $emergency_url = wp_login_url() . '?ofast_emergency=' . $emergency_key;
-        
-        $subject = '[' . $site_name . '] Your Admin Login Details';
-        
-        $message = "Hello Admin,\n\n";
-        $message .= "Here are your custom admin login details for " . $site_name . ":\n\n";
-        $message .= "═══════════════════════════════════════\n";
-        $message .= "CUSTOM LOGIN URL:\n";
-        $message .= $login_url . "\n\n";
-        $message .= "EMERGENCY BYPASS URL (One-Time Use):\n";
-        $message .= $emergency_url . "\n";
-        $message .= "═══════════════════════════════════════\n\n";
-        $message .= "IMPORTANT:\n";
-        $message .= "• Keep this email safe - you'll need these URLs to access your admin area\n";
-        $message .= "• The emergency URL rotates after each use\n";
-        $message .= "• If locked out, add this to wp-config.php:\n";
-        $message .= "  define('OFAST_DISABLE_ADMIN_PROTECTION', true);\n\n";
-        $message .= "This email was sent from: " . $site_url . "\n";
-        $message .= "Time: " . current_time('mysql') . "\n";
-        
-        $sent = wp_mail($admin_email, $subject, $message);
-        
-        if ($sent) {
-            wp_send_json_success(array('message' => 'Email sent'));
-        } else {
-            wp_send_json_error('Failed to send email');
-        }
     }
 
     /**
@@ -690,7 +541,6 @@ class Ofast_X_Admin_Tweaks
 
             <form method="post" action="">
                 <?php wp_nonce_field('ofast_admin_tweaks_save', 'admin_tweaks_nonce'); ?>
-                <?php wp_nonce_field('ofast_admin_url_change_' . get_current_user_id(), 'admin_url_nonce'); ?>
                 
                 <!-- Mobile Only Save Button (Top) -->
                 <div class="ofast-form-actions mobile-only" style="margin-bottom: 20px; text-align: center;">
@@ -933,21 +783,8 @@ class Ofast_X_Admin_Tweaks
                             </div>
                         </div>
 
-                         <!-- TAB: MODULES (Pro Only) -->
+                         <!-- TAB: MODULES -->
                         <div id="tab-modules" class="ofast-tab-content">
-                        <?php if ( ! ofast_toolkit_is_pro() ): ?>
-                        <div style="position: relative; overflow: hidden; border-radius: 16px;">
-                            <div style="position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(255,255,255,0.35); backdrop-filter: blur(2.5px); -webkit-backdrop-filter: blur(2.5px); border-radius: 16px;">
-                                <div style="width: 44px; height: 44px; background: rgba(99,102,241,0.12); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                                    <span class="dashicons dashicons-lock" style="color: #6366f1; font-size: 22px; width: 22px; height: 22px;"></span>
-                                </div>
-                                <div style="font-size: 15px; font-weight: 600; color: #1e293b;">Pro Feature</div>
-                                <div style="font-size: 13px; color: #64748b; text-align: center; max-width: 320px; line-height: 1.5;">White Label, User Roles, Content Ordering, Admin URL Security, and Custom Admin Design.</div>
-                                <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-license')); ?>" style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 24px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; font-size: 13px; font-weight: 600; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">
-                                    <span class="dashicons dashicons-star-filled" style="font-size:14px;width:14px;height:14px;"></span> Upgrade to Pro
-                                </a>
-                            </div>
-                        <?php endif; ?>
                             <div class="ofast-card">
                                 <div class="ofast-card-header">
                                     <h2>Admin Modules</h2>
@@ -970,21 +807,6 @@ class Ofast_X_Admin_Tweaks
 
                                     <div class="ofast-tweak-row">
                                         <div class="ofast-tweak-content">
-                                            <label for="ofast_enable_whos_admin">White Label</label>
-                                            <p class="description">Designer details, footer branding, and white label tools.</p>
-                                        </div>
-                                        <div class="ofast-tweak-action">
-                                            <label class="ofast-toggle">
-                                                <input type="checkbox" name="ofast_enable_whos_admin" id="ofast_enable_whos_admin" value="1" <?php checked(!empty($settings['enable_whos_admin'])); ?>>
-                                                <span class="ofast-slider"></span>
-                                            </label>
-                                        </div>
-                                    </div>
-
-
-
-                                    <div class="ofast-tweak-row">
-                                        <div class="ofast-tweak-content">
                                             <label for="ofast_enable_content_ordering">Content Ordering</label>
                                             <p class="description">Drag-and-drop reordering for content.</p>
                                         </div>
@@ -993,29 +815,6 @@ class Ofast_X_Admin_Tweaks
                                                 <input type="checkbox" name="ofast_enable_content_ordering" id="ofast_enable_content_ordering" value="1" <?php checked(!empty($settings['enable_content_ordering'])); ?>>
                                                 <span class="ofast-slider"></span>
                                             </label>
-                                        </div>
-                                    </div>
-
-                                    <div class="ofast-tweak-row">
-                                        <div class="ofast-tweak-content">
-                                            <label for="ofast_enable_admin_url">Admin URL Security</label>
-                                            <p class="description">Hide /wp-admin behind a custom URL.</p>
-                                        </div>
-                                        <div class="ofast-tweak-action">
-                                            <label class="ofast-toggle">
-                                                <input type="checkbox" name="ofast_enable_admin_url" id="ofast_enable_admin_url" value="1" <?php checked(!empty($settings['enable_admin_url'])); ?>>
-                                                <span class="ofast-slider"></span>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div id="admin-url-settings" style="display: <?php echo !empty($settings['enable_admin_url']) ? 'block' : 'none'; ?>; margin-top: 15px;">
-                                        <div class="ofast-collapsible-header" onclick="toggleCollapsible('admin-url-content')" style="background: #f8fafc; padding: 12px 15px; border-radius: 8px 8px 0 0; border: 1px solid #e2e8f0; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-                                            <span style="font-weight: 600; color: #374151;">Admin URL Settings</span>
-                                            <span class="dashicons dashicons-arrow-down-alt2" id="admin-url-content-arrow" style="transition: transform 0.3s; transform: rotate(-90deg);"></span>
-                                        </div>
-                                        <div id="admin-url-content" style="padding: 20px; background: #fff; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px; display: none;">
-                                            <?php $this->render_admin_url_settings(); ?>
                                         </div>
                                     </div>
 
@@ -1043,7 +842,6 @@ class Ofast_X_Admin_Tweaks
                                     </div>
 
                                 </div>
-                        <?php if ( ! ofast_toolkit_is_pro() ): ?></div><?php endif; ?>
                         </div>
 
                     </div>
@@ -1052,398 +850,6 @@ class Ofast_X_Admin_Tweaks
             </form>
         </div>
 
-        <style>
-            .ofast-tweaks-wrap { max-width: 1200px; margin: 20px auto; padding: 0 20px; }            
-            /* Header */
-            .ofast-page-header { background: #ffffff; border-radius: 16px; padding: 30px; margin-bottom: 30px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-            .ofast-header-content { display: flex; align-items: center; gap: 20px; }
-            .ofast-header-icon { width: 60px; height: 60px; background: #ffffff; border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2); border: 1px solid #e2e8f0; color: #6366f1; }
-            .ofast-header-icon .dashicons { font-size: 28px; width: 28px; height: 28px; }
-            .ofast-header-text h1 { margin: 0; font-size: 28px; font-weight: 700; color: #1e293b; }
-            .ofast-header-text p { margin: 5px 0 0; color: #64748b; font-size: 15px; }
-
-            /* STUDIO LAYOUT - 2 COLUMNS */
-            .ofast-studio-wrapper { display: flex; align-items: flex-start; gap: 60px; margin-top: 30px; }
-            
-            /* Sidebar */
-            .ofast-studio-sidebar { width: 220px; flex-shrink: 0; position: sticky; top: 50px; }
-            .ofast-studio-tab { display: flex; align-items: center; gap: 12px; padding: 15px 20px; margin-bottom: 8px; background: #fff; border-radius: 12px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; color: #64748b; font-weight: 500; }
-            .ofast-studio-tab:hover { background: #f8fafc; color: #374151; transform: translateX(5px); }
-            /* Active Tab - Light Variant */
-            .ofast-studio-tab.active { background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.1); }
-            .ofast-studio-tab .dashicons { font-size: 20px; width: 20px; height: 20px; }
-            
-            /* Content Area */
-            .ofast-studio-content { flex-grow: 1; min-width: 0; }
-            .ofast-tab-content { display: none; animation: fadeIn 0.3s ease; }
-            .ofast-tab-content.active { display: block; }
-            
-            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-            /* SEARCH MODE: Show all tabs when searching */
-            .ofast-studio-wrapper.searching .ofast-tab-content { display: block !important; animation: none; margin-bottom: 30px; }
-            .ofast-studio-wrapper.searching .ofast-studio-sidebar { opacity: 0.5; pointer-events: none; }
-
-            /* Search Box in Card Header */
-            .ofast-search-box { position: relative; }
-            .ofast-search-box input { width: 200px; padding: 8px 35px 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: #fff; transition: all 0.2s; }
-            .ofast-search-box input:focus { border-color: #6366f1; outline: none; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); width: 260px; }
-            .ofast-search-box .dashicons { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 16px; width: 16px; height: 16px; pointer-events: none; }
-            
-            /* Hidden Elements */
-            .ofast-tweak-row.hidden-by-search { display: none !important; }
-            .ofast-section-title.hidden-by-search { display: none !important; }
-            .ofast-card.hidden-by-search { display: none !important; }
-            .ofast-tab-content.hidden-by-search { display: none !important; }
-
-            /* Grid Layout */
-            .ofast-tweaks-container { display: flex; flex-direction: column; gap: 0; }
-            
-            /* Cards */
-            .ofast-card { background: #fff; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; border: 1px solid rgba(0,0,0,0.05); }
-            .ofast-card-header { display: flex; align-items: center; gap: 12px; padding: 20px 25px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1px solid #e2e8f0; }
-            .ofast-card-header .dashicons { font-size: 20px; width: 20px; height: 20px; color: #6366f1; }
-            .ofast-card-header h2 { margin: 0; font-size: 16px; font-weight: 600; color: #1e293b; }
-            .ofast-card-body { padding: 25px; }
-
-            /* Tweak Rows */
-            .ofast-tweak-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f1f5f9; }
-            .ofast-tweak-row:last-child { border-bottom: none; }
-            .ofast-tweak-content label { font-weight: 600; color: #374151; font-size: 15px; display: block; margin-bottom: 4px; }
-            .ofast-tweak-content .description { margin: 0; font-size: 13px; color: #64748b; }
-            .ofast-section-title { margin: 20px 0 10px; font-size: 14px; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.5px; font-weight: 700; }
-
-            /* Modern Toggle Switch */
-            .ofast-toggle { position: relative; display: inline-block; width: 48px; height: 26px; flex-shrink: 0; }
-            .ofast-toggle input { opacity: 0; width: 0; height: 0; }
-            .ofast-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 34px; }
-            .ofast-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-            input:checked + .ofast-slider { background-color: #6366f1; }
-            input:checked + .ofast-slider:before { transform: translateX(22px); }
-            input:focus + .ofast-slider { box-shadow: 0 0 1px #6366f1; }
-
-            /* Checkbox Pills */
-            .ofast-checkbox-pill { display: inline-flex; align-items: center; padding: 6px 12px; background: #f1f5f9; border-radius: 20px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
-            .ofast-checkbox-pill input { display: none; }
-            .ofast-checkbox-pill span { font-size: 13px; color: #475569; font-weight: 500; }
-            .ofast-checkbox-pill:hover { background: #e2e8f0; }
-            .ofast-checkbox-pill input:checked + span { color: #6366f1; }
-            .ofast-checkbox-pill:has(input:checked) { background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.2); }
-
-            /* Buttons */
-            .ofast-btn-primary { display: inline-flex; align-items: center; gap: 10px; padding: 12px 24px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
-            .ofast-btn-primary:hover { background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); color: #fff; }
-
-            /* Admin URL Settings Inline */
-            #admin-url-settings h3 { margin: 0 0 15px 0; font-size: 16px; color: #1e293b; }
-            #admin-url-settings .form-field { margin-bottom: 15px; }
-            #admin-url-settings label { display: block; font-weight: 600; color: #374151; margin-bottom: 5px; }
-            #admin-url-settings input[type="text"], #admin-url-settings input[type="number"], #admin-url-settings textarea { width: 100%; max-width: 400px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; }
-            #admin-url-settings .description { color: #64748b; font-size: 12px; margin-top: 5px; }
-
-            /* RESPONSIVE DESIGN */
-            @media screen and (max-width: 960px) {
-                .ofast-studio-wrapper { flex-direction: column; gap: 20px; }
-                
-                /* Sidebar becomes horizontal scroll menu */
-                .ofast-studio-sidebar { 
-                    width: 100%; 
-                    display: flex; 
-                    overflow-x: auto; 
-                    padding-bottom: 5px; 
-                    position: static;
-                    gap: 10px;
-                    -webkit-overflow-scrolling: touch;
-                }
-                
-                /* Tabs in scroll menu */
-                .ofast-studio-tab { 
-                    flex-shrink: 0; 
-                    margin-bottom: 0; 
-                    white-space: nowrap; 
-                    padding: 10px 15px;
-                    font-size: 13px;
-                }
-                
-                /* Move Save Button to be inline or floating? 
-                   For now, let's keep it at the end of the scroll list or hide it in sidebar and use a global one.
-                   Actually, let's just make it full width at the bottom of the content or keep it in sidebar but styled differently.
-                */
-                .ofast-studio-sidebar div:last-child {
-                    /* Container for save button in sidebar */
-                    margin-top: 0 !important;
-                    display: none; /* Hide sidebar save button on mobile, assume user knows to scroll or we duplicate it */
-                }
-
-                /* We might need a floating save button or show it at bottom of content */
-                .ofast-form-actions { text-align: center; } /* content save button */
-            }
-            
-            /* Add Save Button to bottom of content area for Mobile */
-            @media screen and (min-width: 961px) {
-                .ofast-form-actions.mobile-only { display: none; }
-            }
-            @media screen and (max-width: 782px) {
-                 .ofast-tweak-row { flex-direction: column; align-items: flex-start; gap: 10px; }
-                 .ofast-tweak-action { align-self: flex-end; }
-                 .ofast-card-header { flex-direction: column; align-items: flex-start; gap: 15px; }
-                 .ofast-search-box { width: 100%; }
-                 .ofast-search-box input, .ofast-search-box input:focus { width: 100% !important; }
-            }
-        </style>
-
-        <script>
-        jQuery(document).ready(function($) {
-            
-            // Tab Switching
-            $('.ofast-studio-tab').on('click', function() {
-                // Ignore click if searching
-                if ($('.ofast-studio-wrapper').hasClass('searching')) return;
-                
-                var target = $(this).data('target');
-                
-                // Update Sidebar
-                $('.ofast-studio-tab').removeClass('active');
-                $(this).addClass('active');
-                
-                // Update Content
-                $('.ofast-tab-content').removeClass('active');
-                $('#' + target).addClass('active');
-                
-                // Save active tab to localStorage (optional)
-                localStorage.setItem('ofast_admin_tweaks_tab', target);
-            });
-            
-            // Restore active tab
-            var savedTab = localStorage.getItem('ofast_admin_tweaks_tab');
-            if (savedTab && $('#' + savedTab).length > 0) {
-                 $('.ofast-studio-tab[data-target="' + savedTab + '"]').click();
-            }
-
-            // Toggle Admin URL settings visibility
-            $('#ofast_enable_admin_url').on('change', function() {
-                if ($(this).is(':checked')) {
-                    $('#admin-url-settings').slideDown(300);
-                } else {
-                    $('#admin-url-settings').slideUp(300);
-                }
-            });
-            
-            // Toggle Admin Design settings visibility
-            $('#ofast_enable_admin_design').on('change', function() {
-                if ($(this).is(':checked')) {
-                    $('#admin-design-settings').slideDown(300);
-                } else {
-                    $('#admin-design-settings').slideUp(300);
-                }
-            });
-
-            // Toggle custom greeting input visibility
-            $('#ofast_custom_greeting_enabled').on('change', function() {
-                if ($(this).is(':checked')) {
-                    $('#ofast-custom-greeting-row').slideDown(200);
-                } else {
-                    $('#ofast-custom-greeting-row').slideUp(200);
-                }
-            });
-
-            // Search functionality
-            $('#ofast-tweaks-search').on('input', function() {
-                var searchTerm = $(this).val().toLowerCase().trim();
-                var wrapper = $('.ofast-studio-wrapper');
-                
-                if (searchTerm === '') {
-                    // CLEAR SEARCH
-                    wrapper.removeClass('searching');
-                    $('.ofast-tweak-row, .ofast-section-title, .ofast-card, .ofast-tab-content').removeClass('hidden-by-search');
-                    // Restore active tab
-                    $('.ofast-studio-tab.active').click(); 
-                    return;
-                }
-                
-                // ACTIVE SEARCH MODE
-                wrapper.addClass('searching');
-                
-                // Search through all cards and rows
-                $('.ofast-card').each(function() {
-                    var card = $(this);
-                    
-                    card.find('.ofast-tweak-row').each(function() {
-                        var labelText = $(this).find('label').first().text().toLowerCase();
-                        var descText = $(this).find('.description').text().toLowerCase();
-                        
-                        if (labelText.includes(searchTerm) || descText.includes(searchTerm)) {
-                            $(this).removeClass('hidden-by-search');
-                        } else {
-                            $(this).addClass('hidden-by-search');
-                        }
-                    });
-                    
-                    // Hide section titles if needed
-                    card.find('.ofast-section-title').each(function() {
-                        var $nextRows = $(this).nextUntil('.ofast-section-title, .ofast-card-header');
-                        var visibleRows = $nextRows.filter('.ofast-tweak-row:not(.hidden-by-search)').length;
-                        $(this).toggleClass('hidden-by-search', visibleRows === 0);
-                    });
-                    
-                    // Hide card if no visible rows
-                    var visibleRowsInCard = card.find('.ofast-tweak-row:not(.hidden-by-search)').length;
-                    card.toggleClass('hidden-by-search', visibleRowsInCard === 0);
-                });
-                
-                // Hide tabs if no visible cards
-                $('.ofast-tab-content').each(function() {
-                    var visibleCards = $(this).find('.ofast-card:not(.hidden-by-search)').length;
-                    $(this).toggleClass('hidden-by-search', visibleCards === 0);
-                });
-            });
-        });
-        
-        // Collapsible toggle function
-        function toggleCollapsible(contentId) {
-            var content = document.getElementById(contentId);
-            var arrow = document.getElementById(contentId + '-arrow');
-            if (content.style.display === 'none') {
-                content.style.display = 'block';
-                arrow.style.transform = 'rotate(0deg)';
-            } else {
-                content.style.display = 'none';
-                arrow.style.transform = 'rotate(-90deg)';
-            }
-        }
-        </script>
-<?php
-    }
-
-    /**
-     * Render Admin URL settings inline
-     */
-    private function render_admin_url_settings()
-    {
-        $custom_slug = get_option('ofast_admin_custom_slug', '');
-        $emergency_key = get_option('ofast_admin_emergency_key', '');
-        $site_url = home_url();
-        $max_attempts = get_option('ofast_security_max_attempts', 5);
-        $lockout_duration = get_option('ofast_security_lockout_duration', 15);
-        $ip_whitelist = get_option('ofast_security_ip_whitelist', '');
-?>
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
-            <p style="margin: 0; color: #64748b; font-size: 13px;">
-                <strong>Note:</strong> When enabled, <code>/wp-admin</code> and <code>/wp-login.php</code> will return 404. Remember your custom URL.
-            </p>
-        </div>
-
-        <div class="form-field">
-            <label>Custom Login URL</label>
-            <div style="display: flex; align-items: center; gap: 0;">
-                <span style="background: #f1f5f9; padding: 10px; border: 1px solid #e2e8f0; border-right: none; border-radius: 8px 0 0 8px; font-family: monospace; color: #64748b; font-size: 13px;"><?php echo esc_html($site_url); ?>/</span>
-                <input type="text" name="ofast_admin_url_slug" value="<?php echo esc_attr($custom_slug); ?>" placeholder="my-secret-login" pattern="[a-z0-9\-]+" style="border-radius: 0 8px 8px 0 !important; max-width: 200px;">
-            </div>
-            <p class="description">Lowercase letters, numbers, and hyphens only. Leave empty to disable.</p>
-        </div>
-
-        <?php if (!empty($custom_slug) && !empty($emergency_key)): ?>
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin: 15px 0;">
-            <p style="margin: 0 0 10px 0; font-weight: 600; color: #374151;">Protection Active</p>
-            <p style="margin: 0; font-size: 13px; color: #374151;">
-                <strong>Login URL:</strong> <code id="login-url-display"><?php echo esc_html(trailingslashit($site_url) . $custom_slug); ?></code>
-                <button type="button" class="button button-small" style="margin-left: 8px;" onclick="copyToClipboard('login-url-display', this)">Copy</button>
-            </p>
-        </div>
-
-        <!-- Recovery Options Section -->
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin: 15px 0;">
-            <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #374151;">
-                Recovery Options
-            </h4>
-            
-            <div style="margin-bottom: 12px;">
-                <p style="margin: 0 0 5px 0; font-size: 12px; font-weight: 600; color: #374151;">Emergency Bypass URL (One-Time Use):</p>
-                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                    <code id="emergency-url-display" style="font-size: 10px; background: #fff; padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 4px; word-break: break-all; max-width: 100%;"><?php echo esc_html(wp_login_url() . '?ofast_emergency=' . $emergency_key); ?></code>
-                    <button type="button" class="button button-small" onclick="copyToClipboard('emergency-url-display', this)">Copy</button>
-                </div>
-                <p style="margin: 5px 0 0; font-size: 11px; color: #64748b;">This key rotates after each use. A new one will be emailed to you.</p>
-            </div>
-
-            <div style="margin-bottom: 12px;">
-                <p style="margin: 0 0 5px 0; font-size: 12px; font-weight: 600; color: #374151;">Permanent Bypass (wp-config.php):</p>
-                <code id="wpconfig-bypass" style="font-size: 11px; background: #fff; padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 4px; display: block;">define('OFAST_DISABLE_ADMIN_PROTECTION', true);</code>
-                <p style="margin: 5px 0 0; font-size: 11px; color: #64748b;">Add this line to wp-config.php if you're locked out.</p>
-            </div>
-
-            <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
-                <button type="button" class="button" onclick="ofastResendLoginDetails()" id="resend-login-btn">
-                    Resend Login Details to Admin Email
-                </button>
-                <span id="resend-status" style="margin-left: 10px; font-size: 12px;"></span>
-            </div>
-        </div>
-
-        <script>
-        function copyToClipboard(elementId, button) {
-            var text = document.getElementById(elementId).innerText;
-            navigator.clipboard.writeText(text).then(function() {
-                var originalText = button.innerText;
-                button.innerText = 'Copied!';
-                button.style.background = '#10b981';
-                button.style.color = '#fff';
-                setTimeout(function() {
-                    button.innerText = originalText;
-                    button.style.background = '';
-                    button.style.color = '';
-                }, 2000);
-            });
-        }
-
-        function ofastResendLoginDetails() {
-            var btn = document.getElementById('resend-login-btn');
-            var status = document.getElementById('resend-status');
-            btn.disabled = true;
-            status.innerHTML = '<span style="color: #6366f1;">Sending...</span>';
-            
-            jQuery.ajax({
-                url: ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'ofast_resend_admin_url_email',
-                    nonce: '<?php echo wp_create_nonce('ofast_resend_email_nonce'); ?>'
-                },
-                success: function(response) {
-                    btn.disabled = false;
-                    if (response.success) {
-                        status.innerHTML = '<span style="color: #10b981;">✓ Email sent to <?php echo esc_js(get_option('admin_email')); ?></span>';
-                    } else {
-                        status.innerHTML = '<span style="color: #ef4444;">Failed: ' + response.data + '</span>';
-                    }
-                },
-                error: function() {
-                    btn.disabled = false;
-                    status.innerHTML = '<span style="color: #ef4444;">Connection error</span>';
-                }
-            });
-        }
-        </script>
-        <?php endif; ?>
-
-        <h4 style="margin: 20px 0 10px 0; font-size: 14px; color: #374151;">Login Limit Settings</h4>
-        
-        <div class="form-field" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; max-width: 400px;">
-            <div>
-                <label>Max Failed Attempts</label>
-                <input type="number" name="ofast_max_attempts" value="<?php echo esc_attr($max_attempts); ?>" min="1" max="20" style="width: 100%;">
-            </div>
-            <div>
-                <label>Lockout Duration (min)</label>
-                <input type="number" name="ofast_lockout_duration" value="<?php echo esc_attr($lockout_duration); ?>" min="1" max="1440" style="width: 100%;">
-            </div>
-        </div>
-
-        <div class="form-field">
-            <label>IP Whitelist</label>
-            <textarea name="ofast_ip_whitelist" rows="3" placeholder="One IP per line" style="max-width: 400px;"><?php echo esc_textarea($ip_whitelist); ?></textarea>
-            <p class="description">IPs that bypass login limits (one per line).</p>
-        </div>
 <?php
     }
 

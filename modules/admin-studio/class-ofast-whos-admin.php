@@ -23,6 +23,11 @@ class Ofast_X_Whos_Admin
     private $menu_editor = null;
 
     /**
+     * @var Ofast_X_Admin_Url|null Admin URL instance for embedded settings.
+     */
+    private $admin_url = null;
+
+    /**
      * Initialize module
      */
     public function init()
@@ -71,6 +76,16 @@ class Ofast_X_Whos_Admin
     public function set_menu_editor($menu_editor)
     {
         $this->menu_editor = $menu_editor;
+    }
+
+    /**
+     * Set the Admin URL instance for embedding in White Label.
+     *
+     * @param Ofast_X_Admin_Url $admin_url
+     */
+    public function set_admin_url($admin_url)
+    {
+        $this->admin_url = $admin_url;
     }
 
     /**
@@ -229,6 +244,17 @@ class Ofast_X_Whos_Admin
             delete_option('ofast_protection_password');
             delete_option('ofast_page_protection_timeout');
             delete_option('ofast_protected_pages_list');
+            delete_option('ofast_admin_custom_slug');
+            delete_option('ofast_admin_emergency_key');
+            delete_option('ofast_admin_url_enabled');
+            delete_option('ofast_security_max_attempts');
+            delete_option('ofast_security_lockout_duration');
+            delete_option('ofast_security_ip_whitelist');
+            $admin_tweaks = get_option('ofast_admin_tweaks', array());
+            if (is_array($admin_tweaks)) {
+                $admin_tweaks['enable_admin_url'] = 0;
+                update_option('ofast_admin_tweaks', $admin_tweaks);
+            }
             delete_site_transient('update_plugins');
             $this->clear_protection_cookie();
 
@@ -281,6 +307,13 @@ class Ofast_X_Whos_Admin
             'disable_file_editor' => isset($_POST['disable_file_editor']) ? 1 : 0,
         );
         update_option('ofast_admin_footer_settings', $footer_settings);
+
+        $admin_tweaks = get_option('ofast_admin_tweaks', array());
+        if (!is_array($admin_tweaks)) {
+            $admin_tweaks = array();
+        }
+        $admin_tweaks['enable_admin_url'] = isset($_POST['enable_admin_url']) ? 1 : 0;
+        update_option('ofast_admin_tweaks', $admin_tweaks);
 
         // Save Updates Settings
         update_option('ofast_disable_plugin_updates', isset($_POST['ofast_disable_plugin_updates']) ? 1 : 0);
@@ -730,6 +763,10 @@ class Ofast_X_Whos_Admin
             'right_text' => '',
             'hide_wp_version' => 0,
         ));
+        $admin_tweaks = get_option('ofast_admin_tweaks', array());
+        if (!is_array($admin_tweaks)) {
+            $admin_tweaks = array();
+        }
 
         $saved = isset($_GET['settings_saved']);
         $was_reset = isset($_GET['settings_reset']);
@@ -1047,6 +1084,24 @@ class Ofast_X_Whos_Admin
                                                 </label>
                                                 <span class="ofast-field-hint">Removes the built-in code editor from Plugins and Themes to prevent direct file modifications.</span>
                                             </div>
+
+                                            <div class="ofast-form-group">
+                                                <label class="ofast-checkbox-label">
+                                                    <input type="checkbox" name="enable_admin_url" value="1" <?php checked(!empty($admin_tweaks['enable_admin_url'])); ?>>
+                                                    <span class="ofast-checkbox-custom"></span>
+                                                    <span class="ofast-checkbox-text">
+                                                        Enable Admin URL Security
+                                                        <span class="ofast-security-badge">Security</span>
+                                                    </span>
+                                                </label>
+                                                <span class="ofast-field-hint">Moves login access to a custom URL and blocks the default WordPress admin/login routes.</span>
+                                            </div>
+
+                                            <?php if ($this->admin_url): ?>
+                                                <div style="margin-top: 24px;">
+                                                    <?php $this->admin_url->render_embedded_settings(); ?>
+                                                </div>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </div>

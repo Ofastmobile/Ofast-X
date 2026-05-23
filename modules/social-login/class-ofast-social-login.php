@@ -95,6 +95,7 @@ class Ofast_X_Social_Login {
         }
 
         add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
+        add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
 
         if ( ! $this->is_enabled() ) {
             return;
@@ -142,6 +143,25 @@ class Ofast_X_Social_Login {
             'manage_options',
             'ofast-social-login',
             array( $this, 'render_settings_page' )
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Admin asset enqueue
+    // -------------------------------------------------------------------------
+
+    public function enqueue_admin_scripts() {
+        if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'ofast-social-login' ) {
+            return;
+        }
+
+        $module_url = plugin_dir_url( __FILE__ );
+
+        wp_enqueue_style(
+            'ofast-social-login-admin',
+            $module_url . 'assets/css/social-login-admin.css',
+            array(),
+            OFAST_X_VERSION
         );
     }
 
@@ -195,19 +215,6 @@ class Ofast_X_Social_Login {
 
             <form method="post">
                 <?php wp_nonce_field( 'ofast_social_login_save', 'ofast_social_nonce' ); ?>
-                <style>
-                    .ofast-social-card { background:#fff; border-radius:12px; padding:30px; box-shadow:0 4px 6px -1px rgba(0,0,0,.05); border:1px solid #e2e8f0; margin-bottom:24px; }
-                    .ofast-social-card h2 { margin-top:0; font-size:18px; color:#1e293b; border-bottom:1px solid #f1f5f9; padding-bottom:15px; }
-                    .ofast-toggle { position:relative; display:inline-block; width:50px; height:26px; vertical-align:middle; }
-                    .ofast-toggle input { opacity:0; width:0; height:0; }
-                    .ofast-toggle-slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:#cbd5e1; transition:.3s; border-radius:26px; }
-                    .ofast-toggle-slider:before { position:absolute; content:""; height:20px; width:20px; left:3px; bottom:3px; background:#fff; transition:.3s; border-radius:50%; }
-                    input:checked + .ofast-toggle-slider { background:#6366f1; }
-                    input:checked + .ofast-toggle-slider:before { transform:translateX(24px); }
-                    .ofast-callback-url { background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px 12px; font-family:monospace; font-size:12px; color:#475569; display:block; margin-top:8px; word-break:break-all; }
-                    .form-table th { width:180px; }
-                    .form-table input[type=text], .form-table input[type=password], .form-table input[type=url], .form-table select { border-radius:6px; }
-                </style>
 
                 <!-- General -->
                 <div class="ofast-social-card">
@@ -491,19 +498,27 @@ class Ofast_X_Social_Login {
     // -------------------------------------------------------------------------
 
     public function enqueue_login_styles() {
-        ?>
-        <style>
-            .ofast-social-login-wrap { margin: 20px 0; text-align: center; }
-            .ofast-social-divider { position: relative; text-align: center; margin: 20px 0; }
-            .ofast-social-divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: #e2e8f0; }
-            .ofast-social-divider span { position: relative; background: #fff; padding: 0 12px; color: #94a3b8; font-size: 12px; }
-            .ofast-social-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 10px 20px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; color: #1e293b; font-size: 14px; font-weight: 500; text-decoration: none; cursor: pointer; transition: all .2s; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
-            .ofast-social-btn:hover { background: #f8fafc; border-color: #6366f1; color: #1e293b; }
-            .ofast-social-btn:focus { outline: 2px solid #6366f1; outline-offset: 2px; }
-            .ofast-social-btn svg { flex-shrink: 0; }
-            .ofast-social-btn-loading { opacity: 0.7; pointer-events: none; }
-        </style>
-        <?php
+        $module_url = plugin_dir_url( __FILE__ );
+
+        wp_enqueue_style(
+            'ofast-social-login-buttons',
+            $module_url . 'assets/css/social-login-buttons.css',
+            array(),
+            OFAST_X_VERSION
+        );
+
+        wp_enqueue_script(
+            'ofast-social-login-buttons',
+            $module_url . 'assets/js/social-login-buttons.js',
+            array(),
+            OFAST_X_VERSION,
+            true
+        );
+
+        wp_localize_script( 'ofast-social-login-buttons', 'ofastSocial', array(
+            'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
+            'errorMsg' => __( 'Social login is not configured. Please contact the site admin.', 'ofast-x' ),
+        ) );
     }
 
     public function render_login_buttons() {
@@ -555,44 +570,6 @@ class Ofast_X_Social_Login {
                 </button>
             <?php endif; ?>
         </div>
-
-        <script>
-        (function() {
-            var ajaxUrl = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
-
-            document.querySelectorAll('.ofast-social-btn[data-provider]').forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    var provider = btn.getAttribute('data-provider');
-                    var nonce    = btn.getAttribute('data-nonce');
-
-                    btn.classList.add('ofast-social-btn-loading');
-                    btn.setAttribute('aria-busy', 'true');
-
-                    var fd = new FormData();
-                    fd.append('action',   'ofast_social_get_auth_url');
-                    fd.append('provider', provider);
-                    fd.append('nonce',    nonce);
-                    fd.append('redirect', window.location.href);
-
-                    fetch(ajaxUrl, { method: 'POST', body: fd })
-                        .then(function(r) { return r.json(); })
-                        .then(function(data) {
-                            if (data.success && data.data.url) {
-                                window.location.href = data.data.url;
-                            } else {
-                                alert(data.data.message || <?php echo wp_json_encode( __( 'Social login is not configured. Please contact the site admin.', 'ofast-x' ) ); ?>);
-                                btn.classList.remove('ofast-social-btn-loading');
-                                btn.removeAttribute('aria-busy');
-                            }
-                        })
-                        .catch(function() {
-                            btn.classList.remove('ofast-social-btn-loading');
-                            btn.removeAttribute('aria-busy');
-                        });
-                });
-            });
-        })();
-        </script>
         <?php
     }
 

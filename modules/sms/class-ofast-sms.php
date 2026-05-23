@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Ofast X - SMS Channel Module
  * Multi-provider SMS sending with tabbed admin UI
@@ -40,6 +40,7 @@ class Ofast_X_SMS
         add_action('wp_ajax_ofast_sms_test', array($this, 'ajax_test_sms'));
         add_action('wp_ajax_ofast_sms_test_connection', array($this, 'ajax_test_connection'));
         add_action('wp_ajax_ofast_sms_send', array($this, 'ajax_send_sms'));
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
 
         // Auto-create log table
         add_action('admin_init', array($this, 'maybe_create_table'));
@@ -345,6 +346,39 @@ class Ofast_X_SMS
         }
     }
 
+
+    // =============================================
+    // ADMIN ASSET ENQUEUE
+    // =============================================
+
+    public function enqueue_admin_scripts()
+    {
+        if (!isset($_GET['page']) || $_GET['page'] !== 'ofast-sms') {
+            return;
+        }
+
+        $module_url = plugin_dir_url(__FILE__);
+
+        wp_enqueue_style(
+            'ofast-sms-admin',
+            $module_url . 'assets/css/sms-admin.css',
+            array(),
+            OFAST_X_VERSION
+        );
+
+        wp_enqueue_script(
+            'ofast-sms-admin',
+            $module_url . 'assets/js/sms-admin.js',
+            array('jquery'),
+            OFAST_X_VERSION,
+            true
+        );
+
+        wp_localize_script('ofast-sms-admin', 'ofastSMS', array(
+            'nonce' => wp_create_nonce('ofast_sms_nonce'),
+        ));
+    }
+
     // =============================================
     // ADMIN PAGE RENDER
     // =============================================
@@ -363,133 +397,6 @@ class Ofast_X_SMS
             echo Ofast_X_Dropdown::render_assets();
         }
         ?>
-        <style>
-            :root {
-                --ofast-primary: #4F46E5;
-                --ofast-primary-hover: #4338CA;
-                --ofast-surface: #ffffff;
-                --ofast-bg: #f8fafc;
-                --ofast-border: #e2e8f0;
-                --ofast-text-main: #0f172a;
-                --ofast-text-muted: #64748b;
-                --ofast-radius-lg: 16px;
-                --ofast-radius-md: 12px;
-                --ofast-radius-sm: 8px;
-                --ofast-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-                --ofast-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-                --ofast-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
-                --ofast-shadow-glow: 0 0 15px rgba(79, 70, 229, 0.15);
-                --ofast-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-
-            /* Global & Typography */
-            .wrap.ofast-sms-wrap { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ofast-text-main); margin-top: 20px; max-width: 1400px; }
-            
-            /* Header with subtle gradient & glassmorphism hint */
-            .ofast-header { display: flex; align-items: center; gap: 24px; background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%); padding: 32px 36px; border-radius: var(--ofast-radius-lg); box-shadow: var(--ofast-shadow-md); margin-bottom: 32px; border: 1px solid rgba(255,255,255,0.8); position: relative; overflow: hidden; }
-            .ofast-header::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--ofast-primary), #0ea5e9); }
-            .ofast-header-icon { width: 64px; height: 64px; background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 4px 10px rgba(79,70,229,0.05); border-radius: 20px; display: flex; align-items: center; justify-content: center; transform: rotate(-3deg); transition: var(--ofast-transition); }
-            .ofast-header:hover .ofast-header-icon { transform: rotate(0deg) scale(1.05); }
-            .ofast-header-icon .dashicons { font-size: 32px; width: 32px; height: 32px; color: var(--ofast-primary); }
-            .ofast-header-content h1 { margin: 0 0 6px 0; font-size: 28px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
-            .ofast-header-content p { margin: 0; color: var(--ofast-text-muted); font-size: 15px; font-weight: 500; }
-
-            /* Modern Pill Tabs */
-            .ofast-tabs-nav { display: inline-flex; flex-wrap: nowrap; gap: 4px; margin-bottom: 32px; padding: 6px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; position: sticky; top: 32px; z-index: 99; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
-            .ofast-tab { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: transparent; border: none; border-radius: 10px; color: #475569; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; transition: var(--ofast-transition); position: relative; }
-            .ofast-tab:hover { color: var(--ofast-primary); }
-            .ofast-tab.active { background: #ffffff; color: var(--ofast-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-            .ofast-tab .dashicons { font-size: 18px; width: 18px; height: 18px; line-height: 18px; }
-
-            /* Tab Content Animations */
-            .ofast-tab-content { display: none; opacity: 0; transform: translateY(10px); transition: opacity 0.4s ease, transform 0.4s ease; }
-            .ofast-tab-content.active { display: block; opacity: 1; transform: translateY(0); animation: slideUpFade 0.4s ease forwards; }
-            @keyframes slideUpFade { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-
-            /* Premium Cards */
-            .ofast-card { background: var(--ofast-surface); border-radius: var(--ofast-radius-lg); padding: 32px; box-shadow: var(--ofast-shadow-lg); border: 1px solid rgba(226,232,240,0.8); margin-bottom: 24px; transition: var(--ofast-transition); }
-            .ofast-card:hover { box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.01); border-color: #cbd5e1; }
-            .ofast-card h2 { margin: 0 0 24px; font-size: 19px; color: var(--ofast-text-main); font-weight: 700; letter-spacing: -0.3px; display: flex; align-items: center; gap: 8px; }
-            .ofast-card h3 { margin: 0 0 16px; font-size: 15px; color: var(--ofast-text-main); font-weight: 600; padding-bottom: 12px; border-bottom: 2px solid #f1f5f9; }
-
-            /* Layouts */
-            .ofast-sms-send-layout { display: grid; grid-template-columns: 1fr 340px; gap: 32px; }
-            .ofast-settings-layout { display: grid; grid-template-columns: 360px 1fr; gap: 32px; }
-            @media screen and (max-width: 1024px) { .ofast-sms-send-layout, .ofast-settings-layout { grid-template-columns: 1fr; } }
-
-            /* Precision Form Fields */
-            .ofast-field { margin-bottom: 20px; position: relative; }
-            .ofast-field label { display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px; }
-            .ofast-field input[type="text"],
-            .ofast-field input[type="password"],
-            .ofast-field textarea { width: 100%; padding: 12px 16px; background: #f8fafc; border: 2px solid transparent; border-radius: var(--ofast-radius-md); font-size: 14px; color: #0f172a; transition: var(--ofast-transition); }
-            .ofast-field input:hover, .ofast-field textarea:hover { background: #f1f5f9; }
-            .ofast-field input:focus,
-            .ofast-field textarea:focus { outline: none; background: #ffffff; border-color: var(--ofast-primary); box-shadow: 0 0 0 4px rgba(79,70,229,0.1); }
-            .ofast-field .field-hint { font-size: 12px; color: #64748b; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
-
-            /* Interactive Provider Cards */
-            .ofast-provider-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-            .ofast-provider-card { background: #ffffff; border: 2px solid #e2e8f0; border-radius: var(--ofast-radius-md); padding: 20px 16px; cursor: pointer; transition: var(--ofast-transition); text-align: center; position: relative; overflow: hidden; }
-            .ofast-provider-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, rgba(79,70,229,0.03) 0%, transparent 100%); opacity: 0; transition: opacity 0.3s; }
-            .ofast-provider-card:hover { border-color: #cbd5e1; transform: translateY(-2px); box-shadow: var(--ofast-shadow-md); }
-            .ofast-provider-card:hover::before { opacity: 1; }
-            .ofast-provider-card.active { border-color: var(--ofast-primary); background: #f5f8ff; box-shadow: var(--ofast-shadow-glow); transform: translateY(-2px); }
-            .ofast-provider-card input[type="radio"] { display: none; }
-            .ofast-provider-logo { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-weight: 800; font-size: 16px; color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: relative; z-index: 1; transition: var(--ofast-transition); }
-            .ofast-provider-card:hover .ofast-provider-logo { transform: scale(1.1); }
-            .ofast-provider-card .provider-name { font-weight: 700; font-size: 15px; color: #1e293b; margin-bottom: 4px; position: relative; z-index: 1; }
-            .ofast-provider-card .provider-region { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; position: relative; z-index: 1; }
-            .ofast-provider-card .check-icon { position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; background: var(--ofast-primary); color: #fff; border-radius: 50%; display: none; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; z-index: 2; box-shadow: 0 2px 6px rgba(79,70,229,0.4); animation: scaleIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-            .ofast-provider-card.active .check-icon { display: flex; }
-            @keyframes scaleIn { from { transform: scale(0); } to { transform: scale(1); } }
-
-            /* Credential Fields Anim */
-            .ofast-provider-fields { display: none; opacity: 0; transform: translateX(10px); transition: all 0.3s ease; border: 1px solid #cbd5e1; border-radius: 12px; padding: 24px; background: #ffffff; margin-top: 24px; }
-            .ofast-provider-fields.active { display: block; opacity: 1; transform: translateX(0); }
-
-            /* Enhanced Buttons */
-            .ofast-btn { padding: 12px 24px; border-radius: var(--ofast-radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: var(--ofast-transition); display: inline-flex; align-items: center; justify-content: center; gap: 8px; background-size: 200% auto; text-decoration: none; }
-            .ofast-btn-primary { background-image: linear-gradient(to right, var(--ofast-primary) 0%, #6366f1 51%, var(--ofast-primary) 100%); color: #fff; box-shadow: 0 4px 10px rgba(79,70,229,0.3); }
-            .ofast-btn-primary:hover:not(:disabled) { background-position: right center; box-shadow: 0 6px 15px rgba(79,70,229,0.4); transform: translateY(-1px); color: #fff; }
-            .ofast-btn-primary:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 2px 5px rgba(79,70,229,0.3); }
-            .ofast-btn-primary:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; opacity: 0.7; }
-            .ofast-btn-secondary { background: #ffffff; border: 2px solid #e2e8f0; color: #334155; }
-            .ofast-btn-secondary:hover { border-color: #cbd5e1; background: #f8fafc; color: #0f172a; }
-            .ofast-btn-danger { background: #ffffff; border: 2px solid #fecaca; color: #dc2626; }
-            .ofast-btn-danger:hover { background: #fef2f2; border-color: #f87171; }
-
-            /* Send SMS UI Specific */
-            .ofast-composer-meta { background: #f8fafc; border-radius: var(--ofast-radius-md); padding: 20px; margin-bottom: 24px; display: flex; gap: 24px; border: 1px solid #f1f5f9; }
-            .ofast-composer-meta .meta-block { flex: 1; }
-            .ofast-composer-meta .meta-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 700; margin-bottom: 4px; }
-            .ofast-composer-meta .meta-value { font-size: 15px; font-weight: 600; color: #0f172a; }
-
-            /* Status badges */
-            .ofast-status { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.3px; }
-            .ofast-status.sent { background: #dcfce7; color: #166534; box-shadow: inset 0 0 0 1px rgba(22,101,52,0.1); }
-            .ofast-status.failed { background: #fee2e2; color: #991b1b; box-shadow: inset 0 0 0 1px rgba(153,27,27,0.1); }
-            .ofast-status.pending { background: #fef3c7; color: #92400e; box-shadow: inset 0 0 0 1px rgba(146,64,14,0.1); }
-
-            /* Logs Data Table */
-            .ofast-logs-wrapper { border-radius: var(--ofast-radius-md); overflow: hidden; border: 1px solid #e2e8f0; }
-            .ofast-logs-table { width: 100%; border-collapse: separate; border-spacing: 0; background: #fff; }
-            .ofast-logs-table th { text-align: left; padding: 16px 20px; background: #f8fafc; color: #475569; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
-            .ofast-logs-table td { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; font-size: 14px; color: #334155; vertical-align: middle; }
-            .ofast-logs-table tr:last-child td { border-bottom: none; }
-            .ofast-logs-table tr:hover td { background: #f8fafc; }
-            .ofast-logs-empty { text-align: center; padding: 60px 40px; color: #64748b; font-size: 15px; background: #fafafa; }
-
-            /* Clean Toasts */
-            .ofast-sms-result { padding: 12px 16px; font-size: 13px; font-weight: 500; border-radius: var(--ofast-radius-sm); margin-top: 16px; display: none; animation: slideUpFade 0.3s ease; }
-            .ofast-sms-result.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-            .ofast-sms-result.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-            .ofast-sms-result.visible { display: block; }
-
-            /* Actions row */
-            .ofast-actions-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 20px; }
-            .ofast-actions-row-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        </style>
 
         <div class="wrap">
             <!-- Header -->
@@ -530,133 +437,6 @@ class Ofast_X_SMS
             </div>
         </div>
 
-        <script>
-        jQuery(document).ready(function($) {
-            // Tab switching (no reload)
-            function switchTab(name) {
-                $('.ofast-tab').removeClass('active');
-                $('.ofast-tab[data-tab="' + name + '"]').addClass('active');
-                $('.ofast-tab-content').removeClass('active');
-                $('#tab-' + name).addClass('active');
-                history.replaceState(null, null, '#' + name);
-            }
-            $('.ofast-tab[data-tab]').on('click', function(e) {
-                e.preventDefault();
-                switchTab($(this).data('tab'));
-            });
-            // Handle hash on load
-            var hash = window.location.hash.replace('#', '');
-            if (hash && $('#tab-' + hash).length) { switchTab(hash); }
-
-            // Provider card selection
-            $('.ofast-provider-card').on('click', function() {
-                var provider = $(this).data('provider');
-                $('.ofast-provider-card').removeClass('active');
-                $(this).addClass('active');
-                $(this).find('input[type="radio"]').prop('checked', true);
-                
-                $('#ofast-provider-placeholder').hide();
-                $('.ofast-provider-fields').removeClass('active');
-                $('#fields-' + provider).addClass('active');
-                // Re-initialize Ofast dropdowns in newly visible fields
-                if (typeof window.OfastInitDropdowns === 'function') {
-                    window.OfastInitDropdowns('#fields-' + provider);
-                }
-            });
-
-            // Send SMS
-            $('#ofast-sms-send-btn').on('click', function() {
-                var btn = $(this);
-                var recipients = $('#ofast-sms-recipients').val();
-                // Get content from WP editor
-                var message = '';
-                if (typeof tinyMCE !== 'undefined' && tinyMCE.get('ofast_sms_message')) {
-                    message = tinyMCE.get('ofast_sms_message').getContent({format: 'text'});
-                } else {
-                    message = $('#ofast_sms_message').val();
-                }
-
-                if (!recipients || !message) {
-                    ofastToast.error('Please enter recipients and a message.');
-                    return;
-                }
-
-                btn.prop('disabled', true).text('Sending...');
-
-                $.post(ajaxurl, {
-                    action: 'ofast_sms_send',
-                    nonce: '<?php echo $nonce; ?>',
-                    recipients: recipients,
-                    message: message
-                }, function(response) {
-                    btn.prop('disabled', false).html('<span class="dashicons dashicons-email-alt"></span> Send SMS');
-                    if (response.success) {
-                        ofastToast.success(response.message || 'SMS sent successfully!');
-                    } else {
-                        var msg = response.message || response.data || 'Failed to send.';
-                        if (response.errors && response.errors.length) {
-                            msg += ' ' + response.errors.join(', ');
-                        }
-                        ofastToast.error(msg);
-                    }
-                }).fail(function() {
-                    btn.prop('disabled', false).html('<span class="dashicons dashicons-email-alt"></span> Send SMS');
-                    ofastToast.error('Request failed. Please try again.');
-                });
-            });
-
-            // Test connection
-            $('#ofast-sms-test-conn').on('click', function() {
-                var btn = $(this);
-                btn.prop('disabled', true).text('Testing...');
-
-                $.post(ajaxurl, {
-                    action: 'ofast_sms_test_connection',
-                    nonce: '<?php echo $nonce; ?>',
-                    provider: $('input[name="ofast_sms_provider"]:checked').val() || ''
-                }, function(response) {
-                    btn.prop('disabled', false).html('<span class="dashicons dashicons-update" style="margin-top:2px;"></span> Test Connection');
-                    if (response.success) {
-                        ofastToast.success(response.message || response.data || 'Connection successful!');
-                    } else {
-                        ofastToast.error(response.message || response.data || 'Connection failed.');
-                    }
-                }).fail(function() {
-                    btn.prop('disabled', false).html('<span class="dashicons dashicons-update" style="margin-top:2px;"></span> Test Connection');
-                    ofastToast.error('Request failed. Please try again.');
-                });
-            });
-
-            // Test SMS
-            $('#ofast-sms-test-send').on('click', function() {
-                var btn = $(this);
-                var phone = $('#ofast-test-phone').val();
-
-                if (!phone) {
-                    ofastToast.warning('Please enter a phone number.');
-                    return;
-                }
-
-                btn.prop('disabled', true).text('Sending...');
-
-                $.post(ajaxurl, {
-                    action: 'ofast_sms_test',
-                    nonce: '<?php echo $nonce; ?>',
-                    phone: phone
-                }, function(response) {
-                    btn.prop('disabled', false).html('<span class="dashicons dashicons-email-alt" style="margin-top:2px;"></span> Send Test');
-                    if (response.success) {
-                        ofastToast.success(response.message || response.data || 'Test SMS sent!');
-                    } else {
-                        ofastToast.error(response.message || response.data || 'Failed to send test SMS.');
-                    }
-                }).fail(function() {
-                    btn.prop('disabled', false).html('<span class="dashicons dashicons-email-alt" style="margin-top:2px;"></span> Send Test');
-                    ofastToast.error('Request failed. Please try again.');
-                });
-            });
-        });
-        </script>
         <?php
     }
 

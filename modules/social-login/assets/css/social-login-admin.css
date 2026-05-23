@@ -1,0 +1,16 @@
+/**
+ * Ofast X Social Login - Admin Settings Styles
+ * Extracted from class-ofast-social-login.php
+ */
+
+.ofast-social-card { background:#fff; border-radius:12px; padding:30px; box-shadow:0 4px 6px -1px rgba(0,0,0,.05); border:1px solid #e2e8f0; margin-bottom:24px; }
+.ofast-social-card h2 { margin-top:0; font-size:18px; color:#1e293b; border-bottom:1px solid #f1f5f9; padding-bottom:15px; }
+.ofast-toggle { position:relative; display:inline-block; width:50px; height:26px; vertical-align:middle; }
+.ofast-toggle input { opacity:0; width:0; height:0; }
+.ofast-toggle-slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:#cbd5e1; transition:.3s; border-radius:26px; }
+.ofast-toggle-slider:before { position:absolute; content:""; height:20px; width:20px; left:3px; bottom:3px; background:#fff; transition:.3s; border-radius:50%; }
+input:checked + .ofast-toggle-slider { background:#6366f1; }
+input:checked + .ofast-toggle-slider:before { transform:translateX(24px); }
+.ofast-callback-url { background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px 12px; font-family:monospace; font-size:12px; color:#475569; display:block; margin-top:8px; word-break:break-all; }
+.form-table th { width:180px; }
+.form-table input[type=text], .form-table input[type=password], .form-table input[type=url], .form-table select { border-radius:6px; }

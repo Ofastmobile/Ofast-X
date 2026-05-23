@@ -1578,6 +1578,7 @@ class Ofast_X_Whos_Admin
                 background: #f8fafc;
                 border: 2px solid #e2e8f0;
                 border-radius: 10px;
+                position: relative;
                 transition: all 0.2s ease;
             }
 
@@ -1587,9 +1588,50 @@ class Ofast_X_Whos_Admin
             }
 
             .ofast-checkbox-label input[type="checkbox"] {
+                position: absolute;
+                opacity: 0;
+                pointer-events: none;
+            }
+
+            .ofast-checkbox-custom {
                 width: 20px;
                 height: 20px;
-                accent-color: #6366f1;
+                border: 2px solid #cbd5e1;
+                border-radius: 6px;
+                background: #fff;
+                flex: 0 0 20px;
+                position: relative;
+                transition: all 0.2s ease;
+            }
+
+            .ofast-checkbox-custom::after {
+                content: "";
+                position: absolute;
+                left: 5px;
+                top: 1px;
+                width: 6px;
+                height: 11px;
+                border: solid #fff;
+                border-width: 0 2px 2px 0;
+                opacity: 0;
+                transform: rotate(45deg) scale(0.8);
+                transition: all 0.2s ease;
+            }
+
+            .ofast-checkbox-label input[type="checkbox"]:checked + .ofast-checkbox-custom {
+                background: #6366f1;
+                border-color: #6366f1;
+                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14);
+            }
+
+            .ofast-checkbox-label input[type="checkbox"]:checked + .ofast-checkbox-custom::after {
+                opacity: 1;
+                transform: rotate(45deg) scale(1);
+            }
+
+            .ofast-checkbox-label:focus-within {
+                border-color: #6366f1;
+                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
             }
 
             .ofast-checkbox-text {

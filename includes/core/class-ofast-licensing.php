@@ -154,12 +154,27 @@ function ofast_toolkit_activate_license($license_key)
         return ['success' => false, 'message' => 'Please enter a license key.'];
     }
 
+    // Security: Validate license key format before making any API call
+    $license_key = strtoupper($license_key);
+    if (!preg_match('/^OFAST-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/', $license_key)) {
+        return ['success' => false, 'message' => 'Invalid license key format. Expected: OFAST-XXXX-XXXX-XXXX-XXXX'];
+    }
+
+    // Security: Client-side rate limiting (max 5 activation attempts per hour)
+    $rate_key = 'ofast_lic_attempts_' . get_current_user_id();
+    $attempts = (int) get_transient($rate_key);
+    if ($attempts >= 5) {
+        return ['success' => false, 'message' => 'Too many activation attempts. Please try again in 1 hour.'];
+    }
+    set_transient($rate_key, $attempts + 1, HOUR_IN_SECONDS);
+
     $response = wp_remote_post(ofast_toolkit_get_api_url() . '/activate', [
-        'timeout' => 15,
-        'headers' => ['X-Ofast-Api-Secret' => OFAST_API_CLIENT_SECRET],
-        'body'    => [
+        'timeout'   => 15,
+        'sslverify' => true,
+        'headers'   => ['X-Ofast-Api-Secret' => OFAST_API_CLIENT_SECRET],
+        'body'      => [
             'license_key' => $license_key,
-            'domain'      => home_url(),
+            'domain'      => esc_url_raw(home_url()),
         ],
     ]);
 
@@ -178,6 +193,8 @@ function ofast_toolkit_activate_license($license_key)
         if (!empty($body['signature'])) {
             update_option('ofast_license_signature', sanitize_text_field($body['signature']));
         }
+        // Clear rate limit on success
+        delete_transient($rate_key);
         return ['success' => true, 'message' => 'License activated successfully! Pro features are now unlocked.'];
     }
 
@@ -199,11 +216,12 @@ function ofast_toolkit_deactivate_license()
     }
 
     $response = wp_remote_post(ofast_toolkit_get_api_url() . '/deactivate', [
-        'timeout' => 15,
-        'headers' => ['X-Ofast-Api-Secret' => OFAST_API_CLIENT_SECRET],
-        'body'    => [
+        'timeout'   => 15,
+        'sslverify' => true,
+        'headers'   => ['X-Ofast-Api-Secret' => OFAST_API_CLIENT_SECRET],
+        'body'      => [
             'license_key' => $license_key,
-            'domain'      => home_url(),
+            'domain'      => esc_url_raw(home_url()),
         ],
     ]);
 
@@ -236,11 +254,12 @@ function ofast_toolkit_validate_license()
     }
 
     $response = wp_remote_post(ofast_toolkit_get_api_url() . '/validate', [
-        'timeout' => 15,
-        'headers' => ['X-Ofast-Api-Secret' => OFAST_API_CLIENT_SECRET],
-        'body'    => [
+        'timeout'   => 15,
+        'sslverify' => true,
+        'headers'   => ['X-Ofast-Api-Secret' => OFAST_API_CLIENT_SECRET],
+        'body'      => [
             'license_key' => $license_key,
-            'domain'      => home_url(),
+            'domain'      => esc_url_raw(home_url()),
         ],
     ]);
 

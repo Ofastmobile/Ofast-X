@@ -20,8 +20,9 @@ body.wp-admin {
     transition: all 0.3s ease;
 }
 
-/* Hover effect */
-.postbox:hover {
+/* Hover effect — excluded on media library (upload.php) because transform creates
+   a stacking context that breaks WP's fixed-position media modal overlays */
+body.wp-admin:not(.upload-php) .postbox:hover {
     transform: scale(1.01);
     box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
 }
@@ -36,8 +37,8 @@ body.wp-admin {
     padding: 10px 15px;
 }
 
-/* Widget content */
-.inside {
+/* Widget content — scoped to postboxes only to avoid leaking into WP media library modals */
+.postbox .inside {
     padding: 15px !important;
     font-size: 0.95rem;
     color: #333;

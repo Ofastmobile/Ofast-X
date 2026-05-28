@@ -652,8 +652,8 @@ class Ofast_Email_Tab_Send
                             <tbody>
                                 <?php
 
-                                // Cap at 500 users to prevent memory issues on large sites
-                                $users = get_users(['number' => 500, 'orderby' => 'ID', 'order' => 'ASC']);
+                                // Fetch all users — client-side pagination handles display performance
+                                $users = get_users(['orderby' => 'ID', 'order' => 'ASC']);
                                 $i = 1;
                                 foreach ($users as $user) {
                                     $userdata = get_userdata($user->ID);
@@ -668,7 +668,7 @@ class Ofast_Email_Tab_Send
                         <td class="search-text">' . esc_html($user->user_login) . '</td>
                         <td class="search-text">' . esc_html($user->user_email) . '</td>
                         <td class="search-text">' . esc_html($user->ID) . '</td>
-                        <td class="search-text">' . esc_html($roles_list) . '</td>
+                        <td class="search-text ofast-roles-cell">' . esc_html($roles_list) . '</td>
                     </tr>';
                                 }
                                 echo '</tbody></table>';

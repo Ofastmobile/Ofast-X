@@ -171,6 +171,18 @@ class Ofast_X_SMTP
             $phpmailer->SMTPAutoTLS = false;
         }
 
+        // SSL certificate verification — relaxed for shared hosting compatibility.
+        // Many shared hosts (Namecheap, etc.) have outdated or mismatched CA bundles
+        // which cause PHPMailer to fail with "Connection refused" even though the
+        // raw port test (stream_socket_client) passes without certificate checks.
+        $phpmailer->SMTPOptions = array(
+            'ssl' => array(
+                'verify_peer'       => false,
+                'verify_peer_name'  => false,
+                'allow_self_signed' => true,
+            ),
+        );
+
         // From settings — fallback may have its own from address
         $from_email = $this->get_smtp_option('from_email', '');
         $from_name = $this->get_smtp_option('from_name', get_bloginfo('name'));
@@ -278,8 +290,8 @@ class Ofast_X_SMTP
         $username = sanitize_text_field($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
 
-        // If password is empty (not submitted from form), use saved password
-        if (empty($password)) {
+        // If password is the masked placeholder or empty, use the saved (encrypted) password
+        if ($password === '••••••••' || empty($password)) {
             $saved_password = get_option('ofast_smtp_password', '');
             if (!empty($saved_password)) {
                 $password = $this->decrypt_password($saved_password);
@@ -315,6 +327,15 @@ class Ofast_X_SMTP
                 $mail->SMTPSecure = '';
                 $mail->SMTPAutoTLS = false;
             }
+
+            // SSL certificate verification — relaxed for shared hosting compatibility
+            $mail->SMTPOptions = array(
+                'ssl' => array(
+                    'verify_peer'       => false,
+                    'verify_peer_name'  => false,
+                    'allow_self_signed' => true,
+                ),
+            );
 
             $mail->setFrom($from_email, $from_name);
             $mail->addAddress(get_option('admin_email'));

@@ -425,9 +425,10 @@ class Ofast_Email_Campaign {
      * @return int
      */
     public static function get_progress( $campaign ): int {
-        // Handle legacy column name (total_recipients → total)
-        $total    = (int) ( $campaign->total    ?? $campaign->total_recipients ?? 0 );
-        $position = (int) ( $campaign->position ?? $campaign->sent             ?? 0 );
+        // Handle legacy column name (total_recipients → total).
+        // Use property_exists() to avoid PHP warnings on old-schema stdClass rows.
+        $total    = (int) ( property_exists( $campaign, 'total' )    ? $campaign->total    : ( $campaign->total_recipients ?? 0 ) );
+        $position = (int) ( property_exists( $campaign, 'position' ) ? $campaign->position : ( $campaign->sent ?? 0 ) );
 
         if ( $total === 0 ) {
             return 0;

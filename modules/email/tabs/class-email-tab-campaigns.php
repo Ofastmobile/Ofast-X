@@ -80,9 +80,9 @@ class Ofast_Email_Tab_Campaigns {
                 <div class="ofast-campaigns-list" id="ofast-campaigns-list">
                     <?php foreach ( $campaigns as $campaign ) :
                         $camp_status   = $campaign->status   ?? 'queued';
-                        $camp_strategy = $campaign->strategy ?? 'rapid';
+                        $camp_strategy = property_exists( $campaign, 'strategy' ) ? $campaign->strategy : 'rapid';
                         $camp_sent     = (int) ( $campaign->sent   ?? 0 );
-                        $camp_total    = (int) ( $campaign->total   ?? $campaign->total_recipients ?? 0 );
+                        $camp_total    = (int) ( property_exists( $campaign, 'total' ) ? $campaign->total : ( $campaign->total_recipients ?? 0 ) );
                         $camp_failed   = (int) ( $campaign->failed  ?? 0 );
                         $camp_next     = $campaign->next_run ?? '';
                         $progress      = Ofast_Email_Campaign::get_progress( $campaign );

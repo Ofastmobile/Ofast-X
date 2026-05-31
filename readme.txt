@@ -4,7 +4,7 @@ Tags: smtp, contact form, dashboard, security, newsletter, snippets, redirects
 Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -44,6 +44,14 @@ Yes, the SMTP module supports all major providers including Amazon SES, Mailgun,
 3. The modern Contact Form builder interface.
 
 == Changelog ==
+
+= 1.0.2 =
+* Major update: Integrated Campaign/CRM module with advanced throttling and queue management.
+* Security enhancements and execution timeout guards for email batching.
+
+= 1.0.1 =
+* Added White Label module for complete agency dashboard branding.
+* UI and layout refinements.
 
 = 1.0.0 =
 * Initial release of the unified Ofast Toolkit.

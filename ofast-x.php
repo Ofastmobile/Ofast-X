@@ -2,9 +2,8 @@
 
 /**
  * Plugin Name: Ofast Toolkit
- * Plugin URI: https://ofastshop.com/ofast-x
  * Description: All-in-One WordPress plugin with Email System, SMTP Configuration, Dashboard Customization, Newsletter, Contact Forms, Code Snippets, Redirects, and more.
- * Version: 1.0.0
+ * Version: 1.0.2
  * Author: Ofastshop Digitals
  * Author URI: https://ofastshop.com
  * Text Domain: ofast-x
@@ -28,7 +27,7 @@ if (!defined('ABSPATH')) {
 /**
  * Plugin Constants
  */
-define('OFAST_X_VERSION', '1.0.0');
+define('OFAST_X_VERSION', '1.0.2');
 define('OFAST_X_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('OFAST_X_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('OFAST_X_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -149,6 +148,22 @@ function ofast_x_plugin_action_links($links)
     return $links;
 }
 add_filter('plugin_action_links_' . plugin_basename(__FILE__), 'ofast_x_plugin_action_links');
+
+/**
+ * Add links to the plugin meta row
+ */
+function ofast_x_plugin_row_meta($links, $file)
+{
+    if (plugin_basename(__FILE__) === $file) {
+        $new_links = array(
+            '<a href="https://toolkit.ofastshop.com" target="_blank">View details</a>',
+            '<a href="https://toolkit.ofastshop.com/docs/index.html" target="_blank">View Docs</a>'
+        );
+        $links = array_merge($links, $new_links);
+    }
+    return $links;
+}
+add_filter('plugin_row_meta', 'ofast_x_plugin_row_meta', 10, 2);
 
 /**
  * Redirect to wizard on first activation

@@ -1,4 +1,4 @@
-$plugin = "ofast-toolkit"
+$plugin = "ofast-x"
 $version = "1.0.0"
 
 $source = ".\"
@@ -10,7 +10,7 @@ $robocopyParams = @(
     $destination,
     "/MIR",
     "/XD", ".git", ".vscode", "node_modules", "dist",
-    "/XF", ".gitignore", "*.map", "build.ps1", "REPO_READY_CHECKLIST.txt", "kind.txt", "footer.txt", "LICENSING_GUIDE.md"
+    "/XF", ".gitignore", "*.map", "build.ps1", "REPO_READY_CHECKLIST.txt", "kind.txt", "footer.txt", "LICENSING_GUIDE.md", "debugging.md", "error.txt", "securitty-2.md", "security.md"
 )
 & robocopy @robocopyParams | Out-Null
 

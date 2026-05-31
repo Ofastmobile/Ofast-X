@@ -54,7 +54,7 @@ class Ofast_Email_Processor {
         }
 
         $batch_size = min( 500, max( 1, (int) get_option( 'ofast_email_batch_size', self::DEFAULT_RAPID_BATCH_SIZE ) ) );
-        $delay      = min( 120, max( 0, (int) get_option( 'ofast_email_batch_delay', self::DEFAULT_RAPID_DELAY ) ) );
+        // Note: batch delay is now applied at the start of ajax_queue_worker() — see §1.1 audit fix
 
         $result = self::process_batch( $campaign, $batch_size );
 
@@ -70,9 +70,10 @@ class Ofast_Email_Processor {
             $result['failed_emails'] ?? array()
         );
 
-        // If more emails remain, fire next loopback after the burst-protection delay
+        // If more emails remain, fire next loopback immediately.
+        // The delay is applied at the *start* of the next loopback handler (§1.1 audit fix)
+        // so this PHP worker is freed without blocking.
         if ( ! $result['is_done'] ) {
-            sleep( $delay ); // Pause to avoid SMTP burst detection
             self::fire_loopback( (int) $campaign->id );
         }
     }
@@ -139,11 +140,31 @@ class Ofast_Email_Processor {
         $failed        = 0;
         $failed_emails = array();
 
+        // §1.2 Audit fix: Wall-clock guard — break before PHP's max_execution_time kills us mid-send.
+        // Leaves a 5-second buffer for cleanup (DB writes, loopback fire, etc.).
+        $start_time  = time();
+        $max_seconds = (int) ini_get( 'max_execution_time' );
+        $max_seconds = ( $max_seconds > 0 ) ? min( 55, $max_seconds - 5 ) : 55;
+        if ( $max_seconds <= 0 ) {
+            $max_seconds = 55;
+        }
+
         // Get email-sending headers
         require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email.php';
         $headers = Ofast_X_Email::get_safe_email_headers();
 
+        // §2.1 Audit fix: Signal SMTP rate limiter to skip per-email throttling during campaign sends
+        $GLOBALS['ofast_campaign_active'] = true;
+
+        $processed_count = 0;
+
         foreach ( $batch as $recipient ) {
+            // Check wall-clock time before each send
+            if ( ( time() - $start_time ) >= $max_seconds ) {
+                error_log( 'Ofast Email Processor: Batch time limit reached after ' . $processed_count . ' emails. Remaining will continue in next batch.' );
+                break;
+            }
+
             $email   = '';
             $user    = null;
 
@@ -165,6 +186,7 @@ class Ofast_Email_Processor {
 
             if ( empty( $email ) ) {
                 $failed++;
+                $processed_count++;
                 continue;
             }
 
@@ -184,9 +206,12 @@ class Ofast_Email_Processor {
             }
 
             $GLOBALS['ofast_current_campaign_id'] = null; // clear after each send
+            $processed_count++;
         }
 
-        $new_position = $position + count( $batch );
+        // Clear campaign flag so normal rate limiting resumes
+        $GLOBALS['ofast_campaign_active'] = false;
+        $new_position = $position + $processed_count;
         $is_done      = $new_position >= $total;
 
         return compact( 'sent', 'failed', 'failed_emails', 'new_position', 'is_done' );
@@ -323,14 +348,27 @@ class Ofast_Email_Processor {
      * A shared secret key so the loopback endpoint can verify it's called
      * by our own code, not an outside attacker.
      *
+     * §1.3 Audit fix: Key now auto-rotates weekly for security hardening.
+     *
      * @return string
      */
     public static function get_worker_key(): string {
         $key = get_option( 'ofast_queue_worker_key' );
-        if ( ! $key ) {
+
+        // Auto-rotate the key weekly (§1.3 audit fix)
+        $last_rotated = (int) get_option( 'ofast_queue_worker_key_rotated', 0 );
+        $rotation_interval = (int) apply_filters( 'ofast_worker_key_rotation_seconds', WEEK_IN_SECONDS );
+
+        if ( ! $key || ( $last_rotated > 0 && ( time() - $last_rotated ) > $rotation_interval ) ) {
             $key = wp_generate_password( 40, false );
             update_option( 'ofast_queue_worker_key', $key, false );
+            update_option( 'ofast_queue_worker_key_rotated', time(), false );
         }
+
+        if ( ! $last_rotated ) {
+            update_option( 'ofast_queue_worker_key_rotated', time(), false );
+        }
+
         return $key;
     }
 

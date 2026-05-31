@@ -102,6 +102,13 @@ class Ofast_X_SMTP
      */
     public function check_rate_limit($null, $atts)
     {
+        // §2.1 Audit fix: Skip SMTP rate limiting during active campaign sends.
+        // The campaign processor already throttles via batch delay — double-throttling
+        // causes legitimate campaign emails to be logged as 'rate_limited' failures.
+        if ( ! empty( $GLOBALS['ofast_campaign_active'] ) ) {
+            return $null;
+        }
+
         $transient_key = 'ofast_smtp_rate_' . date('Y-m-d-H-i');
         $current_count = get_transient($transient_key) ?: 0;
 
@@ -195,8 +202,17 @@ class Ofast_X_SMTP
         // SECURITY: Sanitize headers to hide system fingerprint
         $phpmailer->XMailer = 'Ofast Mailer';
 
-        // Remove headers that expose server info
+        // §3.2 Audit fix: Remove only server-fingerprinting headers instead of
+        // clearCustomHeaders() which wipes ALL custom headers (including those
+        // added by WooCommerce, tracking plugins, etc.)
+        $existing_headers = $phpmailer->getCustomHeaders();
         $phpmailer->clearCustomHeaders();
+        $blocked = array('x-mailer', 'x-php-originating-script', 'x-phpmailer-version');
+        foreach ($existing_headers as $header) {
+            if (!in_array(strtolower($header[0]), $blocked, true)) {
+                $phpmailer->addCustomHeader($header[0], $header[1]);
+            }
+        }
 
         // Add minimal safe headers only
         $phpmailer->addCustomHeader('X-Priority', '3');
@@ -434,6 +450,9 @@ class Ofast_X_SMTP
 
     /**
      * Decrypt password from storage
+     *
+     * §3.1 Audit fix: Returns '' and logs an error if decryption fails
+     * (e.g. SECURE_AUTH_KEY changed after site migration or salt regeneration).
      */
     private function decrypt_password($encrypted)
     {
@@ -449,14 +468,26 @@ class Ofast_X_SMTP
         if (strpos($encrypted, ':') !== false) {
             list($iv_b64, $ct_b64) = explode(':', $encrypted, 2);
             $key = hash('sha256', SECURE_AUTH_KEY, true);
-            return openssl_decrypt(base64_decode($ct_b64), 'AES-256-CBC', $key, OPENSSL_RAW_DATA, base64_decode($iv_b64));
+            $decrypted = openssl_decrypt(base64_decode($ct_b64), 'AES-256-CBC', $key, OPENSSL_RAW_DATA, base64_decode($iv_b64));
+
+            if ($decrypted === false) {
+                error_log('Ofast SMTP: Password decryption failed — SECURE_AUTH_KEY may have changed. Please re-enter your SMTP password in Settings.');
+                return '';
+            }
+            return $decrypted;
         }
 
         // Legacy fallback: deterministic IV format (auto-upgrades on next save)
         $key = hash('sha256', SECURE_AUTH_KEY);
         $iv  = substr(hash('sha256', AUTH_KEY), 0, 16);
         $decoded = base64_decode($encrypted);
-        return openssl_decrypt($decoded, 'AES-256-CBC', $key, 0, $iv);
+        $decrypted = openssl_decrypt($decoded, 'AES-256-CBC', $key, 0, $iv);
+
+        if ($decrypted === false) {
+            error_log('Ofast SMTP: Legacy password decryption failed — AUTH_KEY or SECURE_AUTH_KEY may have changed. Please re-enter your SMTP password in Settings.');
+            return '';
+        }
+        return $decrypted;
     }
 
     /**

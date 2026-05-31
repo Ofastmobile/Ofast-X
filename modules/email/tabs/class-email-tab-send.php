@@ -667,9 +667,31 @@ class Ofast_Email_Tab_Send
                             <tbody>
                                 <?php
 
-                                // Fetch all users — client-side pagination handles display performance
-                                $users = get_users(['orderby' => 'ID', 'order' => 'ASC']);
-                                $i = 1;
+                                // Server-side pagination to prevent memory exhaustion on large sites (§5.1 audit fix)
+                                $users_per_page = apply_filters( 'ofast_email_user_table_limit', 500 );
+                                $user_page      = isset( $_GET['u_paged'] ) ? max( 1, intval( $_GET['u_paged'] ) ) : 1;
+                                $total_users    = (int) count_users()['total_users'];
+                                $total_pages    = max( 1, ceil( $total_users / $users_per_page ) );
+                                if ( $user_page > $total_pages ) $user_page = $total_pages;
+
+                                $users = get_users([
+                                    'orderby' => 'ID',
+                                    'order'   => 'ASC',
+                                    'number'  => $users_per_page,
+                                    'paged'   => $user_page,
+                                ]);
+
+                                if ( $total_users > $users_per_page ) {
+                                    $page_start = ( $user_page - 1 ) * $users_per_page + 1;
+                                    $page_end   = min( $user_page * $users_per_page, $total_users );
+                                    echo '<div style="margin-bottom:12px; padding:10px 16px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; font-size:13px; color:#92400e;">';
+                                    echo '<span class="dashicons dashicons-info" style="font-size:16px; width:16px; height:16px; color:#f59e0b; vertical-align:middle; margin-right:6px;"></span>';
+                                    echo 'Showing users <strong>' . $page_start . '–' . $page_end . '</strong> of <strong>' . number_format( $total_users ) . '</strong>. ';
+                                    echo 'Use the page selector below or the <em>User ID(s) / Ranges</em> field above to target specific users.';
+                                    echo '</div>';
+                                }
+
+                                $i = ( $user_page - 1 ) * $users_per_page + 1;
                                 foreach ($users as $user) {
                                     $userdata = get_userdata($user->ID);
                                     $user_roles_arr = ($userdata && isset($userdata->roles)) ? $userdata->roles : array();
@@ -688,6 +710,26 @@ class Ofast_Email_Tab_Send
                                 }
                                 echo '</tbody></table>';
                                 echo '<div id="user-pagination" style="margin-top:10px;"></div>';
+
+                                // Server-side page navigation (§5.1 — only shown when total_users > per-page cap)
+                                if ( $total_pages > 1 ) {
+                                    $base_url = admin_url( 'admin.php?page=ofast-emailer&tab=send' );
+                                    echo '<div style="margin-top:12px; display:flex; justify-content:center; gap:5px; flex-wrap:wrap;">';
+                                    echo '<span style="align-self:center; font-size:13px; color:#64748b; margin-right:8px;">Server page:</span>';
+                                    for ( $p = 1; $p <= min( $total_pages, 20 ); $p++ ) {
+                                        $active_style = $p === $user_page
+                                            ? 'background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; border-color:#6366f1;'
+                                            : 'background:#fff; color:#333;';
+                                        echo '<a href="' . esc_url( add_query_arg( 'u_paged', $p, $base_url ) ) . '" '
+                                           . 'style="padding:5px 10px; border:1px solid #e2e8f0; border-radius:4px; text-decoration:none; font-size:13px; ' . $active_style . '">'
+                                           . $p . '</a>';
+                                    }
+                                    if ( $total_pages > 20 ) {
+                                        echo '<span style="align-self:center; color:#64748b;">… ' . $total_pages . ' pages</span>';
+                                    }
+                                    echo '</div>';
+                                }
+
                                 echo '</div>'; // End ofast-card
 
 

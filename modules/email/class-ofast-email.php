@@ -112,7 +112,15 @@ class Ofast_X_Email
 
         $campaign_id = isset($_POST['campaign_id']) ? absint($_POST['campaign_id']) : null;
 
-        // Run one rapid batch — this may sleep() internally before firing the next loopback
+        // §1.1 Audit fix: Apply burst-protection delay HERE (at the start of the new loopback worker)
+        // instead of at the end of run_rapid(). This frees the previous PHP worker immediately
+        // instead of holding it open during sleep().
+        $delay = min( 120, max( 0, (int) get_option( 'ofast_email_batch_delay', 3 ) ) );
+        if ( $delay > 0 ) {
+            sleep( $delay );
+        }
+
+        // Run one rapid batch
         Ofast_Email_Processor::run_rapid($campaign_id ?: null);
 
         wp_send_json_success('batch_processed');

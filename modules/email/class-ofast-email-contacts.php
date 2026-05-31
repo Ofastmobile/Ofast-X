@@ -66,6 +66,13 @@ class Ofast_X_Email_Contacts
             return;
         }
 
+        // §4.1 Audit fix: Prevent memory exhaustion from oversized CSV uploads
+        $max_csv_bytes = apply_filters( 'ofast_csv_max_upload_size', 5 * 1024 * 1024 ); // 5MB default
+        if ($file['size'] > $max_csv_bytes) {
+            echo Ofast_X_Toast::render('File too large. Maximum ' . size_format($max_csv_bytes) . ' allowed.', 'error');
+            return;
+        }
+
         // Basic file extension check (MIME types can be unreliable for CSV)
         if (strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) !== 'csv') {
             echo Ofast_X_Toast::render('Please upload a valid CSV file.', 'error');

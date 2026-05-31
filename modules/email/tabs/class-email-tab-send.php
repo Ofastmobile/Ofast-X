@@ -170,7 +170,17 @@ class Ofast_Email_Tab_Send
 
                     $send_test = isset($_POST['test_email']);
                     $schedule_time = sanitize_text_field($_POST['schedule_time'] ?? '');
-                    $timestamp = $schedule_time ? strtotime($schedule_time) : time();
+                    $schedule_timestamp = 0;
+                    if ($schedule_time !== '') {
+                        $scheduled_date = DateTime::createFromFormat('Y-m-d\TH:i', $schedule_time, wp_timezone());
+                        if (!$scheduled_date) {
+                            $scheduled_date = date_create($schedule_time, wp_timezone());
+                        }
+                        if ($scheduled_date instanceof DateTimeInterface) {
+                            $schedule_timestamp = $scheduled_date->getTimestamp();
+                        }
+                    }
+                    $is_scheduled = $schedule_timestamp > time();
 
                     // FIX #7: Get checked user IDs from checkboxes with validation
                     $checked_user_ids = array();
@@ -275,9 +285,10 @@ class Ofast_Email_Tab_Send
 
                         // ── V2 Queue threshold ────────────────────────────────────────────
                         // Default: 50 — configurable via filter.
-                        $queue_threshold = (int) apply_filters('ofast_queue_threshold', 50);
+                        $queue_enabled = (bool) get_option('ofast_email_queue_enabled', true);
+                        $queue_threshold = max(1, (int) apply_filters('ofast_queue_threshold', get_option('ofast_email_queue_threshold', 50)));
 
-                        if ($total_count > $queue_threshold) {
+                        if ($is_scheduled || ($queue_enabled && $total_count > $queue_threshold)) {
                             // ── QUEUE PATH: Insert campaign, fire worker, return campaign_id ──
 
                             // Load queue classes (require_once is idempotent)
@@ -286,12 +297,16 @@ class Ofast_Email_Tab_Send
 
                             // Auto-detect strategy based on whether SMTP is active
                             $strategy = $this->detect_strategy();
+                            $next_run = $is_scheduled
+                                ? wp_date('Y-m-d H:i:s', $schedule_timestamp, wp_timezone())
+                                : current_time('mysql');
 
                             $campaign_id = Ofast_Email_Campaign::create([
                                 'subject'       => $subject,
                                 'body'          => $body,
                                 'recipient_ids' => $all_recipients,
                                 'strategy'      => $strategy,
+                                'next_run'      => $next_run,
                                 'created_by'    => get_current_user_id(),
                             ]);
 

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Ofast X - SMS Channel Module
  * Multi-provider SMS sending with tabbed admin UI

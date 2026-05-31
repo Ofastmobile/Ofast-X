@@ -18,6 +18,8 @@ server/
 
 # Vendor (parked/archived modules)
 vendor/
+!modules/white-label/custom-dashboard/assets/vendor/
+!modules/white-label/custom-dashboard/assets/vendor/chart.min.js
 
 # Node
 node_modules/

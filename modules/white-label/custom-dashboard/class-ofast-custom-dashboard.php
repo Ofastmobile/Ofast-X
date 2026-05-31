@@ -115,8 +115,8 @@ class Ofast_X_Custom_Dashboard
             return;
         }
 
-        $css_file = OFAST_X_PLUGIN_DIR . 'modules/admin-design/custom-dashboard/assets/dashboard.css';
-        $js_file = OFAST_X_PLUGIN_DIR . 'modules/admin-design/custom-dashboard/assets/dashboard.js';
+        $css_file = OFAST_X_PLUGIN_DIR . 'modules/white-label/custom-dashboard/assets/dashboard.css';
+        $js_file = OFAST_X_PLUGIN_DIR . 'modules/white-label/custom-dashboard/assets/dashboard.js';
         $css_version = file_exists($css_file) ? (string) filemtime($css_file) : OFAST_X_VERSION;
         $js_version = file_exists($js_file) ? (string) filemtime($js_file) : OFAST_X_VERSION;
 

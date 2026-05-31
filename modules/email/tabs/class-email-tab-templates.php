@@ -63,6 +63,11 @@ class Ofast_Email_Tab_Templates
         $font_size = get_option('ofast_email_font_size', '15');
         $logo_width = get_option('ofast_email_logo_width', '120');
         $logo_height = get_option('ofast_email_logo_height', '0');
+        $queue_enabled = (bool) get_option('ofast_email_queue_enabled', true);
+        $queue_threshold = (int) get_option('ofast_email_queue_threshold', 50);
+        $emails_per_batch = (int) get_option('ofast_email_batch_size', 50);
+        $rapid_batch_delay = (int) get_option('ofast_email_batch_delay', get_option('ofast_email_batch_pause', 3));
+        $slow_batch_delay = (int) get_option('ofast_email_slow_delay_minutes', 60);
 
         ?>
 <div class="ofast-template-layout">
@@ -235,6 +240,51 @@ class Ofast_Email_Tab_Templates
                         ?>
                     </div>
 
+                    <!-- Delivery Queue -->
+                    <div class="ofast-card" style="padding: 20px; margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 15px 0; font-size: 16px;">Delivery Queue &amp; Throttle</h3>
+                        <p style="margin: 0 0 12px 0; font-size: 12px; color: #64748b;">Control how Emailer campaigns are queued, batched, and paced.</p>
+                        <table class="form-table" style="margin: 0;">
+                            <tr>
+                                <th style="width: 150px; padding: 10px 0;">Queue campaigns</th>
+                                <td style="padding: 10px 0;">
+                                    <label>
+                                        <input type="checkbox" name="queue_enabled" value="1" <?php checked($queue_enabled); ?>>
+                                        Use the background queue for bulk or scheduled sends
+                                    </label>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th style="padding: 10px 0;"><label for="queue_threshold">Queue threshold</label></th>
+                                <td style="padding: 10px 0;">
+                                    <input type="number" name="queue_threshold" id="queue_threshold" value="<?php echo esc_attr($queue_threshold); ?>" min="1" max="5000" step="1" style="width: 90px;">
+                                    <span class="description">Recipients above this number are sent in the background.</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th style="padding: 10px 0;"><label for="emails_per_batch">Emails per batch</label></th>
+                                <td style="padding: 10px 0;">
+                                    <input type="number" name="emails_per_batch" id="emails_per_batch" value="<?php echo esc_attr($emails_per_batch); ?>" min="1" max="500" step="1" style="width: 90px;">
+                                    <span class="description">Default: 50. Lower this if your provider rate-limits aggressively.</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th style="padding: 10px 0;"><label for="email_batch_delay">Rapid pause</label></th>
+                                <td style="padding: 10px 0;">
+                                    <input type="number" name="email_batch_delay" id="email_batch_delay" value="<?php echo esc_attr($rapid_batch_delay); ?>" min="0" max="120" step="1" style="width: 90px;">
+                                    <span class="description">Seconds to pause between rapid SMTP batches.</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th style="padding: 10px 0;"><label for="email_slow_delay_minutes">Slow pause</label></th>
+                                <td style="padding: 10px 0;">
+                                    <input type="number" name="email_slow_delay_minutes" id="email_slow_delay_minutes" value="<?php echo esc_attr($slow_batch_delay); ?>" min="1" max="1440" step="1" style="width: 90px;">
+                                    <span class="description">Minutes to wait between WP-Cron batches when SMTP is not active.</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
                     <!-- Buttons -->
                     <div style="margin-top: 30px; display: flex; gap: 12px; flex-wrap: wrap;">
                         <button type="submit" name="ofast_save_template" class="button button-primary button-large ofast-template-btn" style="flex: 1;"><span class="dashicons dashicons-saved"></span> Save Changes</button>
@@ -293,10 +343,21 @@ class Ofast_Email_Tab_Templates
             update_option('ofast_email_custom_template', '');
         }
 
-        update_option('ofast_email_cron_enabled', isset($_POST['queue_enabled']) ? 1 : 0);
-        update_option('ofast_email_queue_enabled', isset($_POST['queue_enabled']) ? true : false);
-        update_option('ofast_email_rate_per_hour', max(10, min(500, absint($_POST['emails_per_hour'] ?? 30))));
-        update_option('ofast_email_batch_size', max(1, min(50, absint($_POST['emails_per_batch'] ?? 5))));
+        $queue_enabled = isset($_POST['queue_enabled']);
+        $batch_size = max(1, min(500, absint($_POST['emails_per_batch'] ?? get_option('ofast_email_batch_size', 50))));
+        $rapid_delay = max(0, min(120, absint($_POST['email_batch_delay'] ?? get_option('ofast_email_batch_delay', 3))));
+        $slow_delay = max(1, min(1440, absint($_POST['email_slow_delay_minutes'] ?? get_option('ofast_email_slow_delay_minutes', 60))));
+
+        update_option('ofast_email_cron_enabled', $queue_enabled ? 1 : 0);
+        update_option('ofast_email_queue_enabled', $queue_enabled);
+        update_option('ofast_email_queue_threshold', max(1, min(5000, absint($_POST['queue_threshold'] ?? 50))));
+        update_option('ofast_email_rate_per_hour', max(10, min(500, absint($_POST['emails_per_hour'] ?? get_option('ofast_email_rate_per_hour', 30)))));
+        update_option('ofast_email_batch_size', $batch_size);
+        update_option('ofast_email_batch_delay', $rapid_delay);
+        update_option('ofast_email_slow_delay_minutes', $slow_delay);
+
+        // Keep the legacy batch sender aligned with the newer campaign processor.
+        update_option('ofast_email_batch_pause', $rapid_delay);
     }
 
     /**
@@ -322,5 +383,11 @@ class Ofast_Email_Tab_Templates
         update_option('ofast_email_font_size', '15');
         update_option('ofast_email_logo_width', '120');
         update_option('ofast_email_logo_height', '0');
+        update_option('ofast_email_queue_enabled', true);
+        update_option('ofast_email_queue_threshold', 50);
+        update_option('ofast_email_batch_size', 50);
+        update_option('ofast_email_batch_delay', 3);
+        update_option('ofast_email_slow_delay_minutes', 60);
+        update_option('ofast_email_batch_pause', 3);
     }
 }

@@ -310,26 +310,26 @@ class Ofast_X_Core
     private function load_whos_admin()
     {
         // 1. Load White Label
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-whos-admin.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/white-label/class-ofast-whos-admin.php';
         $whos_admin = new Ofast_X_Whos_Admin();
         $whos_admin->init();
         $this->modules['whos-admin'] = $whos_admin;
 
         // 2. Load Menu Editor (embedded in White Label Updates tab)
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-menu-editor.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/white-label/class-ofast-menu-editor.php';
         $menu_editor = new Ofast_X_Menu_Editor();
         $menu_editor->init();
         $this->modules['menu-editor'] = $menu_editor;
         $whos_admin->set_menu_editor($menu_editor);
 
         // 3. Load Admin Footer (handles Dark Mode toggle)
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-footer/class-ofast-admin-footer.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/white-label/class-ofast-admin-footer.php';
         $admin_footer = new Ofast_X_Admin_Footer();
         $admin_footer->init();
         $this->modules['admin-footer'] = $admin_footer;
 
         // 4. Load Custom Dashboard
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-design/custom-dashboard/class-ofast-custom-dashboard.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/white-label/custom-dashboard/class-ofast-custom-dashboard.php';
         $custom_dashboard = new Ofast_X_Custom_Dashboard();
         $custom_dashboard->init();
         $this->modules['custom-dashboard'] = $custom_dashboard;
@@ -405,7 +405,7 @@ class Ofast_X_Core
      */
     private function load_admin_url()
     {
-        require_once OFAST_X_PLUGIN_DIR . 'modules/admin-studio/class-ofast-admin-url.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/white-label/class-ofast-admin-url.php';
 
         $admin_url = new Ofast_X_Admin_Url();
         $admin_url->init();

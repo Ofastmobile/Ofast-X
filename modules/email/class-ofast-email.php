@@ -60,8 +60,9 @@ class Ofast_X_Email
         add_action('wp_ajax_nopriv_ofast_queue_worker', array($this, 'ajax_queue_worker'));
 
         // ── Queue System: Slow cron hook (PHP Mail / shared hosting strategy) ─
+        add_action('ofast_campaign_rapid_batch',   array($this, 'cron_rapid_batch'), 10, 1);
         add_action('ofast_campaign_slow_batch',    array($this, 'cron_slow_batch'), 10, 1);
-        add_action('ofast_campaign_cron_fallback', array($this, 'cron_slow_batch'), 10, 1);
+        add_action('ofast_campaign_cron_fallback', array($this, 'cron_campaign_fallback'), 10, 1);
 
         // ── Queue System: Progress polling (admin AJAX) ──────────────────────
         add_action('wp_ajax_ofast_campaign_progress', array($this, 'ajax_campaign_progress'));
@@ -118,6 +119,16 @@ class Ofast_X_Email
     }
 
     /**
+     * WP-Cron: Process one rapid batch for a scheduled campaign.
+     *
+     * @param int $campaign_id
+     */
+    public function cron_rapid_batch(int $campaign_id)
+    {
+        Ofast_Email_Processor::run_rapid($campaign_id);
+    }
+
+    /**
      * WP-Cron: Process one slow batch for a specific campaign.
      *
      * @param int $campaign_id
@@ -131,6 +142,22 @@ class Ofast_X_Email
         if ($campaign && $campaign->status === Ofast_Email_Campaign::STATUS_QUEUED) {
             Ofast_Email_Processor::reschedule_slow_campaign($campaign_id, $campaign->next_run);
         }
+    }
+
+    /**
+     * Backwards-compatible cron fallback that routes by campaign strategy.
+     *
+     * @param int $campaign_id
+     */
+    public function cron_campaign_fallback(int $campaign_id)
+    {
+        $campaign = Ofast_Email_Campaign::get($campaign_id);
+        if ($campaign && $campaign->strategy === Ofast_Email_Campaign::STRATEGY_RAPID) {
+            $this->cron_rapid_batch($campaign_id);
+            return;
+        }
+
+        $this->cron_slow_batch($campaign_id);
     }
 
     /**

@@ -46,6 +46,7 @@ class Ofast_Email_Campaign {
      *   @type array  $recipient_ids Mixed array of WP user IDs (int) and raw email addresses (string).
      *   @type string $strategy      'rapid' or 'slow'.
      *   @type int    $created_by    Admin user ID.
+     *   @type string $next_run      Optional MySQL datetime for the first send.
      * }
      * @return int|false New campaign ID or false on failure.
      */
@@ -56,6 +57,9 @@ class Ofast_Email_Campaign {
         $strategy      = isset( $args['strategy'] ) && $args['strategy'] === self::STRATEGY_SLOW
             ? self::STRATEGY_SLOW
             : self::STRATEGY_RAPID;
+        $next_run      = ! empty( $args['next_run'] ) && strtotime( $args['next_run'] )
+            ? sanitize_text_field( $args['next_run'] )
+            : current_time( 'mysql' );
 
         $data = array(
             'subject'       => sanitize_text_field( $args['subject'] ?? '' ),
@@ -68,7 +72,7 @@ class Ofast_Email_Campaign {
             'failed'        => 0,
             'position'      => 0,
             'lock_expires'  => null,
-            'next_run'      => current_time( 'mysql' ),
+            'next_run'      => $next_run,
             'created_by'    => absint( $args['created_by'] ?? get_current_user_id() ),
             'created_at'    => current_time( 'mysql' ),
         );

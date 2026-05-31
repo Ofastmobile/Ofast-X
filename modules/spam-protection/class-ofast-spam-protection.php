@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 /**
  * Ofast X - Spam Protection Module
@@ -488,7 +488,7 @@ class Ofast_X_Spam_Protection
         }
 ?>
 
-        <div class="wrap">
+        <div class="wrap ofast-spam-protection-page">
             <!-- Header -->
             <div class="ofast-header">
                 <div class="ofast-header-icon">
@@ -798,7 +798,7 @@ class Ofast_X_Spam_Protection
      */
     public function enqueue_admin_scripts($hook)
     {
-        if (!isset($_GET['page']) || $_GET['page'] !== 'ofast-spam-protection') {
+        if (strpos($hook, 'ofast-spam-protection') === false) {
             return;
         }
 

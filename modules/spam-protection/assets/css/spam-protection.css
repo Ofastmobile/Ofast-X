@@ -4,11 +4,11 @@
  */
 
 /* Colors */
-:root {
+.ofast-spam-protection-page {
     --ofast-primary: #6366f1;
 }
 
-.ofast-tabs-nav {
+.ofast-spam-protection-page .ofast-tabs-nav {
     display: flex;
     flex-wrap: nowrap;
     gap: 8px;
@@ -22,7 +22,7 @@
     z-index: 100;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
-.ofast-tab {
+.ofast-spam-protection-page .ofast-tab {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -39,27 +39,27 @@
     flex-shrink: 0;
     white-space: nowrap;
 }
-.ofast-tab:hover {
+.ofast-spam-protection-page .ofast-tab:hover {
     background: #fff;
     color: #1e293b;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
-.ofast-tab.active {
+.ofast-spam-protection-page .ofast-tab.active {
     background: var(--ofast-primary);
     color: #fff;
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
 }
-.ofast-tab .dashicons {
+.ofast-spam-protection-page .ofast-tab .dashicons {
     font-size: 16px;
     width: 16px;
     height: 16px;
     line-height: 16px;
 }
-.ofast-tab-content { display: none; }
-.ofast-tab-content.active { display: block; animation: ofastFadeIn 0.3s ease; }
+.ofast-spam-protection-page .ofast-tab-content { display: none; }
+.ofast-spam-protection-page .ofast-tab-content.active { display: block; animation: ofastFadeIn 0.3s ease; }
 
 /* Card Styling */
-.ofast-card {
+.ofast-spam-protection-page .ofast-card {
     background: #fff;
     border-radius: 16px;
     padding: 40px;
@@ -67,10 +67,10 @@
     margin-top: 20px;
     border: 1px solid rgba(226, 232, 240, 0.6);
 }
-.ofast-card h2 { margin-top: 0; }
+.ofast-spam-protection-page .ofast-card h2 { margin-top: 0; }
 
 /* Toggle Switch */
-.ofast-toggle {
+.ofast-spam-protection-page .ofast-toggle {
     position: relative;
     display: inline-block;
     width: 44px;
@@ -78,12 +78,12 @@
     vertical-align: middle;
     margin-right: 10px;
 }
-.ofast-toggle input { 
+.ofast-spam-protection-page .ofast-toggle input {
     opacity: 0; 
     width: 0; 
     height: 0; 
 }
-.ofast-slider {
+.ofast-spam-protection-page .ofast-slider {
     position: absolute;
     cursor: pointer;
     top: 0;
@@ -94,7 +94,7 @@
     transition: .4s;
     border-radius: 34px;
 }
-.ofast-slider:before {
+.ofast-spam-protection-page .ofast-slider:before {
     position: absolute;
     content: "";
     height: 18px;
@@ -106,18 +106,18 @@
     border-radius: 50%;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-input:checked + .ofast-slider {
+.ofast-spam-protection-page input:checked + .ofast-slider {
     background-color: var(--ofast-primary);
 }
-input:focus + .ofast-slider {
+.ofast-spam-protection-page input:focus + .ofast-slider {
     box-shadow: 0 0 1px var(--ofast-primary);
 }
-input:checked + .ofast-slider:before {
+.ofast-spam-protection-page input:checked + .ofast-slider:before {
     transform: translateX(20px);
 }
 
 /* Button Override */
-.button.button-primary {
+.ofast-spam-protection-page .button.button-primary {
     background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
     border-color: #6366f1 !important;
     text-shadow: none !important;
@@ -127,19 +127,19 @@ input:checked + .ofast-slider:before {
     padding-bottom: 10px !important;
     height: auto !important;
 }
-.button.button-primary:hover {
+.ofast-spam-protection-page .button.button-primary:hover {
     background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
 }
-.button.button-primary:active {
+.ofast-spam-protection-page .button.button-primary:active {
     transform: translateY(0);
 }
 
 @keyframes ofastFadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
 /* Header Styles */
-.ofast-header {
+.ofast-spam-protection-page .ofast-header {
     display: flex;
     align-items: center;
     gap: 20px;
@@ -150,7 +150,7 @@ input:checked + .ofast-slider:before {
     margin-bottom: 30px;
     margin-top: 20px;
 }
-.ofast-header-icon {
+.ofast-spam-protection-page .ofast-header-icon {
     width: 56px;
     height: 56px;
     background: #fff;
@@ -161,13 +161,13 @@ input:checked + .ofast-slider:before {
     align-items: center;
     justify-content: center;
 }
-.ofast-header-icon .dashicons {
+.ofast-spam-protection-page .ofast-header-icon .dashicons {
     font-size: 28px;
     width: 28px;
     height: 28px;
     color: #6366f1;
 }
-.ofast-header-content h1 {
+.ofast-spam-protection-page .ofast-header-content h1 {
     margin: 0 0 5px 0;
     font-size: 24px;
     font-weight: 700;
@@ -175,7 +175,7 @@ input:checked + .ofast-slider:before {
     display: block;
     padding: 0;
 }
-.ofast-header-content p {
+.ofast-spam-protection-page .ofast-header-content p {
     margin: 0;
     color: #64748b;
     font-size: 14px;

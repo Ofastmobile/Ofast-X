@@ -3,17 +3,23 @@
  * Extracted from class-ofast-spam-protection.php
  */
 jQuery(document).ready(function($) {
+    var $page = $('.ofast-spam-protection-page');
+
+    if (!$page.length) {
+        return;
+    }
+
     // Tab Switching
-    $('.ofast-tab').on('click', function(e) {
+    $page.find('.ofast-tab').on('click', function(e) {
         e.preventDefault();
         var target = $(this).data('tab');
         
         // Update classes
-        $('.ofast-tab').removeClass('active');
+        $page.find('.ofast-tab').removeClass('active');
         $(this).addClass('active');
         
-        $('.ofast-tab-content').removeClass('active');
-        $('#tab-' + target).addClass('active');
+        $page.find('.ofast-tab-content').removeClass('active');
+        $page.find('#tab-' + target).addClass('active');
         
         // Update URL
         var url = new URL(window.location);
@@ -29,6 +35,6 @@ jQuery(document).ready(function($) {
     window.onpopstate = function() {
         var urlParams = new URLSearchParams(window.location.search);
         var tab = urlParams.get('tab') || 'general';
-        $('.ofast-tab[data-tab="' + tab + '"]').click();
+        $page.find('.ofast-tab[data-tab="' + tab + '"]').click();
     };
 });

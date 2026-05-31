@@ -10,12 +10,16 @@
     --ofast-purple: #8b5cf6;
 }
 
-body.ofast-clean-dashboard {
-    background-color: var(--ofast-bg-dark);
+body.ofast-clean-dashboard,
+body.ofast-clean-dashboard #wpwrap,
+body.ofast-clean-dashboard #wpcontent,
+body.ofast-clean-dashboard #wpbody,
+body.ofast-clean-dashboard #wpbody-content {
+    background-color: var(--ofast-bg-dark) !important;
 }
 
 body.ofast-clean-dashboard #wpcontent {
-    background-color: var(--ofast-bg-dark);
+    min-height: calc(100vh - 32px);
     padding-left: 0;
 }
 

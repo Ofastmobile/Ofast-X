@@ -53,8 +53,8 @@ class Ofast_Email_Processor {
             return; // Nothing to process right now
         }
 
-        $batch_size = (int) get_option( 'ofast_email_batch_size', self::DEFAULT_RAPID_BATCH_SIZE );
-        $delay      = (int) get_option( 'ofast_email_batch_delay', self::DEFAULT_RAPID_DELAY );
+        $batch_size = min( 500, max( 1, (int) get_option( 'ofast_email_batch_size', self::DEFAULT_RAPID_BATCH_SIZE ) ) );
+        $delay      = min( 120, max( 0, (int) get_option( 'ofast_email_batch_delay', self::DEFAULT_RAPID_DELAY ) ) );
 
         $result = self::process_batch( $campaign, $batch_size );
 
@@ -88,15 +88,15 @@ class Ofast_Email_Processor {
             return;
         }
 
-        $batch_size    = (int) get_option( 'ofast_email_batch_size', self::DEFAULT_SLOW_BATCH_SIZE );
-        $delay_minutes = (int) get_option( 'ofast_email_slow_delay_minutes', self::DEFAULT_SLOW_DELAY_MINUTES );
+        $batch_size    = min( 500, max( 1, (int) get_option( 'ofast_email_batch_size', self::DEFAULT_SLOW_BATCH_SIZE ) ) );
+        $delay_minutes = min( 1440, max( 1, (int) get_option( 'ofast_email_slow_delay_minutes', self::DEFAULT_SLOW_DELAY_MINUTES ) ) );
 
         $result = self::process_batch( $campaign, $batch_size );
 
         // For slow mode, next run is now + delay (respects hosting hourly limits)
         $next_run = current_time( 'mysql' );
         if ( ! $result['is_done'] ) {
-            $next_run = gmdate( 'Y-m-d H:i:s', strtotime( "+{$delay_minutes} minutes" ) );
+            $next_run = wp_date( 'Y-m-d H:i:s', time() + ( $delay_minutes * MINUTE_IN_SECONDS ), wp_timezone() );
         }
 
         Ofast_Email_Campaign::update_progress(
@@ -270,7 +270,7 @@ class Ofast_Email_Processor {
         if ( is_wp_error( $result ) ) {
             // Loopback failed — schedule a cron fallback
             error_log( 'Ofast Email Processor: Loopback failed for campaign #' . $campaign_id . ' — ' . $result->get_error_message() );
-            wp_schedule_single_event( time() + 30, 'ofast_campaign_cron_fallback', array( $campaign_id ) );
+            wp_schedule_single_event( time() + 30, 'ofast_campaign_rapid_batch', array( $campaign_id ) );
         }
     }
 
@@ -286,7 +286,11 @@ class Ofast_Email_Processor {
      */
     public static function schedule_slow_campaign( int $campaign_id ) {
         if ( ! wp_next_scheduled( 'ofast_campaign_slow_batch', array( $campaign_id ) ) ) {
-            wp_schedule_single_event( time(), 'ofast_campaign_slow_batch', array( $campaign_id ) );
+            $campaign  = Ofast_Email_Campaign::get( $campaign_id );
+            $timestamp = $campaign && ! empty( $campaign->next_run ) ? strtotime( $campaign->next_run ) : time();
+            $timestamp = $timestamp && $timestamp > time() ? $timestamp : time();
+
+            wp_schedule_single_event( $timestamp, 'ofast_campaign_slow_batch', array( $campaign_id ) );
         }
     }
 

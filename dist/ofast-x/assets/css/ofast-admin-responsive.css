@@ -1,0 +1,213 @@
+/**
+ * Ofast X - Admin Responsive CSS
+ * Makes all admin pages mobile-friendly
+ * Breakpoint: 782px (WordPress standard)
+ */
+
+/* ==========================================================================
+   GRID LAYOUTS
+   ========================================================================== */
+
+.ofast-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.ofast-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.ofast-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+.ofast-grid-auto {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+/* ==========================================================================
+   TWO-COLUMN LAYOUT (Main + Sidebar)
+   ========================================================================== */
+
+.ofast-flex-layout {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.ofast-main {
+    flex: 1;
+    min-width: 0;
+    /* Prevents overflow */
+}
+
+.ofast-sidebar {
+    width: 280px;
+    flex-shrink: 0;
+}
+
+/* ==========================================================================
+   UTILITY CLASSES
+   ========================================================================== */
+
+.ofast-section {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.ofast-card {
+    background: #fff;
+    padding: 25px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.ofast-flex-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.ofast-gap-10 {
+    gap: 10px;
+}
+
+.ofast-gap-15 {
+    gap: 15px;
+}
+
+.ofast-gap-20 {
+    gap: 20px;
+}
+
+.ofast-gap-25 {
+    gap: 25px;
+}
+
+.ofast-mt-20 {
+    margin-top: 20px;
+}
+
+.ofast-mt-25 {
+    margin-top: 25px;
+}
+
+.ofast-mb-20 {
+    margin-bottom: 20px;
+}
+
+.ofast-mb-25 {
+    margin-bottom: 25px;
+}
+
+/* ==========================================================================
+   FORM TABLE RESPONSIVE
+   ========================================================================== */
+
+.ofast-form-table th,
+.ofast-form-table td {
+    display: block;
+    width: 100%;
+}
+
+/* ==========================================================================
+   MEDIA QUERIES - Mobile (782px is WordPress admin breakpoint)
+   ========================================================================== */
+
+@media screen and (max-width: 782px) {
+
+    /* Prevent overflow on mobile */
+    .wrap {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    /* Ensure all flex/grid children don't overflow */
+    .ofast-flex-layout>div,
+    .ofast-main,
+    .ofast-grid-2>div,
+    .ofast-grid-3>div,
+    .ofast-grid-4>div {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* Grids become 2 columns on mobile (50% each) */
+    .ofast-grid-2,
+    .ofast-grid-3,
+    .ofast-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+
+    /* Two-column layout stacks vertically */
+    .ofast-flex-layout {
+        flex-direction: column;
+    }
+
+    .ofast-sidebar {
+        width: 100%;
+        order: 2;
+    }
+
+    .ofast-main {
+        order: 1;
+        width: 100%;
+    }
+
+    /* Cards full width */
+    .ofast-card,
+    .ofast-section {
+        padding: 15px;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* Form tables stack labels above inputs */
+    .form-table th {
+        padding-bottom: 5px;
+    }
+
+    .form-table td {
+        padding-top: 0;
+    }
+
+    /* Buttons wrap */
+    .ofast-flex-wrap {
+        flex-direction: column;
+    }
+
+    .ofast-flex-wrap .button {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* ==========================================================================
+   SMALLER MOBILE (480px)
+   ========================================================================== */
+
+@media screen and (max-width: 480px) {
+
+    .ofast-grid-2,
+    .ofast-grid-3,
+    .ofast-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .ofast-section,
+    .ofast-card {
+        padding: 12px;
+    }
+}

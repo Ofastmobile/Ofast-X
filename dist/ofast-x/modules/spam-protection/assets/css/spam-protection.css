@@ -1,0 +1,182 @@
+/**
+ * Ofast X Spam Protection Admin Styles
+ * Extracted from class-ofast-spam-protection.php
+ */
+
+/* Colors */
+.ofast-spam-protection-page {
+    --ofast-primary: #6366f1;
+}
+
+.ofast-spam-protection-page .ofast-tabs-nav {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin-bottom: 25px;
+    padding: 10px 12px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid rgba(226, 232, 240, 0.6);
+    position: sticky;
+    top: 47px;
+    z-index: 100;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+.ofast-spam-protection-page .ofast-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+.ofast-spam-protection-page .ofast-tab:hover {
+    background: #fff;
+    color: #1e293b;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.ofast-spam-protection-page .ofast-tab.active {
+    background: var(--ofast-primary);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+.ofast-spam-protection-page .ofast-tab .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+}
+.ofast-spam-protection-page .ofast-tab-content { display: none; }
+.ofast-spam-protection-page .ofast-tab-content.active { display: block; animation: ofastFadeIn 0.3s ease; }
+
+/* Card Styling */
+.ofast-spam-protection-page .ofast-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    margin-top: 20px;
+    border: 1px solid rgba(226, 232, 240, 0.6);
+}
+.ofast-spam-protection-page .ofast-card h2 { margin-top: 0; }
+
+/* Toggle Switch */
+.ofast-spam-protection-page .ofast-toggle {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    vertical-align: middle;
+    margin-right: 10px;
+}
+.ofast-spam-protection-page .ofast-toggle input {
+    opacity: 0; 
+    width: 0; 
+    height: 0; 
+}
+.ofast-spam-protection-page .ofast-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #cbd5e1;
+    transition: .4s;
+    border-radius: 34px;
+}
+.ofast-spam-protection-page .ofast-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.ofast-spam-protection-page input:checked + .ofast-slider {
+    background-color: var(--ofast-primary);
+}
+.ofast-spam-protection-page input:focus + .ofast-slider {
+    box-shadow: 0 0 1px var(--ofast-primary);
+}
+.ofast-spam-protection-page input:checked + .ofast-slider:before {
+    transform: translateX(20px);
+}
+
+/* Button Override */
+.ofast-spam-protection-page .button.button-primary {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+    border-color: #6366f1 !important;
+    text-shadow: none !important;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+    transition: all 0.3s ease !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    height: auto !important;
+}
+.ofast-spam-protection-page .button.button-primary:hover {
+    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
+}
+.ofast-spam-protection-page .button.button-primary:active {
+    transform: translateY(0);
+}
+
+@keyframes ofastFadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Header Styles */
+.ofast-spam-protection-page .ofast-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: #fff;
+    padding: 25px 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    margin-bottom: 30px;
+    margin-top: 20px;
+}
+.ofast-spam-protection-page .ofast-header-icon {
+    width: 56px;
+    height: 56px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.ofast-spam-protection-page .ofast-header-icon .dashicons {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+    color: #6366f1;
+}
+.ofast-spam-protection-page .ofast-header-content h1 {
+    margin: 0 0 5px 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e293b;
+    display: block;
+    padding: 0;
+}
+.ofast-spam-protection-page .ofast-header-content p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+}

@@ -38,6 +38,7 @@ class Ofast_X_Menu_Editor
             'users.php',
             'plugins.php',
             'options-general.php',
+            'tools.php',
             'ofast-menu-editor',
             'ofast-dashboard',
         );
@@ -231,24 +232,48 @@ class Ofast_X_Menu_Editor
 
         $ordered_items = array();
         $unordered_items = array();
+        $separators = array();
 
         foreach ($menu as $key => $item) {
-            if (empty($item[2]))
+            // Preserve separators so they aren't silently dropped
+            if (empty($item[2])) {
+                $separators[$key] = $item;
                 continue;
+            }
 
             $slug = $item[2];
 
             if (isset($this->menu_settings[$slug]) && !empty($this->menu_settings[$slug]['order'])) {
-                $order = $this->menu_settings[$slug]['order'];
+                $order = (int) $this->menu_settings[$slug]['order'];
+                // Avoid key collisions: if order already taken, nudge by 1
+                while (isset($ordered_items[$order])) {
+                    $order++;
+                }
                 $ordered_items[$order] = $item;
             } else {
-                $unordered_items[$key] = $item;
+                $unordered_items[] = $item;
             }
         }
 
         if (!empty($ordered_items)) {
             ksort($ordered_items);
-            $menu = array_merge($ordered_items, $unordered_items);
+            // Re-index ordered items then append unordered and separators
+            $new_menu = array();
+            $pos = 1;
+            foreach ($ordered_items as $item) {
+                $new_menu[$pos] = $item;
+                $pos++;
+            }
+            foreach ($unordered_items as $item) {
+                $new_menu[$pos] = $item;
+                $pos++;
+            }
+            // Re-insert separators at reasonable positions
+            foreach ($separators as $item) {
+                $new_menu[$pos] = $item;
+                $pos++;
+            }
+            $menu = $new_menu;
         }
     }
 

@@ -102,7 +102,7 @@ function ofast_toolkit_pro_disabled()
  */
 function ofast_toolkit_get_upgrade_url()
 {
-    return 'https://ofastshop.com/product/ofast-toolkit-pro/';
+    return 'https://ofastshop.com/user/digital/wordpress-plugin/ofast-tooltik-pro/';
 }
 
 /**

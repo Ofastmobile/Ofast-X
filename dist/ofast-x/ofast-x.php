@@ -35,7 +35,7 @@ define('OFAST_X_PLUGIN_FILE', __FILE__);
 
 // License API endpoint (can be overridden in wp-config.php)
 if (!defined('OFAST_LICENSE_API_URL')) {
-    define('OFAST_LICENSE_API_URL', 'https://ofastshop.com/wp-json/ofast-license/v1');
+    define('OFAST_LICENSE_API_URL', 'https://ofastshop.com/user/wp-json/ofast-license/v1');
 }
 
 // Shared API client secret for license server authentication

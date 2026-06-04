@@ -253,6 +253,10 @@ class Ofast_Email_Tab_Send
                         wp_mail($user->user_email, $subject, $this->admin->get_email_template($message), $headers);
                         $result_message = Ofast_X_Toast::render('Test email sent to ' . esc_html($user->user_email), 'success');
                     } else {
+                        // ── Free tier daily quota check ──────────────────────────────
+                        // Only counts Ofast Emailer sends. WP core, WooCommerce, OTP
+                        // emails are completely exempt (counter is never called for those).
+                        require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-quota.php';
                         // Merge user IDs + roles
                         $total_ids = $selected_user_ids;
                         if (!empty($selected_roles)) {
@@ -282,6 +286,21 @@ class Ofast_Email_Tab_Send
                             $manual_emails
                         );
                         $total_count = count($all_recipients);
+
+                        // ── Free tier quota gate ──────────────────────────────────────────
+                        if ( ! Ofast_Email_Quota::can_send( $total_count ) ) {
+                            $q_used  = Ofast_Email_Quota::get_today_count();
+                            $q_limit = Ofast_Email_Quota::get_daily_limit();
+                            $q_left  = Ofast_Email_Quota::remaining();
+                            $result_message = Ofast_X_Toast::render(
+                                sprintf(
+                                    'Daily email limit reached (%d/%d used today). %d remaining. <a href="%s" style="color:#6366f1;font-weight:600;">Upgrade to Pro</a> for unlimited emails.',
+                                    $q_used, $q_limit, $q_left,
+                                    esc_url( admin_url('admin.php?page=ofast-license') )
+                                ),
+                                'warning'
+                            );
+                        } else {
 
                         // ── V2 Queue threshold ────────────────────────────────────────────
                         // Default: 50 — configurable via filter.
@@ -376,6 +395,11 @@ class Ofast_Email_Tab_Send
                                 }
                             }
 
+                            // ── Increment daily quota counter (direct sends) ──
+                            if ( $sent > 0 ) {
+                                Ofast_Email_Quota::increment( $sent );
+                            }
+
                             $log_target_roles = $selected_roles;
                             if ($include_contacts)   $log_target_roles[] = '_imported_contacts';
                             if (!empty($manual_emails)) $log_target_roles[] = '_manual_emails';
@@ -391,6 +415,8 @@ class Ofast_Email_Tab_Send
                                 $result_message = Ofast_X_Toast::render('Sent successfully to ' . $sent . ' user(s)', 'success');
                             }
                         }
+
+                        } // End quota gate
                     }
                 } // End rate limit else block
             } // End double-submit else block
@@ -572,7 +598,42 @@ class Ofast_Email_Tab_Send
                                 </div>
                             </div>
                         </div>
-<div class="ofast-sidebar-card">
+
+                        <?php
+                        // ── Daily Quota Badge ────────────────────────────────────
+                        require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-quota.php';
+                        $is_pro_user   = ! Ofast_Email_Quota::is_free_tier();
+                        $quota_used    = Ofast_Email_Quota::get_today_count();
+                        $quota_limit   = Ofast_Email_Quota::get_daily_limit();
+                        $quota_percent = $is_pro_user ? 0 : min( 100, round( ( $quota_used / max( 1, $quota_limit ) ) * 100 ) );
+                        ?>
+                        <div class="ofast-sidebar-card" style="padding: 14px 16px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                <span style="font-size: 12px; font-weight: 700; color: <?php echo $is_pro_user ? '#065f46' : '#1e3a5f'; ?>; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <?php echo $is_pro_user ? '✅ Pro — Unlimited' : '📧 Daily Email Quota'; ?>
+                                </span>
+                                <?php if ( ! $is_pro_user ): ?>
+                                    <span style="font-size: 12px; font-weight: 600; color: <?php echo $quota_used >= $quota_limit ? '#dc2626' : '#374151'; ?>;">
+                                        <?php echo esc_html( $quota_used ); ?>/<?php echo esc_html( $quota_limit ); ?>
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+                            <?php if ( ! $is_pro_user ): ?>
+                                <div style="background: #e5e7eb; border-radius: 50px; height: 6px; overflow: hidden;">
+                                    <div style="background: <?php echo $quota_percent >= 100 ? '#dc2626' : ( $quota_percent >= 80 ? '#f59e0b' : '#6366f1' ); ?>; height: 100%; width: <?php echo esc_attr( $quota_percent ); ?>%; border-radius: 50px; transition: width 0.3s ease;"></div>
+                                </div>
+                                <div style="margin-top: 6px; font-size: 11px; color: #6b7280;">
+                                    <?php if ( $quota_used >= $quota_limit ): ?>
+                                        Limit reached — resets at midnight.
+                                    <?php else: ?>
+                                        <?php echo esc_html( Ofast_Email_Quota::remaining() ); ?> emails remaining today.
+                                    <?php endif; ?>
+                                    <a href="<?php echo esc_url( admin_url('admin.php?page=ofast-license') ); ?>" style="color: #6366f1; text-decoration: none; font-weight: 600;">Upgrade →</a>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <div class="ofast-sidebar-card">
                             <h4>Schedule</h4>
                             <div class="ofast-form-group" style="margin-bottom: 15px;">
                                 <label>
@@ -599,6 +660,23 @@ class Ofast_Email_Tab_Send
                                     Email</button>
                             </div>
                         </div>
+
+                        <?php if ( Ofast_Email_Quota::is_free_tier() ): ?>
+                        <div class="ofast-sidebar-card" style="background: linear-gradient(135deg, #faf5ff, #ede9fe); border: 1px solid #c4b5fd;">
+                            <h4 style="margin-top: 0; color: #5b21b6; font-size: 14px;">⚡ Pro Queue Features</h4>
+                            <ul style="font-size: 12px; color: #6b7280; padding-left: 18px; margin: 8px 0 14px; line-height: 1.8;">
+                                <li><strong>Unlimited</strong> daily emails</li>
+                                <li>Smart Retries with exponential backoff</li>
+                                <li>Fallback SMTP server</li>
+                                <li>Email health reports</li>
+                            </ul>
+                            <a href="<?php echo esc_url( admin_url('admin.php?page=ofast-license') ); ?>"
+                               style="display: block; text-align: center; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; padding: 9px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; box-shadow: 0 2px 8px rgba(99,102,241,0.3); transition: transform 0.2s;"
+                               onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+                                Upgrade to Pro →
+                            </a>
+                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 

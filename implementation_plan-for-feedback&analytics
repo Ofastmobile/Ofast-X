@@ -1,0 +1,64 @@
+# Goal Description
+
+Implement two key analytics and user-retention features for the Ofast-X plugin:
+1. **Deactivation Feedback Form:** A popup that appears when a user clicks "Deactivate" on the WordPress plugins page, asking them why they are leaving. The feedback will be sent directly to your custom API endpoint on `ofastshop.com`.
+2. **Opt-in Telemetry (Active Install Tracker):** An opt-in banner shown upon plugin activation asking free/paid users to share anonymous usage data. This allows you to track exactly how many active installs you have.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **API Infrastructure:** This plan assumes you will build (or already have) endpoints on your main website (`https://ofastshop.com/wp-json/ofast-analytics/v1/`) to receive this data. The plugin will send the data, but your server needs to be ready to catch it!
+
+> [!WARNING]
+> **Privacy Compliance:** We must make the telemetry *strictly opt-in* (the user must click "Allow") to comply with WordPress.org repository guidelines and GDPR. 
+
+## Open Questions
+
+1. Do you already have API endpoints ready on `ofastshop.com` to receive this data, or should the plugin just send an email to your support address for now?
+2. Are you planning to host the free version of this plugin on the official WordPress.org repository? (If yes, we must be extremely careful with the opt-in rules).
+
+## Proposed Changes
+
+---
+
+### `includes/analytics/` (New Folder)
+
+We will create a new dedicated folder for analytics to keep the core clean.
+
+#### [NEW] `includes/analytics/class-ofast-telemetry.php`
+- **Purpose:** Handles the "Opt-in" banner displayed when the plugin is first activated.
+- **Logic:**
+  - Hook into `admin_notices` to show a dismissible banner: "Help us improve Ofast Toolkit by opting in to anonymous usage tracking."
+  - If they click "Allow", generate a unique site ID (`ofast_site_id`), save it, and send a `POST` request to `ofastshop.com` with their PHP version, WP version, and activation status.
+  - Add a weekly WP-Cron job to "ping" your server so you know they are still active.
+
+#### [NEW] `includes/analytics/class-ofast-deactivation-survey.php`
+- **Purpose:** Injects the popup modal on the `plugins.php` admin page.
+- **Logic:**
+  - Enqueue a custom JavaScript file (`deactivation.js`) only on the `plugins.php` page.
+  - Intercept the click event on the "Deactivate" link for Ofast Toolkit.
+  - Show a customized HTML modal with radio buttons (e.g., "I found a bug", "It's too hard to use", "Temporary deactivation").
+  - When submitted, send an AJAX request to your `ofastshop.com` API with the reason, then proceed to actually deactivate the plugin.
+
+#### [NEW] `assets/js/ofast-deactivation.js`
+- **Purpose:** The JavaScript file that handles the modal UI, the animation, the click interception, and the background AJAX request before allowing the default WordPress deactivation URL to trigger.
+
+#### [NEW] `assets/css/ofast-deactivation.css`
+- **Purpose:** Styles for the modal to make it look clean and professional (matching the Ofast brand design).
+
+---
+
+### Core Plugin Setup
+
+#### [MODIFY] `ofast-x.php`
+- Include the new analytics classes during `ofast_x_init_plugin()`.
+- Instantiate the Telemetry and Deactivation Survey classes so they boot up correctly.
+
+## Verification Plan
+
+### Automated Tests
+- None required for this UI/API integration.
+
+### Manual Verification
+1. **Telemetry:** Activate the plugin on a fresh site. Verify the opt-in banner appears. Click "Allow" and check the network tab to ensure the payload is sent to `ofastshop.com`.
+2. **Deactivation:** Go to the Plugins page. Click "Deactivate" on Ofast Toolkit. Verify the modal pops up and prevents immediate deactivation. Select a reason, click submit, verify the network payload sends, and confirm the plugin successfully deactivates afterward.

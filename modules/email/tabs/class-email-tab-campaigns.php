@@ -19,6 +19,7 @@ class Ofast_Email_Tab_Campaigns {
         }
 
         require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-campaign.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-retry.php';
 
         $result = Ofast_Email_Campaign::get_all( array( 'per_page' => 20 ) );
         $campaigns = $result['items'];
@@ -63,6 +64,24 @@ class Ofast_Email_Tab_Campaigns {
                     Refresh
                 </button>
             </div>
+
+            <?php
+            // ── Smart Retries admin notice (Pro only) ──
+            $retry_notice = Ofast_Email_Retry::get_active_retries_notice();
+            if ( $retry_notice ) :
+                $next_label = ! empty( $retry_notice['next_retry'] )
+                    ? date_i18n( 'g:i a', strtotime( $retry_notice['next_retry'] ) )
+                    : 'soon';
+            ?>
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(135deg,#eff6ff,#ede9fe);border:1px solid #c7d2fe;border-radius:10px;margin-bottom:16px;">
+                    <span style="font-size:18px;">⚡</span>
+                    <div style="font-size:13px;color:#3730a3;">
+                        <strong>Smart Retries Active:</strong>
+                        <?php echo esc_html( $retry_notice['count'] ); ?> email<?php echo $retry_notice['count'] !== 1 ? 's' : ''; ?>
+                        queued for retry. Next attempt at <?php echo esc_html( $next_label ); ?>.
+                    </div>
+                </div>
+            <?php endif; ?>
 
             <?php if ( empty( $campaigns ) ) : ?>
                 <!-- Empty state -->
@@ -120,6 +139,21 @@ class Ofast_Email_Tab_Campaigns {
                                     <?php echo esc_html( $camp_sent ); ?> / <?php echo esc_html( $camp_total ); ?> sent
                                     <?php if ( $camp_failed > 0 ) : ?>
                                         <span class="ofast-failed-badge"><?php echo esc_html( $camp_failed ); ?> failed</span>
+                                    <?php endif; ?>
+                                    <?php
+                                    // ── Smart Retry stats (Pro only) ──
+                                    $retry_stats = Ofast_Email_Retry::get_campaign_stats( (int) $campaign->id );
+                                    if ( $retry_stats['total'] > 0 ) :
+                                    ?>
+                                        <span style="display:inline-flex;align-items:center;gap:3px;background:#ede9fe;color:#5b21b6;padding:1px 8px;border-radius:50px;font-size:11px;font-weight:600;margin-left:4px;">
+                                            ⚡ <?php echo esc_html( $retry_stats['pending'] ); ?> retrying
+                                            <?php if ( $retry_stats['success'] > 0 ) : ?>
+                                                · <?php echo esc_html( $retry_stats['success'] ); ?> recovered
+                                            <?php endif; ?>
+                                            <?php if ( $retry_stats['exhausted'] > 0 ) : ?>
+                                                · <?php echo esc_html( $retry_stats['exhausted'] ); ?> exhausted
+                                            <?php endif; ?>
+                                        </span>
                                     <?php endif; ?>
                                 </span>
                                 <span class="ofast-progress-pct" id="ofast-progress-pct-<?php echo esc_attr( $campaign->id ); ?>">

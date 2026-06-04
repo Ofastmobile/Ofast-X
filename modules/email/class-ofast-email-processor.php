@@ -22,6 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once __DIR__ . '/class-ofast-email-campaign.php';
 require_once __DIR__ . '/class-ofast-email-template.php';
+require_once __DIR__ . '/class-ofast-email-quota.php';
 
 class Ofast_Email_Processor {
 
@@ -61,6 +62,12 @@ class Ofast_Email_Processor {
         // Determine next_run — immediate for rapid mode
         $next_run = current_time( 'mysql' );
 
+        // ── Quota-pause: if free tier quota exhausted, delay until tomorrow ──
+        if ( ! empty( $result['quota_paused'] ) ) {
+            $next_run = wp_date( 'Y-m-d 00:00:30', strtotime( '+1 day' ), wp_timezone() );
+            error_log( 'Ofast Email Processor: Campaign #' . $campaign->id . ' paused until tomorrow (daily quota exhausted).' );
+        }
+
         Ofast_Email_Campaign::update_progress(
             (int) $campaign->id,
             $result['sent'],
@@ -73,7 +80,8 @@ class Ofast_Email_Processor {
         // If more emails remain, fire next loopback immediately.
         // The delay is applied at the *start* of the next loopback handler (§1.1 audit fix)
         // so this PHP worker is freed without blocking.
-        if ( ! $result['is_done'] ) {
+        // BUT: Don't fire if quota paused — wait until tomorrow.
+        if ( ! $result['is_done'] && empty( $result['quota_paused'] ) ) {
             self::fire_loopback( (int) $campaign->id );
         }
     }
@@ -97,7 +105,13 @@ class Ofast_Email_Processor {
         // For slow mode, next run is now + delay (respects hosting hourly limits)
         $next_run = current_time( 'mysql' );
         if ( ! $result['is_done'] ) {
-            $next_run = wp_date( 'Y-m-d H:i:s', time() + ( $delay_minutes * MINUTE_IN_SECONDS ), wp_timezone() );
+            // ── Quota-pause: if free tier quota exhausted, delay until tomorrow ──
+            if ( ! empty( $result['quota_paused'] ) ) {
+                $next_run = wp_date( 'Y-m-d 00:00:30', strtotime( '+1 day' ), wp_timezone() );
+                error_log( 'Ofast Email Processor: Slow campaign #' . $campaign->id . ' paused until tomorrow (daily quota exhausted).' );
+            } else {
+                $next_run = wp_date( 'Y-m-d H:i:s', time() + ( $delay_minutes * MINUTE_IN_SECONDS ), wp_timezone() );
+            }
         }
 
         Ofast_Email_Campaign::update_progress(
@@ -139,6 +153,27 @@ class Ofast_Email_Processor {
         $sent          = 0;
         $failed        = 0;
         $failed_emails = array();
+        $quota_paused  = false;
+
+        // ── Free tier quota enforcement (per-batch) ─────────────────────────
+        // Only applies to free-tier users. Pro users skip this entirely.
+        // Only counts Ofast Emailer sends — WP/WooCommerce emails are exempt.
+        if ( Ofast_Email_Quota::is_free_tier() ) {
+            $remaining_quota = Ofast_Email_Quota::remaining();
+            if ( $remaining_quota <= 0 ) {
+                // Daily budget fully exhausted — return early, campaign will resume tomorrow
+                error_log( 'Ofast Email Processor: Daily quota exhausted (0 remaining). Campaign #' . $campaign->id . ' will resume tomorrow.' );
+                return array(
+                    'sent' => 0, 'failed' => 0, 'failed_emails' => array(),
+                    'new_position' => $position, 'is_done' => false,
+                    'quota_paused' => true,
+                );
+            }
+            // Trim batch to fit remaining quota
+            if ( count( $batch ) > $remaining_quota ) {
+                $batch = array_slice( $batch, 0, $remaining_quota );
+            }
+        }
 
         // §1.2 Audit fix: Wall-clock guard — break before PHP's max_execution_time kills us mid-send.
         // Leaves a 5-second buffer for cleanup (DB writes, loopback fire, etc.).
@@ -200,9 +235,22 @@ class Ofast_Email_Processor {
             if ( wp_mail( $email, $subject, $html, $headers ) ) {
                 $sent++;
             } else {
-                $failed++;
-                $failed_emails[] = $email;
-                error_log( 'Ofast Email Processor: Failed to send campaign #' . $campaign->id . ' to ' . $email );
+                // ── Pro: Queue for smart retry instead of immediate failure ──
+                require_once __DIR__ . '/class-ofast-email-retry.php';
+                $queued_for_retry = Ofast_Email_Retry::queue(
+                    (int) $campaign->id, $email, $subject, $body,
+                    'Initial send failed'
+                );
+
+                if ( $queued_for_retry ) {
+                    // Don't count as failed yet — it's in the retry queue
+                    error_log( 'Ofast Email Processor: Queued smart retry for ' . $email . ' (campaign #' . $campaign->id . ')' );
+                } else {
+                    // Free tier or duplicate — count as immediate failure
+                    $failed++;
+                    $failed_emails[] = $email;
+                    error_log( 'Ofast Email Processor: Failed to send campaign #' . $campaign->id . ' to ' . $email );
+                }
             }
 
             $GLOBALS['ofast_current_campaign_id'] = null; // clear after each send
@@ -214,7 +262,17 @@ class Ofast_Email_Processor {
         $new_position = $position + $processed_count;
         $is_done      = $new_position >= $total;
 
-        return compact( 'sent', 'failed', 'failed_emails', 'new_position', 'is_done' );
+        // ── Increment daily quota counter for batch sends ──
+        if ( $sent > 0 ) {
+            Ofast_Email_Quota::increment( $sent );
+        }
+
+        // Check if free-tier quota is now exhausted after this batch
+        if ( ! $is_done && Ofast_Email_Quota::is_free_tier() && Ofast_Email_Quota::remaining() <= 0 ) {
+            $quota_paused = true;
+        }
+
+        return compact( 'sent', 'failed', 'failed_emails', 'new_position', 'is_done', 'quota_paused' );
     }
 
     // ─────────────────────────────────────────────

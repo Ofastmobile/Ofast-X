@@ -1,0 +1,177 @@
+# Email Queue System — Pro Gating & Smart Retries (v2)
+
+Gate the Ofast Emailer with a 50 emails/day free tier and Smart Retries for Pro users.
+
+---
+
+## Critical Architecture Decision: What Counts?
+
+> [!IMPORTANT]
+> **The 50/day quota ONLY counts emails sent through the Ofast Emailer module.** It does NOT affect:
+> - WordPress core emails (password resets, admin notifications)
+> - WooCommerce emails (order confirmations, shipping updates)
+> - OTP/verification emails from any plugin
+> - Any `wp_mail()` call from other plugins or themes
+> - Test sends ("Send to me as test only")
+>
+> **Why this works:** Our quota counter is only called inside our own module code (Send tab + Processor). We never hook into the global `wp_mail` pipeline for counting. Sites with heavy notifications are completely unaffected.
+
+**What DOES count toward 50/day:**
+- Emails sent from the "Send Email" tab (both direct ≤50 and queued >50 paths)
+- Background campaign batch sends from the queue processor
+
+**Example day for a free user:**
+- 9am: Send 30 emails via Emailer → counter = 30
+- 10am: WooCommerce sends 200 order emails → counter still 30 (exempt)
+- 11am: WordPress sends 5 password resets → counter still 30 (exempt)
+- 2pm: Send 20 more via Emailer → counter = 50 (limit reached)
+- 3pm: Try to send 10 more via Emailer → **blocked** with upgrade message
+- Next day: counter resets to 0 automatically
+
+---
+
+## DB Bloat Concern — Addressed
+
+> [!NOTE]
+> **Transient = 1 single row per day. Zero bloat.**
+>
+> The daily counter uses ONE WordPress transient: `ofast_email_sent_2026-06-04`. That's literally 1 row in `wp_options`. When it expires at midnight, WordPress auto-deletes it on the next page load (no cron needed for cleanup — WP does this in `wp_loaded`). 
+>
+> Yesterday's transient is gone before today's first send. At any moment, there is exactly **1 row** in the database for the counter. Compare this to alternatives:
+> - Custom table approach: requires CREATE TABLE, migration, manual cleanup cron
+> - Option-based approach: persists forever, needs manual reset logic
+> - Transient: self-cleaning, zero maintenance, exactly the right tool
+
+**For campaign quota enforcement:** When a free campaign exhausts its daily quota mid-send, we simply update the existing campaign row's `next_run` to tomorrow. No new rows, no new tables — just one `UPDATE` on a row that already exists.
+
+---
+
+## Pros, Cons & Senior Dev Assessment
+
+### Pros (Why This Architecture is Sound)
+
+| Aspect | Assessment |
+|--------|-----------|
+| **Separation of concerns** | Quota only touches Ofast Emailer — zero interference with WP core, WooCommerce, or any other plugin's email pipeline |
+| **Minimal DB footprint** | 1 transient row/day (auto-cleaned). Retry table grows slowly and has 7-day cleanup |
+| **Scalable** | Adding tiers later = change one constant. Filter hook (`ofast_email_free_daily_limit`) lets hosts/agencies override per-site |
+| **Graceful degradation** | Campaigns auto-resume next day, no data loss, no manual intervention needed |
+| **No performance impact** | Zero hooks on the hot `wp_mail()` path for counting — only called inside our own code |
+| **Battle-tested pattern** | Transients for daily counters is used by Wordfence, Jetpack, WPForms — proven at scale |
+| **Maintainable** | 2 new self-contained classes, follows existing patterns (compare to how fallback SMTP was added) |
+
+### Cons & Mitigations
+
+| Risk | Severity | Mitigation |
+|------|----------|------------|
+| User could bypass by calling `wp_mail()` directly | Low | That's fine — we gate the UI, not all email. Same pattern as Mailchimp/ConvertKit |
+| Retry cron (5 min) on shared hosting | Low | WP already runs cron on page loads. 5-min is standard. Retries process max 20 emails per run — lightweight |
+| Retry table needs cleanup | Low | 7-day auto-cleanup cron (same pattern as existing `ofast_email_cleanup` and `ofast_smtp_cleanup_logs`) |
+| Object cache could interfere with transients | Very Low | Sites with Redis/Memcached handle transients even better (in-memory, never hits DB) |
+
+### Is This a Dead Trap? No.
+
+**This is the exact same pattern used by:**
+- **WPForms**: Free = 20 notifications/form, Pro = unlimited
+- **FluentSMTP**: Free email logging, Pro = advanced features
+- **MailPoet**: Free = 1,000 subscribers, Pro = unlimited
+
+The architecture is **additive** (2 new files, 4 small modifications). If you ever decide to remove the quota, you delete 1 class and remove ~15 lines from 2 files. The retry system is independently useful and can stay regardless.
+
+**Future-proof:** If you add more tiers (e.g., "Business" = 500/day), you only change the `get_daily_limit()` method to check license tier. The rest of the system doesn't care.
+
+---
+
+## Proposed Changes
+
+### [NEW] class-ofast-email-quota.php
+
+Daily counter utility. Tracks Emailer-only sends via a single transient.
+
+- `can_send(int $count)` — checks if within budget (Pro always returns true)
+- `increment(int $count)` — bumps counter after successful sends
+- `remaining()` — how many left today
+- `get_daily_limit()` — returns 50 for free, PHP_INT_MAX for Pro
+- Filterable via `ofast_email_free_daily_limit`
+- Transient key: `ofast_email_sent_YYYY-MM-DD` (1 row, auto-expires at midnight)
+
+### [NEW] class-ofast-email-retry.php
+
+Smart retry queue with exponential backoff (Pro only). DB table: `{prefix}ofast_email_retries`.
+
+- `queue()` — adds a failed email to retry queue (only if Pro)
+- `process_due_retries()` — cron callback, processes up to 20 due retries per run
+- Backoff schedule: 5 min → 15 min → 1 hour (3 attempts max)
+- `cleanup_old(7)` — daily cron removes records older than 7 days
+- Retry result statuses: `pending` → `success` or `exhausted`
+
+### [MODIFY] class-email-tab-send.php
+
+1. **Quota check** before sending (both direct and queue paths) — blocks with upgrade message if exhausted
+2. **Quota increment** after successful direct sends
+3. **Quota badge** in sidebar: `"12/50 emails today"` (free) or `"✅ Unlimited (Pro)"` 
+4. **Pro upsell card** in sidebar for free users listing: unlimited emails, smart retries, fallback SMTP
+5. **Test sends exempt** — no change to test email behavior
+
+### [MODIFY] class-ofast-email-processor.php
+
+1. **Per-batch quota check** — if daily budget exhausted, return early with 0 sent (campaign auto-reschedules to tomorrow)
+2. **Trim batch** to fit remaining quota if partially available
+3. **Increment counter** after batch sends
+4. **Queue failed emails for retry** instead of immediate failure (Pro only)
+
+### [MODIFY] class-ofast-email.php
+
+1. Register `ofast_every_five_minutes` cron schedule
+2. Schedule retry processor cron (`ofast_email_process_retries`)
+3. Schedule retry cleanup cron (`ofast_email_retry_cleanup`)
+4. Add `cron_process_retries()` and `cron_cleanup_retries()` callbacks
+
+### [MODIFY] class-email-tab-campaigns.php
+
+1. Add retry status info for Pro campaigns: `"3 failed (2 retrying, 1 exhausted)"`
+2. Admin notice when retries are active for a campaign
+
+---
+
+## Retry Notification Strategy
+
+> [!NOTE]
+> **Admin Notice approach** (not email notification) — because if the SMTP server is failing, sending a notification email about the failure would also fail. Admin notices are rendered server-side and always visible.
+
+When Smart Retries are active:
+- **Admin notice** on Emailer pages: `"⚡ Smart Retries: 3 emails are being retried for Campaign #42. Next attempt in 12 minutes."`
+- **Campaigns tab** shows retry counts inline
+- **error_log()** entries for debugging
+
+---
+
+## Free vs Pro Summary
+
+| Feature | Free (50/day) | Pro (Unlimited) |
+|---------|---------------|-----------------|
+| Daily Emailer sends | 50/day | **Unlimited** |
+| WordPress/WooCommerce emails | ✅ Unlimited (exempt) | ✅ Unlimited |
+| Queue system | ✅ Works (within quota) | ✅ Works |
+| Smart Retries | ❌ Immediate fail | ✅ 3 attempts (5m→15m→1h) |
+| Fallback SMTP | ❌ (already gated) | ✅ |
+| Rate limiting config | ❌ (already gated) | ✅ |
+| Health reports | ❌ (already gated) | ✅ |
+
+---
+
+## Verification Plan
+
+### Automated Tests
+1. Send 50 emails as free → verify 51st blocked
+2. Verify WooCommerce/WP emails still work at any volume
+3. Start 100-email campaign as free → verify pauses at 50, resumes next day
+4. Force email failure with Pro → verify retry table populated with correct backoff
+5. Verify transient cleanup (only 1 row exists at any time)
+
+### Manual Verification
+- Quota badge visible in Send tab sidebar
+- Retry column visible in Campaigns tab (Pro only)
+- Admin notice shows active retries
+- Upgrade links navigate to license page
+- All existing Pro features unchanged

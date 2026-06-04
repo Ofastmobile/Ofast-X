@@ -5,11 +5,15 @@ $source = ".\"
 $destination = ".\dist\$plugin"
 
 Write-Host "Copying files to $destination..."
+if (Test-Path -LiteralPath $destination) {
+    Remove-Item -LiteralPath $destination -Recurse -Force
+}
+
 $robocopyParams = @(
     $source,
     $destination,
     "/MIR",
-    "/XD", ".git", ".vscode", "node_modules", "dist",
+    "/XD", ".git", ".vscode", "node_modules", "dist", "not_part",
     "/XF", ".gitignore", "*.map", "build.ps1", "REPO_READY_CHECKLIST.txt", "kind.txt", "footer.txt", "LICENSING_GUIDE.md", "debugging.md", "error.txt", "securitty-2.md", "security.md"
 )
 & robocopy @robocopyParams | Out-Null

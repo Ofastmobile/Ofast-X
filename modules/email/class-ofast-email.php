@@ -23,6 +23,9 @@ class Ofast_X_Email
         $this->load_dependencies();
         $this->init_components();
         $this->setup_hooks();
+
+        // Register custom cron intervals (must happen early)
+        add_filter( 'cron_schedules', array( $this, 'register_cron_intervals' ) );
     }
 
     /**
@@ -34,6 +37,7 @@ class Ofast_X_Email
         require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-admin.php';
         require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-campaign.php';
         require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-processor.php';
+        require_once OFAST_X_PLUGIN_DIR . 'modules/email/class-ofast-email-retry.php';
     }
 
     /**
@@ -88,6 +92,18 @@ class Ofast_X_Email
             wp_schedule_event(time(), 'daily', 'ofast_email_cleanup');
         }
         add_action('ofast_email_cleanup', array($this, 'cleanup_old_logs'));
+
+        // ── Smart Retries: Process retry queue every 5 minutes (Pro only) ────
+        if ( ! wp_next_scheduled( 'ofast_email_process_retries' ) ) {
+            wp_schedule_event( time() + 300, 'ofast_every_five_minutes', 'ofast_email_process_retries' );
+        }
+        add_action( 'ofast_email_process_retries', array( $this, 'cron_process_retries' ) );
+
+        // ── Smart Retries: Daily cleanup of old retry records ────────────────
+        if ( ! wp_next_scheduled( 'ofast_email_retry_cleanup' ) ) {
+            wp_schedule_event( time(), 'daily', 'ofast_email_retry_cleanup' );
+        }
+        add_action( 'ofast_email_retry_cleanup', array( $this, 'cron_cleanup_retries' ) );
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -166,6 +182,38 @@ class Ofast_X_Email
         }
 
         $this->cron_slow_batch($campaign_id);
+    }
+
+    /**
+     * Register custom cron interval for smart retries.
+     *
+     * @param array $schedules Existing WP-Cron schedules.
+     * @return array Modified schedules.
+     */
+    public function register_cron_intervals( $schedules ) {
+        if ( ! isset( $schedules['ofast_every_five_minutes'] ) ) {
+            $schedules['ofast_every_five_minutes'] = array(
+                'interval' => 300,
+                'display'  => __( 'Every 5 Minutes (Ofast Retries)', 'ofast-x' ),
+            );
+        }
+        return $schedules;
+    }
+
+    /**
+     * WP-Cron: Process due smart retries (Pro only).
+     * Runs every 5 minutes, processes up to 20 retries per run.
+     */
+    public function cron_process_retries() {
+        Ofast_Email_Retry::process_due_retries();
+    }
+
+    /**
+     * WP-Cron: Cleanup retry records older than 7 days.
+     * Runs daily to prevent table bloat.
+     */
+    public function cron_cleanup_retries() {
+        Ofast_Email_Retry::cleanup_old( 7 );
     }
 
     /**

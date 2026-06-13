@@ -182,8 +182,8 @@ class Ofast_Email_Tab_History {
                                 <th>Subject</th>
                                 <th style="width:15%;">Sent At</th>
                                 <th style="width:7%;text-align:center;">Total</th>
-                                <th style="width:7%;text-align:center;">✅ Sent</th>
-                                <th style="width:7%;text-align:center;">❌ Failed</th>
+                                <th style="width:7%;text-align:center;"> Sent</th>
+                                <th style="width:7%;text-align:center;"> Failed</th>
                                 <th style="width:9%;">Status</th>
                                 <th style="width:9%;">Actions</th>
                             </tr>
@@ -308,17 +308,17 @@ class Ofast_Email_Tab_History {
                 <div style="display:flex;gap:0;border-bottom:1px solid #e2e8f0;padding:0 24px;">
                     <button type="button" class="ofast-modal-tab active" data-tab="body"
                         style="padding:12px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:#6366f1;border-bottom:2px solid #6366f1;margin-bottom:-1px;">
-                        📧 Email Preview
+                         Email Preview
                     </button>
                     <button type="button" class="ofast-modal-tab" data-tab="failed"
                         id="ofast-tab-failed-btn"
                         style="padding:12px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:#94a3b8;border-bottom:2px solid transparent;margin-bottom:-1px;">
-                        ❌ Failed (<span id="ofast-modal-failed-count">0</span>)
+                         Failed (<span id="ofast-modal-failed-count">0</span>)
                     </button>
                     <button type="button" class="ofast-modal-tab" data-tab="pending"
                         id="ofast-tab-pending-btn"
                         style="padding:12px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:#94a3b8;border-bottom:2px solid transparent;margin-bottom:-1px;">
-                        ⏳ Pending (<span id="ofast-modal-pending-count">0</span>)
+                         Pending (<span id="ofast-modal-pending-count">0</span>)
                     </button>
                 </div>
 
@@ -381,15 +381,15 @@ class Ofast_Email_Tab_History {
                     '</div>'                                                                                  +
                     '<div style="flex:1;padding:16px 20px;text-align:center;border-right:1px solid #e2e8f0;">'  +
                         '<div style="font-size:24px;font-weight:700;color:#065f46;">' + sent    + '</div>' +
-                        '<div style="font-size:12px;color:#64748b;margin-top:2px;">✅ Sent (' + pct + '%)</div>' +
+                        '<div style="font-size:12px;color:#64748b;margin-top:2px;"> Sent (' + pct + '%)</div>' +
                     '</div>'                                                                                  +
                     '<div style="flex:1;padding:16px 20px;text-align:center;border-right:1px solid #e2e8f0;">'  +
                         '<div style="font-size:24px;font-weight:700;color:' + (failed > 0 ? '#dc2626' : '#9ca3af') + ';">' + failed  + '</div>' +
-                        '<div style="font-size:12px;color:#64748b;margin-top:2px;">❌ Failed</div>'          +
+                        '<div style="font-size:12px;color:#64748b;margin-top:2px;"> Failed</div>'          +
                     '</div>'                                                                                  +
                     '<div style="flex:1;padding:16px 20px;text-align:center;">'                               +
                         '<div style="font-size:24px;font-weight:700;color:' + (pending > 0 ? '#f59e0b' : '#9ca3af') + ';">' + pending + '</div>' +
-                        '<div style="font-size:12px;color:#64748b;margin-top:2px;">⏳ Pending</div>'         +
+                        '<div style="font-size:12px;color:#64748b;margin-top:2px;"> Pending</div>'         +
                     '</div>'
                 );
 

@@ -26,6 +26,6 @@ if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
 
 Write-Host "Zipping the plugin to $zipPath..."
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-[System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path $destination).ProviderPath, (Join-Path (Resolve-Path ".\dist").ProviderPath "$plugin-$version.zip"))
+[System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path $destination).ProviderPath, (Join-Path (Resolve-Path ".\dist").ProviderPath "$plugin-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $true)
 
 Write-Host "Build complete: $zipPath"

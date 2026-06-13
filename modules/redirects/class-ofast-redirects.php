@@ -20,29 +20,20 @@ class Ofast_X_Redirects
         // NOTE: Module enabled check removed - core loader already verified this
         // before calling init(). See class-ofast-core.php is_module_enabled()
 
-        // Admin menu
         add_action('admin_menu', array($this, 'add_admin_menu'));
-
-        // Enqueue scripts and styles
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
-
-        // Handle form submissions
         add_action('admin_init', array($this, 'handle_form_submissions'));
 
-        // AJAX handlers
         add_action('wp_ajax_ofast_toggle_redirect', array($this, 'ajax_toggle_redirect'));
         add_action('wp_ajax_ofast_delete_redirect', array($this, 'ajax_delete_redirect'));
         add_action('wp_ajax_ofast_import_redirects_from_plugin', array($this, 'ajax_import_from_plugin'));
         add_action('wp_ajax_ofast_export_redirects', array($this, 'ajax_export_redirects'));
 
-        // Process redirects on frontend
         add_action('template_redirect', array($this, 'process_redirects'), 1);
     }
 
     /**
-     * Enqueue scripts and styles for redirects page
-     *
-     * @param string $hook The current admin page hook.
+     * Enqueue scripts and styles for redirects admin page
      */
     public function enqueue_scripts($hook)
     {
@@ -71,18 +62,18 @@ class Ofast_X_Redirects
             'importNonce' => wp_create_nonce('ofast_import_redirects'),
             'exportNonce' => wp_create_nonce('ofast_export_redirects'),
             'i18n' => array(
-                'on' => __('ON', 'ofast-x'),
-                'off' => __('OFF', 'ofast-x'),
+                'on'            => __('ON', 'ofast-x'),
+                'off'           => __('OFF', 'ofast-x'),
                 'confirmDelete' => __('Are you sure you want to delete this redirect?', 'ofast-x'),
-                'importing' => __('Importing...', 'ofast-x'),
-                'exporting' => __('Exporting...', 'ofast-x'),
-                'importFailed' => __('Import failed: ', 'ofast-x'),
-            )
+                'importing'     => __('Importing...', 'ofast-x'),
+                'exporting'     => __('Exporting...', 'ofast-x'),
+                'importFailed'  => __('Import failed: ', 'ofast-x'),
+            ),
         ));
     }
 
     /**
-     * Add admin menu
+     * Add admin submenu page
      */
     public function add_admin_menu()
     {
@@ -97,7 +88,7 @@ class Ofast_X_Redirects
     }
 
     /**
-     * Handle form submissions
+     * Handle add/edit form submissions
      */
     public function handle_form_submissions()
     {
@@ -112,25 +103,18 @@ class Ofast_X_Redirects
         check_admin_referer('ofast_redirect_save', '_wpnonce');
 
         global $wpdb;
-        $table = $wpdb->prefix . 'ofast_redirects';
+        $table             = $wpdb->prefix . 'ofast_redirects';
         $priority_supported = $this->ensure_redirects_priority_schema();
 
-        // Save regex strict setting from the same form
-        $strict = isset($_POST['redirects_regex_strict']) ? 1 : 0;
-        update_option('ofast_redirects_regex_strict', $strict);
-
-        $id = isset($_POST['redirect_id']) ? intval($_POST['redirect_id']) : 0;
+        $id         = isset($_POST['redirect_id']) ? intval($_POST['redirect_id']) : 0;
         $source_url = isset($_POST['source_url']) ? sanitize_text_field(wp_unslash($_POST['source_url'])) : '';
-
         $raw_target = isset($_POST['target_url']) ? wp_unslash($_POST['target_url']) : '';
         $target_url = $this->normalize_target_url($raw_target);
-        $type = $this->normalize_redirect_type(isset($_POST['redirect_type']) ? sanitize_text_field(wp_unslash($_POST['redirect_type'])) : '301');
-        $is_regex = isset($_POST['is_regex']) ? 1 : 0;
-        $active = isset($_POST['active']) ? 1 : 0;
-        $priority = isset($_POST['priority']) ? intval($_POST['priority']) : 10;
-        $priority = max(1, min(9999, $priority));
+        $type       = $this->normalize_redirect_type(isset($_POST['redirect_type']) ? sanitize_text_field(wp_unslash($_POST['redirect_type'])) : '301');
+        $is_regex   = isset($_POST['is_regex']) ? 1 : 0;
+        $active     = isset($_POST['active']) ? 1 : 0;
+        $priority   = isset($_POST['priority']) ? max(1, min(9999, intval($_POST['priority']))) : 10;
 
-        // Validate
         if (empty($source_url)) {
             add_settings_error('ofast_redirects', 'error', __('Source URL is required.', 'ofast-x'), 'error');
             return;
@@ -141,7 +125,6 @@ class Ofast_X_Redirects
             return;
         }
 
-        // SECURITY: Validate target URL to prevent open redirect attacks
         $target_validation = $this->validate_redirect_target($target_url);
         if (is_wp_error($target_validation)) {
             add_settings_error('ofast_redirects', 'error', $target_validation->get_error_message(), 'error');
@@ -155,12 +138,9 @@ class Ofast_X_Redirects
                 return;
             }
         } else {
-            // Ensure source starts with /
             if (strpos($source_url, '/') !== 0) {
                 $source_url = '/' . ltrim($source_url, '/');
             }
-
-            // SECURITY: Prevent redirect loops for exact paths.
             $source_path = parse_url($source_url, PHP_URL_PATH);
             $target_path = parse_url($target_url, PHP_URL_PATH);
             if (!empty($source_path) && !empty($target_path) && $source_path === $target_path) {
@@ -170,108 +150,101 @@ class Ofast_X_Redirects
         }
 
         if ($id > 0) {
-            // Update
             $update_data = array(
                 'source_url' => $source_url,
                 'target_url' => $target_url,
-                'type' => $type,
-                'is_regex' => $is_regex,
-                'active' => $active
+                'type'       => $type,
+                'is_regex'   => $is_regex,
+                'active'     => $active,
             );
             if ($priority_supported) {
                 $update_data['priority'] = $priority;
             }
             $wpdb->update($table, $update_data, array('id' => $id));
-
             add_settings_error('ofast_redirects', 'success', __('Redirect updated successfully.', 'ofast-x'), 'success');
         } else {
-            // Insert
             $insert_data = array(
                 'source_url' => $source_url,
                 'target_url' => $target_url,
-                'type' => $type,
-                'is_regex' => $is_regex,
-                'active' => $active,
-                'hits' => 0,
+                'type'       => $type,
+                'is_regex'   => $is_regex,
+                'active'     => $active,
+                'hits'       => 0,
                 'created_at' => current_time('mysql'),
-                'created_by' => get_current_user_id()
+                'created_by' => get_current_user_id(),
             );
             if ($priority_supported) {
                 $insert_data['priority'] = $priority;
             }
             $wpdb->insert($table, $insert_data);
-
             add_settings_error('ofast_redirects', 'success', __('Redirect added successfully.', 'ofast-x'), 'success');
         }
 
-        // Clear cache when redirects are modified
         $this->clear_redirects_cache();
 
-        // Redirect to avoid resubmission
         wp_safe_redirect(admin_url('admin.php?page=ofast-redirects'));
         exit;
     }
 
     /**
-     * Process redirects on frontend
-     * PERFORMANCE: Uses transient caching to avoid DB queries on every request
+     * Process redirects on frontend — runs on every page load via template_redirect.
+     * DB query only happens on transient miss (every 5 minutes at most).
      */
     public function process_redirects()
     {
-        // Don't run in admin
         if (is_admin()) {
             return;
         }
 
-        // Get current request URI (sanitized)
-        $request_uri = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '/';
+        global $wpdb;
+        $table = $wpdb->prefix . 'ofast_redirects';
+
+        $request_uri  = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '/';
         $request_path = parse_url($request_uri, PHP_URL_PATH);
 
-        // PERFORMANCE: Get redirects from cache (5 minute TTL)
+        // Ensure last_accessed and priority columns exist.
+        // Uses a static variable internally — DB work only happens once ever per request.
+        $priority_supported = $this->ensure_redirects_schema();
+
         $redirects = get_transient('ofast_redirects_cache');
-        $priority_supported = $this->ensure_redirects_priority_schema();
 
-        if ($redirects === false) {
-            global $wpdb;
-            $table = $wpdb->prefix . 'ofast_redirects';
-            $order_by = $priority_supported ? 'priority ASC, id ASC' : 'id ASC';
+        // !is_array() catches false (cache miss), null (DB error on first load),
+        // and any other garbage that should not be treated as a valid empty cache.
+        if (!is_array($redirects)) {
+            $order_by  = $priority_supported ? 'priority ASC, id ASC' : 'id ASC';
             $redirects = $wpdb->get_results("SELECT * FROM $table WHERE active = 1 ORDER BY {$order_by}");
-
-            // Cache for 5 minutes (300 seconds)
-            set_transient('ofast_redirects_cache', $redirects, 300);
+            if (!is_array($redirects)) {
+                $redirects = array(); // DB error — do not cache broken result
+            } else {
+                set_transient('ofast_redirects_cache', $redirects, 300);
+            }
         }
 
-        // Early exit if no redirects
         if (empty($redirects)) {
             return;
         }
 
         foreach ($redirects as $redirect) {
             $matched = false;
-            $target = '';
+            $target  = '';
 
             if ($redirect->is_regex) {
-                // Regex matching
                 $pattern = $this->sanitize_regex($redirect->source_url);
                 if ($pattern === false) {
                     continue;
                 }
-
                 $matches = array();
                 if ($this->regex_match($pattern, $request_path, $matches)) {
                     $matched = true;
-                    // Replace backreferences in target
-                    $target = $redirect->target_url;
+                    $target  = $redirect->target_url;
                     for ($i = 1; $i < count($matches); $i++) {
                         $target = str_replace('$' . $i, $matches[$i], $target);
                     }
                 }
             } else {
-                // Exact matching (case-insensitive, normalize trailing slashes)
-                $source_normalized = rtrim(strtolower($redirect->source_url), '/');
+                $source_normalized  = rtrim(strtolower($redirect->source_url), '/');
                 $request_normalized = rtrim(strtolower($request_path), '/');
 
-                // Handle root path special case
                 if ($source_normalized === '') {
                     $source_normalized = '/';
                 }
@@ -281,7 +254,7 @@ class Ofast_X_Redirects
 
                 if ($request_normalized === $source_normalized) {
                     $matched = true;
-                    $target = $redirect->target_url;
+                    $target  = $redirect->target_url;
                 }
             }
 
@@ -290,16 +263,15 @@ class Ofast_X_Redirects
                 if (is_wp_error($target_validation)) {
                     continue;
                 }
+
                 $type = $this->normalize_redirect_type($redirect->type);
 
-                // Update hit counter atomically.
                 $wpdb->query($wpdb->prepare(
                     "UPDATE {$table} SET hits = hits + 1, last_accessed = %s WHERE id = %d",
                     current_time('mysql'),
                     intval($redirect->id)
                 ));
 
-                // Perform redirect
                 if ($this->is_external_url($target)) {
                     wp_redirect($target, intval($type));
                 } else {
@@ -311,12 +283,16 @@ class Ofast_X_Redirects
     }
 
     /**
-     * Clear redirects cache when redirects are modified
+     * Clear the redirects transient cache
      */
     private function clear_redirects_cache()
     {
         delete_transient('ofast_redirects_cache');
     }
+
+    // =========================================================================
+    // AJAX HANDLERS
+    // =========================================================================
 
     /**
      * AJAX: Toggle redirect active/inactive
@@ -329,7 +305,7 @@ class Ofast_X_Redirects
             wp_send_json_error('Unauthorized');
         }
 
-        $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        $id      = isset($_POST['id']) ? intval($_POST['id']) : 0;
         $current = isset($_POST['active']) ? intval($_POST['active']) : 0;
 
         if ($id <= 0) {
@@ -340,6 +316,7 @@ class Ofast_X_Redirects
         $table = $wpdb->prefix . 'ofast_redirects';
 
         $new_active = $current ? 0 : 1;
+
         if ($new_active === 1) {
             $redirect = $wpdb->get_row($wpdb->prepare(
                 "SELECT id, source_url, target_url, type, is_regex FROM {$table} WHERE id = %d",
@@ -370,8 +347,6 @@ class Ofast_X_Redirects
         }
 
         $wpdb->update($table, array('active' => $new_active), array('id' => $id));
-
-        // Clear cache when redirect is toggled
         $this->clear_redirects_cache();
 
         wp_send_json_success(array('active' => $new_active));
@@ -398,15 +373,13 @@ class Ofast_X_Redirects
         $table = $wpdb->prefix . 'ofast_redirects';
 
         $wpdb->delete($table, array('id' => $id));
-
-        // Clear cache when redirect is deleted
         $this->clear_redirects_cache();
 
         wp_send_json_success();
     }
 
     /**
-     * AJAX: Import from other plugins
+     * AJAX: Import from other redirect plugins
      */
     public function ajax_import_from_plugin()
     {
@@ -416,7 +389,7 @@ class Ofast_X_Redirects
             wp_send_json_error('Unauthorized');
         }
 
-        $plugin = isset($_POST['plugin']) ? sanitize_text_field(wp_unslash($_POST['plugin'])) : '';
+        $plugin   = isset($_POST['plugin']) ? sanitize_text_field(wp_unslash($_POST['plugin'])) : '';
         $imported = 0;
 
         global $wpdb;
@@ -424,24 +397,14 @@ class Ofast_X_Redirects
 
         switch ($plugin) {
             case 'redirection':
-                // Import from Redirection plugin
                 $source_table = $wpdb->prefix . 'redirection_items';
                 if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $source_table)) === $source_table) {
                     $items = $wpdb->get_results("SELECT url, action_data, regex FROM {$source_table} WHERE action_type = 'url'");
                     foreach ($items as $item) {
-                        $insert_data = $this->prepare_redirect_insert_data(
-                            $item->url,
-                            $item->action_data,
-                            '301',
-                            $item->regex ? 1 : 0,
-                            0,
-                            10
-                        );
+                        $insert_data = $this->prepare_redirect_insert_data($item->url, $item->action_data, '301', $item->regex ? 1 : 0, 0, 10);
                         if (is_wp_error($insert_data)) {
                             continue;
                         }
-
-                        // Check if already exists
                         $exists = $wpdb->get_var($wpdb->prepare("SELECT id FROM $table WHERE source_url = %s", $insert_data['source_url']));
                         if (!$exists) {
                             $wpdb->insert($table, $insert_data);
@@ -452,30 +415,16 @@ class Ofast_X_Redirects
                 break;
 
             case 'safe-redirect-manager':
-                // Import from Safe Redirect Manager
-                $redirects = get_posts(array(
-                    'post_type' => 'redirect_rule',
-                    'posts_per_page' => -1,
-                    'post_status' => 'publish'
-                ));
+                $redirects = get_posts(array('post_type' => 'redirect_rule', 'posts_per_page' => -1, 'post_status' => 'publish'));
                 foreach ($redirects as $redirect) {
                     $source = get_post_meta($redirect->ID, '_redirect_rule_from', true);
                     $target = get_post_meta($redirect->ID, '_redirect_rule_to', true);
                     $status = get_post_meta($redirect->ID, '_redirect_rule_status_code', true);
-
                     if ($source && $target) {
-                        $insert_data = $this->prepare_redirect_insert_data(
-                            $source,
-                            $target,
-                            $status ?: '301',
-                            0,
-                            0,
-                            10
-                        );
+                        $insert_data = $this->prepare_redirect_insert_data($source, $target, $status ?: '301', 0, 0, 10);
                         if (is_wp_error($insert_data)) {
                             continue;
                         }
-
                         $exists = $wpdb->get_var($wpdb->prepare("SELECT id FROM $table WHERE source_url = %s", $insert_data['source_url']));
                         if (!$exists) {
                             $wpdb->insert($table, $insert_data);
@@ -486,22 +435,13 @@ class Ofast_X_Redirects
                 break;
 
             case 'simple-301':
-                // Import from Simple 301 Redirects
                 $redirects = get_option('301_redirects', array());
                 if (is_array($redirects)) {
                     foreach ($redirects as $source => $target) {
-                        $insert_data = $this->prepare_redirect_insert_data(
-                            $source,
-                            $target,
-                            '301',
-                            0,
-                            0,
-                            10
-                        );
+                        $insert_data = $this->prepare_redirect_insert_data($source, $target, '301', 0, 0, 10);
                         if (is_wp_error($insert_data)) {
                             continue;
                         }
-
                         $exists = $wpdb->get_var($wpdb->prepare("SELECT id FROM $table WHERE source_url = %s", $insert_data['source_url']));
                         if (!$exists) {
                             $wpdb->insert($table, $insert_data);
@@ -512,9 +452,8 @@ class Ofast_X_Redirects
                 break;
 
             case 'json':
-                // Import from JSON file
                 $json_data = isset($_POST['json_data']) ? wp_unslash($_POST['json_data']) : '';
-                if (strlen($json_data) > 500000) { // 500KB limit
+                if (strlen($json_data) > 500000) {
                     wp_send_json_error('Import file too large.');
                 }
                 $data = json_decode($json_data, true);
@@ -531,7 +470,6 @@ class Ofast_X_Redirects
                         if (is_wp_error($insert_data)) {
                             continue;
                         }
-
                         $exists = $wpdb->get_var($wpdb->prepare("SELECT id FROM $table WHERE source_url = %s", $insert_data['source_url']));
                         if (!$exists) {
                             $wpdb->insert($table, $insert_data);
@@ -542,17 +480,18 @@ class Ofast_X_Redirects
                 break;
         }
 
-        // Clear cache when redirects are imported
         $this->clear_redirects_cache();
 
         wp_send_json_success(array(
             'imported' => $imported,
-            'message' => $imported > 0 ? "{$imported} redirect(s) imported as INACTIVE. Review and activate when ready." : 'No new redirects found to import.'
+            'message'  => $imported > 0
+                ? "{$imported} redirect(s) imported as INACTIVE. Review and activate when ready."
+                : 'No new redirects found to import.',
         ));
     }
 
     /**
-     * AJAX: Export redirects
+     * AJAX: Export redirects as JSON
      */
     public function ajax_export_redirects()
     {
@@ -563,19 +502,17 @@ class Ofast_X_Redirects
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'ofast_redirects';
+        $table             = $wpdb->prefix . 'ofast_redirects';
         $priority_supported = $this->ensure_redirects_priority_schema();
-        $select_fields = $priority_supported
+        $select_fields     = $priority_supported
             ? 'source_url, target_url, type, is_regex, active, priority'
             : 'source_url, target_url, type, is_regex, active';
 
-        // Check for selected IDs
-        $selected_ids = isset($_POST['ids']) ? array_map('intval', (array)$_POST['ids']) : array();
-        $selected_ids = array_filter($selected_ids);
+        $selected_ids = isset($_POST['ids']) ? array_filter(array_map('intval', (array) $_POST['ids'])) : array();
 
         if (!empty($selected_ids)) {
             $placeholders = implode(',', array_fill(0, count($selected_ids), '%d'));
-            $redirects = $wpdb->get_results($wpdb->prepare(
+            $redirects    = $wpdb->get_results($wpdb->prepare(
                 "SELECT {$select_fields} FROM $table WHERE id IN ($placeholders)",
                 $selected_ids
             ));
@@ -583,53 +520,43 @@ class Ofast_X_Redirects
             $redirects = $wpdb->get_results("SELECT {$select_fields} FROM $table");
         }
 
-        $export_data = array(
-            'plugin' => 'ofast-x',
-            'version' => '1.0',
+        wp_send_json_success(array(
+            'plugin'      => 'ofast-x',
+            'version'     => '1.0',
             'exported_at' => current_time('mysql'),
-            'site_url' => get_site_url(),
-            'redirects' => $redirects
-        );
-
-        wp_send_json_success($export_data);
+            'site_url'    => get_site_url(),
+            'redirects'   => $redirects,
+        ));
     }
 
+    // =========================================================================
+    // ADMIN PAGE RENDER
+    // =========================================================================
+
     /**
-     * Detect available import sources
+     * Detect which redirect plugins have importable data
      */
     private function detect_import_sources()
     {
         global $wpdb;
         $sources = array();
 
-        // Check Redirection plugin
         $redirection_table = $wpdb->prefix . 'redirection_items';
         if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $redirection_table)) === $redirection_table) {
             $count = $wpdb->get_var("SELECT COUNT(*) FROM {$redirection_table} WHERE action_type = 'url'");
             if ($count > 0) {
-                $sources['redirection'] = array(
-                    'name' => 'Redirection Plugin',
-                    'count' => $count
-                );
+                $sources['redirection'] = array('name' => 'Redirection Plugin', 'count' => $count);
             }
         }
 
-        // Check Safe Redirect Manager
         $srm_count = wp_count_posts('redirect_rule');
         if (isset($srm_count->publish) && $srm_count->publish > 0) {
-            $sources['safe-redirect-manager'] = array(
-                'name' => 'Safe Redirect Manager',
-                'count' => $srm_count->publish
-            );
+            $sources['safe-redirect-manager'] = array('name' => 'Safe Redirect Manager', 'count' => $srm_count->publish);
         }
 
-        // Check Simple 301 Redirects
         $simple_301 = get_option('301_redirects', array());
         if (!empty($simple_301)) {
-            $sources['simple-301'] = array(
-                'name' => 'Simple 301 Redirects',
-                'count' => count($simple_301)
-            );
+            $sources['simple-301'] = array('name' => 'Simple 301 Redirects', 'count' => count($simple_301));
         }
 
         return $sources;
@@ -645,27 +572,22 @@ class Ofast_X_Redirects
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'ofast_redirects';
+        $table             = $wpdb->prefix . 'ofast_redirects';
         $priority_supported = $this->ensure_redirects_priority_schema();
 
-        // Check for edit mode
-        $editing = isset($_GET['edit']) ? intval($_GET['edit']) : 0;
+        $editing      = isset($_GET['edit']) ? intval($_GET['edit']) : 0;
         $edit_redirect = null;
         if ($editing) {
             $edit_redirect = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $editing));
         }
 
-        // Get all redirects
-        $order_by = $priority_supported ? 'priority ASC, id DESC' : 'id DESC';
-        $redirects = $wpdb->get_results("SELECT * FROM $table ORDER BY {$order_by}");
-
-        // Detect import sources
+        $order_by      = $priority_supported ? 'priority ASC, id DESC' : 'id DESC';
+        $redirects     = $wpdb->get_results("SELECT * FROM $table ORDER BY {$order_by}");
         $import_sources = $this->detect_import_sources();
-        $regex_strict = get_option('ofast_redirects_regex_strict', 0);
-        $regex_rule_help = __('Use "Use Regular Expression" to save this redirect as a regex rule. The regex badge in the table only appears for redirects saved with that option.', 'ofast-x');
-        $regex_strict_help = __('This is a global setting. It stays on until you turn it off, and it only tightens regex validation. It does not convert a redirect into a regex rule by itself.', 'ofast-x');
+        $regex_help    = __('Use "Use Regular Expression" to save this redirect as a regex rule. The regex badge in the table only appears for redirects saved with that option.', 'ofast-x');
 
         settings_errors('ofast_redirects');
+
         if (class_exists('Ofast_X_Dropdown')) {
             echo Ofast_X_Dropdown::render_assets();
         }
@@ -684,13 +606,15 @@ class Ofast_X_Redirects
 
             <!-- Columns Container -->
             <div class="ofast-redirects-columns">
+
                 <!-- Left Column: Add/Edit -->
                 <div class="ofast-column-left">
                     <div class="ofast-card">
-                        <h2 style="margin-top: 0; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee;"><?php echo $editing ? esc_html__('Edit Redirect', 'ofast-x') : esc_html__('Add New Redirect', 'ofast-x'); ?></h2>
+                        <h2 style="margin-top: 0; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+                            <?php echo $editing ? esc_html__('Edit Redirect', 'ofast-x') : esc_html__('Add New Redirect', 'ofast-x'); ?>
+                        </h2>
                         <form method="post" class="ofast-redirect-form">
                             <?php wp_nonce_field('ofast_redirect_save', '_wpnonce'); ?>
-
                             <?php if ($editing): ?>
                                 <input type="hidden" name="redirect_id" value="<?php echo esc_attr($editing); ?>">
                             <?php endif; ?>
@@ -729,8 +653,8 @@ class Ofast_X_Redirects
                                         <th><label for="priority"><?php esc_html_e('Priority', 'ofast-x'); ?></label></th>
                                         <td>
                                             <?php $priority_value = ($edit_redirect && isset($edit_redirect->priority)) ? intval($edit_redirect->priority) : 10; ?>
-                                            <input type="number" name="priority" id="priority" class="small-text" min="1" max="9999" step="1"
-                                                value="<?php echo esc_attr($priority_value); ?>">
+                                            <input type="number" name="priority" id="priority" class="small-text"
+                                                min="1" max="9999" step="1" value="<?php echo esc_attr($priority_value); ?>">
                                             <p class="description"><?php esc_html_e('Lower number runs first when multiple redirects could match.', 'ofast-x'); ?></p>
                                         </td>
                                     </tr>
@@ -741,22 +665,13 @@ class Ofast_X_Redirects
                                         <label class="ofast-help-label" style="display: block; margin-bottom: 10px;">
                                             <input type="checkbox" name="is_regex" value="1" <?php checked($edit_redirect ? $edit_redirect->is_regex : false); ?>>
                                             <?php esc_html_e('Use Regular Expression', 'ofast-x'); ?>
-                                            <span class="ofast-help-tooltip" tabindex="0" data-tooltip="<?php echo esc_attr($regex_rule_help); ?>" aria-label="<?php echo esc_attr($regex_rule_help); ?>">?</span>
+                                            <span class="ofast-help-tooltip" tabindex="0"
+                                                data-tooltip="<?php echo esc_attr($regex_help); ?>"
+                                                aria-label="<?php echo esc_attr($regex_help); ?>">?</span>
                                         </label>
                                         <label style="display: block;">
                                             <input type="checkbox" name="active" value="1" <?php checked($edit_redirect ? $edit_redirect->active : false); ?>>
                                             <?php esc_html_e('Activate immediately', 'ofast-x'); ?>
-                                        </label>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th><?php esc_html_e('Regex Security', 'ofast-x'); ?></th>
-                                    <td>
-                                        <label class="ofast-toggle">
-                                            <input type="checkbox" name="redirects_regex_strict" value="1" <?php checked($regex_strict, 1); ?>>
-                                            <span class="ofast-toggle-slider"></span>
-                                            <span class="ofast-toggle-text"><?php esc_html_e('Global strict regex validation (advanced)', 'ofast-x'); ?></span>
-                                            <span class="ofast-help-tooltip" tabindex="0" data-tooltip="<?php echo esc_attr($regex_strict_help); ?>" aria-label="<?php echo esc_attr($regex_strict_help); ?>">?</span>
                                         </label>
                                     </td>
                                 </tr>
@@ -776,7 +691,6 @@ class Ofast_X_Redirects
 
                 <!-- Right Column: Import/Export -->
                 <div class="ofast-column-right">
-                    <!-- Import Section -->
                     <?php if (!empty($import_sources)): ?>
                         <div class="ofast-card" style="margin-bottom: 20px;">
                             <h3 style="margin-top: 0;"><?php esc_html_e('Import from Plugins', 'ofast-x'); ?></h3>
@@ -794,17 +708,16 @@ class Ofast_X_Redirects
                         </div>
                     <?php endif; ?>
 
-                    <!-- Import from JSON -->
                     <div class="ofast-card">
                         <h3 style="margin-top: 0; margin-bottom: 15px;"><?php esc_html_e('Import/Export', 'ofast-x'); ?></h3>
-                        
+
                         <div style="margin-bottom: 20px;">
                             <label style="display: block; margin-bottom: 8px; font-weight: 600;"><?php esc_html_e('Import from JSON', 'ofast-x'); ?></label>
                             <div style="display: flex; gap: 10px;">
                                 <input type="file" id="import-json-file" accept=".json" style="flex: 1;">
                             </div>
                         </div>
-                        
+
                         <div style="border-top: 1px solid #eee; padding-top: 20px;">
                             <label style="display: block; margin-bottom: 8px; font-weight: 600;"><?php esc_html_e('Export Redirects', 'ofast-x'); ?></label>
                             <button type="button" id="export-redirects" class="button"><?php esc_html_e('Export All to JSON', 'ofast-x'); ?></button>
@@ -818,10 +731,11 @@ class Ofast_X_Redirects
                 <div class="ofast-card" style="margin-top: 20px;">
                     <h3 style="margin-top: 0;">
                         <?php esc_html_e('All Redirects', 'ofast-x'); ?>
-                        <span style="font-weight: normal; color: #666; font-size: 14px;">(<?php echo esc_html(count($redirects)); ?> <?php esc_html_e('total', 'ofast-x'); ?>)</span>
+                        <span style="font-weight: normal; color: #666; font-size: 14px;">
+                            (<?php echo esc_html(count($redirects)); ?> <?php esc_html_e('total', 'ofast-x'); ?>)
+                        </span>
                     </h3>
 
-                    <!-- Scrollable Table Container -->
                     <div style="overflow-x: auto; max-width: 100%;">
                         <table class="wp-list-table widefat fixed striped" style="min-width: 900px;">
                             <thead>
@@ -860,14 +774,21 @@ class Ofast_X_Redirects
                                         <td style="font-size: 12px;"><?php echo number_format($redirect->hits); ?></td>
                                         <td>
                                             <button class="button button-small ofast-redirect-toggle <?php echo $redirect->active ? 'button-primary' : ''; ?>"
-                                                data-id="<?php echo esc_attr($redirect->id); ?>" data-active="<?php echo esc_attr($redirect->active); ?>"
+                                                data-id="<?php echo esc_attr($redirect->id); ?>"
+                                                data-active="<?php echo esc_attr($redirect->active); ?>"
                                                 style="min-width: 50px;">
                                                 <?php echo $redirect->active ? esc_html__('ON', 'ofast-x') : esc_html__('OFF', 'ofast-x'); ?>
                                             </button>
                                         </td>
                                         <td>
-                                            <a href="?page=ofast-redirects&edit=<?php echo esc_attr($redirect->id); ?>" class="button button-small"><?php esc_html_e('Edit', 'ofast-x'); ?></a>
-                                            <button class="button button-small ofast-redirect-delete" data-id="<?php echo esc_attr($redirect->id); ?>" style="color: #dc3545;"><?php esc_html_e('Delete', 'ofast-x'); ?></button>
+                                            <a href="?page=ofast-redirects&edit=<?php echo esc_attr($redirect->id); ?>" class="button button-small">
+                                                <?php esc_html_e('Edit', 'ofast-x'); ?>
+                                            </a>
+                                            <button class="button button-small ofast-redirect-delete"
+                                                data-id="<?php echo esc_attr($redirect->id); ?>"
+                                                style="color: #dc3545;">
+                                                <?php esc_html_e('Delete', 'ofast-x'); ?>
+                                            </button>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -884,8 +805,12 @@ class Ofast_X_Redirects
 <?php
     }
 
+    // =========================================================================
+    // PRIVATE HELPERS
+    // =========================================================================
+
     /**
-     * Normalize redirect target URL while preserving relative paths.
+     * Normalize redirect target URL, preserving relative paths.
      */
     private function normalize_target_url($raw_target)
     {
@@ -893,16 +818,14 @@ class Ofast_X_Redirects
         if ($raw_target === '') {
             return '';
         }
-
         if (strpos($raw_target, '/') === 0) {
             return sanitize_text_field($raw_target);
         }
-
         return esc_url_raw($raw_target);
     }
 
     /**
-     * Normalize redirect status type to supported values.
+     * Normalize redirect type to one of the three supported values.
      */
     private function normalize_redirect_type($type)
     {
@@ -911,16 +834,16 @@ class Ofast_X_Redirects
     }
 
     /**
-     * Build a sanitized redirect record array for insert operations.
+     * Build a sanitized redirect record for insert operations.
      */
     private function prepare_redirect_insert_data($source, $target, $type = '301', $is_regex = 0, $active = 0, $priority = 10)
     {
         $source_url = sanitize_text_field((string) $source);
         $target_url = $this->normalize_target_url($target);
-        $type = $this->normalize_redirect_type($type);
-        $is_regex = !empty($is_regex) ? 1 : 0;
-        $active = !empty($active) ? 1 : 0;
-        $priority = max(1, min(9999, intval($priority)));
+        $type       = $this->normalize_redirect_type($type);
+        $is_regex   = !empty($is_regex) ? 1 : 0;
+        $active     = !empty($active) ? 1 : 0;
+        $priority   = max(1, min(9999, intval($priority)));
 
         if ($source_url === '') {
             return new WP_Error('invalid_source', __('Source URL is required.', 'ofast-x'));
@@ -938,7 +861,6 @@ class Ofast_X_Redirects
             if (strpos($source_url, '/') !== 0) {
                 $source_url = '/' . ltrim($source_url, '/');
             }
-
             $source_path = parse_url($source_url, PHP_URL_PATH);
             $target_path = parse_url($target_url, PHP_URL_PATH);
             if (!empty($source_path) && !empty($target_path) && $source_path === $target_path) {
@@ -954,12 +876,12 @@ class Ofast_X_Redirects
         $insert_data = array(
             'source_url' => $source_url,
             'target_url' => $target_url,
-            'type' => $type,
-            'is_regex' => $is_regex,
-            'active' => $active,
-            'hits' => 0,
+            'type'       => $type,
+            'is_regex'   => $is_regex,
+            'active'     => $active,
+            'hits'       => 0,
             'created_at' => current_time('mysql'),
-            'created_by' => get_current_user_id()
+            'created_by' => get_current_user_id(),
         );
 
         if ($this->ensure_redirects_priority_schema()) {
@@ -970,12 +892,43 @@ class Ofast_X_Redirects
     }
 
     /**
-     * Check regex validity with comprehensive ReDoS protection.
-     * 
-     * SECURITY: Enhanced validation includes:
-     * - Syntax validation with timeout
-     * - Runtime limit testing
-     * - Pattern complexity analysis
+     * Sanitize regex: length cap, null bytes, classic nested-quantifier ReDoS.
+     */
+    private function sanitize_regex($pattern)
+    {
+        $pattern = trim((string) $pattern);
+
+        if ($pattern === '' || strlen($pattern) > 300) {
+            return false;
+        }
+
+        // Block null bytes and control characters
+        if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $pattern)) {
+            return false;
+        }
+
+        // Block the four classic nested-quantifier ReDoS patterns and PHP recursive refs
+        $dangerous = array(
+            '/\(\.\*\)\*/',             // (.*)*
+            '/\(\.\+\)\+/',             // (.+)+
+            '/\(\.\*\)\+/',             // (.*)+
+            '/\(\.\+\)\*/',             // (.+)*
+            '/\(\?R\)|\(\?[0-9]+\)/',  // (?R) or (?1)
+        );
+        foreach ($dangerous as $d) {
+            if (preg_match($d, $pattern)) {
+                return false;
+            }
+        }
+
+        // Collapse redundant quantifier runs (e.g. ** → *)
+        $pattern = preg_replace('/(\+|\*|\?)\1+/', '$1', $pattern);
+
+        return $pattern;
+    }
+
+    /**
+     * Validate regex syntax by attempting a compile + empty-string match.
      */
     private function is_valid_regex($pattern)
     {
@@ -984,149 +937,44 @@ class Ofast_X_Redirects
             return false;
         }
 
-        // Store original PCRE settings for testing
-        $original_backtrack_limit = ini_get('pcre.backtrack_limit');
-        $original_recursion_limit = ini_get('pcre.recursion_limit');
-        
-        // Apply strict limits for validation
-        @ini_set('pcre.backtrack_limit', '1000');  // Very low for testing
-        @ini_set('pcre.recursion_limit', '100');
-        
-        $is_valid = false;
-        $start_time = microtime(true);
-
         set_error_handler('__return_false');
-        
-        try {
-            // Test pattern compilation and basic matching
-            $result = preg_match($wrapped, '');
-            $pcre_error = preg_last_error();
-            
-            // Pattern is valid if no PCRE errors occurred
-            $is_valid = ($result !== false && $pcre_error === PREG_NO_ERROR);
-            
-            // Additional test with various inputs to catch ReDoS early
-            if ($is_valid) {
-                $test_inputs = array(
-                    '',                           // Empty string
-                    'a',                         // Single char
-                    'aaaaa',                     // Repeated chars
-                    'abcdefghijklmnop',          // Normal string
-                    str_repeat('a', 100),        // Long repeated (ReDoS trigger)
-                    'a' . str_repeat('b', 50) . 'c', // Pattern that might not match
-                );
-                
-                foreach ($test_inputs as $test_input) {
-                    $test_result = preg_match($wrapped, $test_input);
-                    $test_error = preg_last_error();
-                    
-                    // If any test triggers PCRE limits, pattern is dangerous
-                    if ($test_error === PREG_BACKTRACK_LIMIT_ERROR || 
-                        $test_error === PREG_RECURSION_LIMIT_ERROR) {
-                        $is_valid = false;
-                        break;
-                    }
-                    
-                    // Check execution time for each test
-                    $current_time = microtime(true);
-                    if (($current_time - $start_time) > 0.05) { // 50ms total limit
-                        $is_valid = false;
-                        break;
-                    }
-                }
-            }
-            
-        } catch (Exception $e) {
-            $is_valid = false;
-        } finally {
-            restore_error_handler();
-            
-            // Restore original PCRE settings
-            @ini_set('pcre.backtrack_limit', $original_backtrack_limit);
-            @ini_set('pcre.recursion_limit', $original_recursion_limit);
-        }
+        $result = @preg_match($wrapped, '');
+        restore_error_handler();
 
-        return $is_valid;
+        return $result !== false && preg_last_error() === PREG_NO_ERROR;
     }
 
     /**
-     * Run regex match safely with ReDoS protection; invalid patterns return false.
-     * 
-     * SECURITY: Implements runtime protection against ReDoS attacks:
-     * - PCRE backtrack/recursion limits
-     * - Execution time monitoring  
-     * - Input length validation
-     * - Error handling and logging
+     * Execute a regex match with capped PCRE limits.
      */
     private function regex_match($pattern, $subject, &$matches = array())
     {
         $wrapped = $this->wrap_regex_pattern($pattern);
-        if ($wrapped === false) {
+        if ($wrapped === false || strlen($subject) > 2000) {
             return false;
         }
 
-        // Validate input length to prevent excessive processing
-        if (strlen($subject) > 10000) { // Reasonable limit for URL matching
+        $prev_backtrack = ini_get('pcre.backtrack_limit');
+        $prev_recursion = ini_get('pcre.recursion_limit');
+        @ini_set('pcre.backtrack_limit', '10000');
+        @ini_set('pcre.recursion_limit', '500');
+
+        set_error_handler('__return_false');
+        $result = @preg_match($wrapped, $subject, $matches);
+        restore_error_handler();
+
+        @ini_set('pcre.backtrack_limit', $prev_backtrack);
+        @ini_set('pcre.recursion_limit', $prev_recursion);
+
+        if (preg_last_error() !== PREG_NO_ERROR) {
             return false;
-        }
-
-        // Store original PCRE settings
-        $original_backtrack_limit = ini_get('pcre.backtrack_limit');
-        $original_recursion_limit = ini_get('pcre.recursion_limit');
-        
-        // Apply strict runtime limits
-        @ini_set('pcre.backtrack_limit', '10000');   // Lower limit for redirects
-        @ini_set('pcre.recursion_limit', '500');     // Prevent deep recursion
-        
-        $start_time = microtime(true);
-        $result = false;
-        $error = null;
-
-        // Set error handler to catch PCRE errors
-        set_error_handler(function($errno, $errstr) use (&$error) {
-            $error = $errstr;
-            return true;
-        });
-
-        try {
-            // Execute regex with monitoring
-            $result = preg_match($wrapped, $subject, $matches);
-            
-            // Check for PCRE errors
-            $pcre_error = preg_last_error();
-            if ($pcre_error !== PREG_NO_ERROR) {
-                $result = false;
-                if ($pcre_error === PREG_BACKTRACK_LIMIT_ERROR) {
-                    error_log("SECURITY: ReDoS backtrack limit hit for pattern: " . substr($pattern, 0, 100));
-                } elseif ($pcre_error === PREG_RECURSION_LIMIT_ERROR) {
-                    error_log("SECURITY: ReDoS recursion limit hit for pattern: " . substr($pattern, 0, 100));
-                }
-            }
-            
-        } catch (Exception $e) {
-            $result = false;
-            error_log("SECURITY: Regex execution error: " . $e->getMessage());
-        } finally {
-            restore_error_handler();
-            
-            // Restore original PCRE settings
-            @ini_set('pcre.backtrack_limit', $original_backtrack_limit);
-            @ini_set('pcre.recursion_limit', $original_recursion_limit);
-        }
-
-        $execution_time = microtime(true) - $start_time;
-        
-        // Monitor for suspicious execution times (potential ReDoS)
-        if ($execution_time > 0.1) { // 100ms threshold for redirect matching
-            error_log("SECURITY: Suspicious regex execution time: {$execution_time}s for pattern: " . substr($pattern, 0, 100));
-            return false; // Reject slow patterns
         }
 
         return $result === 1;
     }
 
     /**
-     * Wrap stored regex using a controlled delimiter.
+     * Wrap a stored regex with the ~ delimiter, escaping any literal ~ in the pattern.
      */
     private function wrap_regex_pattern($pattern)
     {
@@ -1138,60 +986,86 @@ class Ofast_X_Redirects
     }
 
     /**
-     * Ensure priority column exists for redirects table.
+     * Ensure the priority column exists, adding it via ALTER TABLE if not.
+     * Result is cached in an autoloaded WP option and a static variable.
      */
-    private function ensure_redirects_priority_schema()
+    /**
+     * Ensure priority and last_accessed columns exist, adding them via ALTER TABLE if missing.
+     * Returns true if the priority column exists (used for ORDER BY in process_redirects).
+     * Replaces ensure_redirects_priority_schema() — also covers last_accessed so the
+     * hit-counter UPDATE in process_redirects() never fails with a "unknown column" DB error.
+     * Result is cached in a static variable — DB work only happens once per process.
+     */
+    private function ensure_redirects_schema()
     {
-        static $checked = false;
+        static $checked   = false;
         static $supported = false;
 
         if ($checked) {
             return $supported;
         }
 
-        // Fast-path cache (autoloaded option), avoids schema queries on normal requests.
         $cached = get_option('ofast_redirects_priority_schema', null);
-        if ($cached === '1') {
-            $checked = true;
+
+        // '2' = both priority AND last_accessed confirmed present.
+        if ($cached === '2') {
+            $checked   = true;
             $supported = true;
             return true;
         }
-        if ($cached === '0' && !is_admin()) {
-            $checked = true;
-            $supported = false;
-            return false;
-        }
+
+        // '1' = priority only (old format before this fix). Re-run to add last_accessed.
+        // '0' on frontend = priority missing, but we still need to check last_accessed.
+        // null = never checked before.
 
         global $wpdb;
-        $table = $wpdb->prefix . 'ofast_redirects';
+        $table        = $wpdb->prefix . 'ofast_redirects';
         $table_exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table));
 
         if (!$table_exists) {
-            $checked = true;
+            $checked   = true;
             $supported = false;
             update_option('ofast_redirects_priority_schema', '0', false);
             return false;
         }
 
         $columns = $wpdb->get_col("SHOW COLUMNS FROM {$table}", 0);
+
         if (!in_array('priority', $columns, true)) {
-            $wpdb->query("ALTER TABLE {$table} ADD COLUMN priority INT(11) DEFAULT 10 AFTER is_regex");
-            $columns = $wpdb->get_col("SHOW COLUMNS FROM {$table}", 0);
+            $wpdb->query("ALTER TABLE {$table} ADD COLUMN priority INT(11) NOT NULL DEFAULT 10 AFTER is_regex");
         }
 
+        // The critical one: used in the hit-counter UPDATE on every matched redirect.
+        // If it doesn't exist, $wpdb outputs a DB error which sends output before
+        // wp_redirect() can set headers — redirect silently fails.
+        if (!in_array('last_accessed', $columns, true)) {
+            $wpdb->query("ALTER TABLE {$table} ADD COLUMN last_accessed DATETIME NULL DEFAULT NULL AFTER hits");
+        }
+
+        // Re-read columns once after any ALTER TABLE operations.
+        $columns  = $wpdb->get_col("SHOW COLUMNS FROM {$table}", 0);
         $supported = in_array('priority', $columns, true);
-        $checked = true;
-        update_option('ofast_redirects_priority_schema', $supported ? '1' : '0', false);
+        $checked   = true;
+
+        // Store '2' to signal both columns are present so we skip all of this next time.
+        update_option('ofast_redirects_priority_schema', $supported ? '2' : '0', false);
         return $supported;
     }
 
     /**
-     * SECURITY: Validate redirect target URL
-     * Prevents open redirect attacks
+     * Backwards-compat alias — other methods in this file call ensure_redirects_priority_schema().
+     * Routes to the new consolidated method.
+     */
+    private function ensure_redirects_priority_schema()
+    {
+        return $this->ensure_redirects_schema();
+    }
+
+    /**
+     * SECURITY: Block dangerous protocols; allow http/https and relative paths.
      */
     private function validate_redirect_target($url)
     {
-        // Block dangerous protocols (javascript:, data:, vbscript:)
         $dangerous_protocols = array('javascript:', 'data:', 'vbscript:', 'file:');
         foreach ($dangerous_protocols as $protocol) {
             if (stripos($url, $protocol) === 0) {
@@ -1199,46 +1073,20 @@ class Ofast_X_Redirects
             }
         }
 
-        // Parse the URL
         $parsed = parse_url($url);
         if ($parsed === false) {
             return new WP_Error('invalid_url', __('Invalid target URL format.', 'ofast-x'));
         }
 
-        // Allow only HTTP/HTTPS schemes for absolute URLs.
         if (!empty($parsed['scheme']) && !in_array(strtolower($parsed['scheme']), array('http', 'https'), true)) {
             return new WP_Error('invalid_scheme', __('Only http and https URLs are allowed.', 'ofast-x'));
         }
 
-        // If no host, it's a relative URL (internal) - allow it
-        if (empty($parsed['host'])) {
-            return true;
-        }
-
-        // Get current site host
-        $site_host = parse_url(home_url(), PHP_URL_HOST);
-
-        // If same host as current site - allow it
-        if (strtolower($parsed['host']) === strtolower($site_host)) {
-            return true;
-        }
-
-        // If www variant of same host - allow it
-        if (
-            strtolower($parsed['host']) === 'www.' . strtolower($site_host) ||
-            'www.' . strtolower($parsed['host']) === strtolower($site_host)
-        ) {
-            return true;
-        }
-
-        // External URL - allow but log it for awareness
-        // External redirects are valid use cases (e.g., affiliate links, partner sites)
-        // We just ensure admin is aware by storing this info
         return true;
     }
 
     /**
-     * SECURITY: Check if URL is external
+     * Check whether a URL points to an external host.
      */
     private function is_external_url($url)
     {
@@ -1248,276 +1096,5 @@ class Ofast_X_Redirects
         }
         $site_host = parse_url(home_url(), PHP_URL_HOST);
         return strtolower($parsed['host']) !== strtolower($site_host);
-    }
-
-    /**
-     * SECURITY: Comprehensive regex pattern sanitization to prevent ReDoS attacks (CWE-1333)
-     * 
-     * This function implements defense-in-depth against Regular Expression Denial of Service:
-     * 1. Static analysis to detect dangerous patterns
-     * 2. Complexity scoring to limit resource usage
-     * 3. Whitelist approach for safe constructs
-     * 4. Length and structural limits
-     */
-    private function sanitize_regex($pattern)
-    {
-        $pattern = trim((string) $pattern);
-        if ($pattern === '') {
-            return false;
-        }
-
-        $strict = $this->is_strict_regex_mode();
-
-        // 1. BASIC CONSTRAINTS
-        // SECURITY: Length check must run first — it bounds backtracking in the
-        // pattern detection loop below. Do not move this check lower.
-        $max_length = $strict ? 200 : 300;
-        if (strlen($pattern) > $max_length) {
-            return false;
-        }
-
-        // Block null bytes and control characters that could interfere with validation
-        if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $pattern)) {
-            return false;
-        }
-
-        // 2. CRITICAL REDOS PATTERNS - Block immediately
-        $dangerous_patterns = array(
-            // Classic nested quantifiers
-            '/\(\.\*\)\*/',                    // (.*)* 
-            '/\(\.\+\)\+/',                    // (.+)+
-            '/\(\.\*\)\+/',                    // (.*)+
-            '/\(\.\+\)\*/',                    // (.+)*
-            '/\([^)]*+\+[^)]*+\)\+/',           // (x+y)+
-            '/\([^)]*+\*[^)]*+\)\*/',           // (x*y)*
-            '/\([^)]*+\+[^)]*+\)\*/',           // (x+y)*
-            '/\([^)]*+\*[^)]*+\)\+/',           // (x*y)+
-            
-            // Nested group quantifiers 
-            '/\(\([^)]*+[+*][^)]*+\)[+*]\)/',   // ((x+)+) or ((x*)+)
-            
-            // Character class variants
-            '/\(\[[^\]]*\]\+\)\+/',            // ([...]+)+
-            '/\(\[[^\]]*\]\*\)\*/',            // ([...]*)*
-            '/\(\[[^\]]*\]\+\)\*/',            // ([...]+)*
-            '/\(\[[^\]]*\]\*\)\+/',            // ([...]*)+ 
-            
-            // Word boundary and escape sequences
-            '/\(\\\\[dDwWsS]\+\)\+/',          // (\d+)+, (\w+)+, (\s+)+
-            '/\(\\\\[dDwWsS]\*\)\+/',          // (\d*)+, (\w*)+, (\s*)+
-            '/\(\\\\[dDwWsS]\+\)\*/',          // (\d+)*, (\w+)*, (\s+)*
-            
-            // Overlapping alternations 
-            '/\([^|()]*\|[^|()]*\)[+*].*\1/',  // Basic overlap detection
-            
-            // Dangerous lookaheads/lookbehinds
-            '/\(\?[=!][^)]*[+*]/',             // (?=...*) or (?!...+)
-            '/\(\?<[=!][^)]*[+*]/',            // (?<=...*) or (?<!...+)
-            
-            // Backreference amplification
-            '/\([^)]*+\).*\\\\1[+*]/',         // (group)....\1+
-            
-            // Recursive patterns
-            '/\(\?R\)|\(\?[0-9]+\)/',          // (?R) or (?1) etc
-            
-            // Possessive quantifiers misuse
-            '/[+*]\+[+*]/',                    // *++ or ++* 
-        );
-
-        foreach ($dangerous_patterns as $dangerous) {
-            if (preg_match($dangerous, $pattern)) {
-                return false;
-            }
-        }
-
-        // 3. STRUCTURAL VALIDATION
-        $quantifier_count = preg_match_all('/[^\\\\][+*?]|\{[0-9,]+\}/', $pattern);
-        $max_quantifiers = $strict ? 10 : 20;
-        if ($quantifier_count > $max_quantifiers) { // Too many quantifiers = likely problematic
-            return false;
-        }
-
-        // 4. STRICT MODE: Additional checks (advanced)
-        if ($strict) {
-            $complexity_score = $this->calculate_regex_complexity($pattern);
-            if ($complexity_score > 100) {
-                return false;
-            }
-
-            $max_depth = $this->get_regex_nesting_depth($pattern);
-            if ($max_depth > 4) {
-                return false;
-            }
-
-            if (!$this->validate_alternations($pattern)) {
-                return false;
-            }
-
-            if (!$this->is_whitelisted_regex_pattern($pattern)) {
-                return false;
-            }
-        }
-
-        // 5. FINAL SANITIZATION
-        // Remove redundant quantifier duplications
-        $pattern = preg_replace('/(\+|\*|\?)\1+/', '$1', $pattern);
-        
-        // Normalize common problematic sequences
-        $pattern = preg_replace('/\.\*\+/', '.*', $pattern);  // .*+ -> .*
-        $pattern = preg_replace('/\.\+\*/', '.+', $pattern);  // .+* -> .+
-
-        return $pattern;
-    }
-
-    /**
-     * Check if strict regex mode is enabled.
-     */
-    private function is_strict_regex_mode()
-    {
-        return (bool) get_option('ofast_redirects_regex_strict', 0);
-    }
-
-    /**
-     * Calculate complexity score for regex pattern.
-     */
-    private function calculate_regex_complexity($pattern)
-    {
-        $score = 0;
-        $score += strlen($pattern) * 0.5;
-        $quantifiers = preg_match_all('/[+*?]|\{[0-9,]+\}/', $pattern);
-        $score += $quantifiers * 5;
-        $groups = preg_match_all('/\([^)]*\)/', $pattern);
-        $score += $groups * 3;
-        $alternations = preg_match_all('/\|/', $pattern);
-        $score += $alternations * 8;
-        $nesting_depth = $this->get_regex_nesting_depth($pattern);
-        $score += pow($nesting_depth, 2) * 5;
-        $char_classes = preg_match_all('/\[[^\]]*\]/', $pattern);
-        $score += $char_classes * 2;
-        $assertions = preg_match_all('/\(\?[=!<]/', $pattern);
-        $score += $assertions * 15;
-        $backrefs = preg_match_all('/\\\\[1-9]/', $pattern);
-        $score += $backrefs * 10;
-
-        return (int) $score;
-    }
-
-    /**
-     * Calculate maximum nesting depth of groups in regex.
-     */
-    private function get_regex_nesting_depth($pattern)
-    {
-        $max_depth = 0;
-        $current_depth = 0;
-        $in_char_class = false;
-
-        for ($i = 0; $i < strlen($pattern); $i++) {
-            $char = $pattern[$i];
-            $prev_char = $pattern[$i - 1] ?? '';
-
-            if ($prev_char === '\\') {
-                continue;
-            }
-
-            if ($char === '[' && !$in_char_class) {
-                $in_char_class = true;
-                continue;
-            }
-            if ($char === ']' && $in_char_class) {
-                $in_char_class = false;
-                continue;
-            }
-
-            if ($in_char_class) {
-                continue;
-            }
-
-            if ($char === '(') {
-                $current_depth++;
-                $max_depth = max($max_depth, $current_depth);
-            } elseif ($char === ')') {
-                $current_depth = max(0, $current_depth - 1);
-            }
-        }
-
-        return $max_depth;
-    }
-
-    /**
-     * Validate alternation patterns for overlapping branches.
-     */
-    private function validate_alternations($pattern)
-    {
-        if (preg_match_all('/\(([^()]+\|[^()]+)\)[+*?]/', $pattern, $matches)) {
-            foreach ($matches[1] as $alternation) {
-                $branches = explode('|', $alternation);
-
-                if (count($branches) > 8) {
-                    return false;
-                }
-
-                for ($i = 0; $i < count($branches); $i++) {
-                    for ($j = $i + 1; $j < count($branches); $j++) {
-                        $branch_a = trim($branches[$i]);
-                        $branch_b = trim($branches[$j]);
-
-                        if ($branch_a === $branch_b) {
-                            return false;
-                        }
-
-                        if (strlen($branch_a) > 0 && strlen($branch_b) > 0) {
-                            if (strpos($branch_b, $branch_a) === 0 || strpos($branch_a, $branch_b) === 0) {
-                                return false;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Whitelist validation for strict mode.
-     */
-    private function is_whitelisted_regex_pattern($pattern)
-    {
-        $remaining = $pattern;
-
-        // Safe literals
-        $remaining = preg_replace('/[a-zA-Z0-9\-\/_.]/', '', $remaining);
-
-        // Safe character classes
-        $remaining = preg_replace('/\[[a-zA-Z0-9\-_\/\.]+\]/', '', $remaining);
-
-        // Safe quantifiers
-        $remaining = preg_replace('/[+*?]/', '', $remaining);
-        $remaining = preg_replace('/\{[0-9]+,?[0-9]*\}/', '', $remaining);
-
-        // Safe anchors
-        $remaining = preg_replace('/[\^$]/', '', $remaining);
-
-        // Safe escapes for URL patterns and common classes
-        $remaining = preg_replace('/\\\\[\/\-\.dDwWsS]/', '', $remaining);
-
-        // Non-capturing groups and grouping
-        $remaining = preg_replace('/\(\?\:/', '', $remaining);
-        $remaining = preg_replace('/[()]/', '', $remaining);
-
-        // Alternation
-        $remaining = preg_replace('/\|/', '', $remaining);
-
-        // Whitespace
-        $remaining = preg_replace('/\s/', '', $remaining);
-
-        if (strlen($remaining) > 0) {
-            $dangerous_remaining = preg_match('/[?=!<>]|\\\\[^\/\-\.dDwWsS]/', $remaining);
-            if ($dangerous_remaining) {
-                return false;
-            }
-        }
-
-        return true;
     }
 }

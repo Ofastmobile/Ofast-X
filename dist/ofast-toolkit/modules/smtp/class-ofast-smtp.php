@@ -102,6 +102,12 @@ class Ofast_X_SMTP
      */
     public function check_rate_limit($null, $atts)
     {
+        // Skip rate limiting during campaign batch sends — the campaign processor
+        // manages its own pacing via batch_size + batch_delay settings.
+        if ( ! empty( $GLOBALS['ofast_campaign_active'] ) ) {
+            return $null;
+        }
+
         $transient_key = 'ofast_smtp_rate_' . date('Y-m-d-H-i');
         $current_count = get_transient($transient_key) ?: 0;
 

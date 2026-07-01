@@ -62,7 +62,7 @@ class Ofast_X_Spam_Protection
             add_filter('wpcf7_form_elements', array($this, 'add_cf7_widget'));
 
             // Validate CF7 submission
-            add_filter('wpcf7_spam', array($this, 'check_cf7_spam'), 20);
+            add_filter('wpcf7_spam', array($this, 'validate_cf7'), 20);
 
             // Enqueue script on CF7 pages
             add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_script'));
@@ -327,8 +327,10 @@ class Ofast_X_Spam_Protection
             return false;
         }
 
+        // Empty token = user/bot didn't complete the challenge -- hard fail.
+        // Only fall back to honeypot on actual API errors (Cloudflare outage).
         if (empty($token)) {
-            return true;
+            return false;
         }
 
         return isset($result['code']) && $result['code'] === 'api_error';

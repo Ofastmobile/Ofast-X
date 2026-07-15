@@ -135,21 +135,82 @@
         /* ── VIDEO EMBED (click to play) ───────────────────────── */
         $('#ofast-inline-video-wrapper').on('click', function () {
             var videoId = $(this).data('video-id');
-            var iframe = $('<iframe/>', {
-                'src': 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&rel=0',
-                'frameborder': '0',
-                'allow': 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
-                'allowfullscreen': 'true',
-                'css': {
-                    'width': '100%',
-                    'height': '100%',
-                    'position': 'absolute',
-                    'top': '0',
-                    'left': '0',
-                    'z-index': '10'
+            
+            var $modal = $('<div/>', {
+                id: 'ofast-video-modal',
+                css: {
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(0,0,0,0.85)',
+                    zIndex: 999999,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                }
+            }).appendTo('body');
+            
+            var $videoContainer = $('<div/>', {
+                css: {
+                    position: 'relative',
+                    width: '90%',
+                    maxWidth: '960px',
+                    aspectRatio: '16/9',
+                    backgroundColor: '#000',
+                    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    cursor: 'default'
+                }
+            }).appendTo($modal);
+
+            if (!CSS.supports('aspect-ratio', '16/9')) {
+                $videoContainer.css({
+                    height: 0,
+                    paddingBottom: '56.25%'
+                });
+            }
+
+            $('<iframe/>', {
+                src: 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&rel=0',
+                frameborder: '0',
+                allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+                allowfullscreen: 'true',
+                css: {
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%'
+                }
+            }).appendTo($videoContainer);
+            
+            var $closeBtn = $('<div/>', {
+                html: '&times;',
+                css: {
+                    position: 'absolute',
+                    top: '20px',
+                    right: '30px',
+                    color: '#fff',
+                    fontSize: '40px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    zIndex: 10
+                }
+            }).appendTo($modal);
+
+            $modal.on('click', function(e) {
+                if (e.target === this || e.target === $closeBtn[0]) {
+                    $modal.fadeOut(300, function() {
+                        $(this).remove();
+                    });
                 }
             });
-            $(this).empty().append(iframe);
+            
+            $modal.hide().fadeIn(300);
         });
 
         /* ── LOG PAGE – AJAX PAGINATION ────────────────────────── */

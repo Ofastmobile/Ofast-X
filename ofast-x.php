@@ -75,7 +75,7 @@ function ofast_x_init_plugin()
     // Load Licensing/Pro Gatekeeper
     require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-licensing.php';
 
-    // Load Logger utility (used by spam-protection, social-login)
+    // Load Logger utility (used by spam-protection)
     require_once OFAST_X_PLUGIN_DIR . 'includes/utilities/class-ofast-logger.php';
 
     // Load security hardening (early load for headers)
@@ -105,8 +105,7 @@ function ofast_x_init_plugin()
     // Load Contact Forms module
     require_once OFAST_X_PLUGIN_DIR . 'modules/forms/class-ofast-forms.php';
 
-    // Load Social Login module
-    require_once OFAST_X_PLUGIN_DIR . 'modules/social-login/class-ofast-social-login.php';
+
 
     // Load Login Redesign module
     require_once OFAST_X_PLUGIN_DIR . 'modules/login-redesign/class-ofast-login-redesign.php';

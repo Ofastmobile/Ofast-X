@@ -117,7 +117,6 @@ class Ofast_X_Settings
         // Reset module enabled states to defaults
         $default_modules = array(
             'email' => true,
-            'debug' => true,
             'smtp' => true,
         );
         update_option('ofastx_modules_enabled', $default_modules);
@@ -919,12 +918,7 @@ class Ofast_X_Settings
                 'category' => 'security',
                 'admin_url' => 'admin.php?page=ofast-login-redesign',
             ),
-            'social-login' => array(
-                'name' => 'Social Login',
-                'description' => 'Allow users to login with Google and Facebook accounts (OAuth)',
-                'category' => 'security',
-                'admin_url' => 'admin.php?page=ofast-social-login',
-            ),
+
             
             // === CONTENT ===
             'snippets' => array(
@@ -948,12 +942,7 @@ class Ofast_X_Settings
                 'admin_url' => 'admin.php?page=ofast-white-label',
             ),
 
-            // === UTILITY ===
-            'debug' => array(
-                'name' => 'Debug Indicator',
-                'description' => 'Warns you if WP_DEBUG is active on production sites (security risk alert)',
-                'category' => 'utility',
-            ),
+
         );
     }
 }

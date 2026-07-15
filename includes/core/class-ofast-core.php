@@ -70,9 +70,7 @@ class Ofast_X_Core
             $this->load_email_module();
         }
 
-        if ($this->is_module_enabled('debug')) {
-            $this->load_debug_indicator();
-        }
+
 
         if ($this->is_admin_tweak_enabled('enable_admin_design')) {
             $this->load_admin_design();
@@ -109,10 +107,7 @@ class Ofast_X_Core
             $this->load_spam_protection();
         }
 
-        // Load Social Login module
-        if ($this->is_module_enabled('social-login')) {
-            $this->load_social_login();
-        }
+
 
         // Load Login Redesign module
         if ($this->is_module_enabled('login-redesign')) {
@@ -171,7 +166,6 @@ class Ofast_X_Core
             if (self::$enabled_modules_cache === false) {
                 self::$enabled_modules_cache = array(
                     'email' => true,
-                    'debug' => true,
                     'smtp' => true,
                     'admin-tweaks' => true,
                 );
@@ -322,11 +316,7 @@ class Ofast_X_Core
         $this->modules['menu-editor'] = $menu_editor;
         $whos_admin->set_menu_editor($menu_editor);
 
-        // 3. Load Admin Footer (handles Dark Mode toggle)
-        require_once OFAST_X_PLUGIN_DIR . 'modules/white-label/class-ofast-admin-footer.php';
-        $admin_footer = new Ofast_X_Admin_Footer();
-        $admin_footer->init();
-        $this->modules['admin-footer'] = $admin_footer;
+
 
         // 4. Load Custom Dashboard
         require_once OFAST_X_PLUGIN_DIR . 'modules/white-label/custom-dashboard/class-ofast-custom-dashboard.php';
@@ -362,18 +352,7 @@ class Ofast_X_Core
         self::$enabled_modules_cache = null; // clear cache
     }
 
-    /**
-     * Load Debug Indicator Module
-     */
-    private function load_debug_indicator()
-    {
-        require_once OFAST_X_PLUGIN_DIR . 'modules/debug-indicator/class-ofast-debug-indicator.php';
 
-        $debug_indicator = new Ofast_X_Debug_Indicator();
-        $debug_indicator->init();
-
-        $this->modules['debug'] = $debug_indicator;
-    }
 
     /**
      * Load Code Snippets Module
@@ -458,17 +437,7 @@ class Ofast_X_Core
         $this->modules['spam-protection'] = $spam_protection;
     }
 
-    /**
-     * Load Social Login Module
-     */
-    private function load_social_login()
-    {
-        if (class_exists('Ofast_X_Social_Login')) {
-            $social_login = Ofast_X_Social_Login::get_instance();
-            $social_login->init();
-            $this->modules['social-login'] = $social_login;
-        }
-    }
+
 
     /**
      * Load Login Redesign Module

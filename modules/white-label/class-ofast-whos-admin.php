@@ -326,7 +326,6 @@ class Ofast_X_Whos_Admin
             'left_text' => wp_kses_post($_POST['footer_left_text'] ?? ''),
             'right_text' => sanitize_text_field($_POST['footer_right_text'] ?? ''),
             'hide_wp_version' => isset($_POST['hide_wp_version']) ? 1 : 0,
-            'enable_dark_mode' => isset($_POST['enable_dark_mode']) ? 1 : 0,
             'enable_custom_dashboard' => isset($_POST['enable_custom_dashboard']) ? 1 : 0,
             'disable_file_editor' => isset($_POST['disable_file_editor']) ? 1 : 0,
         );
@@ -756,7 +755,7 @@ class Ofast_X_Whos_Admin
                                 ['dashicons-update', 'Plugin update control'],
                                 ['dashicons-lock', 'Admin page protection'],
                                 ['dashicons-menu-alt3', 'Menu editor'],
-                                ['dashicons-admin-generic', 'Dark/Light mode toggle'],
+
                             ] as $item): ?>
                             <li style="display:flex;align-items:center;gap:10px;background:#f8fafc;border-radius:10px;padding:12px 14px;">
                                 <span class="dashicons <?php echo esc_attr($item[0]); ?>" style="color:#6366f1;font-size:18px;width:18px;height:18px;"></span>
@@ -1059,18 +1058,7 @@ class Ofast_X_Whos_Admin
                                             <h2><?php esc_html_e('Features', 'ofast-x'); ?></h2>
                                         </div>
                                         <div class="ofast-card-body">
-                                            <div class="ofast-form-group">
-                                                <label class="ofast-checkbox-label">
-                                                    <input type="checkbox" name="enable_dark_mode" value="1" <?php checked(!empty($footer_settings['enable_dark_mode'])); ?>>
-                                                    <span class="ofast-checkbox-custom"></span>
-                                                    <span class="ofast-checkbox-text">
-                                                        Enable Dark/Light Mode Toggle
-                                                        <span class="ofast-security-badge"
-                                                            style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">UI
-                                                            Feature</span>
-                                                    </span>
-                                                </label>
-                                            </div>
+
 
                                             <div class="ofast-form-group">
                                                 <label class="ofast-checkbox-label">

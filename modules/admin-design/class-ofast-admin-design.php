@@ -41,10 +41,6 @@ class Ofast_X_Admin_Design
             return;
         }
 
-        if ($this->is_bundled_default_css($custom_css)) {
-            return;
-        }
-
         $custom_css = Ofast_X_Sanitizer::css($custom_css);
 
         if (!empty($custom_css)) {
@@ -52,36 +48,7 @@ class Ofast_X_Admin_Design
         }
     }
 
-    /**
-     * Check whether the saved CSS is the bundled starter template.
-     */
-    private function is_bundled_default_css($custom_css)
-    {
-        $default_css_file = OFAST_X_PLUGIN_DIR . 'modules/admin-design/assets/admin-design.css';
 
-        if (!file_exists($default_css_file)) {
-            return false;
-        }
-
-        $default_css = file_get_contents($default_css_file);
-
-        if ($default_css === false) {
-            return false;
-        }
-
-        $normalized_css = $this->normalize_css($custom_css);
-
-        if ($normalized_css === $this->normalize_css($default_css)) {
-            return true;
-        }
-
-        // Older installs may have saved the previous bundled template before
-        // its media-library selectors were tightened.
-        return strpos($normalized_css, 'Overall WP admin dashboard body') !== false
-            && strpos($normalized_css, 'Main Menu Hover') !== false
-            && strpos($normalized_css, '#adminmenuwrap') !== false
-            && strpos($normalized_css, '#welcome-panel') !== false;
-    }
 
     /**
      * Keep broad admin-design CSS away from fragile core/admin takeover screens.
@@ -104,16 +71,5 @@ class Ofast_X_Admin_Design
         $mode = get_user_meta(get_current_user_id(), 'ofast_dashboard_mode', true) ?: 'modern';
 
         return $mode === 'modern';
-    }
-
-    /**
-     * Normalize CSS for template comparison only.
-     */
-    private function normalize_css($css)
-    {
-        $css = str_replace("\r\n", "\n", (string) $css);
-        $css = preg_replace('/\s+/', ' ', $css);
-
-        return trim($css);
     }
 }

@@ -1,0 +1,1 @@
+Google reCAPTCHA has been removed from the ofast-x plugin. If you need the logic, please check the previous commits for class-ofast-spam-protection.php.

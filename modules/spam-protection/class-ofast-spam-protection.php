@@ -2,7 +2,7 @@
 
 /**
  * Ofast X - Spam Protection Module
- * Unified settings for Cloudflare Turnstile and Google reCAPTCHA
+ * Unified settings for Cloudflare Turnstile and Math CAPTCHA
  */
 
 if (!defined('ABSPATH')) {
@@ -143,12 +143,9 @@ class Ofast_X_Spam_Protection
         $token = '';
         if ($provider !== 'math_captcha') {
             $token = isset($_POST['cf-turnstile-response']) ? sanitize_text_field($_POST['cf-turnstile-response']) : '';
-            if (empty($token)) {
-                $token = isset($_POST['g-recaptcha-response']) ? sanitize_text_field($_POST['g-recaptcha-response']) : '';
-            }
         }
 
-        $result = $this->verify_with_turnstile_honeypot_fallback($provider, $token);
+        $result = $this->verify_with_turnstile_honeypot_fallback($provider, $token, 'comment');
 
         if (!$result['success']) {
             wp_die(
@@ -201,12 +198,9 @@ class Ofast_X_Spam_Protection
         $token = '';
         if ($provider !== 'math_captcha') {
             $token = isset($_POST['cf-turnstile-response']) ? sanitize_text_field($_POST['cf-turnstile-response']) : '';
-            if (empty($token)) {
-                $token = isset($_POST['g-recaptcha-response']) ? sanitize_text_field($_POST['g-recaptcha-response']) : '';
-            }
         }
 
-        $verify = $this->verify_with_turnstile_honeypot_fallback($provider, $token);
+        $verify = $this->verify_with_turnstile_honeypot_fallback($provider, $token, 'cf7');
 
         if (!$verify['success']) {
             $result->invalidate('', $verify['error'] ?? 'Spam verification failed');
@@ -272,11 +266,8 @@ class Ofast_X_Spam_Protection
             }
         }
         else {
-            // Turnstile/reCAPTCHA use cf-turnstile-response or g-recaptcha-response
+            // Turnstile uses cf-turnstile-response
             $token = isset($_POST['cf-turnstile-response']) ? sanitize_text_field($_POST['cf-turnstile-response']) : '';
-            if (empty($token)) {
-                $token = isset($_POST['g-recaptcha-response']) ? sanitize_text_field($_POST['g-recaptcha-response']) : '';
-            }
 
             // If no token at all, block immediately (prevents bypass by removing field)
             if (empty($token)) {
@@ -290,7 +281,7 @@ class Ofast_X_Spam_Protection
         }
 
         // Call the unified verify method (handles all providers)
-        $result = $this->verify_with_turnstile_honeypot_fallback($provider, isset($token) ? $token : '');
+        $result = $this->verify_with_turnstile_honeypot_fallback($provider, isset($token) ? $token : '', 'login');
 
         if (!$result['success']) {
             // Log failed verification attempts
@@ -339,9 +330,9 @@ class Ofast_X_Spam_Protection
     /**
      * Use the honeypot field as a fallback when Turnstile could not verify.
      */
-    private function verify_with_turnstile_honeypot_fallback($provider, $token)
+    private function verify_with_turnstile_honeypot_fallback($provider, $token, $form_context = 'unknown')
     {
-        $result = $this->verify($token);
+        $result = $this->verify($token, $form_context);
 
         if ($result['success']) {
             return $result;
@@ -384,8 +375,22 @@ class Ofast_X_Spam_Protection
             wp_die('Permission denied');
         }
 
+        // Handle Clearing Logs
+        if (isset($_POST['ofast_clear_spam_logs'])) {
+            delete_option('ofast_spam_debug_log');
+            wp_safe_redirect(add_query_arg('tab', 'logs', wp_get_referer()));
+            exit;
+        }
+
+        // Handle Clearing Analytics
+        if (isset($_POST['ofast_clear_spam_analytics'])) {
+            delete_option('ofast_spam_analytics');
+            wp_safe_redirect(add_query_arg('tab', 'analytics', wp_get_referer()));
+            exit;
+        }
+
         // Handle POST Save
-        if (isset($_POST['ofast_save_recaptcha']) && wp_verify_nonce(wp_unslash($_POST['recaptcha_nonce'] ?? ''), 'ofast_recaptcha_save')) {
+        if (isset($_POST['ofast_save_spam']) && wp_verify_nonce(wp_unslash($_POST['spam_nonce'] ?? ''), 'ofast_spam_save')) {
             $secret_save_failed = false;
             update_option('ofast_spam_provider', sanitize_text_field($_POST['spam_provider']));
 
@@ -393,6 +398,7 @@ class Ofast_X_Spam_Protection
             update_option('ofast_spam_protect_comments', isset($_POST['protect_comments']) ? 1 : 0);
             update_option('ofast_spam_protect_cf7', isset($_POST['protect_cf7']) ? 1 : 0);
             update_option('ofast_spam_protect_login', isset($_POST['protect_login']) ? 1 : 0);
+            update_option('ofast_spam_bypass_logged_in', isset($_POST['bypass_logged_in']) ? 1 : 0);
 
             // New extended options
             // Server-side Pro guard: force honeypot always on, block Pro settings for free users
@@ -402,6 +408,8 @@ class Ofast_X_Spam_Protection
                 update_option('ofast_spam_force_all_forms', isset($_POST['force_all_forms']) ? 1 : 0);
                 update_option('ofast_spam_honeypot_enabled', isset($_POST['honeypot_enabled']) ? 1 : 0);
                 update_option('ofast_spam_fail_open', isset($_POST['spam_fail_open']) ? 1 : 0);
+                update_option('ofast_spam_whitelist_ips', isset($_POST['whitelist_ips']) ? sanitize_textarea_field($_POST['whitelist_ips']) : '');
+                update_option('ofast_spam_whitelist_agents', isset($_POST['whitelist_agents']) ? sanitize_textarea_field($_POST['whitelist_agents']) : '');
             }
             update_option('ofast_spam_protect_woocommerce', (ofast_toolkit_is_pro() && isset($_POST['protect_woocommerce'])) ? 1 : 0);
             update_option('ofast_spam_protect_tutor', isset($_POST['protect_tutor']) ? 1 : 0);
@@ -427,29 +435,6 @@ class Ofast_X_Spam_Protection
                 }
             }
 
-            // Save reCAPTCHA keys
-            if (!empty($_POST['recaptcha_site_key'])) {
-                update_option('ofast_recaptcha_site_key', sanitize_text_field(wp_unslash($_POST['recaptcha_site_key'])));
-            }
-
-            $recaptcha_secret = sanitize_text_field(wp_unslash($_POST['recaptcha_secret_key'] ?? ''));
-            if ($recaptcha_secret !== '') {
-                if (class_exists('Ofast_X_Security_Hardening')) {
-                    $encrypted = Ofast_X_Security_Hardening::encrypt_option($recaptcha_secret);
-                    if ($encrypted !== false) {
-                        update_option('ofast_recaptcha_secret_key', $encrypted);
-                    }
-                    else {
-                        $secret_save_failed = true;
-                    }
-                }
-                else {
-                    $secret_save_failed = true;
-                }
-            }
-            if (isset($_POST['recaptcha_threshold'])) {
-                update_option('ofast_recaptcha_threshold', floatval($_POST['recaptcha_threshold']));
-            }
 
             // Redirect with success flag
             $redirect_args = $secret_save_failed ? array('settings_error' => 'secret_save_failed') : array('settings_saved' => '1');
@@ -459,11 +444,10 @@ class Ofast_X_Spam_Protection
 
         // Get Options
         $active_provider = get_option('ofast_spam_provider', 'turnstile');
-        $recaptcha_site_key = get_option('ofast_recaptcha_site_key', '');
-        $recaptcha_threshold = get_option('ofast_recaptcha_threshold', 0.5);
         $protect_comments = get_option('ofast_spam_protect_comments', false);
         $protect_cf7 = get_option('ofast_spam_protect_cf7', false);
         $protect_login = get_option('ofast_spam_protect_login', false);
+        $bypass_logged_in = get_option('ofast_spam_bypass_logged_in', false);
 
         // New extended options
         $force_all_forms = get_option('ofast_spam_force_all_forms', false);
@@ -472,6 +456,8 @@ class Ofast_X_Spam_Protection
         $protect_tutor = get_option('ofast_spam_protect_tutor', false);
         $protect_tutor_registration = get_option('ofast_spam_protect_tutor_registration', false);
         $fail_open = get_option('ofast_spam_fail_open', false);
+        $whitelist_ips = get_option('ofast_spam_whitelist_ips', '');
+        $whitelist_agents = get_option('ofast_spam_whitelist_agents', '');
         $tutor_pro_spam_active = $this->is_tutor_pro_spam_active();
 
         // Current Tab
@@ -498,12 +484,12 @@ class Ofast_X_Spam_Protection
                 </div>
                 <div class="ofast-header-content">
                     <h1>Spam Protection</h1>
-                    <p>Unified settings for Cloudflare Turnstile, Google reCAPTCHA, and Math CAPTCHA.</p>
+                    <p>Unified settings for Cloudflare Turnstile and Math CAPTCHA.</p>
                 </div>
             </div>
 
             <form method="post">
-                <?php wp_nonce_field('ofast_recaptcha_save', 'recaptcha_nonce'); ?>
+                <?php wp_nonce_field('ofast_spam_save', 'spam_nonce'); ?>
 
                 <nav class="ofast-tabs-nav" id="spam-tabs-nav">
                     <a href="#" class="ofast-tab <?php echo $default_tab === 'general' ? 'active' : ''; ?>" data-tab="general">
@@ -518,9 +504,13 @@ class Ofast_X_Spam_Protection
                         <span class="dashicons dashicons-calculator"></span>
                         Math CAPTCHA
                     </a>
-                    <a href="#" class="ofast-tab <?php echo $default_tab === 'recaptcha' ? 'active' : ''; ?>" data-tab="recaptcha">
-                        <span class="dashicons dashicons-google"></span>
-                        Google reCAPTCHA
+                    <a href="#" class="ofast-tab <?php echo $default_tab === 'logs' ? 'active' : ''; ?>" data-tab="logs">
+                        <span class="dashicons dashicons-text-page"></span>
+                        Debug Logs
+                    </a>
+                    <a href="#" class="ofast-tab <?php echo $default_tab === 'analytics' ? 'active' : ''; ?>" data-tab="analytics">
+                        <span class="dashicons dashicons-chart-bar"></span>
+                        Analytics <?php ofast_toolkit_pro_badge(); ?>
                     </a>
                 </nav>
 
@@ -551,23 +541,7 @@ class Ofast_X_Spam_Protection
                                             <p class="description" style="margin-left: 54px; margin-top: 5px;">Simple arithmetic challenge (e.g. 5 + 3 = ?). Works offline.</p>
                                         </div>
                                         
-                                        <div style="margin-bottom: 20px;">
-                                            <label class="ofast-toggle">
-                                                <input type="radio" name="spam_provider" value="recaptcha_v2" <?php checked($active_provider, 'recaptcha_v2'); ?>>
-                                                <span class="ofast-slider"></span>
-                                            </label>
-                                            <span style="vertical-align: middle; font-weight: 600;">Google reCAPTCHA v2</span>
-                                            <p class="description" style="margin-left: 54px; margin-top: 5px;">Traditional "I'm not a robot" checkbox.</p>
-                                        </div>
 
-                                        <div style="margin-bottom: 0;">
-                                            <label class="ofast-toggle">
-                                                <input type="radio" name="spam_provider" value="recaptcha_v3" <?php checked($active_provider, 'recaptcha_v3'); ?>>
-                                                <span class="ofast-slider"></span>
-                                            </label>
-                                            <span style="vertical-align: middle; font-weight: 600;">Google reCAPTCHA v3</span>
-                                            <p class="description" style="margin-left: 54px; margin-top: 5px;">Invisible scoring system.</p>
-                                        </div>
                                     </fieldset>
                                 </td>
                             </tr>
@@ -605,6 +579,16 @@ class Ofast_X_Spam_Protection
                                         <span class="ofast-slider"></span>
                                     </label>
                                     <span class="description" style="vertical-align: middle;">Protect login page</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Bypass Logged-in Users</th>
+                                <td>
+                                    <label class="ofast-toggle">
+                                        <input type="checkbox" name="bypass_logged_in" value="1" <?php checked($bypass_logged_in); ?>>
+                                        <span class="ofast-slider"></span>
+                                    </label>
+                                    <span class="description" style="vertical-align: middle;">Do not show CAPTCHA to logged-in users</span>
                                 </td>
                             </tr>
                             <tr>
@@ -716,6 +700,24 @@ class Ofast_X_Spam_Protection
                                     </p>
                                 </td>
                             </tr>
+                            <tr>
+                                <th>
+                                    <span style="color: #3b82f6;"> </span> Whitelist IPs
+                                </th>
+                                <td>
+                                    <textarea name="whitelist_ips" rows="3" class="regular-text code" placeholder="192.168.1.1&#10;10.0.0.1" style="border-radius: 8px; display: block; margin-bottom: 8px;" <?php ofast_toolkit_pro_disabled(); ?>><?php echo esc_textarea($whitelist_ips); ?></textarea>
+                                    <span class="description" style="vertical-align: middle; display: block;">One IP per line. These IPs will always bypass spam protection. <?php ofast_toolkit_pro_badge(); ?></span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>
+                                    <span style="color: #ec4899;"> </span> Whitelist User Agents
+                                </th>
+                                <td>
+                                    <textarea name="whitelist_agents" rows="3" class="regular-text code" placeholder="UptimeRobot&#10;Googlebot" style="border-radius: 8px; display: block; margin-bottom: 8px;" <?php ofast_toolkit_pro_disabled(); ?>><?php echo esc_textarea($whitelist_agents); ?></textarea>
+                                    <span class="description" style="vertical-align: middle; display: block;">One keyword per line. If the visitor's User Agent contains this text, they bypass protection. <?php ofast_toolkit_pro_badge(); ?></span>
+                                </td>
+                            </tr>
                         </table>
 
                         <?php if ( ! ofast_toolkit_is_pro() ): ?></div><?php endif; ?>
@@ -755,38 +757,125 @@ class Ofast_X_Spam_Protection
                     </div>
                 </div>
 
-                <!-- reCAPTCHA Tab -->
-                <div id="tab-recaptcha" class="ofast-tab-content<?php echo $default_tab === 'recaptcha' ? ' active' : ''; ?>">
+                <!-- Debug Logs Tab -->
+                <div id="tab-logs" class="ofast-tab-content<?php echo $default_tab === 'logs' ? ' active' : ''; ?>">
                     <div class="ofast-card">
-                        <h2>Google reCAPTCHA Settings</h2>
-                        <p class="description">Get your keys from <a href="https://www.google.com/recaptcha/admin" target="_blank">Google reCAPTCHA Admin</a></p>
-
-                        <table class="form-table">
-                            <tr>
-                                <th>Site Key</th>
-                                <td>
-                                    <input type="text" name="recaptcha_site_key" value="<?php echo esc_attr($recaptcha_site_key); ?>" class="regular-text" style="border-radius: 8px;">
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Secret Key</th>
-                                <td>
-                                    <input type="password" name="recaptcha_secret_key" value="" class="regular-text" placeholder="<?php echo $recaptcha_site_key ? '(encrypted - enter to change)' : ''; ?>" style="border-radius: 8px;">
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Score Threshold (v3)</th>
-                                <td>
-                                    <input type="number" name="recaptcha_threshold" value="<?php echo esc_attr($recaptcha_threshold); ?>" min="0" max="1" step="0.1" style="width:80px; border-radius: 8px;">
-                                    <p class="description">0.0 (bot) to 1.0 (human). Default: 0.5</p>
-                                </td>
-                            </tr>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h2 style="margin: 0;">Debug Logs</h2>
+                            <button type="submit" name="ofast_clear_spam_logs" class="button button-secondary" onclick="return confirm('Are you sure you want to clear all logs?');">Clear Logs</button>
+                        </div>
+                        <p class="description">Recent failed verification attempts (max 50).</p>
+                        
+                        <table class="wp-list-table widefat fixed striped">
+                            <thead>
+                                <tr>
+                                    <th style="width: 150px;">Date/Time</th>
+                                    <th style="width: 120px;">Provider</th>
+                                    <th style="width: 120px;">Context</th>
+                                    <th style="width: 150px;">IP Address</th>
+                                    <th>Error Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                $logs = get_option('ofast_spam_debug_log', array());
+                                if (empty($logs) || !is_array($logs)) {
+                                    echo '<tr><td colspan="5">No failed verifications logged recently.</td></tr>';
+                                } else {
+                                    // Show newest first
+                                    $logs = array_reverse($logs);
+                                    foreach ($logs as $log) {
+                                        echo '<tr>';
+                                        echo '<td>' . esc_html(wp_date(get_option('date_format') . ' ' . get_option('time_format'), strtotime($log['date']))) . '</td>';
+                                        echo '<td><span class="ofast-badge" style="padding: 3px 8px; border-radius: 4px; background: #e2e8f0; font-size: 11px;">' . esc_html($log['provider'] ?? 'Unknown') . '</span></td>';
+                                        echo '<td>' . esc_html($log['form'] ?? 'Unknown') . '</td>';
+                                        echo '<td><code>' . esc_html($log['ip'] ?? '') . '</code></td>';
+                                        echo '<td>' . esc_html($log['error'] ?? '') . '</td>';
+                                        echo '</tr>';
+                                    }
+                                }
+                                ?>
+                            </tbody>
                         </table>
                     </div>
                 </div>
 
+                <!-- Analytics Tab -->
+                <div id="tab-analytics" class="ofast-tab-content<?php echo $default_tab === 'analytics' ? ' active' : ''; ?>">
+                    <div class="ofast-card">
+                        <h2>Analytics Dashboard <?php ofast_toolkit_pro_badge(); ?></h2>
+                        <?php if ( ! ofast_toolkit_is_pro() ): ?>
+                            <div class="ofast-pro-overlay" style="text-align: center; padding: 40px 20px;">
+                                <span class="dashicons dashicons-chart-area" style="font-size: 48px; width: 48px; height: 48px; color: #cbd5e1; margin-bottom: 15px;"></span>
+                                <h3>Unlock Advanced Analytics</h3>
+                                <p>See exactly how many bots your site is blocking, view success rates, and monitor protection across all forms in real-time.</p>
+                                <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-license')); ?>" class="button button-primary button-large" style="margin-top: 15px;">Upgrade to Pro</a>
+                            </div>
+                        <?php else: ?>
+                            <?php 
+                            $analytics = get_option('ofast_spam_analytics', array()); 
+                            $total = $analytics['total'] ?? 0;
+                            $verified = $analytics['verified'] ?? 0;
+                            $blocked = $analytics['blocked'] ?? 0;
+                            $success_rate = $total > 0 ? round(($verified / $total) * 100, 1) : 0;
+                            ?>
+                            
+                            <div style="display: flex; gap: 20px; margin-bottom: 30px;">
+                                <div style="flex: 1; background: #fff; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                                    <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 13px; text-transform: uppercase;">Total Challenges</h4>
+                                    <div style="font-size: 28px; font-weight: 700; color: #1e293b;"><?php echo number_format_i18n($total); ?></div>
+                                </div>
+                                <div style="flex: 1; background: #fff; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; border-left: 4px solid #10b981;">
+                                    <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 13px; text-transform: uppercase;">Verified (Human)</h4>
+                                    <div style="font-size: 28px; font-weight: 700; color: #10b981;"><?php echo number_format_i18n($verified); ?></div>
+                                </div>
+                                <div style="flex: 1; background: #fff; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; border-left: 4px solid #ef4444;">
+                                    <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 13px; text-transform: uppercase;">Blocked (Bots)</h4>
+                                    <div style="font-size: 28px; font-weight: 700; color: #ef4444;"><?php echo number_format_i18n($blocked); ?></div>
+                                </div>
+                                <div style="flex: 1; background: #fff; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; border-left: 4px solid #8b5cf6;">
+                                    <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 13px; text-transform: uppercase;">Success Rate</h4>
+                                    <div style="font-size: 28px; font-weight: 700; color: #8b5cf6;"><?php echo $success_rate; ?>%</div>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h3 style="margin: 0;">Protection by Context</h3>
+                                <button type="submit" name="ofast_clear_spam_analytics" class="button button-secondary" onclick="return confirm('Are you sure you want to reset all analytics data?');">Reset Stats</button>
+                            </div>
+                            <table class="wp-list-table widefat fixed striped">
+                                <thead>
+                                    <tr>
+                                        <th>Form Context</th>
+                                        <th style="width: 15%;">Total</th>
+                                        <th style="width: 15%;">Verified</th>
+                                        <th style="width: 15%;">Blocked</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php
+                                    if (empty($analytics['forms']) || !is_array($analytics['forms'])) {
+                                        echo '<tr><td colspan="4">No data collected yet.</td></tr>';
+                                    } else {
+                                        foreach ($analytics['forms'] as $context => $stats) {
+                                            echo '<tr>';
+                                            echo '<td><strong>' . esc_html(ucwords(str_replace('_', ' ', $context))) . '</strong></td>';
+                                            echo '<td>' . number_format_i18n($stats['total'] ?? 0) . '</td>';
+                                            echo '<td><span style="color: #10b981;">' . number_format_i18n($stats['verified'] ?? 0) . '</span></td>';
+                                            echo '<td><span style="color: #ef4444;">' . number_format_i18n($stats['blocked'] ?? 0) . '</span></td>';
+                                            echo '</tr>';
+                                        }
+                                    }
+                                    ?>
+                                </tbody>
+                            </table>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+
                 <div class="ofast-form-actions" style="margin-top: 30px; padding-top: 20px;">
-                    <button type="submit" name="ofast_save_recaptcha" class="button button-primary button-large" style="min-width: 150px;">Save Changes</button>
+                    <button type="submit" name="ofast_save_spam" class="button button-primary button-large" style="min-width: 150px;">Save Changes</button>
                 </div>
             </form>
         </div>
@@ -848,12 +937,6 @@ class Ofast_X_Spam_Protection
                 // Math CAPTCHA is always configured - no API keys needed
                 return true;
 
-            case 'recaptcha_v2':
-            case 'recaptcha_v3':
-                $site_key = get_option('ofast_recaptcha_site_key', '');
-                $secret_key = $this->get_decrypted_recaptcha_secret();
-                return !empty($site_key) && !empty($secret_key);
-
             default:
                 return false;
         }
@@ -862,140 +945,147 @@ class Ofast_X_Spam_Protection
     /**
      * Verify spam protection token
      */
-    public function verify($token)
+    public function verify($token, $form_context = 'unknown')
     {
+        if ($this->is_whitelisted()) {
+            return array('success' => true, 'skipped' => true, 'reason' => 'whitelisted');
+        }
+
         $provider = $this->get_active_provider();
+        $result = array('success' => false, 'error' => 'Unknown provider');
 
         switch ($provider) {
             case 'turnstile':
                 if (class_exists('Ofast_X_Turnstile')) {
-                    return Ofast_X_Turnstile::get_instance()->verify($token);
+                    $result = Ofast_X_Turnstile::get_instance()->verify($token);
+                } else {
+                    $result = array('success' => false, 'error' => 'Turnstile not available');
                 }
-                return array('success' => false, 'error' => 'Turnstile not available');
+                break;
 
             case 'math_captcha':
                 if (class_exists('Ofast_X_Math_Captcha')) {
-                    return Ofast_X_Math_Captcha::get_instance()->verify();
+                    $result = Ofast_X_Math_Captcha::get_instance()->verify();
+                } else {
+                    $result = array('success' => false, 'error' => 'Math CAPTCHA not available');
                 }
-                return array('success' => false, 'error' => 'Math CAPTCHA not available');
-
-            case 'recaptcha_v2':
-            case 'recaptcha_v3':
-                return $this->verify_recaptcha($token);
+                break;
 
             default:
-                return array('success' => true);
+                $result = array('success' => true);
+        }
+
+        $this->log_event($result, $provider, $form_context);
+
+        return $result;
+    }
+
+    /**
+     * Log spam protection event (Analytics & Debug)
+     */
+    private function log_event($result, $provider, $form_context = 'unknown')
+    {
+        // 1. Debug Logs
+        if (!$result['success']) {
+            $log = get_option('ofast_spam_debug_log');
+            if (!is_array($log)) {
+                $log = array();
+            }
+            $log[] = array(
+                'date' => current_time('mysql'),
+                'ip' => $this->get_client_ip(),
+                'provider' => $provider,
+                'form' => $form_context,
+                'error' => $result['error'] ?? 'Unknown Error'
+            );
+            if (count($log) > 50) {
+                $log = array_slice($log, -50);
+            }
+            update_option('ofast_spam_debug_log', $log, false);
+        }
+
+        // 2. Analytics (Pro Only)
+        if (ofast_toolkit_is_pro()) {
+            $analytics = get_option('ofast_spam_analytics');
+            if (!is_array($analytics)) {
+                $analytics = array('total' => 0, 'verified' => 0, 'blocked' => 0, 'providers' => array(), 'forms' => array());
+            }
+
+            $analytics['total'] = ($analytics['total'] ?? 0) + 1;
+            if ($result['success']) {
+                $analytics['verified'] = ($analytics['verified'] ?? 0) + 1;
+            } else {
+                $analytics['blocked'] = ($analytics['blocked'] ?? 0) + 1;
+            }
+
+            // By Provider
+            if (!isset($analytics['providers'][$provider])) {
+                $analytics['providers'][$provider] = array('total' => 0, 'verified' => 0, 'blocked' => 0);
+            }
+            $analytics['providers'][$provider]['total']++;
+            if ($result['success']) {
+                $analytics['providers'][$provider]['verified']++;
+            } else {
+                $analytics['providers'][$provider]['blocked']++;
+            }
+
+            // By Form Context
+            if (!isset($analytics['forms'][$form_context])) {
+                $analytics['forms'][$form_context] = array('total' => 0, 'verified' => 0, 'blocked' => 0);
+            }
+            $analytics['forms'][$form_context]['total']++;
+            if ($result['success']) {
+                $analytics['forms'][$form_context]['verified']++;
+            } else {
+                $analytics['forms'][$form_context]['blocked']++;
+            }
+
+            update_option('ofast_spam_analytics', $analytics, false);
         }
     }
 
     /**
-     * Verify reCAPTCHA token
+     * Check if the current request should bypass spam protection
      */
-    private function verify_recaptcha($token)
+    public function is_whitelisted()
     {
-        $secret_key = $this->get_decrypted_recaptcha_secret();
-
-        if (empty($secret_key)) {
-            return array('success' => false, 'error' => 'reCAPTCHA not configured');
+        // 1. Logged in Users Bypass
+        if (get_option('ofast_spam_bypass_logged_in', false) && is_user_logged_in()) {
+            return true;
         }
 
-        $response = wp_remote_post('https://www.google.com/recaptcha/api/siteverify', array(
-            'body' => array(
-                'secret' => $secret_key,
-                'response' => $token,
-                'remoteip' => $this->get_client_ip()
-            )
-        ));
-
-        if (is_wp_error($response)) {
-            if ($this->should_fail_open()) {
-                return array('success' => true, 'skipped' => true, 'reason' => 'api_error');
-            }
-            return array('success' => false, 'error' => 'reCAPTCHA verification failed. Please try again.');
-        }
-
-        $body = json_decode(wp_remote_retrieve_body($response), true);
-
-        if (empty($body['success'])) {
-            $error = isset($body['error-codes']) ? implode(', ', $body['error-codes']) : 'Verification failed';
-            return array('success' => false, 'error' => $error);
-        }
-
-        // For v3, check score threshold
-        if ($this->get_active_provider() === 'recaptcha_v3') {
-            $threshold = floatval(get_option('ofast_recaptcha_threshold', 0.5));
-            $score = isset($body['score']) ? floatval($body['score']) : 0;
-
-            if ($score < $threshold) {
-                return array('success' => false, 'error' => 'Score too low: ' . $score);
-            }
-        }
-
-        return array('success' => true);
-    }
-
-    /**
-     * Should we allow submissions when provider API is unavailable.
-     */
-    private function should_fail_open()
-    {
-        $fail_open = get_option('ofast_spam_fail_open', false);
-        return (bool) apply_filters('ofast_spam_fail_open', $fail_open);
-    }
-
-    /**
-     * Get decrypted reCAPTCHA secret key
-     */
-    private function get_decrypted_recaptcha_secret()
-    {
-        $stored_secret = get_option('ofast_recaptcha_secret_key', '');
-        if (empty($stored_secret)) {
-            return '';
-        }
-
-        if (class_exists('Ofast_X_Security_Hardening')) {
-            $decrypted = Ofast_X_Security_Hardening::decrypt_option($stored_secret);
-            if (!empty($decrypted)) {
-                return $decrypted;
-            }
-
-            if ($this->is_legacy_plaintext_recaptcha_secret($stored_secret)) {
-                $encrypted = Ofast_X_Security_Hardening::encrypt_option($stored_secret);
-                if ($encrypted !== false) {
-                    update_option('ofast_recaptcha_secret_key', $encrypted);
-                    return $stored_secret;
+        if (ofast_toolkit_is_pro()) {
+            // 2. IP Whitelist
+            $whitelist_ips = get_option('ofast_spam_whitelist_ips', '');
+            if (!empty($whitelist_ips)) {
+                $ips = explode("\n", str_replace("\r", "", $whitelist_ips));
+                $current_ip = $this->get_client_ip();
+                foreach ($ips as $ip) {
+                    $ip = sanitize_text_field(trim($ip));
+                    if (!empty($ip) && $ip === $current_ip) {
+                        return true;
+                    }
                 }
-                else {
-                    Ofast_X_Logger::warning(
-                        'Failed to encrypt legacy reCAPTCHA secret. Migration failed.',
-                        array('redacted_secret' => substr($stored_secret, 0, 10) . '...')
-                    );
-                    update_option('ofast_recaptcha_migration_failed', true);
-                    return '';
-                }
             }
 
-            return '';
+            // 3. User Agent Whitelist
+            $whitelist_agents = get_option('ofast_spam_whitelist_agents', '');
+            if (!empty($whitelist_agents) && isset($_SERVER['HTTP_USER_AGENT'])) {
+                $agents = explode("\n", str_replace("\r", "", $whitelist_agents));
+                $current_agent = sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT']));
+                foreach ($agents as $agent) {
+                    $agent = sanitize_text_field(trim($agent));
+                    if (!empty($agent) && stripos($current_agent, $agent) !== false) {
+                        return true;
+                    }
+                }
+            }
         }
 
-        return '';
+        return false;
     }
 
-    /**
-     * Detect legacy plaintext reCAPTCHA secrets so they can be migrated.
-     */
-    private function is_legacy_plaintext_recaptcha_secret($value)
-    {
-        if (!is_string($value) || $value === '') {
-            return false;
-        }
 
-        if (class_exists('Ofast_X_Security_Hardening') && Ofast_X_Security_Hardening::looks_like_encrypted_option($value)) {
-            return false;
-        }
-
-        return preg_match('/^[A-Za-z0-9_-]{20,120}$/', $value) === 1;
-    }
 
       /**
      * Get client IP address.

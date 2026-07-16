@@ -344,7 +344,7 @@ function ofast_toolkit_register_license_page()
     add_submenu_page(
         'ofast-dashboard',
         'License',
-        ofast_toolkit_is_pro() ? '✅ License' : '🔑 License',
+        'License',
         'manage_options',
         'ofast-license',
         'ofast_toolkit_render_license_page'

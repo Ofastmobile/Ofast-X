@@ -19,6 +19,7 @@ class Ofast_X_SMTP_Admin
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'handle_save'));
         add_action('admin_init', array($this, 'handle_resend'));
+        add_action('admin_init', array($this, 'handle_support_form'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('wp_ajax_ofast_smtp_fetch_logs', array($this, 'ajax_fetch_logs'));
 
@@ -190,6 +191,9 @@ class Ofast_X_SMTP_Admin
                     <a href="#" class="ofast-tab ofast-saas-nav-link <?php echo $default_tab === 'log' ? 'active' : ''; ?>" data-tab="log">
                         <span class="dashicons dashicons-list-view"></span> <span class="ofast-saas-nav-text">Email Log</span>
                     </a>
+                    <a href="#" class="ofast-tab ofast-saas-nav-link <?php echo $default_tab === 'support' ? 'active' : ''; ?>" data-tab="support">
+                        <span class="dashicons dashicons-sos"></span> <span class="ofast-saas-nav-text">Help & Support</span>
+                    </a>
                     <a href="#" class="ofast-tab ofast-saas-nav-link <?php echo $default_tab === 'settings' ? 'active' : ''; ?>" data-tab="settings">
                         <span class="dashicons dashicons-admin-settings"></span> <span class="ofast-saas-nav-text">Settings</span>
                     </a>
@@ -215,6 +219,11 @@ class Ofast_X_SMTP_Admin
                     <?php $this->render_log_page_content(); ?>
                 </div>
 
+                <div id="smtp-tab-support" class="ofast-tab-content<?php echo $default_tab === 'support' ? ' active' : ''; ?>"
+                    style="<?php echo $default_tab !== 'support' ? 'display:none;' : ''; ?> padding: 30px;">
+                    <?php $this->render_support_page_content(); ?>
+                </div>
+
                 <div id="smtp-tab-settings" class="ofast-tab-content<?php echo $default_tab === 'settings' ? ' active' : ''; ?>"
                     style="<?php echo $default_tab !== 'settings' ? 'display:none;' : ''; ?> padding: 30px;">
                     <?php $this->render_settings_page_content(); ?>
@@ -229,11 +238,7 @@ class Ofast_X_SMTP_Admin
                 var mainContainer = document.getElementById('ofast-main-container');
                 
                 function updateBackground(tabName) {
-                    if (tabName === 'dashboard') {
-                        mainContainer.style.background = '#0f172a'; // Match sidebar for dashboard
-                    } else {
-                        mainContainer.style.background = '#f8fafc'; // Light gray for logs/settings
-                    }
+                    mainContainer.style.background = '#f8fafc'; // Light mode for all tabs
                 }
                 
                 // Set initial
@@ -330,16 +335,16 @@ class Ofast_X_SMTP_Admin
         ?>
 
 
-        <!-- Dashboard SaaS Dark Theme Wrapper -->
-        <div style="background-color: transparent; padding: 30px; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+        <!-- Dashboard SaaS Light Theme Wrapper -->
+        <div style="background-color: transparent; padding: 30px; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
 
             <!-- Top Row: Charts -->
             <div style="display: flex; gap: 20px; margin-bottom: 25px; flex-wrap: wrap;">
                 <!-- Left: Delivery Success Rate Chart -->
-                <div style="flex: 2; min-width: 400px; background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 12px; padding: 25px;">
+                <div style="flex: 2; min-width: 400px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #f8fafc;">Delivery Success Rate</h3>
-                        <div style="background: rgba(51, 65, 85, 0.5); padding: 5px 12px; border-radius: 6px; font-size: 12px; color: #cbd5e1; border: 1px solid #334155; display: flex; align-items: center; gap: 6px;">
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #1e293b;">Delivery Success Rate</h3>
+                        <div style="background: #f8fafc; padding: 5px 12px; border-radius: 6px; font-size: 12px; color: #64748b; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 6px;">
                             <span class="dashicons dashicons-calendar-alt" style="font-size: 14px; width: 14px; height: 14px;"></span> Last 7 Days
                         </div>
                     </div>
@@ -352,9 +357,9 @@ class Ofast_X_SMTP_Admin
                             $bar_height = max(10, $bar_height);
                             ?>
                             <div style="flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; position: relative; group;">
-                                <div style="position: absolute; top: -25px; font-size: 11px; color: #94a3b8; font-weight: 600; opacity: 0; transition: opacity 0.2s;" class="ofast-chart-tooltip"><?php echo $day['count']; ?></div>
-                                <div style="width: 100%; max-width: 40px; height: <?php echo $bar_height; ?>px; background: linear-gradient(to top, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.8)); border-top: 3px solid #8b5cf6; border-radius: 4px 4px 0 0; position: relative; cursor: pointer;" onmouseover="this.previousElementSibling.style.opacity=1" onmouseout="this.previousElementSibling.style.opacity=0">
-                                    <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%; position: absolute; top: -5px; left: 50%; transform: translateX(-50%); box-shadow: 0 0 10px rgba(139, 92, 246, 0.8);"></div>
+                                <div style="position: absolute; top: -25px; font-size: 11px; color: #64748b; font-weight: 600; opacity: 0; transition: opacity 0.2s;" class="ofast-chart-tooltip"><?php echo $day['count']; ?></div>
+                                <div style="width: 100%; max-width: 40px; height: <?php echo $bar_height; ?>px; background: linear-gradient(to top, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.4)); border-top: 3px solid #8b5cf6; border-radius: 4px 4px 0 0; position: relative; cursor: pointer;" onmouseover="this.previousElementSibling.style.opacity=1" onmouseout="this.previousElementSibling.style.opacity=0">
+                                    <div style="width: 8px; height: 8px; background: #8b5cf6; border-radius: 50%; position: absolute; top: -5px; left: 50%; transform: translateX(-50%); box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);"></div>
                                 </div>
                                 <div style="font-size: 12px; color: #64748b; margin-top: 15px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;"><?php echo esc_html($day['day']); ?></div>
                             </div>
@@ -363,21 +368,20 @@ class Ofast_X_SMTP_Admin
                 </div>
 
                 <!-- Right: Connection Health -->
-                <div style="flex: 1; min-width: 250px; background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 12px; padding: 25px; display: flex; flex-direction: column; align-items: center; justify-content: space-between;">
+                <div style="flex: 1; min-width: 250px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                     <div style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
-                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #f8fafc;">Connection Health</h3>
-                        <span class="dashicons dashicons-ellipsis" style="color: #64748b; cursor: pointer;"></span>
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #1e293b;">Connection Health</h3>
+                        <span class="dashicons dashicons-ellipsis" style="color: #94a3b8; cursor: pointer;"></span>
                     </div>
                     
                     <?php
                     $health_color = $stats['rate'] >= 90 ? '#10b981' : ($stats['rate'] >= 70 ? '#f59e0b' : '#ef4444');
-                    // conic-gradient syntax for the ring
                     ?>
                     <!-- Circular Progress -->
-                    <div style="width: 180px; height: 180px; border-radius: 50%; background: conic-gradient(<?php echo $health_color; ?> <?php echo $stats['rate']; ?>%, #1e293b 0); display: flex; align-items: center; justify-content: center; position: relative; margin: 20px 0;">
+                    <div style="width: 180px; height: 180px; border-radius: 50%; background: conic-gradient(<?php echo $health_color; ?> <?php echo $stats['rate']; ?>%, #f1f5f9 0); display: flex; align-items: center; justify-content: center; position: relative; margin: 20px 0;">
                         <!-- Inner Circle -->
-                        <div style="width: 150px; height: 150px; border-radius: 50%; background: #0f172a; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: inset 0 4px 10px rgba(0,0,0,0.5);">
-                            <div style="font-size: 42px; font-weight: 700; color: #f8fafc; line-height: 1;"><?php echo $stats['rate']; ?>%</div>
+                        <div style="width: 150px; height: 150px; border-radius: 50%; background: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                            <div style="font-size: 42px; font-weight: 700; color: #1e293b; line-height: 1;"><?php echo $stats['rate']; ?>%</div>
                             <div style="font-size: 14px; color: <?php echo $health_color; ?>; font-weight: 500; margin-top: 5px;">
                                 <?php echo $stats['rate'] >= 90 ? 'Excellent' : ($stats['rate'] >= 70 ? 'Good' : 'Poor'); ?>
                             </div>
@@ -385,18 +389,18 @@ class Ofast_X_SMTP_Admin
                     </div>
 
                     <!-- Stats under health -->
-                    <div style="display: flex; justify-content: space-between; width: 100%; padding-top: 15px; border-top: 1px solid rgba(51, 65, 85, 0.5);">
+                    <div style="display: flex; justify-content: space-between; width: 100%; padding-top: 15px; border-top: 1px solid #f1f5f9;">
                         <div>
-                            <div style="font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
+                            <div style="font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 6px;">
                                 <span style="width: 8px; height: 8px; border-radius: 50%; background: #6366f1;"></span> Total
                             </div>
-                            <div style="font-size: 18px; font-weight: 600; color: #f8fafc; margin-top: 5px;"><?php echo number_format($stats['total']); ?></div>
+                            <div style="font-size: 18px; font-weight: 600; color: #1e293b; margin-top: 5px;"><?php echo number_format($stats['total']); ?></div>
                         </div>
                         <div style="text-align: right;">
-                            <div style="font-size: 12px; color: #94a3b8; display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
+                            <div style="font-size: 12px; color: #64748b; display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
                                 <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span> Sent
                             </div>
-                            <div style="font-size: 18px; font-weight: 600; color: #f8fafc; margin-top: 5px;"><?php echo number_format($stats['success']); ?></div>
+                            <div style="font-size: 18px; font-weight: 600; color: #1e293b; margin-top: 5px;"><?php echo number_format($stats['success']); ?></div>
                         </div>
                     </div>
                 </div>
@@ -405,77 +409,77 @@ class Ofast_X_SMTP_Admin
             <!-- Middle Row: 3 Stat Cards -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 25px;">
                 <!-- Total Sent Card -->
-                <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 25px; box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.05); position: relative; overflow: hidden;">
+                <div style="background: #ffffff; border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.05); position: relative; overflow: hidden;">
                     <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: #10b981;"></div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(16, 185, 129, 0.1); display: flex; align-items: center; justify-content: center;">
                                 <span class="dashicons dashicons-email-alt" style="color: #10b981;"></span>
                             </div>
-                            <span style="font-size: 15px; color: #f8fafc; font-weight: 600;">Total Sent</span>
+                            <span style="font-size: 15px; color: #1e293b; font-weight: 600;">Total Sent</span>
                         </div>
-                        <span class="dashicons dashicons-ellipsis" style="color: #64748b; cursor: pointer;"></span>
+                        <span class="dashicons dashicons-ellipsis" style="color: #94a3b8; cursor: pointer;"></span>
                     </div>
-                    <div style="font-size: 38px; font-weight: 700; color: #f8fafc;"><?php echo number_format($stats['total']); ?></div>
+                    <div style="font-size: 38px; font-weight: 700; color: #1e293b;"><?php echo number_format($stats['total']); ?></div>
                     <div style="font-size: 13px; color: #10b981; margin-top: 8px; font-weight: 500;">+ All time</div>
                 </div>
                 
                 <!-- Delivered Card -->
-                <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 12px; padding: 25px; box-shadow: inset 0 0 20px rgba(139, 92, 246, 0.05); position: relative; overflow: hidden;">
+                <div style="background: #ffffff; border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.05); position: relative; overflow: hidden;">
                     <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: #8b5cf6;"></div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(139, 92, 246, 0.1); display: flex; align-items: center; justify-content: center;">
                                 <span class="dashicons dashicons-saved" style="color: #8b5cf6;"></span>
                             </div>
-                            <span style="font-size: 15px; color: #f8fafc; font-weight: 600;">Delivered</span>
+                            <span style="font-size: 15px; color: #1e293b; font-weight: 600;">Delivered</span>
                         </div>
-                        <span class="dashicons dashicons-ellipsis" style="color: #64748b; cursor: pointer;"></span>
+                        <span class="dashicons dashicons-ellipsis" style="color: #94a3b8; cursor: pointer;"></span>
                     </div>
-                    <div style="font-size: 38px; font-weight: 700; color: #f8fafc;"><?php echo number_format($stats['success']); ?></div>
+                    <div style="font-size: 38px; font-weight: 700; color: #1e293b;"><?php echo number_format($stats['success']); ?></div>
                     <div style="font-size: 13px; color: #8b5cf6; margin-top: 8px; font-weight: 500;"><?php echo $stats['rate']; ?>% rate</div>
                 </div>
 
                 <!-- Bounced Card -->
-                <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 25px; box-shadow: inset 0 0 20px rgba(239, 68, 68, 0.05); position: relative; overflow: hidden;">
+                <div style="background: #ffffff; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.05); position: relative; overflow: hidden;">
                     <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: #ef4444;"></div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(239, 68, 68, 0.1); display: flex; align-items: center; justify-content: center;">
                                 <span class="dashicons dashicons-dismiss" style="color: #ef4444;"></span>
                             </div>
-                            <span style="font-size: 15px; color: #f8fafc; font-weight: 600;">Bounced</span>
+                            <span style="font-size: 15px; color: #1e293b; font-weight: 600;">Bounced</span>
                         </div>
-                        <span class="dashicons dashicons-ellipsis" style="color: #64748b; cursor: pointer;"></span>
+                        <span class="dashicons dashicons-ellipsis" style="color: #94a3b8; cursor: pointer;"></span>
                     </div>
-                    <div style="font-size: 38px; font-weight: 700; color: #f8fafc;"><?php echo number_format($stats['failed']); ?></div>
+                    <div style="font-size: 38px; font-weight: 700; color: #1e293b;"><?php echo number_format($stats['failed']); ?></div>
                     <div style="font-size: 13px; color: #ef4444; margin-top: 8px; font-weight: 500;"><?php echo $stats['total'] > 0 ? round(($stats['failed'] / $stats['total']) * 100, 1) : 0; ?>% bounce rate</div>
                 </div>
             </div>
 
             <!-- Bottom Row: Recent Activity -->
-            <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 12px; padding: 25px;">
-                <h3 style="margin: 0 0 25px 0; font-size: 16px; font-weight: 600; color: #f8fafc;">Recent Activity</h3>
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <h3 style="margin: 0 0 25px 0; font-size: 16px; font-weight: 600; color: #1e293b;">Recent Activity</h3>
                 <?php if (empty($recent_emails)): ?>
                     <p style="color: #64748b; text-align: center; padding: 30px 0;">No emails sent yet.</p>
                 <?php else: ?>
                     <div style="overflow-x: auto;">
                         <table style="width: 100%; border-collapse: collapse; text-align: left;">
                             <thead>
-                                <tr style="border-bottom: 1px solid rgba(51, 65, 85, 0.8);">
-                                    <th style="padding: 0 10px 15px 10px; color: #94a3b8; font-size: 13px; font-weight: 500;">Recipient</th>
-                                    <th style="padding: 0 10px 15px 10px; color: #94a3b8; font-size: 13px; font-weight: 500;">Subject</th>
-                                    <th style="padding: 0 10px 15px 10px; color: #94a3b8; font-size: 13px; font-weight: 500;">Status</th>
-                                    <th style="padding: 0 10px 15px 10px; color: #94a3b8; font-size: 13px; font-weight: 500; text-align: right;">Date/Time</th>
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <th style="padding: 0 10px 15px 10px; color: #64748b; font-size: 13px; font-weight: 500;">Recipient</th>
+                                    <th style="padding: 0 10px 15px 10px; color: #64748b; font-size: 13px; font-weight: 500;">Subject</th>
+                                    <th style="padding: 0 10px 15px 10px; color: #64748b; font-size: 13px; font-weight: 500;">Status</th>
+                                    <th style="padding: 0 10px 15px 10px; color: #64748b; font-size: 13px; font-weight: 500; text-align: right;">Date/Time</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($recent_emails as $email): ?>
-                                    <tr style="border-bottom: 1px solid rgba(51, 65, 85, 0.3); transition: background 0.2s;" onmouseover="this.style.background='rgba(51, 65, 85, 0.3)'" onmouseout="this.style.background='transparent'">
-                                        <td style="padding: 16px 10px; font-size: 14px; color: #e2e8f0; font-weight: 500;">
+                                    <tr style="border-bottom: 1px solid #f8fafc; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                                        <td style="padding: 16px 10px; font-size: 14px; color: #334155; font-weight: 500;">
                                             <?php echo esc_html($email->to_email); ?>
                                         </td>
-                                        <td style="padding: 16px 10px; font-size: 14px; color: #cbd5e1; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        <td style="padding: 16px 10px; font-size: 14px; color: #475569; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                             <?php echo esc_html($email->subject); ?>
                                         </td>
                                         <td style="padding: 16px 10px;">
@@ -487,7 +491,7 @@ class Ofast_X_SMTP_Admin
                                                 <span style="border: 1px solid rgba(99, 102, 241, 0.3); color: #8b5cf6; background: rgba(99, 102, 241, 0.1); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">Pending</span>
                                             <?php endif; ?>
                                         </td>
-                                        <td style="padding: 16px 10px; text-align: right; font-size: 13px; color: #94a3b8;">
+                                        <td style="padding: 16px 10px; text-align: right; font-size: 13px; color: #64748b;">
                                             <?php echo gmdate('M j, g:i A', strtotime($email->sent_at)); ?>
                                         </td>
                                     </tr>
@@ -502,9 +506,9 @@ class Ofast_X_SMTP_Admin
             $lifetime = Ofast_X_SMTP::get_delivery_stats();
             if ($lifetime['fallback_used'] > 0): 
             ?>
-            <div style="margin-top: 25px; padding: 15px 25px; background: rgba(217, 119, 6, 0.1); border: 1px solid rgba(217, 119, 6, 0.3); border-radius: 12px; display: flex; align-items: center; gap: 15px;">
-                <span class="dashicons dashicons-update-alt" style="color: #fbbf24; font-size: 24px; width: 24px; height: 24px;"></span>
-                <div style="color: #fcd34d; font-size: 14px;">
+            <div style="margin-top: 25px; padding: 15px 25px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; display: flex; align-items: center; gap: 15px;">
+                <span class="dashicons dashicons-update-alt" style="color: #f59e0b; font-size: 24px; width: 24px; height: 24px;"></span>
+                <div style="color: #b45309; font-size: 14px;">
                     <strong>Fallback Activated:</strong> The system successfully recovered <?php echo number_format($lifetime['fallback_used']); ?> emails via the backup SMTP connection.
                 </div>
             </div>
@@ -512,7 +516,7 @@ class Ofast_X_SMTP_Admin
             
             <!-- Quick Actions -->
             <div style="margin-top: 25px; display: flex; gap: 15px; justify-content: flex-end;">
-                <a href="<?php echo admin_url('admin.php?page=ofast-emailer&tab=history'); ?>" style="background: transparent; color: #cbd5e1; border: 1px solid #475569; padding: 8px 20px; border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='rgba(51,65,85,0.5)'" onmouseout="this.style.background='transparent'">View All Logs</a>
+                <a href="<?php echo admin_url('admin.php?page=ofast-emailer&tab=history'); ?>" style="background: #fff; color: #475569; border: 1px solid #cbd5e1; padding: 8px 20px; border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">View All Logs</a>
                 <a href="<?php echo admin_url('admin.php?page=ofast-smtp&tab=settings'); ?>" style="background: #6366f1; color: #fff; border: none; padding: 8px 20px; border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='#6366f1'">Configure Settings</a>
             </div>
 
@@ -830,6 +834,129 @@ class Ofast_X_SMTP_Admin
             'total_pages' => $total_pages,
             'total' => $total,
         ));
+    }
+
+    public function handle_support_form()
+    {
+        if (!isset($_POST['ofast_smtp_support_submit'])) {
+            return;
+        }
+
+        check_admin_referer('ofast_smtp_support_form', '_wpnonce_support');
+
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+
+        $support_type = sanitize_key($_POST['support_type'] ?? 'bug');
+        $support_email = sanitize_email(wp_unslash($_POST['support_email'] ?? ''));
+        $support_subject = sanitize_text_field(wp_unslash($_POST['support_subject'] ?? ''));
+        $support_message = isset($_POST['support_message']) ? wp_kses_post(wp_unslash($_POST['support_message'])) : '';
+
+        if (empty($support_message)) {
+            Ofast_X_Toast::add('Please describe your issue before sending the request.', 'error');
+            return;
+        }
+
+        $recipient = get_option('admin_email', 'support@ofastshop.com');
+        $reply_to = $support_email ?: $recipient;
+        $site_name = get_bloginfo('name');
+        $message_type = $support_type === 'contact' ? 'Support request' : 'Bug report';
+        $subject = $support_subject ?: sprintf('[%s] %s from %s', strtoupper($support_type === 'contact' ? 'support' : 'bug'), $message_type, $site_name);
+
+        $diagnostics = array(
+            'Site' => $site_name . ' (' . site_url() . ')',
+            'PHP Version' => PHP_VERSION,
+            'WordPress Version' => get_bloginfo('version'),
+            'Plugin Version' => OFAST_X_VERSION,
+            'SMTP Enabled' => get_option('ofast_smtp_enabled', false) ? 'Yes' : 'No',
+            'Mailer Type' => get_option('ofast_smtp_mailer_type', 'default'),
+            'Provider' => get_option('ofast_smtp_provider', 'custom'),
+            'Host' => get_option('ofast_smtp_host', ''),
+            'From Email' => get_option('ofast_smtp_from_email', ''),
+            'Last SMTP Error' => get_option('ofast_smtp_last_error', 'None'),
+        );
+
+        $body = "Hello Ofast Support,\n\n";
+        $body .= "A new {$message_type} was submitted from {$site_name}.\n\n";
+        $body .= "Contact Email: {$reply_to}\n";
+        $body .= "Message:\n{$support_message}\n\n";
+        $body .= "System Diagnostics:\n";
+        foreach ($diagnostics as $label => $value) {
+            $body .= '- ' . $label . ': ' . $value . "\n";
+        }
+        $body .= "\nPlease reply to this message directly for follow-up.";
+
+        $headers = array('Reply-To: ' . $reply_to);
+
+        $sent = wp_mail($recipient, $subject, $body, $headers);
+
+        if ($sent) {
+            update_option('ofast_smtp_last_support_request', current_time('mysql'));
+            Ofast_X_Toast::add('Your support request was sent successfully. We will follow up soon.', 'success');
+        } else {
+            update_option('ofast_smtp_last_support_request', current_time('mysql'));
+            Ofast_X_Toast::add('Your request was saved locally, but the email could not be sent. Please copy the details and contact support manually.', 'error');
+        }
+    }
+
+    private function render_support_page_content()
+    {
+        $default_email = get_option('admin_email', '');
+        $default_subject = 'SMTP issue report';
+        ?>
+        <div style="max-width: 900px;">
+            <div style="background: linear-gradient(135deg, #312e81, #4338ca); color: #fff; border-radius: 16px; padding: 28px 30px; margin-bottom: 24px; box-shadow: 0 10px 25px rgba(49, 46, 129, 0.2);">
+                <h2 style="margin: 0 0 8px 0; font-size: 24px;">Help & Support</h2>
+                <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 15px; line-height: 1.6;">Report a bug, ask for help, or contact us directly from within the SMTP dashboard. We’ll receive your message along with useful diagnostics so troubleshooting is faster.</p>
+            </div>
+
+            <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                <form method="post">
+                    <?php wp_nonce_field('ofast_smtp_support_form', '_wpnonce_support'); ?>
+
+                    <table class="form-table" style="margin-top: 0;">
+                        <tr>
+                            <th scope="row"><label for="support_type">What do you need?</label></th>
+                            <td>
+                                <select name="support_type" id="support_type" style="min-width: 220px;">
+                                    <option value="bug">Report a bug</option>
+                                    <option value="contact">Contact support</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="support_email">Your email</label></th>
+                            <td>
+                                <input type="email" name="support_email" id="support_email" value="<?php echo esc_attr($default_email); ?>" class="regular-text" placeholder="you@example.com">
+                                <p class="description" style="margin-top: 6px;">We’ll use this address for follow-up.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="support_subject">Subject</label></th>
+                            <td>
+                                <input type="text" name="support_subject" id="support_subject" value="<?php echo esc_attr($default_subject); ?>" class="regular-text">
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="support_message">Details</label></th>
+                            <td>
+                                <textarea name="support_message" id="support_message" rows="8" class="large-text code" placeholder="Describe the issue you are seeing, what you expected to happen, and any error messages you saw."></textarea>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div style="margin-top: 12px; padding: 14px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; color: #475569; font-size: 13px; line-height: 1.6;">
+                        <strong>Included automatically:</strong> site URL, PHP version, WordPress version, plugin version, SMTP status, current mailer settings, and the latest SMTP error (if any).
+                    </div>
+
+                    <p class="submit" style="margin-top: 18px;">
+                        <button type="submit" name="ofast_smtp_support_submit" value="1" class="button button-primary">Send request</button>
+                    </p>
+                </form>
+            </div>
+        </div>
+        <?php
     }
 
     private function render_settings_page_content()

@@ -100,12 +100,26 @@ class Ofast_X_Spam_Protection
 
     /**
      * Enqueue frontend script for Turnstile
+     *
+     * Hardened: Also enqueues the disable-submit script on frontend pages
+     * where Turnstile is active (comments, CF7, Tutor registration).
      */
     public function enqueue_frontend_script()
     {
         $provider = $this->get_active_provider();
         if ($provider === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
             Ofast_X_Turnstile::enqueue_script();
+
+            // Enqueue the submit-disable script for frontend forms
+            if (!wp_script_is('ofast-turnstile-disable-submit', 'enqueued')) {
+                wp_enqueue_script(
+                    'ofast-turnstile-disable-submit',
+                    plugin_dir_url(__FILE__) . 'assets/js/disable-submit.js',
+                    array('ofast-turnstile-api'),
+                    defined('OFAST_X_VERSION') ? OFAST_X_VERSION : '1.0',
+                    array('in_footer' => true, 'strategy' => 'defer')
+                );
+            }
         }
     }
 
@@ -230,17 +244,57 @@ class Ofast_X_Spam_Protection
 
     /**
      * Enqueue scripts on login page
+     *
+     * Hardened: Also enqueues the disable-submit script and adds an inline
+     * script that resets the Turnstile widget after a failed login attempt,
+     * preventing "timeout-or-duplicate" errors on retry.
      */
     public function enqueue_login_script()
     {
         $provider = $this->get_active_provider();
         if ($provider === 'turnstile' && class_exists('Ofast_X_Turnstile')) {
             Ofast_X_Turnstile::enqueue_script();
+
+            // Enqueue the submit-disable script for login form
+            if (!wp_script_is('ofast-turnstile-disable-submit', 'enqueued')) {
+                wp_enqueue_script(
+                    'ofast-turnstile-disable-submit',
+                    plugin_dir_url(__FILE__) . 'assets/js/disable-submit.js',
+                    array('ofast-turnstile-api'),
+                    defined('OFAST_X_VERSION') ? OFAST_X_VERSION : '1.0',
+                    array('in_footer' => true, 'strategy' => 'defer')
+                );
+            }
+
+            // Re-render Turnstile after failed login attempt (token is consumed)
+            // Forked from Simple Cloudflare Turnstile's cfturnstile_login_rerender_script()
+            $rerender_script = 'document.addEventListener("DOMContentLoaded",function(){
+                var b=document.getElementById("wp-submit");
+                if(!b)return;
+                b.addEventListener("click",function(){
+                    setTimeout(function(){
+                        if(typeof turnstile==="undefined")return;
+                        var w=document.querySelector("#loginform .cf-turnstile, .login-form-turnstile .cf-turnstile");
+                        if(!w)return;
+                        try{turnstile.reset(w);}catch(e){
+                            try{turnstile.remove(w);turnstile.render(w);}catch(e2){}
+                        }
+                    },2000);
+                });
+            });';
+            wp_add_inline_script('ofast-turnstile-api', $rerender_script);
         }
     }
 
     /**
      * Verify login form spam protection
+     *
+     * Hardened:
+     * - Skips XMLRPC/REST requests (no widget rendered in those contexts)
+     * - Skips WooCommerce login (handled by its own integration)
+     * - Skips EDD login (handled by its own integration)
+     * - Uses user-bound verification transient to prevent cross-account token replay
+     * - Forked guards from Simple Cloudflare Turnstile's cfturnstile_wp_login_check()
      */
     public function verify_login($user, $username, $password)
     {
@@ -249,8 +303,41 @@ class Ofast_X_Spam_Protection
             return $user;
         }
 
-        // FIX: No early return on credential errors — spam check must always run
-        // at priority 9 (before WP credential check at 20)
+        // --- Protocol bypass guards ---
+        // XMLRPC and REST API never render a Turnstile widget, so the token will
+        // always be empty. Blocking these would break wp-cli, mobile apps,
+        // Jetpack, and any REST-based authentication.
+        if (defined('XMLRPC_REQUEST') && XMLRPC_REQUEST) {
+            return $user;
+        }
+        if (defined('REST_REQUEST') && REST_REQUEST) {
+            return $user;
+        }
+
+        // --- Third-party form guards ---
+        // WooCommerce and EDD have their own login forms with separate nonces.
+        // If those plugins handle Turnstile via their own integration, skip here
+        // to avoid double-verification.
+        if (isset($_POST['woocommerce-login-nonce']) && wp_verify_nonce(sanitize_text_field($_POST['woocommerce-login-nonce']), 'woocommerce-login')) {
+            return $user;
+        }
+        if (isset($_POST['edd_login_nonce']) && wp_verify_nonce(sanitize_text_field($_POST['edd_login_nonce']), 'edd-login-nonce')) {
+            return $user;
+        }
+
+        // --- Skip if WP already found credential errors ---
+        // If username/password are both empty, WP returns empty_username + empty_password errors.
+        // No point running Turnstile if credentials weren't even submitted.
+        if (is_wp_error($user) && isset($user->errors['empty_username']) && isset($user->errors['empty_password'])) {
+            return $user;
+        }
+
+        // --- User-bound verification transient ---
+        // If this user was already verified in this session, skip re-check.
+        // Forked from SCT: prevents cross-account token replay.
+        if (isset($user->ID) && get_transient('ofast_login_verified_' . $user->ID)) {
+            return $user;
+        }
 
         $provider = $this->get_active_provider();
 
@@ -296,6 +383,13 @@ class Ofast_X_Spam_Protection
                 'spam_protection_failed',
                 '<strong>Spam protection failed:</strong> ' . esc_html($result['error'] ?? 'Please complete the verification.')
                 );
+        }
+
+        // --- Mark user as verified ---
+        // Bind verification to user ID so a token validated for one account
+        // can't be replayed against another. 300-second TTL.
+        if (isset($user->ID)) {
+            set_transient('ofast_login_verified_' . $user->ID, 1, 300);
         }
 
         return $user;

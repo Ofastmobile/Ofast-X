@@ -136,6 +136,12 @@ class Ofast_X_Turnstile
 
     /**
      * Verify Turnstile token
+     *
+     * Hardened: Prevents token replay attacks using short-lived transients.
+     * Each Turnstile token can only be used ONCE. Cloudflare's server-side
+     * validation is single-use, but responses can be replayed within a short
+     * window before CF marks them as timeout-or-duplicate. The transient
+     * ensures we reject replays immediately.
      * 
      * @param string $token The cf-turnstile-response from form
      * @return array ['success' => bool, 'error' => string|null]
@@ -159,6 +165,18 @@ class Ofast_X_Turnstile
             );
         }
 
+        // --- Token Replay Prevention ---
+        // Check if this exact token has already been consumed.
+        // Forked from Simple Cloudflare Turnstile's transient-based approach.
+        $token_hash = 'ofast_ts_' . substr(md5('ofast_verify_' . $token), 0, 20);
+        if (get_transient($token_hash)) {
+            return array(
+                'success' => false,
+                'error' => 'Security token already used. Please complete the challenge again.',
+                'code' => 'token-replay'
+            );
+        }
+
         // Get client IP
         $ip = $this->get_client_ip();
 
@@ -172,9 +190,8 @@ class Ofast_X_Turnstile
             )
         ));
 
-        // Check for WP error
+        // Check for WP error (network/DNS/timeout failure)
         if (is_wp_error($response)) {
-            // Log error but allow submission (fail open)
             error_log('Ofast Turnstile: API error - ' . $response->get_error_message());
             if ($this->should_fail_open()) {
                 return array(
@@ -191,7 +208,34 @@ class Ofast_X_Turnstile
             );
         }
 
+        // Check for Cloudflare server error (5xx)
+        $http_code = wp_remote_retrieve_response_code($response);
+        if ($http_code >= 500) {
+            error_log('Ofast Turnstile: Cloudflare returned HTTP ' . $http_code);
+            if ($this->should_fail_open()) {
+                return array(
+                    'success' => true,
+                    'error' => null,
+                    'skipped' => true,
+                    'reason' => 'api_error'
+                );
+            }
+            return array(
+                'success' => false,
+                'error' => 'Turnstile service temporarily unavailable. Please try again.',
+                'code' => 'api_error'
+            );
+        }
+
         $body = json_decode(wp_remote_retrieve_body($response), true);
+
+        if (!is_array($body)) {
+            return array(
+                'success' => false,
+                'error' => 'Invalid response from Turnstile API.',
+                'code' => 'bad-response'
+            );
+        }
 
         if (empty($body['success'])) {
             $error_codes = isset($body['error-codes']) ? implode(', ', $body['error-codes']) : 'unknown';
@@ -201,6 +245,11 @@ class Ofast_X_Turnstile
                 'code' => $error_codes
             );
         }
+
+        // --- Mark token as consumed ---
+        // 300-second TTL matches Cloudflare's token validity window.
+        // After this, the token is expired at Cloudflare anyway.
+        set_transient($token_hash, 1, 300);
 
         return array(
             'success' => true,
@@ -219,8 +268,12 @@ class Ofast_X_Turnstile
 
     /**
      * Render Turnstile widget HTML
+     *
+     * Hardened: Includes data-action for Cloudflare analytics, auto-retry on
+     * failure, auto-refresh on token expiry, and unique IDs per widget instance.
+     * Forked from Simple Cloudflare Turnstile's cfturnstile_field_show().
      * 
-     * @param string $form_id Optional form identifier for multiple forms
+     * @param string $form_id Form context identifier (e.g. 'login', 'comment', 'cf7')
      * @return string HTML to include in form
      */
     public function render_widget($form_id = 'default')
@@ -229,15 +282,32 @@ class Ofast_X_Turnstile
             return '<!-- Turnstile not configured -->';
         }
 
-        $html = '<div class="cf-turnstile" 
-                     data-sitekey="' . esc_attr($this->site_key) . '" 
-                     data-theme="light"></div>';
+        // Unique ID per widget instance for pages with multiple forms
+        $unique_id = 'ofast-ts-' . sanitize_key($form_id) . '-' . wp_rand(1000, 9999);
+        $action = 'ofast-' . sanitize_key($form_id);
+
+        $html  = '<div id="' . esc_attr($unique_id) . '"';
+        $html .= ' class="cf-turnstile ofast-turnstile-widget"';
+        $html .= ' data-sitekey="' . esc_attr($this->site_key) . '"';
+        $html .= ' data-theme="light"';
+        $html .= ' data-action="' . esc_attr($action) . '"';           // Form type in CF analytics
+        $html .= ' data-retry="auto"';                                   // Auto-retry on failure
+        $html .= ' data-retry-interval="1000"';                          // 1-second retry interval
+        $html .= ' data-refresh-expired="auto"';                         // Auto-refresh expired tokens
+        $html .= ' data-refresh-timeout="auto"';                         // Auto-refresh on timeout
+        $html .= ' data-callback="ofastTurnstileSuccess"';               // Global success callback
+        $html .= ' data-error-callback="ofastTurnstileError"';           // Global error callback
+        $html .= ' data-appearance="always"></div>';                     // Always show widget
 
         return $html;
     }
 
     /**
      * Enqueue Turnstile API script
+     *
+     * Hardened: Uses render=auto mode, loads in footer with defer strategy,
+     * and adds data-cfasync="false" via script_loader_tag filter to prevent
+     * Cloudflare Rocket Loader from breaking the Turnstile widget.
      */
     public static function enqueue_script()
     {
@@ -248,15 +318,29 @@ class Ofast_X_Turnstile
         if (function_exists('wp_enqueue_script')) {
             wp_enqueue_script(
                 'ofast-turnstile-api',
-                'https://challenges.cloudflare.com/turnstile/v0/api.js',
+                'https://challenges.cloudflare.com/turnstile/v0/api.js?render=auto',
                 array(),
                 null,
-                false
+                array('in_footer' => true, 'strategy' => 'defer')
             );
-            wp_script_add_data('ofast-turnstile-api', 'async', true);
-            wp_script_add_data('ofast-turnstile-api', 'defer', true);
             self::$script_output_done = true;
+
+            // Prevent Cloudflare Rocket Loader from deferring the Turnstile script
+            add_filter('script_loader_tag', array(__CLASS__, 'add_cfasync_attribute'), 10, 2);
         }
+    }
+
+    /**
+     * Add data-cfasync="false" to the Turnstile script tag.
+     * Prevents Cloudflare Rocket Loader from breaking the widget.
+     */
+    public static function add_cfasync_attribute($tag, $handle)
+    {
+        if ('ofast-turnstile-api' === $handle) {
+            $tag = str_replace("src='", "data-cfasync='false' src='", $tag);
+            $tag = str_replace('src="', 'data-cfasync="false" src="', $tag);
+        }
+        return $tag;
     }
 
     /**
@@ -274,26 +358,36 @@ class Ofast_X_Turnstile
     }
 
     /**
-     * Get client IP address
+     * Get client IP address.
+     *
+     * Hardened: Removed X-Forwarded-For trust — the leftmost IP is
+     * client-controlled and trivially spoofable. CF-Connecting-IP now
+     * rejects private/reserved IPs.
+     * Priority: CF-Connecting-IP → X-Real-IP → REMOTE_ADDR.
      */
     private function get_client_ip()
     {
-        $ip_headers = array(
-            'HTTP_CF_CONNECTING_IP', // Cloudflare
-            'HTTP_X_FORWARDED_FOR',
-            'HTTP_X_REAL_IP',
-            'REMOTE_ADDR'
-        );
+        // 1. CF-Connecting-IP: set by Cloudflare proxy, reject private/reserved
+        if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+            $ip = sanitize_text_field(trim(wp_unslash($_SERVER['HTTP_CF_CONNECTING_IP'])));
+            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                return $ip;
+            }
+        }
 
-        foreach ($ip_headers as $header) {
-            if (!empty($_SERVER[$header])) {
-                $ip = $_SERVER[$header];
-                if (strpos($ip, ',') !== false) {
-                    $ip = trim(explode(',', $ip)[0]);
-                }
-                if (filter_var($ip, FILTER_VALIDATE_IP)) {
-                    return $ip;
-                }
+        // 2. X-Real-IP: single-value header set by nginx reverse proxy
+        if (!empty($_SERVER['HTTP_X_REAL_IP'])) {
+            $ip = sanitize_text_field(trim(wp_unslash($_SERVER['HTTP_X_REAL_IP'])));
+            if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
+        }
+
+        // 3. REMOTE_ADDR: the only value that truly cannot be spoofed
+        if (!empty($_SERVER['REMOTE_ADDR'])) {
+            $ip = sanitize_text_field(trim(wp_unslash($_SERVER['REMOTE_ADDR'])));
+            if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
             }
         }
 

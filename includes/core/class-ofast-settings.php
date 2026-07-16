@@ -20,6 +20,7 @@ class Ofast_X_Settings
         add_action('admin_menu', array($this, 'add_settings_menu'));
         add_action('admin_init', array($this, 'handle_save'));
         add_action('admin_init', array($this, 'handle_reset'));
+        add_action('admin_init', array($this, 'handle_support_form'));
 
 
         
@@ -54,6 +55,144 @@ class Ofast_X_Settings
             'manage_options',
             'ofast-dashboard'
         );
+
+        add_submenu_page(
+            'ofast-dashboard',
+            'Help & Support',
+            'Help & Support',
+            'manage_options',
+            'ofast-support',
+            array($this, 'render_support_page')
+        );
+    }
+
+    /**
+     * Handle support form submission
+     */
+    public function handle_support_form()
+    {
+        if (!isset($_POST['ofast_support_submit'])) {
+            return;
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have sufficient permissions', 'ofast-x'));
+        }
+
+        check_admin_referer('ofast_support_form', '_wpnonce_support');
+
+        $support_type = sanitize_key($_POST['support_type'] ?? 'bug');
+        $support_email = sanitize_email(wp_unslash($_POST['support_email'] ?? ''));
+        $support_subject = sanitize_text_field(wp_unslash($_POST['support_subject'] ?? ''));
+        $support_message = isset($_POST['support_message']) ? sanitize_textarea_field(wp_unslash($_POST['support_message'])) : '';
+
+        if (empty($support_message)) {
+            if (class_exists('Ofast_X_Toast')) {
+                Ofast_X_Toast::add('Please describe the issue before sending your message.', 'error');
+            }
+            return;
+        }
+
+        $recipient = apply_filters('ofast_support_recipient_email', 'support@ofastshop.com');
+        $reply_to = $support_email ?: $recipient;
+        $site_name = get_bloginfo('name');
+        $message_type = $support_type === 'contact' ? 'Support request' : 'Bug report';
+        $subject = $support_subject ?: sprintf('[Ofast Toolkit] %s from %s', $message_type, $site_name);
+
+        $diagnostics = array(
+            'Site' => $site_name . ' (' . site_url() . ')',
+            'PHP Version' => PHP_VERSION,
+            'WordPress Version' => get_bloginfo('version'),
+            'Plugin Version' => OFAST_X_VERSION,
+            'SMTP Enabled' => get_option('ofast_smtp_enabled', false) ? 'Yes' : 'No',
+            'Mailer Type' => get_option('ofast_smtp_mailer_type', 'default'),
+            'Provider' => get_option('ofast_smtp_provider', 'custom'),
+            'From Email' => get_option('ofast_smtp_from_email', ''),
+            'Last SMTP Error' => get_option('ofast_smtp_last_error', 'None'),
+        );
+
+        $body = "Hello Ofast Support,\n\n";
+        $body .= "A new {$message_type} was submitted from {$site_name}.\n\n";
+        $body .= "Contact Email: {$reply_to}\n";
+        $body .= "Message:\n{$support_message}\n\n";
+        $body .= "System Diagnostics:\n";
+        foreach ($diagnostics as $label => $value) {
+            $body .= '- ' . $label . ': ' . $value . "\n";
+        }
+        $body .= "\nPlease reply to this email for follow-up.";
+
+        $headers = array('Reply-To: ' . $reply_to);
+        $sent = wp_mail($recipient, $subject, $body, $headers);
+
+        if ($sent) {
+            update_option('ofast_last_support_request', current_time('mysql'));
+            if (class_exists('Ofast_X_Toast')) {
+                Ofast_X_Toast::add('Your support request was sent successfully. We will follow up soon.', 'success');
+            }
+        } else {
+            update_option('ofast_last_support_request', current_time('mysql'));
+            if (class_exists('Ofast_X_Toast')) {
+                Ofast_X_Toast::add('Your request could not be sent right now. Please contact support directly via email.', 'error');
+            }
+        }
+    }
+
+    /**
+     * Render support page
+     */
+    public function render_support_page()
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have sufficient permissions', 'ofast-x'));
+        }
+
+        $default_email = get_option('admin_email', 'support@ofastshop.com');
+        ?>
+        <div class="wrap">
+            <h1>Help & Support</h1>
+            <p style="max-width: 800px; color: #475569;">Report a bug, request help, or contact us from anywhere inside the plugin. Your message will include useful diagnostics to make troubleshooting faster.</p>
+
+            <div style="max-width: 900px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                <form method="post">
+                    <?php wp_nonce_field('ofast_support_form', '_wpnonce_support'); ?>
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row"><label for="support_type">What do you need?</label></th>
+                            <td>
+                                <select name="support_type" id="support_type" style="min-width: 220px;">
+                                    <option value="bug">Report a bug</option>
+                                    <option value="contact">Contact support</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="support_email">Your email</label></th>
+                            <td>
+                                <input type="email" name="support_email" id="support_email" value="<?php echo esc_attr($default_email); ?>" class="regular-text">
+                                <p class="description">We will use this address for follow-up.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="support_subject">Subject</label></th>
+                            <td>
+                                <input type="text" name="support_subject" id="support_subject" value="Plugin issue report" class="regular-text">
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="support_message">Details</label></th>
+                            <td>
+                                <textarea name="support_message" id="support_message" rows="8" class="large-text code" placeholder="Describe the problem, what you expected, and any error messages you saw."></textarea>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <p class="submit">
+                        <button type="submit" name="ofast_support_submit" value="1" class="button button-primary">Send request</button>
+                    </p>
+                </form>
+            </div>
+        </div>
+        <?php
     }
 
     /**
@@ -152,6 +291,8 @@ class Ofast_X_Settings
         
         // Extract special items
         $settings_item = null;
+        $license_item = null;
+        $support_item = null;
         $other_items = array();
         
         foreach ($ofast_submenu as $key => $item) {
@@ -161,21 +302,33 @@ class Ofast_X_Settings
             if ($menu_slug === 'ofast-dashboard') {
                 $settings_item = $item;
             }
+            elseif ($menu_slug === 'ofast-license') {
+                $license_item = $item;
+            }
+            elseif ($menu_slug === 'ofast-support') {
+                $support_item = $item;
+            }
             else {
                 $other_items[] = $item;
             }
         }
         
-        // Sort other items alphabetically by menu title
+        // Sort remaining items alphabetically by menu title
         usort($other_items, function($a, $b) {
             return strcasecmp($a[0], $b[0]);
         });
         
-        // Rebuild submenu: Settings first, sorted items
+        // Rebuild submenu: Settings first, then License, then Help & Support, then the rest
         $new_submenu = array();
         
         if ($settings_item) {
             $new_submenu[] = $settings_item;
+        }
+        if ($license_item) {
+            $new_submenu[] = $license_item;
+        }
+        if ($support_item) {
+            $new_submenu[] = $support_item;
         }
         
         foreach ($other_items as $item) {

@@ -5,7 +5,7 @@
  * Description: All-in-One WordPress plugin with Email System, SMTP Configuration, Dashboard Customization, Newsletter, Contact Forms, Code Snippets, Redirects, and more.
  * Version: 1.0.2
  * Author: Ofastshop Digitals
- * Author URI: https://ofastshop.com
+ * Author URI: https://toolkit.ofastshop.com
  * Text Domain: ofast-x
  * Domain Path: /languages
  * Requires at least: 5.8

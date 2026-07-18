@@ -14,11 +14,16 @@ jQuery(document).ready(function($) {
                     $(this).closest('.module-card').removeClass('enabled');
                 }
                 
-                $.post(ofastSettingsAjax.url, {
+            $.post(ofastSettingsAjax.url, {
                     action: 'ofast_save_module_toggle',
                     nonce: ofastSettingsAjax.nonce,
                     module: module,
                     enabled: isChecked
+                }, function(response) {
+                    if (response.success) {
+                        // Reload so WordPress admin sidebar menus update
+                        window.location.reload();
+                    }
                 });
             });
 

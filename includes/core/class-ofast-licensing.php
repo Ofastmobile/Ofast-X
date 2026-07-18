@@ -430,7 +430,8 @@ function ofast_toolkit_render_license_page()
     <div class="wrap ofast-app-wrap">
         <header class="ofast-topbar">
             <div class="ofast-logo">
-                <img src="<?php echo esc_url(OFAST_X_PLUGIN_URL . 'assets/images/toolkit-logo.png'); ?>" alt="Ofast Toolkit" style="height: 45px; width: auto; object-fit: contain;" />
+                <img src="<?php echo esc_url(OFAST_X_PLUGIN_URL . 'assets/images/toolkit-logo.png'); ?>" alt="Ofast Toolkit Logo" style="height: 40px; width: auto; object-fit: contain;" />
+                <span>Ofast Toolkit</span>
             </div>
             <div class="header-actions">
                 <a href="?page=ofast-setup-wizard" class="action-btn"><span class="dashicons dashicons-admin-tools"></span> Setup Wizard</a>
@@ -454,7 +455,7 @@ function ofast_toolkit_render_license_page()
                     <div class="pro-icon">🚀</div>
                     <h4>Unlock More Power</h4>
                     <p>Upgrade to Pro and get access to advanced features.</p>
-                    <a href="#" class="upgrade-btn">Upgrade Now</a>
+                    <a href="https://toolkit.ofastshop.com/" target="_blank" class="upgrade-btn">Upgrade Now</a>
                 </div>
             </aside>
 

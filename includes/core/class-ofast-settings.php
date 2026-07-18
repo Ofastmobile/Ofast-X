@@ -42,7 +42,8 @@ class Ofast_X_Settings
      */
     public function enqueue_admin_assets($hook)
     {
-        if (strpos($hook, 'ofast') === false) {
+        // Only load on the main Ofast dashboard page, not on module sub-pages
+        if ($hook !== 'toplevel_page_ofast-dashboard' && $hook !== 'ofast-toolkit_page_ofast-dashboard') {
             return;
         }
 
@@ -287,7 +288,43 @@ class Ofast_X_Settings
         exit;
     }
 
+    /**
+     * AJAX: Save individual module toggle
+     */
+    public function ajax_save_module_toggle()
+    {
+        check_ajax_referer('ofast_settings_ajax', 'nonce');
 
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        $module  = sanitize_text_field($_POST['module']);
+        $enabled = filter_var($_POST['enabled'], FILTER_VALIDATE_BOOLEAN);
+
+        $modules_enabled = get_option('ofastx_modules_enabled', array());
+        $modules_enabled[$module] = $enabled;
+        update_option('ofastx_modules_enabled', $modules_enabled);
+
+        wp_send_json_success(array('module' => $module, 'enabled' => $enabled));
+    }
+
+    /**
+     * AJAX: Save data management preference
+     */
+    public function ajax_save_data_management()
+    {
+        check_ajax_referer('ofast_settings_ajax', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        $delete_data = intval($_POST['delete_data']);
+        update_option('ofast_delete_data_on_uninstall', $delete_data);
+
+        wp_send_json_success();
+    }
 
     /**
      * Reorder Ofast X submenus alphabetically
@@ -433,7 +470,7 @@ class Ofast_X_Settings
                         <div class="pro-icon">🚀</div>
                         <h4>Unlock More Power</h4>
                         <p>Upgrade to Pro and get access to advanced features.</p>
-                        <a href="#" class="upgrade-btn">Upgrade Now</a>
+                        <a href="https://toolkit.ofastshop.com/" target="_blank" class="upgrade-btn">Upgrade Now</a>
                     </div>
                 </aside>
                 

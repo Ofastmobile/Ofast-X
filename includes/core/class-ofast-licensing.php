@@ -430,7 +430,7 @@ function ofast_toolkit_render_license_page()
     <div class="wrap ofast-app-wrap">
         <header class="ofast-topbar">
             <div class="ofast-logo">
-                <img src="https://dl.ofastshop.com/ofastshop/web/2026/07/18110733/toolkit-logo.png" alt="Ofast Toolkit" style="height: 45px; width: auto; object-fit: contain;" />
+                <img src="<?php echo esc_url(OFAST_X_PLUGIN_URL . 'assets/images/toolkit-logo.png'); ?>" alt="Ofast Toolkit" style="height: 45px; width: auto; object-fit: contain;" />
             </div>
             <div class="header-actions">
                 <a href="?page=ofast-setup-wizard" class="action-btn"><span class="dashicons dashicons-admin-tools"></span> Setup Wizard</a>

@@ -26,12 +26,33 @@ class Ofast_X_Settings
 
 
         
+        // Enqueue settings assets
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
+        
         // Reorder Ofast X submenus alphabetically (after all menus added)
         add_action('admin_menu', array($this, 'reorder_ofast_submenus'), 99999);
         
         // Reorder admin menu
         add_filter('custom_menu_order', '__return_true');
         add_filter('menu_order', array($this, 'reorder_admin_menu'), 999);
+    }
+
+    /**
+     * Enqueue CSS and JS assets for the settings page
+     */
+    public function enqueue_admin_assets($hook)
+    {
+        if (strpos($hook, 'ofast') === false) {
+            return;
+        }
+
+        wp_enqueue_style('ofast-admin-css', OFAST_X_PLUGIN_URL . 'assets/css/ofast-admin.css', array(), OFAST_X_VERSION);
+        wp_enqueue_script('ofast-admin-js', OFAST_X_PLUGIN_URL . 'assets/js/ofast-admin.js', array('jquery'), OFAST_X_VERSION, true);
+
+        wp_localize_script('ofast-admin-js', 'ofastSettingsAjax', array(
+            'url'   => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('ofast_settings_ajax')
+        ));
     }
 
     /**
@@ -384,7 +405,8 @@ class Ofast_X_Settings
         <div class="wrap ofast-app-wrap">
             <header class="ofast-topbar">
                 <div class="ofast-logo">
-                    <img src="https://dl.ofastshop.com/ofastshop/web/2026/07/18110733/toolkit-logo.png" alt="Ofast Toolkit" style="height: 45px; width: auto; object-fit: contain;" />
+                    <img src="<?php echo esc_url(OFAST_X_PLUGIN_URL . 'assets/images/toolkit-logo.png'); ?>" alt="Ofast Toolkit Logo" style="height: 40px; width: auto; object-fit: contain;" />
+                    <span>Ofast Toolkit</span>
                 </div>
                 <div class="header-actions">
                     <a href="?page=ofast-setup-wizard" class="action-btn"><span class="dashicons dashicons-admin-tools"></span> Setup Wizard</a>
@@ -435,25 +457,7 @@ class Ofast_X_Settings
                                 <span class="desc"><?php echo $active_count; ?> modules are active and working.</span>
                             </div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-icon bg-blue"><span class="dashicons dashicons-performance"></span></div>
-                            <div class="stat-info">
-                                <span class="label">Performance</span>
-                                <span class="value">Excellent</span>
-                                <span class="desc">Your site performance is optimized.</span>
-                            </div>
-                            <!-- Mini chart decorative -->
-                            <div class="mini-chart"><svg viewBox="0 0 100 20"><path d="M0 20 L20 15 L40 18 L60 5 L80 10 L100 0" fill="none" stroke="#3b82f6" stroke-width="2"/></svg></div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon bg-emerald"><span class="dashicons dashicons-shield"></span></div>
-                            <div class="stat-info">
-                                <span class="label">Security</span>
-                                <span class="value">Protected</span>
-                                <span class="desc">All security features are active.</span>
-                            </div>
-                            <div class="mini-chart"><svg viewBox="0 0 100 20"><path d="M0 20 L20 18 L40 10 L60 12 L80 5 L100 0" fill="none" stroke="#10b981" stroke-width="2"/></svg></div>
-                        </div>
+
                         <div class="stat-card">
                             <div class="stat-icon bg-pink"><span class="dashicons dashicons-awards"></span></div>
                             <div class="stat-info">
@@ -697,538 +701,11 @@ class Ofast_X_Settings
             </div>
         </div>
 
-        <script>
-        var ofastSettingsAjax = {
-            url: '<?php echo admin_url('admin-ajax.php'); ?>',
-            nonce: '<?php echo wp_create_nonce('ofast_settings_ajax'); ?>'
-        };
-        </script>
         
-        <style>
-        /* WordPress Admin Override */
-        #wpcontent, #wpbody-content { padding: 0 !important; }
-        #wpfooter { display: none !important; }
-        #wpbody { background: #fcfcfd; }
         
-        /* Google Fonts */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
-        .ofast-app-wrap {
-            margin: 0;
-            width: 100%;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-            box-sizing: border-box;
-        }
-        .ofast-app-wrap * { box-sizing: border-box; }
         
-        .ofast-app-layout {
-            display: flex;
-            gap: 0;
-            background: #fcfcfd;
-            border-radius: 0;
-            border: none;
-            box-shadow: none;
-            min-height: calc(100vh - 32px);
-        }
         
-        .ofast-topbar {
-            position: sticky;
-            top: 32px;
-            z-index: 100;
-            background: #ffffff;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 16px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        /* Sidebar */
-        .ofast-sidebar {
-            width: 220px;
-            background: #ffffff;
-            border-right: 1px solid #e2e8f0;
-            display: flex;
-            flex-direction: column;
-            padding: 24px 16px;
-            flex-shrink: 0;
-            position: sticky;
-            top: 100px;
-            height: calc(100vh - 100px);
-            overflow-y: auto;
-        }
-        
-        .ofast-logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 20px;
-            font-weight: 700;
-            color: #1e293b;
-        }
-        .ofast-logo .logo-icon {
-            background: #4f46e5;
-            color: white;
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .ofast-logo .logo-icon .dashicons {
-            margin-top: 5px;
-        }
-        
-        .ofast-nav { flex-grow: 1; }
-        .nav-section {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #94a3b8;
-            font-weight: 600;
-            margin: 24px 8px 10px 8px;
-        }
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 12px;
-            color: #475569;
-            text-decoration: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s;
-            margin-bottom: 2px;
-        }
-        .nav-item:focus { box-shadow: none; outline: none; }
-        .nav-item .dashicons { font-size: 18px; width: 18px; height: 18px; opacity: 0.7; }
-        .nav-item:hover {
-            background: #f1f5f9;
-            color: #1e293b;
-        }
-        .nav-item:hover .dashicons { opacity: 1; }
-        .nav-item.active {
-            background: #4f46e5;
-            color: white;
-        }
-        .nav-item.active .dashicons { opacity: 1; }
-        
-        .ofast-pro-card {
-            background: linear-gradient(135deg, #312e81 0%, #4338ca 100%);
-            border-radius: 16px;
-            padding: 24px 20px;
-            color: white;
-            text-align: center;
-            margin-top: 20px;
-        }
-        .ofast-pro-card .pro-icon { font-size: 24px; margin-bottom: 10px; }
-        .ofast-pro-card h4 { margin: 0 0 8px 0; color: white; font-size: 16px; }
-        .ofast-pro-card p { font-size: 13px; color: #c7d2fe; margin: 0 0 16px 0; line-height: 1.4; }
-        .upgrade-btn {
-            display: inline-block;
-            background: rgba(255,255,255,0.2);
-            color: white;
-            text-decoration: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 14px;
-            transition: all 0.2s;
-            border: 1px solid rgba(255,255,255,0.3);
-        }
-        .upgrade-btn:hover { background: rgba(255,255,255,0.3); color: white; }
-        
-        /* Main Content */
-        .ofast-main {
-            flex-grow: 1;
-            padding: 32px 40px;
-            background: #fcfcfd;
-            max-width: calc(100% - 220px);
-        }
-        
-        .header-actions { display: flex; gap: 12px; }
-        .action-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            color: #0f172a;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 13px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            transition: all 0.2s;
-        }
-        .action-btn:hover { border-color: #cbd5e1; background: #f8fafc; color: #000000; }
-        .action-btn.icon-only { padding: 8px; }
-        .action-btn.icon-only .dashicons { margin: 0; }
-        .action-btn:focus { box-shadow: none; outline: none; }
-        
-        /* Stats row */
-        .ofast-stats-row {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 16px;
-            margin-bottom: 32px;
-        }
-        .stat-card {
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-            position: relative;
-        }
-        .stat-icon {
-            width: 40px; height: 40px;
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            margin-bottom: 16px;
-        }
-        .stat-icon .dashicons { font-size: 20px; width: 20px; height: 20px; margin-top:5px; }
-        .bg-green { background: #dcfce7; color: #16a34a; }
-        .bg-purple { background: #e0e7ff; color: #4f46e5; }
-        .bg-blue { background: #dbeafe; color: #2563eb; }
-        .bg-emerald { background: #d1fae5; color: #059669; }
-        .bg-pink { background: #fce7f3; color: #db2777; }
-        .bg-yellow { background: #fef3c7; color: #d97706; }
-        
-        .stat-info { display: flex; flex-direction: column; }
-        .stat-info .label { font-size: 13px; color: #0f172a; font-weight: 600; margin-bottom: 4px; }
-        .stat-info .value { font-size: 22px; color: #0f172a; font-weight: 700; margin-bottom: 8px; }
-        .stat-info .desc { font-size: 12px; color: #64748b; line-height: 1.4; }
-        
-        .mini-chart { position: absolute; bottom: 20px; right: 20px; width: 60px; height: 20px; opacity: 0.6; }
-        .badge-icon { position: absolute; bottom: 20px; right: 20px; width: 24px; height: 24px; background: #4f46e5; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-        .badge-icon .dashicons { font-size: 14px; width: 14px; height: 14px; margin-top:2px; }
-        
-        /* Filter Bar */
-        .ofast-filter-bar {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            margin-bottom: 24px;
-            background: white;
-            padding: 12px 16px;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-        }
-        .search-wrap {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            border: 1px solid #e2e8f0;
-            padding: 8px 12px;
-            border-radius: 8px;
-            width: 250px;
-        }
-        .search-wrap .dashicons { color: #94a3b8; }
-        .search-wrap input {
-            border: none;
-            background: transparent;
-            box-shadow: none;
-            padding: 0;
-            width: 100%;
-            font-size: 14px;
-            color: #0f172a;
-        }
-        .search-wrap input:focus { outline: none; box-shadow: none; }
-        
-        .filter-pills { display: flex; gap: 8px; overflow-x: auto; flex-grow: 1; }
-        .filter-pills .pill {
-            background: transparent;
-            border: 1px solid transparent;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 500;
-            color: #64748b;
-            cursor: pointer;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
-        .filter-pills .pill:hover { color: #0f172a; }
-        .filter-pills .pill.active { background: #4f46e5; color: white; }
-        
-        /* Module Grid */
-        .ofast-module-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-bottom: 40px;
-        }
-        .module-card {
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            transition: all 0.2s;
-        }
-        .module-card:hover { border-color: #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .module-card.hidden { display: none; }
-        
-        .card-top { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
-        .card-icon {
-            width: 48px; height: 48px;
-            border-radius: 12px;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-        }
-        .card-icon .dashicons { font-size: 24px; width: 24px; height: 24px; margin-top:5px; }
-        
-        .card-title { flex-grow: 1; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-        .card-title h3 { margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: #0f172a; }
-        
-        .status-badge {
-            font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 6px;
-        }
-        .status-badge.enabled { background: #dcfce7; color: #16a34a; }
-        .status-badge.disabled { background: #fee2e2; color: #dc2626; }
-        
-        .card-desc { font-size: 13px; color: #64748b; line-height: 1.5; margin: 0 0 20px 0; flex-grow: 1; }
-        
-        .card-features { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
-        .feature-tag {
-            font-size: 11px; font-weight: 500; color: #475569;
-            background: #f1f5f9; padding: 4px 8px; border-radius: 4px;
-        }
-        
-        .card-bottom {
-            display: flex; justify-content: space-between; align-items: center;
-            padding-top: 16px; border-top: 1px solid #f1f5f9;
-        }
-        .configure-link { font-size: 14px; font-weight: 600; color: #4f46e5; text-decoration: none; }
-        .configure-link:hover { text-decoration: underline; }
-        
-        .coming-soon-card {
-            border: 2px dashed #cbd5e1;
-            background: #f8fafc;
-            display: flex; align-items: center; justify-content: center;
-            text-align: center; padding: 40px 20px;
-        }
-        .coming-soon-card:hover { border-color: #94a3b8; }
-        .coming-soon-content .dashicons { font-size: 32px; width: 32px; height: 32px; color: #94a3b8; margin-bottom: 12px; }
-        .coming-soon-content h4 { margin: 0 0 8px 0; color: #475569; font-size: 15px; }
-        .coming-soon-content p { margin: 0; color: #64748b; font-size: 13px; }
-        
-        /* Toggle Switch */
-        .ofast-toggle-switch { position: relative; display: inline-block; width: 40px; height: 22px; }
-        .ofast-toggle-switch input { opacity: 0; width: 0; height: 0; }
-        .ofast-toggle-switch .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 22px; }
-        .ofast-toggle-switch .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 2px; bottom: 2px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .ofast-toggle-switch input:checked+.slider { background-color: #4f46e5; }
-        .ofast-toggle-switch input:checked+.slider:before { transform: translateX(18px); }
-        .core-label { font-size: 12px; color: #94a3b8; font-style: italic; }
-
-        /* Bottom Actions */
-        .ofast-bottom-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-        .action-card {
-            background: white; border-radius: 16px; padding: 24px;
-            display: flex; flex-direction: column; justify-content: space-between;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02); border: 1px solid #e2e8f0;
-        }
-        
-        .action-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .action-card-header h4 { margin: 0; font-size: 16px; color: #0f172a; font-weight: 600; }
-        
-        .action-card-content { margin-bottom: 24px; flex-grow: 1; }
-        .action-card-content p { margin: 0; font-size: 13px; color: #64748b; line-height: 1.5; }
-        
-        .ac-icon {
-            width: 40px; height: 40px; border-radius: 10px; background: #e0e7ff; color: #4f46e5;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        }
-        .ac-icon.green { background: #d1fae5; color: #059669; }
-        .ac-icon.red { background: #fee2e2; color: #dc2626; }
-        .ac-icon .dashicons { font-size: 20px; width: 20px; height: 20px; margin-top:5px; }
-        
-        .ac-btn {
-            display: inline-block; text-align: center; padding: 10px 24px;
-            border-radius: 8px; font-weight: 600; font-size: 14px; text-decoration: none; border: none; cursor: pointer; transition: all 0.2s;
-            align-self: flex-start;
-        }
-        .ac-btn.dark { background: #0f172a; color: white; }
-        .ac-btn.dark:hover { background: #1e293b; color: white; }
-        .ac-btn.outline { background: white; border: 1px solid #cbd5e1; color: #475569; }
-        .ac-btn.outline:hover { background: #f8fafc; border-color: #94a3b8; }
-        .ac-btn.outline-red { background: white; border: 1px solid #fecaca; color: #dc2626; }
-        .ac-btn.outline-red:hover { background: #fef2f2; border-color: #fca5a5; }
-
-        /* Modal */
-        .ofast-modal {
-            display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%;
-            background-color: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px);
-            align-items: center; justify-content: center;
-        }
-        .ofast-modal.active { display: flex; }
-        .ofast-modal-content {
-            background-color: #fff; border-radius: 16px; width: 100%; max-width: 500px;
-            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
-            overflow: hidden;
-        }
-        .modal-header { padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
-        .modal-header h2 { margin: 0; font-size: 18px; color: #0f172a; }
-        .close-modal { cursor: pointer; color: #64748b; }
-        .modal-body { padding: 24px; }
-        .modal-body > p { margin: 0 0 20px 0; color: #475569; font-size: 14px; }
-        .data-options { display: flex; flex-direction: column; gap: 12px; }
-        .data-option {
-            display: flex; align-items: flex-start; gap: 12px; padding: 16px;
-            border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; transition: all 0.2s;
-        }
-        .data-option input { margin-top: 4px; }
-        .opt-text strong { display: block; margin-bottom: 4px; color: #0f172a; font-size: 14px; }
-        .opt-text span { color: #64748b; font-size: 13px; }
-        .data-option.selected { border-color: #4f46e5; background: #e0e7ff; }
-        .data-option.danger.selected { border-color: #ef4444; background: #fee2e2; }
-        .modal-body .note { margin: 20px 0 0 0; font-size: 12px; color: #94a3b8; font-style: italic; }
-        .modal-footer { padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px; }
-        .btn-cancel { padding: 10px 16px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #475569; font-weight: 600; cursor: pointer; }
-        .btn-save { padding: 10px 16px; border-radius: 8px; border: none; background: #4f46e5; color: white; font-weight: 600; cursor: pointer; }
-
-        @media (max-width: 1400px) {
-            .ofast-module-grid { grid-template-columns: repeat(2, 1fr); }
-            .ofast-stats-row { grid-template-columns: repeat(3, 1fr); }
-        }
-        @media (max-width: 1100px) {
-            .ofast-bottom-actions { grid-template-columns: repeat(2, 1fr); }
-        }
-        @media (max-width: 900px) {
-            .ofast-app-layout { flex-direction: column; }
-            .ofast-sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e2e8f0; }
-            .ofast-main { max-width: 100%; }
-        }
-        @media (max-width: 768px) {
-            .ofast-stats-row { grid-template-columns: repeat(2, 1fr); }
-            .ofast-module-grid { grid-template-columns: 1fr; }
-            .ofast-bottom-actions { grid-template-columns: 1fr; }
-            .ofast-header { flex-direction: column; gap: 16px; }
-        }
-        </style>
-        
-        <script>
-        jQuery(document).ready(function($) {
-            // Module toggle AJAX
-            $('.module-toggle').on('change', function() {
-                var isChecked = $(this).is(':checked');
-                var module = $(this).data('module');
-                var badge = $(this).closest('.module-card').find('.status-badge');
-                
-                // Update UI optimistically
-                if (isChecked) {
-                    badge.removeClass('disabled').addClass('enabled').text('Enabled');
-                    $(this).closest('.module-card').addClass('enabled');
-                } else {
-                    badge.removeClass('enabled').addClass('disabled').text('Disabled');
-                    $(this).closest('.module-card').removeClass('enabled');
-                }
-                
-                $.post(ofastSettingsAjax.url, {
-                    action: 'ofast_save_module_toggle',
-                    nonce: ofastSettingsAjax.nonce,
-                    module: module,
-                    enabled: isChecked
-                });
-            });
-
-            // Filtering
-            $('.filter-pills .pill').on('click', function() {
-                $('.filter-pills .pill').removeClass('active');
-                $(this).addClass('active');
-                
-                var filter = $(this).data('filter');
-                if (filter === 'all') {
-                    $('.module-card:not(.coming-soon-card)').show();
-                } else if (filter === 'status-enabled') {
-                    $('.module-card:not(.coming-soon-card)').hide();
-                    $('.module-card.enabled').show();
-                } else if (filter === 'status-disabled') {
-                    $('.module-card:not(.coming-soon-card)').hide();
-                    $('.module-card:not(.enabled):not(.coming-soon-card)').show();
-                }
-            });
-            
-            // Search
-            $('#module-search').on('input', function() {
-                var term = $(this).val().toLowerCase();
-                if (term) {
-                    $('.filter-pills .pill').removeClass('active');
-                } else {
-                    $('.filter-pills .pill[data-filter="all"]').addClass('active');
-                }
-                
-                $('.module-card:not(.coming-soon-card)').each(function() {
-                    var title = $(this).find('h3').text().toLowerCase();
-                    var desc = $(this).find('.card-desc').text().toLowerCase();
-                    if (title.indexOf(term) > -1 || desc.indexOf(term) > -1) {
-                        $(this).show();
-                    } else {
-                        $(this).hide();
-                    }
-                });
-            });
-
-            // Modal
-            $('.ofast-open-data-modal').on('click', function(e) {
-                e.preventDefault();
-                $('#data-management-modal').addClass('active');
-            });
-            $('.close-modal').on('click', function() {
-                $('#data-management-modal').removeClass('active');
-            });
-            
-            // Data options selection
-            $('input[name="delete_data_choice"]').on('change', function() {
-                $('.data-option').removeClass('selected').removeClass('danger-selected');
-                var isDanger = $(this).closest('.data-option').hasClass('danger');
-                if(isDanger) {
-                    $(this).closest('.data-option').addClass('selected');
-                } else {
-                    $(this).closest('.data-option').addClass('selected');
-                }
-            });
-            
-            // Save Data Management
-            $('#save-data-management').on('click', function() {
-                var choice = $('input[name="delete_data_choice"]:checked').val();
-                var btn = $(this);
-                var originalText = btn.text();
-                
-                btn.text('Saving...').prop('disabled', true);
-                
-                $.post(ofastSettingsAjax.url, {
-                    action: 'ofast_save_data_management',
-                    nonce: ofastSettingsAjax.nonce,
-                    delete_data: choice
-                }, function(response) {
-                    btn.text('Saved!');
-                    setTimeout(function() {
-                        btn.text(originalText).prop('disabled', false);
-                        $('#data-management-modal').removeClass('active');
-                    }, 1000);
-                });
-            });
-
-            // Tab Switching (no page reload)
-            $('.nav-item[data-tab]').on('click', function(e) {
-                e.preventDefault();
-                var tab = $(this).data('tab');
-                $('.ofast-tab-panel').hide();
-                $('#ofast-tab-' + tab).show();
-                $('.nav-item[data-tab]').removeClass('active');
-                $(this).addClass('active');
-            });
-        });
-        </script>
         <?php
     }
 private function get_module_admin_url($module)

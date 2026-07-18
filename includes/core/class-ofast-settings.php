@@ -21,6 +21,8 @@ class Ofast_X_Settings
         add_action('admin_init', array($this, 'handle_save'));
         add_action('admin_init', array($this, 'handle_reset'));
         add_action('admin_init', array($this, 'handle_support_form'));
+        add_action('wp_ajax_ofast_save_module_toggle', array($this, 'ajax_save_module_toggle'));
+        add_action('wp_ajax_ofast_save_data_management', array($this, 'ajax_save_data_management'));
 
 
         
@@ -47,22 +49,13 @@ class Ofast_X_Settings
             2
         );
 
-        // Rename first submenu to Settings
+        // Rename first submenu to Dashboard
         add_submenu_page(
             'ofast-dashboard',
-            'Settings',
-            'Settings',
+            'Dashboard',
+            'Dashboard',
             'manage_options',
             'ofast-dashboard'
-        );
-
-        add_submenu_page(
-            'ofast-dashboard',
-            'Help & Support',
-            'Help & Support',
-            'manage_options',
-            'ofast-support',
-            array($this, 'render_support_page')
         );
     }
 
@@ -286,6 +279,9 @@ class Ofast_X_Settings
         if (!isset($submenu['ofast-dashboard']) || !is_array($submenu['ofast-dashboard'])) {
             return;
         }
+
+        // Hide License from WP admin submenu (it's now a tab inside settings)
+        remove_submenu_page('ofast-dashboard', 'ofast-license');
         
         $ofast_submenu = $submenu['ofast-dashboard'];
         
@@ -375,632 +371,867 @@ class Ofast_X_Settings
 
         $modules = $this->get_available_modules();
         $enabled = get_option('ofastx_modules_enabled', array());
-        $saved = isset($_GET['settings_saved']);
-
-?>
-        <div class="wrap ofast-settings-wrap all-categories-view">
-            <!-- Modern Header - Unified Style -->
-            <div class="ofast-page-header">
-                <div class="ofast-header-content">
-                    <div class="ofast-header-icon">
-                        <span class="dashicons dashicons-admin-generic"></span>
-                    </div>
-                    <div class="ofast-header-text">
-                        <h1>Ofast Toolkit Settings</h1>
-                        <p>Manage your plugin modules and view system status.</p>
-                    </div>
+        $delete_data = get_option('ofast_delete_data_on_uninstall', 0);
+        
+        // Count active modules
+        $active_count = 0;
+        foreach ($modules as $slug => $data) {
+            if (!empty($data['locked']) || !empty($enabled[$slug])) $active_count++;
+        }
+        $total_modules = count($modules);
+        
+        ?>
+        <div class="wrap ofast-app-wrap">
+            <header class="ofast-topbar">
+                <div class="ofast-logo">
+                    <img src="https://dl.ofastshop.com/ofastshop/web/2026/07/18110733/toolkit-logo.png" alt="Ofast Toolkit" style="height: 45px; width: auto; object-fit: contain;" />
                 </div>
-            </div>
-
-            <!-- Stats Section -->
-            <?php
-            $roles = wp_roles()->roles;
-            $all_users = count_users();
-            $total_users = $all_users['total_users'];
-            
-            // Simulation Mode for Testing
-            if (isset($_GET['sim_roles'])) {
-                for ($i = 1; $i <= 15; $i++) {
-                    $all_users['avail_roles']['test_role_' . $i] = rand(10, 500);
-                    $roles['test_role_' . $i] = array('name' => 'Test Role ' . $i);
-                }
-            }
-
-            // Prepare Data
-            $visible_limit = 5;
-            $role_counts = $all_users['avail_roles'];
-            $visible_roles = array_slice($role_counts, 0, $visible_limit, true);
-            $hidden_roles = array_slice($role_counts, $visible_limit, null, true);
-            ?>
-
-            <div class="ofast-stats-container">
-                <div class="ofast-stats-row">
-                     <div class="ofast-stat-item total">
-                        <span class="label">Total Users</span>
-                        <span class="value"><?php echo esc_html($total_users); ?></span>
-                     </div>
-                     <?php foreach ($visible_roles as $role => $role_count): 
-                        $label = isset($roles[$role]['name']) ? $roles[$role]['name'] : ucfirst($role);
-                     ?>
-                     <div class="ofast-stat-item">
-                        <span class="label"><?php echo esc_html($label); ?></span>
-                        <span class="value"><?php echo esc_html($role_count); ?></span>
-                     </div>
-                     <?php endforeach; ?>
-
-                     <?php if (!empty($hidden_roles)): ?>
-                     <div class="ofast-stat-item expand-trigger" id="ofast-show-more-roles">
-                        <span class="dashicons dashicons-plus"></span>
-                        <span class="label"><?php echo count($hidden_roles); ?> More</span>
-                     </div>
-                     <?php endif; ?>
+                <div class="header-actions">
+                    <a href="?page=ofast-setup-wizard" class="action-btn"><span class="dashicons dashicons-admin-tools"></span> Setup Wizard</a>
+                    <a href="https://toolkit.ofastshop.com/docs/index.html" target="_blank" class="action-btn"><span class="dashicons dashicons-book"></span> Documentation</a>
+                    <a href="#" class="action-btn">Quick Actions</a>
                 </div>
+            </header>
 
-                <?php if (!empty($hidden_roles)): ?>
-                <div class="ofast-stats-row hidden-row" id="ofast-hidden-roles" style="display: none; margin-top: 15px;">
-                     <?php foreach ($hidden_roles as $role => $role_count): 
-                        $label = isset($roles[$role]['name']) ? $roles[$role]['name'] : ucfirst($role);
-                     ?>
-                     <div class="ofast-stat-item secondary">
-                        <span class="label"><?php echo esc_html($label); ?></span>
-                        <span class="value"><?php echo esc_html($role_count); ?></span>
-                     </div>
-                     <?php endforeach; ?>
-                </div>
-                <?php endif; ?>
-            </div>
-
-            <script>
-            jQuery(document).ready(function($) {
-                $('#ofast-show-more-roles').on('click', function() {
-                    $('#ofast-hidden-roles').slideToggle();
-                    // Also toggle class on parent row for mobile CSS handling
-                    $(this).closest('.ofast-stats-row').toggleClass('expanded');
+            <div class="ofast-app-layout">
+                <!-- Sidebar -->
+                <aside class="ofast-sidebar">
+                    <nav class="ofast-nav">
+                        <a href="#" class="nav-item active" data-tab="dashboard">
+                            <span class="dashicons dashicons-grid-view"></span> Dashboard
+                        </a>
+                        
+                        <div class="nav-section">SYSTEM</div>
+                        <a href="#" class="nav-item ofast-open-data-modal"><span class="dashicons dashicons-database"></span> Data Management</a>
+                        <a href="#" class="nav-item" data-tab="license"><span class="dashicons dashicons-admin-network"></span> License</a>
+                        <a href="#" class="nav-item" data-tab="support"><span class="dashicons dashicons-editor-help"></span> Help &amp; Support</a>
+                    </nav>
                     
-                    $(this).toggleClass('active');
-                    var icon = $(this).find('.dashicons');
-                    if ($(this).hasClass('active')) {
-                        icon.removeClass('dashicons-plus').addClass('dashicons-minus');
-                    } else {
-                        icon.removeClass('dashicons-minus').addClass('dashicons-plus');
-                    }
-                });
-            });
-            </script>
-
-            <?php if ($saved): ?>
-                <?php echo Ofast_X_Toast::render('Settings saved successfully!', 'success'); ?>
-            <?php endif; ?>
-
-            <?php if (isset($_GET['settings_reset'])): ?>
-                <?php echo Ofast_X_Toast::render('All settings have been reset to defaults!', 'warning'); ?>
-            <?php endif; ?>
-
-            <!-- Toolbar: Search, Filters, Category Tabs -->
-            <div class="ofast-toolbar">
-                <div class="ofast-search-box">
-                    <input type="text" id="ofast-search" placeholder="Search modules..." />
-                    <span class="dashicons dashicons-search"></span>
-                </div>
+                    <div class="ofast-pro-card">
+                        <div class="pro-icon">🚀</div>
+                        <h4>Unlock More Power</h4>
+                        <p>Upgrade to Pro and get access to advanced features.</p>
+                        <a href="#" class="upgrade-btn">Upgrade Now</a>
+                    </div>
+                </aside>
                 
-                <div class="ofast-filters">
-                    <?php
-                    $total_count = count($modules);
-                    $enabled_count = 0;
-                    foreach ($modules as $slug => $data) {
-                        if (!empty($data['locked']) || !empty($enabled[$slug])) $enabled_count++;
-                    }
-                    $disabled_count = $total_count - $enabled_count;
-                    ?>
-                    <button type="button" class="ofast-filter active" data-filter="all">All <span class="count">(<?php echo $total_count; ?>)</span></button>
-                    <button type="button" class="ofast-filter" data-filter="enabled">Enabled <span class="count">(<?php echo $enabled_count; ?>)</span></button>
-                    <button type="button" class="ofast-filter" data-filter="disabled">Disabled <span class="count">(<?php echo $disabled_count; ?>)</span></button>
-                </div>
-                
-                <div class="ofast-category-tabs">
-                    <button type="button" class="ofast-tab active" data-category="all">All</button>
-                    <button type="button" class="ofast-tab" data-category="communication"> Communication</button>
-                    <button type="button" class="ofast-tab" data-category="security"> Security</button>
-                    <button type="button" class="ofast-tab" data-category="content"> Content</button>
-                    <button type="button" class="ofast-tab" data-category="customization"> Customization</button>
-                    <button type="button" class="ofast-tab" data-category="utility"> Utility</button>
-                </div>
-            </div>
-
-            <form method="post" action="">
-                <?php wp_nonce_field('ofast_settings_save', '_wpnonce'); ?>
-
-                <?php
-                // Group modules by category
-                $categories = array(
-                    'customization' => array('icon' => 'dashicons-admin-appearance', 'title' => 'Customization Features'),
-                    'communication' => array('icon' => 'dashicons-email', 'title' => 'Communication Features'),
-                    'content' => array('icon' => 'dashicons-edit', 'title' => 'Content Management'),
-                    'security' => array('icon' => 'dashicons-lock', 'title' => 'Security Features'),
-                    'utility' => array('icon' => 'dashicons-admin-tools', 'title' => 'Utility Features'),
-                );
-                
-                $grouped_modules = array();
-                foreach ($modules as $slug => $data) {
-                    $cat = $data['category'] ?? 'utility';
-                    $grouped_modules[$cat][$slug] = $data;
-                }
-                ?>
-                <div class="ofast-all-modules-container">
-                <?php
-                foreach ($categories as $cat_key => $cat_info):
-                    if (empty($grouped_modules[$cat_key])) continue;
-                ?>
-                <div class="ofast-category-section" data-category="<?php echo esc_attr($cat_key); ?>">
-                    <h2 class="ofast-category-title">
-                        <span class="dashicons <?php echo esc_attr($cat_info['icon']); ?>"></span>
-                        <?php echo esc_html($cat_info['title']); ?>
-                    </h2>
+                <!-- Main Content -->
+                <main class="ofast-main">
+                    <div id="ofast-tab-dashboard" class="ofast-tab-panel">
+                    <div class="ofast-stats-row">
+                        <div class="stat-card">
+                            <div class="stat-icon bg-green"><span class="dashicons dashicons-yes"></span></div>
+                            <div class="stat-info">
+                                <span class="label">Plugin Health</span>
+                                <span class="value">98%</span>
+                                <span class="desc">Everything is running smoothly.</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon bg-purple"><span class="dashicons dashicons-grid-view"></span></div>
+                            <div class="stat-info">
+                                <span class="label">Modules Active</span>
+                                <span class="value"><?php echo $active_count; ?> / <?php echo $total_modules; ?></span>
+                                <span class="desc"><?php echo $active_count; ?> modules are active and working.</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon bg-blue"><span class="dashicons dashicons-performance"></span></div>
+                            <div class="stat-info">
+                                <span class="label">Performance</span>
+                                <span class="value">Excellent</span>
+                                <span class="desc">Your site performance is optimized.</span>
+                            </div>
+                            <!-- Mini chart decorative -->
+                            <div class="mini-chart"><svg viewBox="0 0 100 20"><path d="M0 20 L20 15 L40 18 L60 5 L80 10 L100 0" fill="none" stroke="#3b82f6" stroke-width="2"/></svg></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon bg-emerald"><span class="dashicons dashicons-shield"></span></div>
+                            <div class="stat-info">
+                                <span class="label">Security</span>
+                                <span class="value">Protected</span>
+                                <span class="desc">All security features are active.</span>
+                            </div>
+                            <div class="mini-chart"><svg viewBox="0 0 100 20"><path d="M0 20 L20 18 L40 10 L60 12 L80 5 L100 0" fill="none" stroke="#10b981" stroke-width="2"/></svg></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon bg-pink"><span class="dashicons dashicons-awards"></span></div>
+                            <div class="stat-info">
+                                <span class="label">License Status</span>
+                                <span class="value">Active</span>
+                                <span class="desc">Your license is valid and active.</span>
+                            </div>
+                            <div class="badge-icon"><span class="dashicons dashicons-yes-alt"></span></div>
+                        </div>
+                    </div>
                     
-                    <div class="ofast-modules-grid">
-                        <?php foreach ($grouped_modules[$cat_key] as $slug => $data):
+                    <div class="ofast-filter-bar">
+                        <div class="search-wrap">
+                            <span class="dashicons dashicons-search"></span>
+                            <input type="text" id="module-search" placeholder="Search modules..." />
+                        </div>
+                        <div class="filter-pills">
+                            <button class="pill active" data-filter="all">All Modules</button>
+                            <button class="pill" data-filter="status-enabled">Active</button>
+                            <button class="pill" data-filter="status-disabled">Disabled</button>
+                        </div>
+                    </div>
+                    
+                    <div class="ofast-module-grid">
+                        <?php foreach ($modules as $slug => $data):
                             $is_locked = !empty($data['locked']);
                             $is_enabled = !empty($enabled[$slug]) || $is_locked;
                             $module_url = $this->get_module_admin_url($data);
-                            $card_class = $is_enabled ? 'enabled' : '';
-                            if ($is_locked) {
-                                $card_class .= ' locked';
-                            }
-                            if (!empty($module_url)) {
-                                $card_class .= ' has-module-link';
-                            }
                         ?>
-                        <div class="ofast-module-card <?php echo esc_attr(trim($card_class)); ?>" data-module="<?php echo esc_attr($slug); ?>"<?php echo !empty($module_url) ? ' data-module-url="' . esc_url($module_url) . '"' : ''; ?><?php echo (!empty($module_url) && $is_enabled) ? ' tabindex="0"' : ''; ?>>
-                            <div class="module-header">
-                                <h3><?php echo esc_html($data['name']); ?></h3>
-                                <?php if ($is_locked): ?>
-                                    <span class="ofast-badge active">Always On</span>
-                                <?php elseif ($is_enabled): ?>
-                                    <span class="ofast-badge integrated">Enabled</span>
-                                <?php else: ?>
-                                    <span class="ofast-badge not-integrated">Disabled</span>
+                        <div class="module-card <?php echo $is_enabled ? 'enabled' : ''; ?>" data-category="<?php echo esc_attr($data['category'] ?? 'core'); ?>">
+                            <div class="card-top">
+                                <div class="card-icon <?php echo esc_attr($data['color_class'] ?? 'bg-purple'); ?>">
+                                    <span class="dashicons <?php echo esc_attr($data['icon'] ?? 'dashicons-admin-generic'); ?>"></span>
+                                </div>
+                                <div class="card-title">
+                                    <h3><?php echo esc_html($data['name']); ?></h3>
+                                    <?php if ($is_enabled): ?>
+                                        <span class="status-badge enabled">Enabled</span>
+                                    <?php else: ?>
+                                        <span class="status-badge disabled">Disabled</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <p class="card-desc"><?php echo esc_html($data['description']); ?></p>
+                            
+                            <div class="card-features">
+                                <?php if (!empty($data['features'])): ?>
+                                    <?php foreach ($data['features'] as $feature): ?>
+                                        <span class="feature-tag"><?php echo esc_html($feature); ?></span>
+                                    <?php endforeach; ?>
                                 <?php endif; ?>
                             </div>
-                            <p class="module-description"><?php echo esc_html($data['description']); ?></p>
-                            <div class="module-footer">
-                                <?php if ($is_locked): ?>
-                                    <span class="always-active">Core Module</span>
+                            
+                            <div class="card-bottom">
+                                <?php if (!empty($module_url)): ?>
+                                    <a href="<?php echo esc_url($module_url); ?>" class="configure-link">Configure</a>
                                 <?php else: ?>
+                                    <span></span>
+                                <?php endif; ?>
+                                
+                                <?php if (!$is_locked): ?>
                                     <label class="ofast-toggle-switch">
-                                        <input type="checkbox" name="modules[<?php echo esc_attr($slug); ?>]" value="1" <?php checked($is_enabled); ?>>
+                                        <input type="checkbox" class="module-toggle" data-module="<?php echo esc_attr($slug); ?>" <?php checked($is_enabled); ?>>
                                         <span class="slider"></span>
                                     </label>
-                                    <span class="toggle-label"><?php echo $is_enabled ? 'Enabled' : 'Disabled'; ?></span>
-                                <?php endif; ?>
-                                <?php if (!empty($module_url)): ?>
-                                    <a href="<?php echo esc_url($module_url); ?>" class="module-open-link" aria-label="<?php echo esc_attr(sprintf(__('Open %s', 'ofast-x'), $data['name'])); ?>">
-                                        Open Module
-                                    </a>
+                                <?php else: ?>
+                                    <span class="core-label">Core</span>
                                 <?php endif; ?>
                             </div>
                         </div>
                         <?php endforeach; ?>
+                        
+
                     </div>
-                </div>
-                <?php endforeach; ?>
-                </div>
-
-                <!-- Data Management Section -->
-                <div class="ofast-data-management" style="margin-top: 40px; padding: 25px; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;">
-                    <h2 style="margin: 0 0 10px 0; font-size: 18px; color: #1e293b;">Data Management</h2>
-                    <p style="color: #64748b; margin: 0 0 20px 0;">Control what happens to your data when the plugin is deleted.</p>
-
-                    <?php $delete_data = get_option('ofast_delete_data_on_uninstall', 0); ?>
-
-                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                        <label style="display: flex; align-items: flex-start; gap: 12px; padding: 15px 20px; background: <?php echo !$delete_data ? '#eef2ff' : '#f8fafc'; ?>; border: 2px solid <?php echo !$delete_data ? '#6366f1' : '#e5e7eb'; ?>; border-radius: 10px; cursor: pointer; flex: 1; min-width: 250px;">
-                            <input type="radio" name="ofast_delete_data_on_uninstall" value="0" <?php checked($delete_data, 0); ?> style="margin-top: 3px;">
-                            <div>
-                                <strong style="display: block; color: #1e293b; font-size: 14px;">Keep All Data</strong>
-                                <span style="color: #64748b; font-size: 13px;">Database tables and settings will be preserved.</span>
-                            </div>
-                        </label>
-
-                        <label style="display: flex; align-items: flex-start; gap: 12px; padding: 15px 20px; background: <?php echo $delete_data ? '#fef2f2' : '#f8fafc'; ?>; border: 2px solid <?php echo $delete_data ? '#ef4444' : '#e5e7eb'; ?>; border-radius: 10px; cursor: pointer; flex: 1; min-width: 250px;">
-                            <input type="radio" name="ofast_delete_data_on_uninstall" value="1" <?php checked($delete_data, 1); ?> style="margin-top: 3px;">
-                            <div>
-                                <strong style="display: block; color: #1e293b; font-size: 14px;">Remove All Data</strong>
-                                <span style="color: #64748b; font-size: 13px;">Complete cleanup when uninstalled.</span>
-                            </div>
-                        </label>
-                    </div>
-                    <p style="margin: 15px 0 0 0; font-style: italic; color: #64748b; font-size: 13px;">Note: This setting only takes effect when the plugin is deleted (not just deactivated). Deactivating the plugin will never remove your data.</p>
                     
-                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between;">
-                        <div>
-                            <strong style="display: block; color: #1e293b; font-size: 14px; margin-bottom: 4px;">Setup Wizard</strong>
-                            <span style="color: #64748b; font-size: 13px;">Relaunch the setup wizard to quickly configure core features.</span>
+                    <div class="ofast-bottom-actions">
+                        <div class="action-card">
+                            <div class="action-card-header">
+                                <h4>Setup Wizard</h4>
+                                <div class="ac-icon"><span class="dashicons dashicons-admin-tools"></span></div>
+                            </div>
+                            <div class="action-card-content">
+                                <p>New to Ofast Toolkit? Let's get you started.<br>Launch the setup wizard and configure the essential tools in a few simple steps.</p>
+                            </div>
+                            <a href="?page=ofast-setup-wizard" class="ac-btn dark">Launch Wizard</a>
                         </div>
-                        <a href="<?php echo esc_url(admin_url('admin.php?page=ofast-setup-wizard')); ?>" class="ofast-btn-secondary" style="padding: 10px 20px; text-decoration: none; border: 1px solid #cbd5e1; border-radius: 8px; color: #475569; font-weight: 600; font-size: 13px; transition: all 0.2s;">
-                            <span class="dashicons dashicons-admin-generic" style="vertical-align: middle; margin-right: 5px; font-size: 16px; height: 16px; width: 16px;"></span>
-                            Launch Wizard
-                        </a>
+
+                        <div class="action-card">
+                            <div class="action-card-header">
+                                <h4>Danger Zone</h4>
+                                <div class="ac-icon red"><span class="dashicons dashicons-warning"></span></div>
+                            </div>
+                            <div class="action-card-content">
+                                <p>Reset all settings.<br>This will permanently reset all settings back to default. Your data will not be removed.</p>
+                            </div>
+                            <form method="post" style="margin:0;">
+                                <?php wp_nonce_field('ofast_settings_save', '_wpnonce'); ?>
+                                <button type="submit" name="ofast_reset_settings" class="ac-btn outline-red" onclick="return confirm('Are you sure you want to reset all settings to defaults?');">Reset Settings</button>
+                            </form>
+                        </div>
+                    </div>
+                    </div><!-- /#ofast-tab-dashboard -->
+
+                    <!-- License Tab -->
+                    <div id="ofast-tab-license" class="ofast-tab-panel" style="display:none;">
+                        <div style="max-width: 700px; margin: 0 auto;">
+                            <?php
+                            $is_pro = function_exists('ofast_toolkit_is_pro') ? ofast_toolkit_is_pro() : false;
+                            $license_key = get_option('ofast_license_key', '');
+                            $last_check = get_option('ofast_license_last_check', 0);
+                            $license_notice = get_transient('ofast_license_notice');
+                            if ($license_notice) { delete_transient('ofast_license_notice'); }
+                            ?>
+                            <div style="text-align: center; margin-bottom: 30px;">
+                                <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px; padding: 0;">
+                                    <?php echo $is_pro ? '✅' : '🔑'; ?> Ofast Toolkit License
+                                </h1>
+                                <p style="color: #666; font-size: 15px; margin: 0;">
+                                    <?php echo $is_pro
+                                        ? 'Your Pro license is active. All premium features are unlocked.'
+                                        : 'Enter your license key to unlock all Pro features.'; ?>
+                                </p>
+                            </div>
+                            <?php if ($license_notice): ?>
+                                <div style="padding: 14px 20px; border-radius: 10px; margin-bottom: 20px; font-weight: 500;
+                                    background: <?php echo $license_notice['success'] ? '#ecfdf5' : '#fef2f2'; ?>;
+                                    color: <?php echo $license_notice['success'] ? '#065f46' : '#991b1b'; ?>;
+                                    border: 1px solid <?php echo $license_notice['success'] ? '#a7f3d0' : '#fecaca'; ?>;">
+                                    <?php echo esc_html($license_notice['message']); ?>
+                                </div>
+                            <?php endif; ?>
+                            <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+                                <?php if ($is_pro): ?>
+                                    <div style="text-align: center; padding: 20px 0;">
+                                        <div style="display: inline-block; background: linear-gradient(135deg, #10b981, #059669); color: #fff; padding: 12px 28px; border-radius: 50px; font-size: 15px; font-weight: 600; margin-bottom: 20px;">● License Active</div>
+                                        <div style="background: #f9fafb; border-radius: 12px; padding: 20px; margin: 20px 0; text-align: left;">
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                                                <span style="color: #6b7280; font-size: 13px;">License Key</span>
+                                                <code style="background: #e5e7eb; padding: 2px 10px; border-radius: 6px; font-size: 13px;"><?php echo esc_html(substr($license_key, 0, 10) . '••••••••••••'); ?></code>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                                                <span style="color: #6b7280; font-size: 13px;">Status</span>
+                                                <span style="color: #059669; font-weight: 600; font-size: 13px;">Active</span>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between;">
+                                                <span style="color: #6b7280; font-size: 13px;">Last Verified</span>
+                                                <span style="font-size: 13px;"><?php echo $last_check ? human_time_diff($last_check) . ' ago' : 'Never'; ?></span>
+                                            </div>
+                                        </div>
+                                        <form method="post" action="" style="margin-top: 20px;">
+                                            <?php wp_nonce_field('ofast_license_action', 'ofast_license_nonce'); ?>
+                                            <button type="submit" name="ofast_deactivate_license" value="1" style="background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; padding: 10px 24px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500;" onclick="return confirm('Deactivate this license? You can reactivate it on another site.');">Deactivate License</button>
+                                        </form>
+                                    </div>
+                                <?php else: ?>
+                                    <form method="post" action="">
+                                        <?php wp_nonce_field('ofast_license_action', 'ofast_license_nonce'); ?>
+                                        <label style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #374151;">License Key</label>
+                                        <input type="text" name="ofast_license_key" placeholder="OFAST-XXXX-XXXX-XXXX-XXXX" value="<?php echo esc_attr($license_key); ?>" style="width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 15px; font-family: monospace; outline: none; transition: border-color 0.2s; box-sizing: border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e5e7eb'" required />
+                                        <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 24px;">Enter the license key you received after purchasing on ofastshop.com/user</p>
+                                        <button type="submit" name="ofast_activate_license" value="1" style="width: 100%; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; padding: 14px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(99,102,241,0.35);">Activate License</button>
+                                    </form>
+                                    <div style="text-align: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid #f3f4f6;">
+                                        <p style="color: #9ca3af; font-size: 13px; margin: 0 0 8px;">Don't have a license key?</p>
+                                        <a href="<?php echo esc_url(function_exists('ofast_toolkit_get_upgrade_url') ? ofast_toolkit_get_upgrade_url() : '#'); ?>" target="_blank" style="color: #6366f1; font-weight: 600; text-decoration: none; font-size: 14px;">Get Ofast Toolkit Pro →</a>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div><!-- /#ofast-tab-license -->
+
+                    <!-- Support Tab -->
+                    <div id="ofast-tab-support" class="ofast-tab-panel" style="display:none;">
+                        <div style="max-width: 900px;">
+                            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px; padding: 0;">Help &amp; Support</h1>
+                            <p style="color: #475569; margin: 0 0 24px;">Report a bug, request help, or contact us. Your message will include useful diagnostics to make troubleshooting faster.</p>
+                            <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                                <form method="post">
+                                    <?php wp_nonce_field('ofast_support_form', '_wpnonce_support'); ?>
+                                    <div style="margin-bottom: 20px;">
+                                        <label for="support_type_tab" style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #374151;">What do you need?</label>
+                                        <select name="support_type" id="support_type_tab" style="width: 100%; max-width: 300px; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                                            <option value="bug">Report a bug</option>
+                                            <option value="contact">Contact support</option>
+                                        </select>
+                                    </div>
+                                    <div style="margin-bottom: 20px;">
+                                        <label for="support_email_tab" style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #374151;">Your email</label>
+                                        <input type="email" name="support_email" id="support_email_tab" value="<?php echo esc_attr(get_option('admin_email', '')); ?>" style="width: 100%; max-width: 400px; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                                        <p style="color: #9ca3af; font-size: 12px; margin: 6px 0 0;">We will use this address for follow-up.</p>
+                                    </div>
+                                    <div style="margin-bottom: 20px;">
+                                        <label for="support_subject_tab" style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #374151;">Subject</label>
+                                        <input type="text" name="support_subject" id="support_subject_tab" value="Plugin issue report" style="width: 100%; max-width: 400px; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                                    </div>
+                                    <div style="margin-bottom: 20px;">
+                                        <label for="support_message_tab" style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #374151;">Details</label>
+                                        <textarea name="support_message" id="support_message_tab" rows="8" style="width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; resize: vertical;" placeholder="Describe the problem, what you expected, and any error messages you saw."></textarea>
+                                    </div>
+                                    <button type="submit" name="ofast_support_submit" value="1" style="background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; padding: 12px 24px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(99,102,241,0.35);">Send Request</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div><!-- /#ofast-tab-support -->
+
+                </main>
+            </div>
+            
+            <!-- Data Management Modal -->
+            <div id="data-management-modal" class="ofast-modal">
+                <div class="ofast-modal-content">
+                    <div class="modal-header">
+                        <h2>Data Management</h2>
+                        <span class="dashicons dashicons-no-alt close-modal"></span>
+                    </div>
+                    <div class="modal-body">
+                        <p>Control what happens to your data when the plugin is deleted.</p>
+                        <div class="data-options">
+                            <label class="data-option <?php echo !$delete_data ? 'selected' : ''; ?>">
+                                <input type="radio" name="delete_data_choice" value="0" <?php checked($delete_data, 0); ?>>
+                                <div class="opt-text">
+                                    <strong>Keep All Data</strong>
+                                    <span>Database tables and settings will be preserved.</span>
+                                </div>
+                            </label>
+                            <label class="data-option danger <?php echo $delete_data ? 'selected' : ''; ?>">
+                                <input type="radio" name="delete_data_choice" value="1" <?php checked($delete_data, 1); ?>>
+                                <div class="opt-text">
+                                    <strong>Remove All Data</strong>
+                                    <span>Complete cleanup when uninstalled.</span>
+                                </div>
+                            </label>
+                        </div>
+                        <p class="note">Note: This setting only takes effect when the plugin is deleted (not just deactivated).</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-cancel close-modal">Cancel</button>
+                        <button type="button" class="btn-save" id="save-data-management">Save Preferences</button>
                     </div>
                 </div>
-
-                <p class="submit" style="margin-top: 30px; display: flex; gap: 15px; align-items: center;">
-                    <button type="submit" name="ofast_save_settings" class="ofast-save-btn"> Save All Settings</button>
-                    <button type="submit" name="ofast_reset_settings" class="ofast-reset-btn" onclick="return confirm('Are you sure you want to reset all settings to defaults?\n\nThis will:\n&bull; Disable most modules\n&bull; Reset data management setting\n\nYour DATA will NOT be deleted.');">Reset to Default</button>
-                </p>
-            </form>
-
-            <?php do_action('ofast_settings_after_modules'); ?>
+            </div>
         </div>
 
-        <style>
-            .ofast-settings-wrap { max-width: 1400px; }
-
-            /* Page Header - Unified Style */
-            .ofast-page-header {
-                background: #ffffff;
-                border-radius: 16px;
-                padding: 30px;
-                margin-bottom: 30px;
-                border: 1px solid #e2e8f0;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            }
-            .ofast-header-content {
-                display: flex;
-                align-items: center;
-                gap: 20px;
-            }
-            
-            /* Stats Row */
-            .ofast-stats-container { margin-bottom: 30px; }
-            .ofast-stats-row {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-                gap: 15px;
-            }
-            @media (max-width: 600px) {
-                /* On mobile, force grid to show 2 columns */
-                .ofast-stats-row {
-                    grid-template-columns: 1fr 1fr;
-                }
-                /* Hide items after the first 3 (Total + 2 Roles) on mobile initially */
-                .ofast-stats-row > .ofast-stat-item:nth-child(n+4) {
-                    display: none;
-                }
-                /* Always show the expand trigger if it exists */
-                .ofast-stats-row > .ofast-stat-item.expand-trigger {
-                    display: flex !important;
-                    grid-column: span 2; /* Make button full width on mobile */
-                }
-                /* When expanded, show all items */
-                .ofast-stats-row.expanded > .ofast-stat-item {
-                    display: flex !important;
-                }
-            }
-            .ofast-stat-item {
-                background: #fff;
-                border: 1px solid #e2e8f0;
-                border-radius: 10px;
-                padding: 15px 20px;
-                display: flex;
-                flex-direction: column;
-                align-items: flex-start;
-                justify-content: center;
-                box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-                transition: all 0.2s ease;
-            }
-            .ofast-stat-item:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-                border-color: #cbd5e1;
-            }
-            .ofast-stat-item.total {
-                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-                border: none;
-                color: #fff;
-                grid-column: span 1; /* Ensure it doesn't break grid */
-            }
-            .ofast-stat-item.total .label { color: rgba(255,255,255,0.9); }
-            .ofast-stat-item.total .value { color: #fff; }
-            
-            .ofast-stat-item.secondary { background: #f8fafc; }
-
-            .ofast-stat-item.expand-trigger {
-                cursor: pointer;
-                background: #f1f5f9;
-                border-style: dashed;
-                align-items: center;
-                justify-content: center;
-            }
-            .ofast-stat-item.expand-trigger:hover {
-                background: #e2e8f0;
-                border-color: #94a3b8;
-            }
-            .ofast-stat-item.expand-trigger .dashicons {
-                font-size: 24px;
-                width: 24px;
-                height: 24px;
-                color: #64748b;
-                margin-bottom: 5px;
-            }
-            
-            .ofast-stat-item .label {
-                font-size: 11px;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                color: #64748b;
-                font-weight: 600;
-                margin-bottom: 5px;
-            }
-            .ofast-stat-item .value {
-                font-size: 24px;
-                font-weight: 700;
-                color: #1e293b;
-                line-height: 1;
-            }
-            .ofast-header-icon {
-                width: 60px;
-                height: 60px;
-                background: #ffffff;
-                border-radius: 16px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2); /* Matching brand color */
-                border: 1px solid #e2e8f0;
-                color: #6366f1; /* Matching brand color */
-            }
-            .ofast-header-icon .dashicons {
-                font-size: 28px;
-                width: 28px;
-                height: 28px;
-            }
-            .ofast-header-text h1 {
-                margin: 0;
-                font-size: 28px;
-                font-weight: 700;
-                color: #1e293b;
-            }
-            .ofast-header-text p {
-                margin: 5px 0 0;
-                color: #64748b;
-                font-size: 15px;
-            }
-
-            
-            /* Toolbar */
-            .ofast-toolbar { background: #fff; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-            .ofast-search-box { position: relative; margin-bottom: 15px; }
-            #ofast-search { width: 100%; padding: 12px 40px 12px 15px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 15px; }
-            #ofast-search:focus { border-color: #6366f1; outline: none; }
-            .ofast-search-box .dashicons { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #999; }
-            
-            /* Filters */
-            .ofast-filters { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-            .ofast-filter { padding: 8px 16px; border: 2px solid #e0e0e0; background: #fff; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
-            .ofast-filter:hover { border-color: #6366f1; }
-            .ofast-filter.active { background: #6366f1; color: #fff; border-color: #6366f1; }
-            .ofast-filter .count { opacity: 0.7; font-size: 0.9em; }
-            
-            /* Category Tabs */
-            .ofast-category-tabs { display: flex; gap: 5px; border-bottom: 2px solid #e0e0e0; overflow-x: auto; }
-            .ofast-tab { padding: 10px 16px; border: none; background: transparent; cursor: pointer; white-space: nowrap; border-bottom: 3px solid transparent; transition: all 0.2s; }
-            .ofast-tab:hover { background: #f5f5f5; }
-            .ofast-tab.active { border-bottom-color: #6366f1; color: #6366f1; font-weight: 600; }
-            
-            /* Category Sections */
-            .ofast-category-section { margin: 30px 0; }
-            .ofast-category-section.hidden { display: none; }
-            .ofast-category-title { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e0e0e0; font-size: 18px; }
-            .ofast-category-title .dashicons { font-size: 22px; width: 22px; height: 22px; color: #6366f1; }
-
-            /* Desktop: hide category titles when "All" tab is active */
-            @media (min-width: 769px) {
-                .ofast-settings-wrap.all-categories-view .ofast-category-title { display: none; }
-                .ofast-settings-wrap.all-categories-view .ofast-all-modules-container {
-                    display: grid;
-                    grid-template-columns: repeat(3, 1fr);
-                    gap: 20px;
-                }
-                .ofast-settings-wrap.all-categories-view .ofast-category-section {
-                    display: contents;
-                }
-                .ofast-settings-wrap.all-categories-view .ofast-modules-grid {
-                    display: contents;
-                }
-                .ofast-settings-wrap.all-categories-view .ofast-category-section.hidden {
-                    display: none;
-                }
-            }
-            
-            /* Modules Grid */
-            .ofast-modules-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
-            @media (max-width: 768px) { .ofast-modules-grid { grid-template-columns: 1fr; } }
-            
-            /* Module Card */
-            .ofast-module-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; transition: all 0.3s ease; display: flex; flex-direction: column; position: relative; overflow: hidden; }
-            .ofast-module-card.hidden { display: none; }
-            .ofast-module-card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); transform: translateY(-2px); }
-            .ofast-module-card.enabled { border-color: #6366f1; background: linear-gradient(to bottom, #eef2ff, #fff); }
-            .ofast-module-card.locked { border-color: #6366f1; background: linear-gradient(to bottom, #eef2ff, #fff); }
-            .ofast-module-card.has-module-link.enabled,
-            .ofast-module-card.has-module-link.locked { cursor: pointer; }
-            .ofast-module-card.has-module-link:focus { outline: 2px solid #6366f1; outline-offset: 2px; }
-             
-            .module-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 10px; }
-            .module-header h3 { margin: 0; font-size: 15px; font-weight: 600; color: #1e293b; }
-            .module-description { color: #64748b; font-size: 13px; line-height: 1.5; margin: 0 0 15px 0; flex-grow: 1; }
-            .module-footer { display: flex; align-items: center; gap: 10px; padding-top: 15px; border-top: 1px solid #f1f5f9; flex-wrap: wrap; }
-            .toggle-label, .always-active { font-size: 12px; color: #64748b; }
-            .always-active { font-style: italic; }
-            .module-open-link {
-                margin-left: auto;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                padding: 8px 12px;
-                border-radius: 999px;
-                background: #4338ca;
-                color: #fff;
-                font-size: 12px;
-                font-weight: 600;
-                text-decoration: none;
-                opacity: 0;
-                visibility: hidden;
-                transform: translateY(6px);
-                pointer-events: none;
-                transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease, background 0.2s ease;
-            }
-            .module-open-link:hover,
-            .module-open-link:focus { background: #3730a3; color: #fff; }
-            .ofast-module-card.enabled:hover .module-open-link,
-            .ofast-module-card.locked:hover .module-open-link,
-            .ofast-module-card.enabled:focus-within .module-open-link,
-            .ofast-module-card.locked:focus-within .module-open-link,
-            .ofast-module-card.enabled:focus .module-open-link,
-            .ofast-module-card.locked:focus .module-open-link {
-                opacity: 1;
-                visibility: visible;
-                transform: translateY(0);
-                pointer-events: auto;
-            }
-            @media (hover: none) {
-                .ofast-module-card.enabled .module-open-link,
-                .ofast-module-card.locked .module-open-link {
-                    opacity: 1;
-                    visibility: visible;
-                    transform: translateY(0);
-                    pointer-events: auto;
-                }
-            }
-
-            /* Toggle Switch */
-            .ofast-toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
-            .ofast-toggle-switch input { opacity: 0; width: 0; height: 0; }
-            .ofast-toggle-switch .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 24px; }
-            .ofast-toggle-switch .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-            .ofast-toggle-switch input:checked+.slider { background-color: #6366f1; }
-            .ofast-toggle-switch input:checked+.slider:before { transform: translateX(20px); }
-
-            /* Badges */
-            .ofast-badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
-            .ofast-badge.integrated { background: #d4edda; color: #155724; }
-            .ofast-badge.not-integrated { background: #f8d7da; color: #721c24; }
-            .ofast-badge.active { background: #ede9fe; color: #6d28d9; }
-
-            /* Buttons */
-            .ofast-save-btn { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: #fff; border: none; padding: 14px 32px; font-size: 15px; font-weight: 600; border-radius: 10px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
-            .ofast-save-btn:hover { background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); transform: translateY(-2px); }
-            .ofast-reset-btn { background: #fff; color: #ef4444; border: 2px solid #fecaca; padding: 12px 24px; font-size: 14px; font-weight: 600; border-radius: 10px; cursor: pointer; transition: all 0.3s ease; }
-            .ofast-reset-btn:hover { background: #fef2f2; border-color: #ef4444; }
-        </style>
-
         <script>
-            jQuery(document).ready(function($) {
-                // Toggle label update
-                $('.ofast-toggle-switch input').on('change', function() {
-                    var label = $(this).closest('.module-footer').find('.toggle-label');
-                    var card = $(this).closest('.ofast-module-card');
-                    var badge = card.find('.module-header .ofast-badge');
-                    if (this.checked) {
-                        label.text('Enabled');
-                        card.addClass('enabled');
-                        if (card.data('module-url')) {
-                            card.attr('tabindex', '0');
-                        }
-                        badge.removeClass('not-integrated').addClass('integrated').text('Enabled');
-                    } else {
-                        label.text('Disabled');
-                        card.removeClass('enabled');
-                        card.removeAttr('tabindex');
-                        badge.removeClass('integrated').addClass('not-integrated').text('Disabled');
-                    }
-                    updateCounts();
-                });
+        var ofastSettingsAjax = {
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            nonce: '<?php echo wp_create_nonce('ofast_settings_ajax'); ?>'
+        };
+        </script>
+        
+        <style>
+        /* WordPress Admin Override */
+        #wpcontent, #wpbody-content { padding: 0 !important; }
+        #wpfooter { display: none !important; }
+        #wpbody { background: #fcfcfd; }
+        
+        /* Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        .ofast-app-wrap {
+            margin: 0;
+            width: 100%;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+            box-sizing: border-box;
+        }
+        .ofast-app-wrap * { box-sizing: border-box; }
+        
+        .ofast-app-layout {
+            display: flex;
+            gap: 0;
+            background: #fcfcfd;
+            border-radius: 0;
+            border: none;
+            box-shadow: none;
+            min-height: calc(100vh - 32px);
+        }
+        
+        .ofast-topbar {
+            position: sticky;
+            top: 32px;
+            z-index: 100;
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-                $('.ofast-module-card.has-module-link').on('keydown', function(event) {
-                    if (event.key !== 'Enter' && event.key !== ' ') {
-                        return;
-                    }
+        /* Sidebar */
+        .ofast-sidebar {
+            width: 220px;
+            background: #ffffff;
+            border-right: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            padding: 24px 16px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 100px;
+            height: calc(100vh - 100px);
+            overflow-y: auto;
+        }
+        
+        .ofast-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        .ofast-logo .logo-icon {
+            background: #4f46e5;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ofast-logo .logo-icon .dashicons {
+            margin-top: 5px;
+        }
+        
+        .ofast-nav { flex-grow: 1; }
+        .nav-section {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #94a3b8;
+            font-weight: 600;
+            margin: 24px 8px 10px 8px;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            color: #475569;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            margin-bottom: 2px;
+        }
+        .nav-item:focus { box-shadow: none; outline: none; }
+        .nav-item .dashicons { font-size: 18px; width: 18px; height: 18px; opacity: 0.7; }
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+        .nav-item:hover .dashicons { opacity: 1; }
+        .nav-item.active {
+            background: #4f46e5;
+            color: white;
+        }
+        .nav-item.active .dashicons { opacity: 1; }
+        
+        .ofast-pro-card {
+            background: linear-gradient(135deg, #312e81 0%, #4338ca 100%);
+            border-radius: 16px;
+            padding: 24px 20px;
+            color: white;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .ofast-pro-card .pro-icon { font-size: 24px; margin-bottom: 10px; }
+        .ofast-pro-card h4 { margin: 0 0 8px 0; color: white; font-size: 16px; }
+        .ofast-pro-card p { font-size: 13px; color: #c7d2fe; margin: 0 0 16px 0; line-height: 1.4; }
+        .upgrade-btn {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .upgrade-btn:hover { background: rgba(255,255,255,0.3); color: white; }
+        
+        /* Main Content */
+        .ofast-main {
+            flex-grow: 1;
+            padding: 32px 40px;
+            background: #fcfcfd;
+            max-width: calc(100% - 220px);
+        }
+        
+        .header-actions { display: flex; gap: 12px; }
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            color: #0f172a;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 13px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+        }
+        .action-btn:hover { border-color: #cbd5e1; background: #f8fafc; color: #000000; }
+        .action-btn.icon-only { padding: 8px; }
+        .action-btn.icon-only .dashicons { margin: 0; }
+        .action-btn:focus { box-shadow: none; outline: none; }
+        
+        /* Stats row */
+        .ofast-stats-row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .stat-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            position: relative;
+        }
+        .stat-icon {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 16px;
+        }
+        .stat-icon .dashicons { font-size: 20px; width: 20px; height: 20px; margin-top:5px; }
+        .bg-green { background: #dcfce7; color: #16a34a; }
+        .bg-purple { background: #e0e7ff; color: #4f46e5; }
+        .bg-blue { background: #dbeafe; color: #2563eb; }
+        .bg-emerald { background: #d1fae5; color: #059669; }
+        .bg-pink { background: #fce7f3; color: #db2777; }
+        .bg-yellow { background: #fef3c7; color: #d97706; }
+        
+        .stat-info { display: flex; flex-direction: column; }
+        .stat-info .label { font-size: 13px; color: #0f172a; font-weight: 600; margin-bottom: 4px; }
+        .stat-info .value { font-size: 22px; color: #0f172a; font-weight: 700; margin-bottom: 8px; }
+        .stat-info .desc { font-size: 12px; color: #64748b; line-height: 1.4; }
+        
+        .mini-chart { position: absolute; bottom: 20px; right: 20px; width: 60px; height: 20px; opacity: 0.6; }
+        .badge-icon { position: absolute; bottom: 20px; right: 20px; width: 24px; height: 24px; background: #4f46e5; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .badge-icon .dashicons { font-size: 14px; width: 14px; height: 14px; margin-top:2px; }
+        
+        /* Filter Bar */
+        .ofast-filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 24px;
+            background: white;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        .search-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #e2e8f0;
+            padding: 8px 12px;
+            border-radius: 8px;
+            width: 250px;
+        }
+        .search-wrap .dashicons { color: #94a3b8; }
+        .search-wrap input {
+            border: none;
+            background: transparent;
+            box-shadow: none;
+            padding: 0;
+            width: 100%;
+            font-size: 14px;
+            color: #0f172a;
+        }
+        .search-wrap input:focus { outline: none; box-shadow: none; }
+        
+        .filter-pills { display: flex; gap: 8px; overflow-x: auto; flex-grow: 1; }
+        .filter-pills .pill {
+            background: transparent;
+            border: 1px solid transparent;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .filter-pills .pill:hover { color: #0f172a; }
+        .filter-pills .pill.active { background: #4f46e5; color: white; }
+        
+        /* Module Grid */
+        .ofast-module-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .module-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.2s;
+        }
+        .module-card:hover { border-color: #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .module-card.hidden { display: none; }
+        
+        .card-top { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+        .card-icon {
+            width: 48px; height: 48px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .card-icon .dashicons { font-size: 24px; width: 24px; height: 24px; margin-top:5px; }
+        
+        .card-title { flex-grow: 1; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+        .card-title h3 { margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: #0f172a; }
+        
+        .status-badge {
+            font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 6px;
+        }
+        .status-badge.enabled { background: #dcfce7; color: #16a34a; }
+        .status-badge.disabled { background: #fee2e2; color: #dc2626; }
+        
+        .card-desc { font-size: 13px; color: #64748b; line-height: 1.5; margin: 0 0 20px 0; flex-grow: 1; }
+        
+        .card-features { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+        .feature-tag {
+            font-size: 11px; font-weight: 500; color: #475569;
+            background: #f1f5f9; padding: 4px 8px; border-radius: 4px;
+        }
+        
+        .card-bottom {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-top: 16px; border-top: 1px solid #f1f5f9;
+        }
+        .configure-link { font-size: 14px; font-weight: 600; color: #4f46e5; text-decoration: none; }
+        .configure-link:hover { text-decoration: underline; }
+        
+        .coming-soon-card {
+            border: 2px dashed #cbd5e1;
+            background: #f8fafc;
+            display: flex; align-items: center; justify-content: center;
+            text-align: center; padding: 40px 20px;
+        }
+        .coming-soon-card:hover { border-color: #94a3b8; }
+        .coming-soon-content .dashicons { font-size: 32px; width: 32px; height: 32px; color: #94a3b8; margin-bottom: 12px; }
+        .coming-soon-content h4 { margin: 0 0 8px 0; color: #475569; font-size: 15px; }
+        .coming-soon-content p { margin: 0; color: #64748b; font-size: 13px; }
+        
+        /* Toggle Switch */
+        .ofast-toggle-switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+        .ofast-toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .ofast-toggle-switch .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 22px; }
+        .ofast-toggle-switch .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 2px; bottom: 2px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .ofast-toggle-switch input:checked+.slider { background-color: #4f46e5; }
+        .ofast-toggle-switch input:checked+.slider:before { transform: translateX(18px); }
+        .core-label { font-size: 12px; color: #94a3b8; font-style: italic; }
 
-                    if (!$(this).hasClass('enabled') && !$(this).hasClass('locked')) {
-                        return;
-                    }
+        /* Bottom Actions */
+        .ofast-bottom-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .action-card {
+            background: white; border-radius: 16px; padding: 24px;
+            display: flex; flex-direction: column; justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02); border: 1px solid #e2e8f0;
+        }
+        
+        .action-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .action-card-header h4 { margin: 0; font-size: 16px; color: #0f172a; font-weight: 600; }
+        
+        .action-card-content { margin-bottom: 24px; flex-grow: 1; }
+        .action-card-content p { margin: 0; font-size: 13px; color: #64748b; line-height: 1.5; }
+        
+        .ac-icon {
+            width: 40px; height: 40px; border-radius: 10px; background: #e0e7ff; color: #4f46e5;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .ac-icon.green { background: #d1fae5; color: #059669; }
+        .ac-icon.red { background: #fee2e2; color: #dc2626; }
+        .ac-icon .dashicons { font-size: 20px; width: 20px; height: 20px; margin-top:5px; }
+        
+        .ac-btn {
+            display: inline-block; text-align: center; padding: 10px 24px;
+            border-radius: 8px; font-weight: 600; font-size: 14px; text-decoration: none; border: none; cursor: pointer; transition: all 0.2s;
+            align-self: flex-start;
+        }
+        .ac-btn.dark { background: #0f172a; color: white; }
+        .ac-btn.dark:hover { background: #1e293b; color: white; }
+        .ac-btn.outline { background: white; border: 1px solid #cbd5e1; color: #475569; }
+        .ac-btn.outline:hover { background: #f8fafc; border-color: #94a3b8; }
+        .ac-btn.outline-red { background: white; border: 1px solid #fecaca; color: #dc2626; }
+        .ac-btn.outline-red:hover { background: #fef2f2; border-color: #fca5a5; }
 
-                    var moduleUrl = $(this).data('module-url');
-                    if (!moduleUrl) {
-                        return;
-                    }
+        /* Modal */
+        .ofast-modal {
+            display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px);
+            align-items: center; justify-content: center;
+        }
+        .ofast-modal.active { display: flex; }
+        .ofast-modal-content {
+            background-color: #fff; border-radius: 16px; width: 100%; max-width: 500px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+            overflow: hidden;
+        }
+        .modal-header { padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h2 { margin: 0; font-size: 18px; color: #0f172a; }
+        .close-modal { cursor: pointer; color: #64748b; }
+        .modal-body { padding: 24px; }
+        .modal-body > p { margin: 0 0 20px 0; color: #475569; font-size: 14px; }
+        .data-options { display: flex; flex-direction: column; gap: 12px; }
+        .data-option {
+            display: flex; align-items: flex-start; gap: 12px; padding: 16px;
+            border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; transition: all 0.2s;
+        }
+        .data-option input { margin-top: 4px; }
+        .opt-text strong { display: block; margin-bottom: 4px; color: #0f172a; font-size: 14px; }
+        .opt-text span { color: #64748b; font-size: 13px; }
+        .data-option.selected { border-color: #4f46e5; background: #e0e7ff; }
+        .data-option.danger.selected { border-color: #ef4444; background: #fee2e2; }
+        .modal-body .note { margin: 20px 0 0 0; font-size: 12px; color: #94a3b8; font-style: italic; }
+        .modal-footer { padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px; }
+        .btn-cancel { padding: 10px 16px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #475569; font-weight: 600; cursor: pointer; }
+        .btn-save { padding: 10px 16px; border-radius: 8px; border: none; background: #4f46e5; color: white; font-weight: 600; cursor: pointer; }
 
-                    event.preventDefault();
-                    window.location.href = moduleUrl;
-                });
-
-                // Search functionality
-                $('#ofast-search').on('input', function() {
-                    var term = $(this).val().toLowerCase();
-                    $('.ofast-module-card').each(function() {
-                        var title = $(this).find('h3').text().toLowerCase();
-                        var desc = $(this).find('.module-description').text().toLowerCase();
-                        $(this).toggleClass('hidden', !title.includes(term) && !desc.includes(term));
-                    });
-                    updateSectionVisibility();
-                });
-
-                // Filter buttons
-                $('.ofast-filter').on('click', function() {
-                    $('.ofast-filter').removeClass('active');
-                    $(this).addClass('active');
-                    var filter = $(this).data('filter');
-                    $('.ofast-module-card').each(function() {
-                        var enabled = $(this).hasClass('enabled') || $(this).hasClass('locked');
-                        if (filter === 'all') $(this).removeClass('hidden');
-                        else if (filter === 'enabled') $(this).toggleClass('hidden', !enabled);
-                        else if (filter === 'disabled') $(this).toggleClass('hidden', enabled);
-                    });
-                    updateSectionVisibility();
-                });
-
-                // Category tabs
-                $('.ofast-tab').on('click', function() {
-                    $('.ofast-tab').removeClass('active');
-                    $(this).addClass('active');
-                    var category = $(this).data('category');
-                    var $wrap = $('.ofast-settings-wrap');
-                    if (category === 'all') {
-                        $('.ofast-category-section').removeClass('hidden');
-                        $wrap.addClass('all-categories-view');
-                    } else {
-                        $('.ofast-category-section').addClass('hidden');
-                        $('.ofast-category-section[data-category="' + category + '"]').removeClass('hidden');
-                        $wrap.removeClass('all-categories-view');
-                    }
-                });
-
-                function updateSectionVisibility() {
-                    $('.ofast-category-section').each(function() {
-                        var visible = $(this).find('.ofast-module-card:not(.hidden)').length;
-                        $(this).toggleClass('hidden', visible === 0);
-                    });
+        @media (max-width: 1400px) {
+            .ofast-module-grid { grid-template-columns: repeat(2, 1fr); }
+            .ofast-stats-row { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 1100px) {
+            .ofast-bottom-actions { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 900px) {
+            .ofast-app-layout { flex-direction: column; }
+            .ofast-sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e2e8f0; }
+            .ofast-main { max-width: 100%; }
+        }
+        @media (max-width: 768px) {
+            .ofast-stats-row { grid-template-columns: repeat(2, 1fr); }
+            .ofast-module-grid { grid-template-columns: 1fr; }
+            .ofast-bottom-actions { grid-template-columns: 1fr; }
+            .ofast-header { flex-direction: column; gap: 16px; }
+        }
+        </style>
+        
+        <script>
+        jQuery(document).ready(function($) {
+            // Module toggle AJAX
+            $('.module-toggle').on('change', function() {
+                var isChecked = $(this).is(':checked');
+                var module = $(this).data('module');
+                var badge = $(this).closest('.module-card').find('.status-badge');
+                
+                // Update UI optimistically
+                if (isChecked) {
+                    badge.removeClass('disabled').addClass('enabled').text('Enabled');
+                    $(this).closest('.module-card').addClass('enabled');
+                } else {
+                    badge.removeClass('enabled').addClass('disabled').text('Disabled');
+                    $(this).closest('.module-card').removeClass('enabled');
                 }
+                
+                $.post(ofastSettingsAjax.url, {
+                    action: 'ofast_save_module_toggle',
+                    nonce: ofastSettingsAjax.nonce,
+                    module: module,
+                    enabled: isChecked
+                });
+            });
 
-                function updateCounts() {
-                    var enabled = $('.ofast-module-card.enabled, .ofast-module-card.locked').length;
-                    var total = $('.ofast-module-card').length;
-                    $('.ofast-filter[data-filter="enabled"] .count').text('(' + enabled + ')');
-                    $('.ofast-filter[data-filter="disabled"] .count').text('(' + (total - enabled) + ')');
+            // Filtering
+            $('.filter-pills .pill').on('click', function() {
+                $('.filter-pills .pill').removeClass('active');
+                $(this).addClass('active');
+                
+                var filter = $(this).data('filter');
+                if (filter === 'all') {
+                    $('.module-card:not(.coming-soon-card)').show();
+                } else if (filter === 'status-enabled') {
+                    $('.module-card:not(.coming-soon-card)').hide();
+                    $('.module-card.enabled').show();
+                } else if (filter === 'status-disabled') {
+                    $('.module-card:not(.coming-soon-card)').hide();
+                    $('.module-card:not(.enabled):not(.coming-soon-card)').show();
                 }
             });
-        </script>
-<?php
-    }
+            
+            // Search
+            $('#module-search').on('input', function() {
+                var term = $(this).val().toLowerCase();
+                if (term) {
+                    $('.filter-pills .pill').removeClass('active');
+                } else {
+                    $('.filter-pills .pill[data-filter="all"]').addClass('active');
+                }
+                
+                $('.module-card:not(.coming-soon-card)').each(function() {
+                    var title = $(this).find('h3').text().toLowerCase();
+                    var desc = $(this).find('.card-desc').text().toLowerCase();
+                    if (title.indexOf(term) > -1 || desc.indexOf(term) > -1) {
+                        $(this).show();
+                    } else {
+                        $(this).hide();
+                    }
+                });
+            });
 
-    /**
-     * Get the admin URL for a module card.
-     *
-     * @param array $module Module configuration.
-     * @return string
-     */
-    private function get_module_admin_url($module)
+            // Modal
+            $('.ofast-open-data-modal').on('click', function(e) {
+                e.preventDefault();
+                $('#data-management-modal').addClass('active');
+            });
+            $('.close-modal').on('click', function() {
+                $('#data-management-modal').removeClass('active');
+            });
+            
+            // Data options selection
+            $('input[name="delete_data_choice"]').on('change', function() {
+                $('.data-option').removeClass('selected').removeClass('danger-selected');
+                var isDanger = $(this).closest('.data-option').hasClass('danger');
+                if(isDanger) {
+                    $(this).closest('.data-option').addClass('selected');
+                } else {
+                    $(this).closest('.data-option').addClass('selected');
+                }
+            });
+            
+            // Save Data Management
+            $('#save-data-management').on('click', function() {
+                var choice = $('input[name="delete_data_choice"]:checked').val();
+                var btn = $(this);
+                var originalText = btn.text();
+                
+                btn.text('Saving...').prop('disabled', true);
+                
+                $.post(ofastSettingsAjax.url, {
+                    action: 'ofast_save_data_management',
+                    nonce: ofastSettingsAjax.nonce,
+                    delete_data: choice
+                }, function(response) {
+                    btn.text('Saved!');
+                    setTimeout(function() {
+                        btn.text(originalText).prop('disabled', false);
+                        $('#data-management-modal').removeClass('active');
+                    }, 1000);
+                });
+            });
+
+            // Tab Switching (no page reload)
+            $('.nav-item[data-tab]').on('click', function(e) {
+                e.preventDefault();
+                var tab = $(this).data('tab');
+                $('.ofast-tab-panel').hide();
+                $('#ofast-tab-' + tab).show();
+                $('.nav-item[data-tab]').removeClass('active');
+                $(this).addClass('active');
+            });
+        });
+        </script>
+        <?php
+    }
+private function get_module_admin_url($module)
     {
         if (empty($module['admin_url'])) {
             return '';
@@ -1015,87 +1246,114 @@ class Ofast_X_Settings
     private function get_available_modules()
     {
         return array(
-            // === CUSTOMIZATION ===
             'dashboard' => array(
                 'name' => 'Dashboard Module',
                 'description' => 'View user counts by role, recent activity, and system stats at a glance',
-                'category' => 'customization',
+                'category' => 'core',
                 'locked' => true,
                 'admin_url' => 'admin.php?page=ofast-dashboard',
+                'icon' => 'dashicons-grid-view',
+                'color_class' => 'bg-purple',
+                'features' => array('User Stats', 'Activity Log')
             ),
             'admin-tweaks' => array(
                 'name' => 'Admin Studio',
-                'description' => 'Admin customizations including User Roles, Menu Editor, Admin URL, Admin Design, and more',
+                'description' => 'Customize WordPress admin area, menus, roles, admin URL, and more.',
                 'category' => 'customization',
                 'admin_url' => 'admin.php?page=ofast-admin-tweaks',
+                'icon' => 'dashicons-admin-users',
+                'color_class' => 'bg-blue',
+                'features' => array('User Roles', 'Admin URL', 'Menu Editor')
             ),
-            // NOTE: Admin Footer module removed - footer text settings now in White Label (whos-admin module)
-            // Dark Mode and Custom Dashboard toggles are handled within Admin Footer module internally
-            
-            // === COMMUNICATION ===
             'email' => array(
                 'name' => 'Email Module',
-                'description' => 'Send personalized bulk emails to users by role, with scheduling and templates',
+                'description' => 'Send beautiful emails, manage templates and email settings.',
                 'category' => 'communication',
                 'admin_url' => 'admin.php?page=ofast-emailer',
+                'icon' => 'dashicons-email-alt',
+                'color_class' => 'bg-blue',
+                'features' => array('Templates', 'Bulk Email', 'Scheduling')
             ),
             'smtp' => array(
                 'name' => 'SMTP Configuration',
-                'description' => 'Configure SendGrid, Mailgun, Zoho, or Gmail to ensure emails reach inboxes',
+                'description' => 'Configure SMTP providers like SendGrid, Mailgun, Zoho and more.',
                 'category' => 'communication',
                 'admin_url' => 'admin.php?page=ofast-smtp',
-            ),
-            'forms' => array(
-                'name' => 'Contact Forms',
-                'description' => 'Custom contact form builder with submission storage and admin review',
-                'category' => 'communication',
-                'admin_url' => 'admin.php?page=ofast-forms',
+                'icon' => 'dashicons-database-export',
+                'color_class' => 'bg-yellow',
+                'features' => array('Reliable', 'Secure', 'Fast Delivery')
             ),
             'sms-channel' => array(
                 'name' => 'SMS Channel',
-                'description' => 'Multi-provider SMS sending via Twilio, Africa\'s Talking, Termii, or SmartSMSSolutions',
+                'description' => 'Send SMS via Twilio, Africa\'s Talking, Termii or SmartSMSSolutions.',
                 'category' => 'communication',
                 'admin_url' => 'admin.php?page=ofast-sms',
+                'icon' => 'dashicons-smartphone',
+                'color_class' => 'bg-green',
+                'features' => array('Twilio', 'Termii', 'Bulk SMS')
             ),
-            
-            // === SECURITY ===
             'spam-protection' => array(
                 'name' => 'Spam Protection',
-                'description' => 'Cloudflare Turnstile and Google reCAPTCHA v2/v3 integration to block spam',
+                'description' => 'Protect your site with Turnstile, reCAPTCHA and math challenge.',
                 'category' => 'security',
                 'admin_url' => 'admin.php?page=ofast-spam-protection',
+                'icon' => 'dashicons-shield',
+                'color_class' => 'bg-green',
+                'features' => array('Cloudflare', 'reCAPTCHA', 'Math')
             ),
             'login-redesign' => array(
                 'name' => 'Login Redesign',
-                'description' => 'Customize the WordPress login page with your logo, colors, and branding',
+                'description' => 'Customize your WordPress login page with your brand identity.',
                 'category' => 'security',
                 'admin_url' => 'admin.php?page=ofast-login-redesign',
+                'icon' => 'dashicons-lock',
+                'color_class' => 'bg-pink',
+                'features' => array('Custom Login', 'Branding', 'Styles')
             ),
-
-            
-            // === CONTENT ===
             'snippets' => array(
-                'name' => 'Code Snippets Manager',
-                'description' => 'Manage code snippets with visual toggle switches - easier than Code Snippets plugin',
-                'category' => 'content',
+                'name' => 'Code Snippets',
+                'description' => 'Add and manage code snippets with visual editor and conditions.',
+                'category' => 'developer',
                 'admin_url' => 'admin.php?page=ofast-snippets',
+                'icon' => 'dashicons-editor-code',
+                'color_class' => 'bg-purple',
+                'features' => array('PHP', 'CSS', 'JS')
             ),
             'redirects' => array(
                 'name' => 'Redirects Manager',
-                'description' => '301/302/307 redirects with import/export and usage tracking - SEO essential',
-                'category' => 'content',
+                'description' => 'Manage 301/302/307 redirects and track redirect analytics.',
+                'category' => 'marketing',
                 'admin_url' => 'admin.php?page=ofast-redirects',
+                'icon' => 'dashicons-external',
+                'color_class' => 'bg-blue',
+                'features' => array('301 Redirect', '404 Monitor', 'Import/Export')
             ),
-            
-            // === CUSTOMIZATION (Pro) ===
+            'forms' => array(
+                'name' => 'Contact Forms',
+                'description' => 'Build beautiful contact forms with submissions management.',
+                'category' => 'marketing',
+                'admin_url' => 'admin.php?page=ofast-forms',
+                'icon' => 'dashicons-feedback',
+                'color_class' => 'bg-yellow',
+                'features' => array('Builder', 'Storage', 'Notifications')
+            ),
             'white-label' => array(
                 'name' => 'White Label',
-                'description' => 'Designer branding, footer text, plugin update control, page protection, and admin URL security',
+                'description' => 'White label your plugin with custom branding and footer text.',
                 'category' => 'customization',
                 'admin_url' => 'admin.php?page=ofast-white-label',
+                'icon' => 'dashicons-art',
+                'color_class' => 'bg-emerald',
+                'features' => array('Branding', 'Footer Text', 'Admin Security')
             ),
-
-
-        );
-    }
+            'utilities' => array(
+                'name' => 'Utilities',
+                'description' => 'Import/Export settings, system info and other useful tools.',
+                'category' => 'developer',
+                'admin_url' => '#',
+                'icon' => 'dashicons-admin-tools',
+                'color_class' => 'bg-blue',
+                'features' => array('Export', 'Import', 'System Info')
+            )
+        );    }
 }

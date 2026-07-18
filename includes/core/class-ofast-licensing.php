@@ -394,99 +394,155 @@ function ofast_toolkit_render_license_page()
         delete_transient('ofast_license_notice');
     }
     ?>
-    <div class="wrap" style="max-width: 700px; margin: 40px auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    <style>
+        #wpcontent, #wpbody-content { padding: 0 !important; }
+        #wpfooter { display: none !important; }
+        #wpbody { background: #fcfcfd; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .ofast-app-wrap { margin: 0; width: 100%; font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; box-sizing: border-box; }
+        .ofast-app-wrap * { box-sizing: border-box; }
+        .ofast-app-layout { display: flex; gap: 0; background: #fcfcfd; min-height: calc(100vh - 32px); }
+        .ofast-topbar { position: sticky; top: 32px; z-index: 100; background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+        .ofast-logo { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 700; color: #1e293b; }
+        .ofast-sidebar { width: 220px; background: #ffffff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; padding: 24px 16px; flex-shrink: 0; position: sticky; top: 100px; height: calc(100vh - 100px); overflow-y: auto; }
+        .ofast-nav { flex-grow: 1; }
+        .nav-section { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; font-weight: 600; margin: 24px 8px 10px 8px; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; color: #475569; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 500; transition: all 0.2s; margin-bottom: 2px; }
+        .nav-item:focus { box-shadow: none; outline: none; }
+        .nav-item .dashicons { font-size: 18px; width: 18px; height: 18px; opacity: 0.7; }
+        .nav-item:hover { background: #f1f5f9; color: #1e293b; }
+        .nav-item:hover .dashicons { opacity: 1; }
+        .nav-item.active { background: #4f46e5; color: white; }
+        .nav-item.active .dashicons { opacity: 1; }
+        .ofast-pro-card { background: linear-gradient(135deg, #312e81 0%, #4338ca 100%); border-radius: 16px; padding: 24px 20px; color: white; text-align: center; margin-top: 20px; }
+        .ofast-pro-card .pro-icon { font-size: 24px; margin-bottom: 10px; }
+        .ofast-pro-card h4 { margin: 0 0 8px 0; color: white; font-size: 16px; }
+        .ofast-pro-card p { font-size: 13px; color: #c7d2fe; margin: 0 0 16px 0; line-height: 1.4; }
+        .upgrade-btn { display: inline-block; background: rgba(255,255,255,0.2); color: white; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 14px; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.3); }
+        .upgrade-btn:hover { background: rgba(255,255,255,0.3); color: white; }
+        .ofast-main { flex-grow: 1; padding: 32px 40px; background: #fcfcfd; max-width: calc(100% - 220px); }
+        .header-actions { display: flex; gap: 12px; }
+        .action-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; color: #4f46e5; text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.2s; }
+        .action-btn:hover { background: #f8fafc; color: #4338ca; }
+        .action-btn .dashicons { font-size: 16px; width: 16px; height: 16px; }
+    </style>
 
-        <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px;">
-                <?php echo $is_pro ? '✅' : '🔑'; ?> Ofast Toolkit License
-            </h1>
-            <p style="color: #666; font-size: 15px; margin: 0;">
-                <?php echo $is_pro
-                    ? 'Your Pro license is active. All premium features are unlocked.'
-                    : 'Enter your license key to unlock all Pro features.'; ?>
-            </p>
-        </div>
-
-        <?php if ($notice): ?>
-            <div style="padding: 14px 20px; border-radius: 10px; margin-bottom: 20px; font-weight: 500;
-                background: <?php echo $notice['success'] ? '#ecfdf5' : '#fef2f2'; ?>;
-                color: <?php echo $notice['success'] ? '#065f46' : '#991b1b'; ?>;
-                border: 1px solid <?php echo $notice['success'] ? '#a7f3d0' : '#fecaca'; ?>;">
-                <?php echo esc_html($notice['message']); ?>
+    <div class="wrap ofast-app-wrap">
+        <header class="ofast-topbar">
+            <div class="ofast-logo">
+                <img src="https://dl.ofastshop.com/ofastshop/web/2026/07/18110733/toolkit-logo.png" alt="Ofast Toolkit" style="height: 45px; width: auto; object-fit: contain;" />
             </div>
-        <?php endif; ?>
+            <div class="header-actions">
+                <a href="?page=ofast-setup-wizard" class="action-btn"><span class="dashicons dashicons-admin-tools"></span> Setup Wizard</a>
+                <a href="https://toolkit.ofastshop.com/docs/index.html" target="_blank" class="action-btn"><span class="dashicons dashicons-book"></span> Documentation</a>
+                <a href="#" class="action-btn">Quick Actions</a>
+            </div>
+        </header>
 
-        <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
-
-            <?php if ($is_pro): ?>
-                <!-- ACTIVE LICENSE STATE -->
-                <div style="text-align: center; padding: 20px 0;">
-                    <div style="display: inline-block; background: linear-gradient(135deg, #10b981, #059669); color: #fff; padding: 12px 28px; border-radius: 50px; font-size: 15px; font-weight: 600; margin-bottom: 20px;">
-                        ● License Active
-                    </div>
-
-                    <div style="background: #f9fafb; border-radius: 12px; padding: 20px; margin: 20px 0; text-align: left;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-                            <span style="color: #6b7280; font-size: 13px;">License Key</span>
-                            <code style="background: #e5e7eb; padding: 2px 10px; border-radius: 6px; font-size: 13px;">
-                                <?php echo esc_html(substr($license_key, 0, 10) . '••••••••••••'); ?>
-                            </code>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-                            <span style="color: #6b7280; font-size: 13px;">Status</span>
-                            <span style="color: #059669; font-weight: 600; font-size: 13px;">Active</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #6b7280; font-size: 13px;">Last Verified</span>
-                            <span style="font-size: 13px;"><?php echo $last_check ? human_time_diff($last_check) . ' ago' : 'Never'; ?></span>
-                        </div>
-                    </div>
-
-                    <form method="post" action="" style="margin-top: 20px;">
-                        <?php wp_nonce_field('ofast_license_action', 'ofast_license_nonce'); ?>
-                        <button type="submit" name="ofast_deactivate_license" value="1"
-                            style="background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; padding: 10px 24px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500;"
-                            onclick="return confirm('Deactivate this license? You can reactivate it on another site.');">
-                            Deactivate License
-                        </button>
-                    </form>
-                </div>
-
-            <?php else: ?>
-                <!-- INACTIVE LICENSE STATE -->
-                <form method="post" action="">
-                    <?php wp_nonce_field('ofast_license_action', 'ofast_license_nonce'); ?>
-
-                    <label style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #374151;">
-                        License Key
-                    </label>
-                    <input type="text" name="ofast_license_key" placeholder="OFAST-XXXX-XXXX-XXXX-XXXX"
-                        value="<?php echo esc_attr($license_key); ?>"
-                        style="width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 15px; font-family: monospace; outline: none; transition: border-color 0.2s; box-sizing: border-box;"
-                        onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e5e7eb'"
-                        required />
-
-                    <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 24px;">
-                        Enter the license key you received after purchasing on ofastshop.com/user
-                    </p>
-
-                    <button type="submit" name="ofast_activate_license" value="1"
-                        style="width: 100%; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; padding: 14px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 14px rgba(99,102,241,0.35);"
-                        onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 20px rgba(99,102,241,0.45)'"
-                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 14px rgba(99,102,241,0.35)'">
-                        Activate License
-                    </button>
-                </form>
-
-                <div style="text-align: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid #f3f4f6;">
-                    <p style="color: #9ca3af; font-size: 13px; margin: 0 0 8px;">Don't have a license key?</p>
-                    <a href="<?php echo esc_url(ofast_toolkit_get_upgrade_url()); ?>" target="_blank"
-                        style="color: #6366f1; font-weight: 600; text-decoration: none; font-size: 14px;">
-                        Get Ofast Toolkit Pro →
+        <div class="ofast-app-layout">
+            <aside class="ofast-sidebar">
+                <nav class="ofast-nav">
+                    <a href="?page=ofast-dashboard" class="nav-item">
+                        <span class="dashicons dashicons-grid-view"></span> Dashboard
                     </a>
+                    <div class="nav-section">SYSTEM</div>
+                    <a href="#" class="nav-item"><span class="dashicons dashicons-database"></span> Data Management</a>
+                    <a href="?page=ofast-license" class="nav-item active"><span class="dashicons dashicons-admin-network"></span> License</a>
+                    <a href="?page=ofast-support" class="nav-item"><span class="dashicons dashicons-editor-help"></span> Help &amp; Support</a>
+                </nav>
+                <div class="ofast-pro-card">
+                    <div class="pro-icon">🚀</div>
+                    <h4>Unlock More Power</h4>
+                    <p>Upgrade to Pro and get access to advanced features.</p>
+                    <a href="#" class="upgrade-btn">Upgrade Now</a>
                 </div>
+            </aside>
 
-            <?php endif; ?>
+            <main class="ofast-main">
+                <div style="max-width: 700px; margin: 0 auto;">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px;">
+                            <?php echo $is_pro ? '✅' : '🔑'; ?> Ofast Toolkit License
+                        </h1>
+                        <p style="color: #666; font-size: 15px; margin: 0;">
+                            <?php echo $is_pro
+                                ? 'Your Pro license is active. All premium features are unlocked.'
+                                : 'Enter your license key to unlock all Pro features.'; ?>
+                        </p>
+                    </div>
+
+                    <?php if ($notice): ?>
+                        <div style="padding: 14px 20px; border-radius: 10px; margin-bottom: 20px; font-weight: 500;
+                            background: <?php echo $notice['success'] ? '#ecfdf5' : '#fef2f2'; ?>;
+                            color: <?php echo $notice['success'] ? '#065f46' : '#991b1b'; ?>;
+                            border: 1px solid <?php echo $notice['success'] ? '#a7f3d0' : '#fecaca'; ?>;">
+                            <?php echo esc_html($notice['message']); ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+                        <?php if ($is_pro): ?>
+                            <div style="text-align: center; padding: 20px 0;">
+                                <div style="display: inline-block; background: linear-gradient(135deg, #10b981, #059669); color: #fff; padding: 12px 28px; border-radius: 50px; font-size: 15px; font-weight: 600; margin-bottom: 20px;">
+                                    ● License Active
+                                </div>
+                                <div style="background: #f9fafb; border-radius: 12px; padding: 20px; margin: 20px 0; text-align: left;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                                        <span style="color: #6b7280; font-size: 13px;">License Key</span>
+                                        <code style="background: #e5e7eb; padding: 2px 10px; border-radius: 6px; font-size: 13px;">
+                                            <?php echo esc_html(substr($license_key, 0, 10) . '••••••••••••'); ?>
+                                        </code>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                                        <span style="color: #6b7280; font-size: 13px;">Status</span>
+                                        <span style="color: #059669; font-weight: 600; font-size: 13px;">Active</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span style="color: #6b7280; font-size: 13px;">Last Verified</span>
+                                        <span style="font-size: 13px;"><?php echo $last_check ? human_time_diff($last_check) . ' ago' : 'Never'; ?></span>
+                                    </div>
+                                </div>
+                                <form method="post" action="" style="margin-top: 20px;">
+                                    <?php wp_nonce_field('ofast_license_action', 'ofast_license_nonce'); ?>
+                                    <button type="submit" name="ofast_deactivate_license" value="1"
+                                        style="background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; padding: 10px 24px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500;"
+                                        onclick="return confirm('Deactivate this license? You can reactivate it on another site.');">
+                                        Deactivate License
+                                    </button>
+                                </form>
+                            </div>
+                        <?php else: ?>
+                            <form method="post" action="">
+                                <?php wp_nonce_field('ofast_license_action', 'ofast_license_nonce'); ?>
+                                <label style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #374151;">
+                                    License Key
+                                </label>
+                                <input type="text" name="ofast_license_key" placeholder="OFAST-XXXX-XXXX-XXXX-XXXX"
+                                    value="<?php echo esc_attr($license_key); ?>"
+                                    style="width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 15px; font-family: monospace; outline: none; transition: border-color 0.2s; box-sizing: border-box;"
+                                    onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e5e7eb'"
+                                    required />
+                                <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 24px;">
+                                    Enter the license key you received after purchasing on ofastshop.com/user
+                                </p>
+                                <button type="submit" name="ofast_activate_license" value="1"
+                                    style="width: 100%; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; padding: 14px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 14px rgba(99,102,241,0.35);"
+                                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 20px rgba(99,102,241,0.45)'"
+                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 14px rgba(99,102,241,0.35)'">
+                                    Activate License
+                                </button>
+                            </form>
+                            <div style="text-align: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid #f3f4f6;">
+                                <p style="color: #9ca3af; font-size: 13px; margin: 0 0 8px;">Don't have a license key?</p>
+                                <a href="<?php echo esc_url(ofast_toolkit_get_upgrade_url()); ?>" target="_blank"
+                                    style="color: #6366f1; font-weight: 600; text-decoration: none; font-size: 14px;">
+                                    Get Ofast Toolkit Pro →
+                                </a>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
     <?php

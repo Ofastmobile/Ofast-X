@@ -467,7 +467,6 @@ class Ofast_X_Settings
                     </nav>
                     
                     <div class="ofast-pro-card">
-                        <div class="pro-icon">🚀</div>
                         <h4>Unlock More Power</h4>
                         <p>Upgrade to Pro and get access to advanced features.</p>
                         <a href="https://toolkit.ofastshop.com/" target="_blank" class="upgrade-btn">Upgrade Now</a>
@@ -506,7 +505,7 @@ class Ofast_X_Settings
                         </div>
                     </div>
                     
-                    <div class="ofast-filter-bar">
+                    <div class="ofast-filter-bar" style="margin-bottom: 24px;">
                         <div class="search-wrap">
                             <span class="dashicons dashicons-search"></span>
                             <input type="text" id="module-search" placeholder="Search modules..." />
@@ -525,44 +524,42 @@ class Ofast_X_Settings
                             $module_url = $this->get_module_admin_url($data);
                         ?>
                         <div class="module-card <?php echo $is_enabled ? 'enabled' : ''; ?>" data-category="<?php echo esc_attr($data['category'] ?? 'core'); ?>">
-                            <div class="card-top">
-                                <div class="card-icon <?php echo esc_attr($data['color_class'] ?? 'bg-purple'); ?>">
-                                    <span class="dashicons <?php echo esc_attr($data['icon'] ?? 'dashicons-admin-generic'); ?>"></span>
-                                </div>
-                                <div class="card-title">
-                                    <h3><?php echo esc_html($data['name']); ?></h3>
-                                    <?php if ($is_enabled): ?>
-                                        <span class="status-badge enabled">Enabled</span>
+                            <div class="card-header-top">
+                                <?php if (!empty($module_url)): ?>
+                                    <a href="<?php echo esc_url($module_url); ?>" class="card-icon <?php echo esc_attr($data['color_class'] ?? 'bg-purple'); ?>" title="Configure Module">
+                                        <span class="dashicons <?php echo esc_attr($data['icon'] ?? 'dashicons-admin-generic'); ?>"></span>
+                                    </a>
+                                <?php else: ?>
+                                    <div class="card-icon <?php echo esc_attr($data['color_class'] ?? 'bg-purple'); ?>">
+                                        <span class="dashicons <?php echo esc_attr($data['icon'] ?? 'dashicons-admin-generic'); ?>"></span>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <div class="card-toggle">
+                                    <?php if (!$is_locked): ?>
+                                        <label class="ofast-toggle-switch">
+                                            <input type="checkbox" class="module-toggle" data-module="<?php echo esc_attr($slug); ?>" <?php checked($is_enabled); ?>>
+                                            <span class="slider"></span>
+                                        </label>
                                     <?php else: ?>
-                                        <span class="status-badge disabled">Disabled</span>
+                                        <span class="core-label">Core</span>
                                     <?php endif; ?>
                                 </div>
                             </div>
-                            <p class="card-desc"><?php echo esc_html($data['description']); ?></p>
                             
-                            <div class="card-features">
-                                <?php if (!empty($data['features'])): ?>
-                                    <?php foreach ($data['features'] as $feature): ?>
-                                        <span class="feature-tag"><?php echo esc_html($feature); ?></span>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </div>
-                            
-                            <div class="card-bottom">
-                                <?php if (!empty($module_url)): ?>
-                                    <a href="<?php echo esc_url($module_url); ?>" class="configure-link">Configure</a>
-                                <?php else: ?>
-                                    <span></span>
-                                <?php endif; ?>
-                                
-                                <?php if (!$is_locked): ?>
-                                    <label class="ofast-toggle-switch">
-                                        <input type="checkbox" class="module-toggle" data-module="<?php echo esc_attr($slug); ?>" <?php checked($is_enabled); ?>>
-                                        <span class="slider"></span>
-                                    </label>
-                                <?php else: ?>
-                                    <span class="core-label">Core</span>
-                                <?php endif; ?>
+                            <div class="card-body-content">
+                                <div class="card-title-wrap">
+                                    <?php if (!empty($module_url)): ?>
+                                        <h3><a href="<?php echo esc_url($module_url); ?>"><?php echo esc_html($data['name']); ?></a></h3>
+                                    <?php else: ?>
+                                        <h3><?php echo esc_html($data['name']); ?></h3>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (!empty($data['features']) && in_array('NEW', $data['features'])): ?>
+                                        <span class="feature-tag new-badge">NEW</span>
+                                    <?php endif; ?>
+                                </div>
+                                <p class="card-desc"><?php echo esc_html($data['description']); ?></p>
                             </div>
                         </div>
                         <?php endforeach; ?>

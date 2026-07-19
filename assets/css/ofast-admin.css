@@ -118,10 +118,11 @@
         }
         .nav-item:hover .dashicons { opacity: 1; }
         .nav-item.active {
-            background: #f5f0e8;
-            color: #5c4a32;
+            background: #f1f5f9;
+            color: #0f172a;
+            font-weight: 600;
         }
-        .nav-item.active .dashicons { opacity: 1; color: #8b7355; }
+        .nav-item.active .dashicons { opacity: 1; color: #000000; }
         
         .ofast-pro-card {
             background: linear-gradient(135deg, #312e81 0%, #4338ca 100%);

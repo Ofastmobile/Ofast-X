@@ -412,6 +412,8 @@
     min-width: 180px;
     padding: 6px 0;
     margin-top: 4px;
+    max-height: 140px;
+    overflow-y: auto;
 }
 .ofast-role-option {
     display: flex;

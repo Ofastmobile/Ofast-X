@@ -332,8 +332,8 @@ class Ofast_X_Menu_Editor
                 <span class="dashicons dashicons-arrow-down-alt2" id="ofast-menu-editor-arrow" style="font-size: 20px; color: #64748b; transition: transform 0.2s;"></span>
             </div>
             <div class="ofast-card-body" id="ofast-menu-editor-body" style="padding: 0; display: none;">
-                <div style="overflow-x: auto;">
-                    <table class="ofast-modern-table" style="width: 100%;" id="menu-editor-table">
+                <div style="overflow-x: auto; padding: 15px 0;">
+                    <table class="ofast-modern-table" style="width: 100%; min-width: 1000px;" id="menu-editor-table">
                         <thead>
                             <tr>
                                 <th style="width: 40px; text-align: center;"></th>

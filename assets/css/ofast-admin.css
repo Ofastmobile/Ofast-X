@@ -1,7 +1,8 @@
 /* WordPress Admin Override */
-        #wpcontent, #wpbody-content { padding: 0 !important; }
+        #wpcontent, #wpbody-content { padding: 0 !important; overflow: visible !important; }
         #wpfooter { display: none !important; }
-        #wpbody { background: #fcfcfd; }
+        #wpbody { background: #fcfcfd; overflow: visible !important; }
+        #wpwrap { overflow: visible !important; }
         
         /* Google Fonts */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -11,6 +12,7 @@
             width: 100%;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
             box-sizing: border-box;
+            overflow: visible !important;
         }
         .ofast-app-wrap * { box-sizing: border-box; }
         
@@ -22,6 +24,7 @@
             border: none;
             box-shadow: none;
             min-height: calc(100vh - 32px);
+            overflow: visible !important;
         }
         
         .ofast-topbar {
@@ -43,12 +46,24 @@
             border-right: 1px solid #e2e8f0;
             display: flex;
             flex-direction: column;
-            padding: 24px 16px;
+            justify-content: space-between;
+            padding: 24px 16px 0;
             flex-shrink: 0;
-            position: sticky;
-            top: 100px;
-            height: calc(100vh - 100px);
+            position: fixed;
+            top: 105px;
+            height: calc(100vh - 105px);
             overflow-y: auto;
+            z-index: 90;
+        }
+
+        /* Sidebar save button area */
+        .ofast-sidebar-actions {
+            padding: 16px;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
+            margin: auto 0 0 0;
+            margin-left: -16px;
+            margin-right: -16px;
         }
         
         .ofast-logo {
@@ -103,10 +118,10 @@
         }
         .nav-item:hover .dashicons { opacity: 1; }
         .nav-item.active {
-            background: #4f46e5;
-            color: white;
+            background: #f5f0e8;
+            color: #5c4a32;
         }
-        .nav-item.active .dashicons { opacity: 1; }
+        .nav-item.active .dashicons { opacity: 1; color: #8b7355; }
         
         .ofast-pro-card {
             background: linear-gradient(135deg, #312e81 0%, #4338ca 100%);
@@ -139,6 +154,7 @@
             padding: 32px 40px;
             background: #fcfcfd;
             max-width: calc(100% - 220px);
+            margin-left: 220px;
         }
         
         .header-actions { display: flex; gap: 12px; }

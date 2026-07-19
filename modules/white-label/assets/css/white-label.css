@@ -53,20 +53,6 @@
     font-size: 15px;
 }
 
-/* Content Grid */
-.ofast-content-grid {
-    display: grid;
-    grid-template-columns: 1.5fr 1fr;
-    gap: 25px;
-    align-items: start;
-}
-
-@media (max-width: 900px) {
-    .ofast-content-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
 /* Cards */
 .ofast-card {
     background: #fff;
@@ -309,83 +295,6 @@
 .ofast-btn-reset:hover {
     background: #fef2f2;
     border-color: #ef4444;
-}
-
-/* Preview Card */
-.ofast-preview-widget {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    border-radius: 12px;
-    padding: 20px;
-    border: 1px solid #e2e8f0;
-}
-
-.ofast-preview-item {
-    padding: 12px 0;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.ofast-preview-item:last-child {
-    border-bottom: none;
-}
-
-.ofast-preview-label {
-    display: block;
-    font-size: 12px;
-    font-weight: 600;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-}
-
-.ofast-preview-value {
-    font-size: 15px;
-    color: #1e293b;
-    font-weight: 500;
-}
-
-.ofast-link {
-    color: #6366f1;
-    text-decoration: none;
-}
-
-.ofast-link:hover {
-    text-decoration: underline;
-}
-
-.ofast-preview-note {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 20px 0 0;
-    padding: 12px 15px;
-    background: #e0f2fe;
-    border-radius: 8px;
-    font-size: 13px;
-    color: #0369a1;
-}
-
-.ofast-preview-note .dashicons {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
-}
-
-/* Footer Preview */
-.ofast-preview-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #fff;
-    padding: 12px 16px;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    font-size: 13px;
-    color: #64748b;
-}
-
-.ofast-preview-footer em {
-    color: #94a3b8;
 }
 
 /* Tooltip */
@@ -691,93 +600,28 @@ input:checked+.ofast-toggle-slider:before {
     margin-top: 6px;
 }
 
-/* ===== Vertical Sub-Tab Layout (Updates tab) ===== */
-.ofast-subtab-layout {
-    display: block;
-}
-
-.ofast-subtab-nav {
+/* ===== Sub-Tab Panel Visibility ===== */
+/* Panels are hidden by default, only show when active */
+.ofast-subtab-panel {
     display: none;
 }
 
-/* Mobile/tablet: show all panels stacked */
-.ofast-subtab-panel {
-    display: block !important;
-    margin-bottom: 20px;
+.ofast-subtab-panel.active {
+    display: block;
 }
 
-/* Desktop: side-by-side layout */
-@media (min-width: 1024px) {
-    .ofast-subtab-layout {
-        display: flex;
-        gap: 24px;
-        align-items: flex-start;
-    }
+/* Give the panels some breathing room inside the main area */
+.ofast-subtab-panels {
+    padding: 0;
+}
 
-    .ofast-subtab-nav {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        width: 240px;
-        flex-shrink: 0;
-        position: sticky;
-        top: 52px;
-        background: #fff;
-        border-radius: 12px;
-        padding: 8px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
-        border: 1px solid #e2e8f0;
-    }
-
-    .ofast-subtab {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 10px 14px;
-        border: none;
-        background: transparent;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 13px;
-        font-weight: 500;
-        color: #64748b;
-        text-align: left;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-    }
-
-    .ofast-subtab:hover {
-        background: #f1f5f9;
-        color: #334155;
-    }
-
-    .ofast-subtab.active {
-        background: #eef2ff;
-        color: #6366f1;
-        border: 1px solid #c7d2fe;
-        font-weight: 600;
-    }
-
-    .ofast-subtab .dashicons {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-        line-height: 18px;
-    }
-
-    .ofast-subtab-panels {
-        flex: 1;
-        min-width: 0;
-    }
-
-    /* Desktop: only show active panel */
-    .ofast-subtab-panel {
-        display: none !important;
-    }
-
-    .ofast-subtab-panel.active {
-        display: block !important;
-    }
+/* Constrain width on simpler panels — keep menu-editor & admin-url full width */
+.ofast-subtab-panel[data-subtab-panel="designer_details"],
+.ofast-subtab-panel[data-subtab-panel="footer"],
+.ofast-subtab-panel[data-subtab-panel="features"],
+.ofast-subtab-panel[data-subtab-panel="updates"],
+.ofast-subtab-panel[data-subtab-panel="page-protection"] {
+    max-width: 680px;
 }
 
 /* Make tables inside sub-tab panels horizontally scrollable */

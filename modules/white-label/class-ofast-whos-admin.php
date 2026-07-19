@@ -99,10 +99,18 @@ class Ofast_X_Whos_Admin
             return;
         }
 
+        // Load shared layout framework (topbar, sidebar, nav-item styles)
+        wp_enqueue_style(
+            'ofast-admin-css',
+            OFAST_X_PLUGIN_URL . 'assets/css/ofast-admin.css',
+            array(),
+            OFAST_X_VERSION
+        );
+
         wp_enqueue_style(
             'ofast-tabs',
             plugins_url('assets/css/ofast-tabs.css', __FILE__),
-            array(),
+            array('ofast-admin-css'),
             OFAST_X_VERSION
         );
 
@@ -288,7 +296,7 @@ class Ofast_X_Whos_Admin
             }
 
             $active_tab = isset($_POST['white_label_active_tab']) ? sanitize_key(wp_unslash($_POST['white_label_active_tab'])) : 'designer_details';
-            if (!in_array($active_tab, array('designer_details', 'footer', 'updates'), true)) {
+            if (!in_array($active_tab, array('designer_details', 'footer', 'features', 'updates', 'page-protection', 'menu-editor', 'admin-url'), true)) {
                 $active_tab = 'designer_details';
             }
 
@@ -380,7 +388,7 @@ class Ofast_X_Whos_Admin
         }
 
         $active_tab = isset($_POST['white_label_active_tab']) ? sanitize_key(wp_unslash($_POST['white_label_active_tab'])) : 'designer_details';
-        if (!in_array($active_tab, array('designer_details', 'footer', 'updates'), true)) {
+        if (!in_array($active_tab, array('designer_details', 'footer', 'features', 'updates', 'page-protection', 'menu-editor', 'admin-url'), true)) {
             $active_tab = 'designer_details';
         }
 
@@ -794,25 +802,25 @@ class Ofast_X_Whos_Admin
         $saved = isset($_GET['settings_saved']);
         $was_reset = isset($_GET['settings_reset']);
         $default_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'designer_details';
-        if (!in_array($default_tab, array('designer_details', 'footer', 'updates'), true)) {
+        if (!in_array($default_tab, array('designer_details', 'footer', 'features', 'updates', 'page-protection', 'menu-editor', 'admin-url'), true)) {
             $default_tab = 'designer_details';
         }
 
         ?>
-        <div class="wrap ofast-white-label-wrap">
-            <!-- Modern Header with Gradient -->
-            <div class="ofast-page-header">
-                <div class="ofast-header-content">
-                    <div class="ofast-header-icon">
-                        <span class="dashicons dashicons-id-alt"></span>
-                    </div>
-                    <div class="ofast-header-text">
-                        <h1>White Label</h1>
-                        <p>Customize designer details, admin footer branding, and future white label settings</p>
-                    </div>
-                </div>
-            </div>
-
+                <?php
+        $tabs = array(
+            'designer_details' => array('label' => 'Designer Details', 'icon' => 'dashicons-businessperson', 'active' => ($default_tab === 'designer_details')),
+            'footer' => array('label' => 'Footer', 'icon' => 'dashicons-editor-kitchensink', 'active' => ($default_tab === 'footer')),
+            'features' => array('label' => 'Features', 'icon' => 'dashicons-admin-generic', 'active' => ($default_tab === 'features')),
+            'updates' => array('label' => 'Plugin Update', 'icon' => 'dashicons-update', 'active' => ($default_tab === 'updates')),
+            'page-protection' => array('label' => 'Page Protection', 'icon' => 'dashicons-lock', 'active' => ($default_tab === 'page-protection')),
+            'menu-editor' => array('label' => 'Menu Editor', 'icon' => 'dashicons-menu-alt3', 'active' => ($default_tab === 'menu-editor')),
+            'admin-url' => array('label' => 'Admin URL', 'icon' => 'dashicons-shield', 'active' => ($default_tab === 'admin-url')),
+        );
+        
+        Ofast_X_UI_Layout::render_header('White Label');
+        Ofast_X_UI_Layout::render_sidebar_start($tabs, 'ofast-white-label-form', 'ofast_white_label_save');
+        ?>
             <?php if ($saved): ?>
                 <?php Ofast_X_Toast::add('White Label settings saved successfully!', 'success'); ?>
             <?php endif; ?>
@@ -820,579 +828,395 @@ class Ofast_X_Whos_Admin
                 <?php Ofast_X_Toast::add('All settings have been reset to defaults!', 'success'); ?>
             <?php endif; ?>
 
-            <form method="post" action="" class="ofast-modern-form">
+            <form method="post" action="" class="ofast-modern-form" id="ofast-white-label-form">
                 <?php wp_nonce_field('ofast_white_label_settings', '_wpnonce'); ?>
-                <input type="hidden" name="white_label_active_tab" value="<?php echo esc_attr($default_tab); ?>"
-                    class="ofast-active-tab">
+                <input type="hidden" name="white_label_active_tab" value="<?php echo esc_attr($default_tab); ?>" class="ofast-active-tab">
 
-                <div class="ofast-tabs-shell">
-                    <nav class="ofast-tabs-nav" aria-label="<?php esc_attr_e('White Label sections', 'ofast-x'); ?>">
-                        <button type="button"
-                            class="ofast-tab <?php echo $default_tab === 'designer_details' ? 'active' : ''; ?>"
-                            data-tab="designer_details">
-                            <span class="dashicons dashicons-businessperson"></span>
-                            <?php esc_html_e('Designer Details', 'ofast-x'); ?>
-                        </button>
-                        <button type="button" class="ofast-tab <?php echo $default_tab === 'footer' ? 'active' : ''; ?>"
-                            data-tab="footer">
-                            <span class="dashicons dashicons-editor-kitchensink"></span>
-                            <?php esc_html_e('Footer', 'ofast-x'); ?>
-                        </button>
-                        <button type="button" class="ofast-tab <?php echo $default_tab === 'updates' ? 'active' : ''; ?>"
-                            data-tab="updates">
-                            <span class="dashicons dashicons-update"></span>
-                            <?php esc_html_e('Updates', 'ofast-x'); ?>
-                        </button>
-                    </nav>
+                <div class="ofast-subtab-panels">
 
-                    <div class="ofast-tab-content<?php echo $default_tab === 'designer_details' ? ' active' : ''; ?>"
-                        data-tab-panel="designer_details">
-
-                        <div class="ofast-content-grid">
+                        <!-- Designer Details Panel -->
+                        <div class="ofast-subtab-panel<?php echo $default_tab === 'designer_details' ? ' active' : ''; ?>" data-subtab-panel="designer_details">
                             <div class="ofast-card ofast-main-card">
                                 <div class="ofast-card-header">
-                                    <span class="dashicons dashicons-admin-users"></span>
                                     <h2>Designer Details</h2>
                                 </div>
                                 <div class="ofast-card-body">
                                     <div class="ofast-form-group">
                                         <label for="designer_name">
-                                            <span class="dashicons dashicons-businessperson"></span>
                                             Designer Name
                                         </label>
-                                        <input type="text" name="designer_name" id="designer_name"
-                                            value="<?php echo esc_attr($name); ?>" placeholder="John Doe or Acme Studios">
+                                        <input type="text" name="designer_name" id="designer_name" value="<?php echo esc_attr($name); ?>" placeholder="John Doe or Acme Studios">
                                         <span class="ofast-field-hint">Your full name or company name</span>
                                     </div>
 
                                     <div class="ofast-form-group">
                                         <label for="designer_email">
-                                            <span class="dashicons dashicons-email"></span>
                                             Email Address
                                         </label>
-                                        <input type="email" name="designer_email" id="designer_email"
-                                            value="<?php echo esc_attr($email); ?>" placeholder="hello@example.com">
+                                        <input type="email" name="designer_email" id="designer_email" value="<?php echo esc_attr($email); ?>" placeholder="hello@example.com">
                                         <span class="ofast-field-hint">Contact email for support inquiries</span>
                                     </div>
 
                                     <div class="ofast-form-group">
                                         <label for="designer_website">
-                                            <span class="dashicons dashicons-admin-site-alt3"></span>
                                             Website URL
                                         </label>
-                                        <input type="url" name="designer_website" id="designer_website"
-                                            value="<?php echo esc_attr($website); ?>" placeholder="https://example.com">
+                                        <input type="url" name="designer_website" id="designer_website" value="<?php echo esc_attr($website); ?>" placeholder="https://example.com">
                                         <span class="ofast-field-hint">Your portfolio or business website</span>
                                     </div>
                                 </div>
                             </div>
-
-                            <div class="ofast-card ofast-preview-card">
-                                <div class="ofast-card-header">
-                                    <span class="dashicons dashicons-visibility"></span>
-                                    <h2>Designer Preview</h2>
-                                </div>
-                                <div class="ofast-card-body">
-                                    <div class="ofast-preview-widget">
-                                        <div class="ofast-preview-item">
-                                            <span class="ofast-preview-label">Designer</span>
-                                            <span class="ofast-preview-value"
-                                                id="preview-name"><?php echo esc_html($name ?: 'Your Name'); ?></span>
-                                        </div>
-                                        <div class="ofast-preview-item">
-                                            <span class="ofast-preview-label">Email</span>
-                                            <a href="mailto:<?php echo esc_attr($email); ?>"
-                                                class="ofast-preview-value ofast-link" id="preview-email">
-                                                <?php echo esc_html($email ?: 'hello@example.com'); ?>
-                                            </a>
-                                        </div>
-                                        <div class="ofast-preview-item">
-                                            <span class="ofast-preview-label">Website</span>
-                                            <a href="<?php echo esc_url($website); ?>" target="_blank"
-                                                class="ofast-preview-value ofast-link" id="preview-website">
-                                                <?php echo esc_html($website ?: 'https://example.com'); ?>
-                                            </a>
-                                        </div>
-                                    </div>
-                                    <p class="ofast-preview-note">
-                                        <span class="dashicons dashicons-info-outline"></span>
-                                        This is how your details appear in the dashboard widget
-                                    </p>
-                                </div>
-                            </div>
                         </div>
 
-                        <div class="ofast-form-actions"
-                            style="margin-top: 30px; display: flex; gap: 12px; align-items: center;">
-                            <button type="submit" name="ofast_white_label_save" class="ofast-btn-primary">
-                                Save Settings
-                            </button>
-                            <button type="submit" name="ofast_white_label_reset" class="ofast-btn-reset"
-                                onclick="return confirm('Reset ALL White Label settings to defaults?');">
-                                Reset to Default
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="ofast-tab-content<?php echo $default_tab === 'footer' ? ' active' : ''; ?>"
-                        data-tab-panel="footer">
-
-                        <div class="ofast-content-grid">
+                        <!-- Footer Panel -->
+                        <div class="ofast-subtab-panel<?php echo $default_tab === 'footer' ? ' active' : ''; ?>" data-subtab-panel="footer">
                             <div class="ofast-card ofast-main-card">
                                 <div class="ofast-card-header">
-                                    <span class="dashicons dashicons-editor-kitchensink"></span>
                                     <h2>Admin Footer</h2>
                                 </div>
                                 <div class="ofast-card-body">
                                     <div class="ofast-form-group">
                                         <label for="footer_left_text">
                                             Left Footer Text
-                                            <span class="ofast-tooltip"
-                                                title="Replaces 'Thank you for creating with WordPress.' HTML is allowed.">
+                                            <span class="ofast-tooltip" title="Replaces 'Thank you for creating with WordPress.' HTML is allowed.">
                                                 <span class="dashicons dashicons-info-outline"></span>
                                             </span>
                                         </label>
-                                        <textarea name="footer_left_text" id="footer_left_text" rows="3"
-                                            placeholder="e.g., Designed by Your Company | Contact: info@example.com"><?php echo esc_textarea($footer_settings['left_text'] ?? ''); ?></textarea>
-                                        <span class="ofast-field-hint">
-                                            Available shortcuts: <code>{site_name}</code> <code>{year}</code>
-                                            <code>{admin_email}</code>
-                                        </span>
+                                        <textarea name="footer_left_text" id="footer_left_text" rows="3" placeholder="e.g., Designed by Your Company | Contact: info@example.com"><?php echo esc_textarea($footer_settings['left_text'] ?? ''); ?></textarea>
+                                        <span class="ofast-field-hint">Available shortcuts: <code>{site_name}</code> <code>{year}</code> <code>{admin_email}</code></span>
                                     </div>
 
                                     <div class="ofast-form-group">
                                         <label for="footer_right_text">
                                             Right Footer Text
-                                            <span class="ofast-tooltip"
-                                                title="Replaces the WordPress version number on the right side.">
+                                            <span class="ofast-tooltip" title="Replaces the WordPress version number on the right side.">
                                                 <span class="dashicons dashicons-info-outline"></span>
                                             </span>
                                         </label>
-                                        <input type="text" name="footer_right_text" id="footer_right_text"
-                                            value="<?php echo esc_attr($footer_settings['right_text'] ?? ''); ?>"
-                                            placeholder="e.g., v1.0.0">
+                                        <input type="text" name="footer_right_text" id="footer_right_text" value="<?php echo esc_attr($footer_settings['right_text'] ?? ''); ?>" placeholder="e.g., v1.0.0">
                                         <span class="ofast-field-hint">Custom text for the right footer area</span>
                                     </div>
 
-                                    <div class="ofast-form-group">
-                                        <label class="ofast-checkbox-label">
-                                            <input type="checkbox" name="hide_wp_version" value="1" <?php checked(!empty($footer_settings['hide_wp_version'])); ?>>
-                                            <span class="ofast-checkbox-custom"></span>
-                                            <span class="ofast-checkbox-text">
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Features Panel -->
+                        <div class="ofast-subtab-panel<?php echo $default_tab === 'features' ? ' active' : ''; ?>" data-subtab-panel="features">
+                            <div class="ofast-card ofast-main-card">
+                                <div class="ofast-card-header">
+                                    <h2><?php esc_html_e('Features', 'ofast-x'); ?></h2>
+                                </div>
+                                <div class="ofast-card-body">
+                                    <div class="ofast-field" style="margin-bottom: 24px;">
+                                        <label for="ofast_hide_wp_version" class="ofast-toggle-label">
+                                            <span class="ofast-toggle-text">
                                                 Hide WordPress version number
                                                 <span class="ofast-security-badge">Security Recommended</span>
                                             </span>
+                                            <div class="ofast-toggle-switch">
+                                                <input type="checkbox" id="ofast_hide_wp_version" name="hide_wp_version" value="1" <?php checked(!empty($footer_settings['hide_wp_version'])); ?> />
+                                                <span class="ofast-toggle-slider"></span>
+                                            </div>
                                         </label>
                                     </div>
-                                </div>
-                            </div>
 
-                            <div class="ofast-card ofast-preview-card">
+                                    <div class="ofast-field" style="margin-bottom: 24px;">
+                                        <label for="ofast_enable_custom_dashboard" class="ofast-toggle-label">
+                                            <span class="ofast-toggle-text">
+                                                Enable Custom Dashboard
+                                                <span class="ofast-security-badge" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">New Feature</span>
+                                            </span>
+                                            <div class="ofast-toggle-switch">
+                                                <input type="checkbox" id="ofast_enable_custom_dashboard" name="enable_custom_dashboard" value="1" <?php checked(!empty($footer_settings['enable_custom_dashboard'])); ?> />
+                                                <span class="ofast-toggle-slider"></span>
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    <div class="ofast-field" style="margin-bottom: 24px;">
+                                        <label for="ofast_disable_file_editor" class="ofast-toggle-label">
+                                            <span class="ofast-toggle-text">
+                                                Disable Plugin & Theme Editor
+                                                <span class="ofast-security-badge">Security Recommended</span>
+                                            </span>
+                                            <div class="ofast-toggle-switch">
+                                                <input type="checkbox" id="ofast_disable_file_editor" name="disable_file_editor" value="1" <?php checked(!empty($footer_settings['disable_file_editor'])); ?> />
+                                                <span class="ofast-toggle-slider"></span>
+                                            </div>
+                                        </label>
+                                        <p class="ofast-field-hint">Removes the built-in code editor from Plugins and Themes to prevent direct file modifications.</p>
+                                    </div>
+</div>
+                            </div>
+                        </div>
+
+                        <!-- Plugin Update Panel -->
+                        <div class="ofast-subtab-panel<?php echo $default_tab === 'updates' ? ' active' : ''; ?>" data-subtab-panel="updates">
+                            <div class="ofast-card ofast-main-card">
                                 <div class="ofast-card-header">
-                                    <span class="dashicons dashicons-visibility"></span>
-                                    <h2>Footer Preview</h2>
+                                    <h2><?php esc_html_e('Plugin Update', 'ofast-x'); ?></h2>
                                 </div>
                                 <div class="ofast-card-body">
-                                    <div class="ofast-preview-widget">
-                                        <div class="ofast-preview-footer">
-                                            <span class="ofast-preview-left"
-                                                id="preview-left"><?php echo !empty($footer_settings['left_text']) ? wp_kses_post($this->replace_shortcuts($footer_settings['left_text'])) : '<em>Thank you for creating with WordPress.</em>'; ?></span>
-                                            <span class="ofast-preview-right"
-                                                id="preview-right"><?php echo !empty($footer_settings['right_text']) ? esc_html($footer_settings['right_text']) : (!empty($footer_settings['hide_wp_version']) ? '' : '<em>Version X.X</em>'); ?></span>
-                                        </div>
+                                    <div class="ofast-field">
+                                        <label for="ofast_disable_plugin_updates" class="ofast-toggle-label">
+                                            <span class="ofast-toggle-text"><?php esc_html_e('Disable Plugin Updates for Specific Plugins', 'ofast-x'); ?></span>
+                                            <div class="ofast-toggle-switch">
+                                                <input type="checkbox" id="ofast_disable_plugin_updates" name="ofast_disable_plugin_updates" value="1" <?php checked(get_option('ofast_disable_plugin_updates', 0), 1); ?> />
+                                                <span class="ofast-toggle-slider"></span>
+                                            </div>
+                                        </label>
+                                        <p class="ofast-field-hint">
+                                            <?php esc_html_e('When enabled, WordPress update checks will be suppressed for the plugins you select below.', 'ofast-x'); ?>
+                                        </p>
                                     </div>
-                                    <p class="ofast-preview-note">
-                                        <span class="dashicons dashicons-info-outline"></span>
-                                        This is how your footer appears in the admin area
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="ofast-form-actions"
-                            style="margin-top: 30px; display: flex; gap: 12px; align-items: center;">
-                            <button type="submit" name="ofast_white_label_save" class="ofast-btn-primary">
-                                Save Settings
-                            </button>
-                            <button type="submit" name="ofast_white_label_reset" class="ofast-btn-reset"
-                                onclick="return confirm('Reset ALL White Label settings to defaults?');">
-                                Reset to Default
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="ofast-tab-content<?php echo $default_tab === 'updates' ? ' active' : ''; ?>"
-                        data-tab-panel="updates">
-
-                        <div class="ofast-subtab-layout">
-                            <!-- Left: vertical sub-tab nav -->
-                            <nav class="ofast-subtab-nav">
-                                <button type="button" class="ofast-subtab active" data-subtab="features">
-                                    <span class="dashicons dashicons-admin-generic"></span>
-                                    <?php esc_html_e('Features', 'ofast-x'); ?>
-                                </button>
-                                <button type="button" class="ofast-subtab" data-subtab="updates">
-                                    <span class="dashicons dashicons-update"></span>
-                                    <?php esc_html_e('Plugin Update', 'ofast-x'); ?>
-                                </button>
-                                <button type="button" class="ofast-subtab" data-subtab="page-protection">
-                                    <span class="dashicons dashicons-lock"></span>
-                                    <?php esc_html_e('Page Protection', 'ofast-x'); ?>
-                                </button>
-                                <button type="button" class="ofast-subtab" data-subtab="menu-editor">
-                                    <span class="dashicons dashicons-menu-alt3"></span>
-                                    <?php esc_html_e('Menu Editor', 'ofast-x'); ?>
-                                </button>
-
-                                <!-- Save/Reset buttons moved below subtab layout for full visibility on all screens -->
-                            </nav>
-
-                            <!-- Right: sub-tab content panels -->
-                            <div class="ofast-subtab-panels">
-
-                                <!-- Features Panel -->
-                                <div class="ofast-subtab-panel active" data-subtab-panel="features">
-                                    <div class="ofast-card ofast-main-card">
-                                        <div class="ofast-card-header">
-                                            <span class="dashicons dashicons-admin-generic"></span>
-                                            <h2><?php esc_html_e('Features', 'ofast-x'); ?></h2>
-                                        </div>
-                                        <div class="ofast-card-body">
-
-
-                                            <div class="ofast-form-group">
-                                                <label class="ofast-checkbox-label">
-                                                    <input type="checkbox" name="enable_custom_dashboard" value="1" <?php checked(!empty($footer_settings['enable_custom_dashboard'])); ?>>
-                                                    <span class="ofast-checkbox-custom"></span>
-                                                    <span class="ofast-checkbox-text">
-                                                        Enable Custom Dashboard
-                                                        <span class="ofast-security-badge"
-                                                            style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">New
-                                                            Feature</span>
-                                                    </span>
-                                                </label>
-                                            </div>
-
-                                            <div class="ofast-form-group">
-                                                <label class="ofast-checkbox-label">
-                                                    <input type="checkbox" name="disable_file_editor" value="1" <?php checked(!empty($footer_settings['disable_file_editor'])); ?>>
-                                                    <span class="ofast-checkbox-custom"></span>
-                                                    <span class="ofast-checkbox-text">
-                                                        Disable Plugin & Theme Editor
-                                                        <span class="ofast-security-badge">Security Recommended</span>
-                                                    </span>
-                                                </label>
-                                                <span class="ofast-field-hint">Removes the built-in code editor from Plugins and Themes to prevent direct file modifications.</span>
-                                            </div>
-
-                                            <div class="ofast-form-group">
-                                                <label class="ofast-checkbox-label">
-                                                    <input type="checkbox" name="enable_admin_url" value="1" <?php checked(!empty($admin_tweaks['enable_admin_url'])); ?>>
-                                                    <span class="ofast-checkbox-custom"></span>
-                                                    <span class="ofast-checkbox-text">
-                                                        Enable Admin URL Security
-                                                        <span class="ofast-security-badge">Security</span>
-                                                    </span>
-                                                </label>
-                                                <span class="ofast-field-hint">Moves login access to a custom URL and blocks the default WordPress admin/login routes.</span>
-                                            </div>
-
-                                            <?php if ($this->admin_url): ?>
-                                                <div style="margin-top: 24px;">
-                                                    <?php $this->admin_url->render_embedded_settings(); ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Plugin Update Panel -->
-                                <div class="ofast-subtab-panel" data-subtab-panel="updates">
-                                    <div class="ofast-card ofast-main-card">
-                                        <div class="ofast-card-header">
-                                            <span class="dashicons dashicons-update"></span>
-                                            <h2><?php esc_html_e('Plugin Update', 'ofast-x'); ?></h2>
-                                        </div>
-                                        <div class="ofast-card-body">
-                                            <div class="ofast-field">
-                                                <label for="ofast_disable_plugin_updates" class="ofast-toggle-label">
-                                                    <span
-                                                        class="ofast-toggle-text"><?php esc_html_e('Disable Plugin Updates for Specific Plugins', 'ofast-x'); ?></span>
-                                                    <div class="ofast-toggle-switch">
-                                                        <input type="checkbox" id="ofast_disable_plugin_updates"
-                                                            name="ofast_disable_plugin_updates" value="1" <?php checked(get_option('ofast_disable_plugin_updates', 0), 1); ?> />
-                                                        <span class="ofast-toggle-slider"></span>
-                                                    </div>
-                                                </label>
-                                                <p class="ofast-field-hint">
-                                                    <?php esc_html_e('When enabled, WordPress update checks will be suppressed for the plugins you select below.', 'ofast-x'); ?>
-                                                </p>
-                                            </div>
-
-                                            <?php
-                                            $is_updates_enabled = get_option('ofast_disable_plugin_updates', 0);
-                                            $disabled_plugins_list = get_option('ofast_disabled_plugins_list', array());
-                                            if (!is_array($disabled_plugins_list)) {
-                                                $disabled_plugins_list = array();
-                                            }
-
-                                            // Get all installed plugins
-                                            if (!function_exists('get_plugins')) {
-                                                require_once ABSPATH . 'wp-admin/includes/plugin.php';
-                                            }
-                                            $all_plugins = get_plugins();
-                                            ?>
-
-                                            <div id="ofast-plugin-selector" class="ofast-plugin-selector"
-                                                style="<?php echo $is_updates_enabled ? '' : 'display:none;'; ?>">
-                                                <div class="ofast-plugin-search-wrap">
-                                                    <span class="dashicons dashicons-search"></span>
-                                                    <input type="text" id="ofast-plugin-search" class="ofast-plugin-search"
-                                                        placeholder="<?php esc_attr_e('Search plugins...', 'ofast-x'); ?>" />
-                                                </div>
-
-                                                <div class="ofast-plugin-select-actions">
-                                                    <button type="button" class="ofast-select-all-btn"
-                                                        id="ofast-select-all"><?php esc_html_e('Select All', 'ofast-x'); ?></button>
-                                                    <button type="button" class="ofast-select-all-btn"
-                                                        id="ofast-deselect-all"><?php esc_html_e('Deselect All', 'ofast-x'); ?></button>
-                                                    <span class="ofast-selected-count"><span
-                                                            id="ofast-selected-num"><?php echo count($disabled_plugins_list); ?></span>
-                                                        <?php esc_html_e('selected', 'ofast-x'); ?></span>
-                                                </div>
-
-                                                <div class="ofast-plugin-list">
-                                                    <?php foreach ($all_plugins as $plugin_file => $plugin_data): ?>
-                                                        <label class="ofast-plugin-item"
-                                                            data-plugin-name="<?php echo esc_attr(strtolower($plugin_data['Name'])); ?>">
-                                                            <input type="checkbox" name="ofast_disabled_plugins[]"
-                                                                value="<?php echo esc_attr($plugin_file); ?>" <?php checked(in_array($plugin_file, $disabled_plugins_list)); ?> />
-                                                            <span class="ofast-plugin-checkbox-custom"></span>
-                                                            <div class="ofast-plugin-info">
-                                                                <span
-                                                                    class="ofast-plugin-name"><?php echo esc_html($plugin_data['Name']); ?></span>
-                                                                <span class="ofast-plugin-meta">
-                                                                    <?php if (!empty($plugin_data['Version'])): ?>
-                                                                        <span
-                                                                            class="ofast-plugin-version">v<?php echo esc_html($plugin_data['Version']); ?></span>
-                                                                    <?php endif; ?>
-                                                                    <?php if (!empty($plugin_data['AuthorName'])): ?>
-                                                                        <span
-                                                                            class="ofast-plugin-author"><?php echo esc_html($plugin_data['AuthorName']); ?></span>
-                                                                    <?php endif; ?>
-                                                                </span>
-                                                            </div>
-                                                        </label>
-                                                    <?php endforeach; ?>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Page Protection Panel -->
-                                <div class="ofast-subtab-panel" data-subtab-panel="page-protection">
 
                                     <?php
-                                    // Page Protection Settings
-                                    $page_protection_enabled = get_option('ofast_page_protection_enabled', 0);
-                                    $super_admin_username = get_option('ofast_super_admin_username', wp_get_current_user()->user_login);
-                                    $protected_pages_list = get_option('ofast_protected_pages_list', array());
-                                    if (!is_array($protected_pages_list)) {
-                                        $protected_pages_list = array();
+                                    $is_updates_enabled = get_option('ofast_disable_plugin_updates', 0);
+                                    $disabled_plugins_list = get_option('ofast_disabled_plugins_list', array());
+                                    if (!is_array($disabled_plugins_list)) {
+                                        $disabled_plugins_list = array();
                                     }
-                                    $has_password_set = (bool) get_option('ofast_protection_password', '');
-                                    $page_protection_timeout = absint(get_option('ofast_page_protection_timeout', self::PAGE_PROTECTION_TIMEOUT_DEFAULT));
 
-                                    // Common admin pages
-                                    $available_pages = array(
-                                        'themes.php' => __('Appearance', 'ofast-x'),
-                                        'plugins.php' => __('Plugins', 'ofast-x'),
-                                        'users.php' => __('Users', 'ofast-x'),
-                                        'options-general.php' => __('Settings', 'ofast-x'),
-                                        'tools.php' => __('Tools', 'ofast-x'),
-                                        'edit.php' => __('Posts', 'ofast-x'),
-                                        'upload.php' => __('Media', 'ofast-x'),
-                                        'edit.php?post_type=page' => __('Pages', 'ofast-x'),
-                                        'edit-comments.php' => __('Comments', 'ofast-x'),
-                                        'profile.php' => __('Profile', 'ofast-x'),
-                                    );
-
-                                    // Add registered admin pages dynamically
-                                    global $menu;
-                                    if (!empty($menu)) {
-                                        foreach ($menu as $m) {
-                                            if (!empty($m[2]) && !isset($available_pages[$m[2]]) && !empty($m[0])) {
-                                                $label = wp_strip_all_tags($m[0]);
-                                                if (!empty($label)) {
-                                                    $available_pages[$m[2]] = $label;
-                                                }
-                                            }
-                                        }
+                                    // Get all installed plugins
+                                    if (!function_exists('get_plugins')) {
+                                        require_once ABSPATH . 'wp-admin/includes/plugin.php';
                                     }
+                                    $all_plugins = get_plugins();
                                     ?>
 
-                                    <div class="ofast-card ofast-main-card" style="margin-top: 20px; margin-bottom: 20px;">
-                                        <div class="ofast-card-header" id="ofast-page-protection-header"
-                                            style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-                                            <div style="display: flex; align-items: center; gap: 8px;">
-                                                <span class="dashicons dashicons-lock"></span>
-                                                <h2 style="margin: 0;"><?php esc_html_e('Page Protection', 'ofast-x'); ?></h2>
-                                            </div>
-                                            <span
-                                                class="dashicons <?php echo $page_protection_enabled ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'; ?>"
-                                                id="ofast-page-protection-arrow"
-                                                style="font-size: 20px; color: #64748b; transition: transform 0.2s;"></span>
+                                    <div id="ofast-plugin-selector" class="ofast-plugin-selector" style="<?php echo $is_updates_enabled ? '' : 'display:none;'; ?>">
+                                        <div class="ofast-plugin-search-wrap">
+                                            <span class="dashicons dashicons-search"></span>
+                                            <input type="text" id="ofast-plugin-search" class="ofast-plugin-search" placeholder="<?php esc_attr_e('Search plugins...', 'ofast-x'); ?>" />
                                         </div>
-                                        <div class="ofast-card-body" id="ofast-page-protection-body"
-                                            style="<?php echo $page_protection_enabled ? '' : 'display: none;'; ?>">
-                                            <div class="ofast-field">
-                                                <label for="ofast_page_protection_enabled" class="ofast-toggle-label">
-                                                    <span
-                                                        class="ofast-toggle-text"><?php esc_html_e('Password-Protect Admin Pages', 'ofast-x'); ?></span>
-                                                    <div class="ofast-toggle-switch">
-                                                        <input type="checkbox" id="ofast_page_protection_enabled"
-                                                            name="ofast_page_protection_enabled" value="1" <?php checked($page_protection_enabled, 1); ?> />
-                                                        <span class="ofast-toggle-slider"></span>
-                                                    </div>
-                                                </label>
-                                                <p class="ofast-field-hint">
-                                                    <?php esc_html_e('When enabled, non-super-admin users must enter a password to access the selected pages.', 'ofast-x'); ?>
-                                                </p>
-                                            </div>
 
-                                            <div id="ofast-page-protection-settings" class="ofast-page-protection-settings"
-                                                style="<?php echo $page_protection_enabled ? '' : 'display:none;'; ?>">
+                                        <div class="ofast-plugin-select-actions">
+                                            <button type="button" class="ofast-select-all-btn" id="ofast-select-all"><?php esc_html_e('Select All', 'ofast-x'); ?></button>
+                                            <button type="button" class="ofast-select-all-btn" id="ofast-deselect-all"><?php esc_html_e('Deselect All', 'ofast-x'); ?></button>
+                                            <span class="ofast-selected-count"><span id="ofast-selected-num"><?php echo count($disabled_plugins_list); ?></span> <?php esc_html_e('selected', 'ofast-x'); ?></span>
+                                        </div>
 
-                                                <div class="ofast-protection-fields">
-                                                    <div class="ofast-form-group">
-                                                        <label for="ofast_super_admin_username">
-                                                            <span class="dashicons dashicons-admin-users"></span>
-                                                            <?php esc_html_e('Super Admin Username', 'ofast-x'); ?>
-                                                        </label>
-                                                        <input type="text" id="ofast_super_admin_username"
-                                                            name="ofast_super_admin_username"
-                                                            value="<?php echo esc_attr($super_admin_username); ?>"
-                                                            placeholder="<?php esc_attr_e('e.g. admin', 'ofast-x'); ?>">
-                                                        <span class="ofast-field-hint">
-                                                            <?php esc_html_e('This user will bypass protection and always have full access.', 'ofast-x'); ?>
-                                                        </span>
-                                                    </div>
-
-                                                    <div class="ofast-form-group">
-                                                        <label for="ofast_protection_password">
-                                                            <span class="dashicons dashicons-lock"></span>
-                                                            <?php esc_html_e('Protection Password', 'ofast-x'); ?>
-                                                        </label>
-                                                        <input type="password" id="ofast_protection_password"
-                                                            name="ofast_protection_password" value=""
-                                                            placeholder="<?php echo $has_password_set ? esc_attr__('••••••• (leave blank to keep current)', 'ofast-x') : esc_attr__('Set a password', 'ofast-x'); ?>">
-                                                        <span class="ofast-field-hint">
-                                                            <?php if ($has_password_set): ?>
-                                                                <span style="color: #10b981;">✓
-                                                                    <?php esc_html_e('Password is set.', 'ofast-x'); ?></span>
-                                                                <?php esc_html_e('Leave blank to keep current password.', 'ofast-x'); ?>
-                                                            <?php else: ?>
-                                                                <span style="color: #ef4444;">✗
-                                                                    <?php esc_html_e('No password set. Feature will not work until a password is configured.', 'ofast-x'); ?></span>
+                                        <div class="ofast-plugin-list">
+                                            <?php foreach ($all_plugins as $plugin_file => $plugin_data): ?>
+                                                <label class="ofast-plugin-item" data-plugin-name="<?php echo esc_attr(strtolower($plugin_data['Name'])); ?>">
+                                                    <input type="checkbox" name="ofast_disabled_plugins[]" value="<?php echo esc_attr($plugin_file); ?>" <?php checked(in_array($plugin_file, $disabled_plugins_list)); ?> />
+                                                    <span class="ofast-plugin-checkbox-custom"></span>
+                                                    <div class="ofast-plugin-info">
+                                                        <span class="ofast-plugin-name"><?php echo esc_html($plugin_data['Name']); ?></span>
+                                                        <span class="ofast-plugin-meta">
+                                                            <?php if (!empty($plugin_data['Version'])): ?>
+                                                                <span class="ofast-plugin-version">v<?php echo esc_html($plugin_data['Version']); ?></span>
+                                                            <?php endif; ?>
+                                                            <?php if (!empty($plugin_data['AuthorName'])): ?>
+                                                                <span class="ofast-plugin-author"><?php echo esc_html($plugin_data['AuthorName']); ?></span>
                                                             <?php endif; ?>
                                                         </span>
                                                     </div>
-
-                                                    <div class="ofast-form-group">
-                                                        <label for="ofast_page_protection_timeout">
-                                                            <span class="dashicons dashicons-clock"></span>
-                                                            <?php esc_html_e('Remember Access For (Minutes)', 'ofast-x'); ?>
-                                                        </label>
-                                                        <input type="number" id="ofast_page_protection_timeout"
-                                                            name="ofast_page_protection_timeout"
-                                                            value="<?php echo esc_attr($page_protection_timeout); ?>"
-                                                            min="<?php echo esc_attr(self::PAGE_PROTECTION_TIMEOUT_MIN); ?>"
-                                                            max="<?php echo esc_attr(self::PAGE_PROTECTION_TIMEOUT_MAX); ?>"
-                                                            step="5">
-                                                        <span class="ofast-field-hint">
-                                                            <?php esc_html_e('Recommended: 30 minutes. Access is remembered in a signed, expiring admin cookie — not as plain text and never in the URL.', 'ofast-x'); ?>
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                <div class="ofast-protected-pages-section">
-                                                    <h4 style="margin: 20px 0 10px; font-weight: 600; color: #1e293b;">
-                                                        <span class="dashicons dashicons-shield"
-                                                            style="color: #6366f1; margin-right: 4px;"></span>
-                                                        <?php esc_html_e('Protected Pages', 'ofast-x'); ?>
-                                                    </h4>
-
-                                                    <div class="ofast-plugin-search-wrap">
-                                                        <span class="dashicons dashicons-search"></span>
-                                                        <input type="text" id="ofast-page-search" class="ofast-plugin-search"
-                                                            placeholder="<?php esc_attr_e('Search pages...', 'ofast-x'); ?>" />
-                                                    </div>
-
-                                                    <div class="ofast-plugin-select-actions">
-                                                        <button type="button" class="ofast-select-all-btn"
-                                                            id="ofast-page-select-all"><?php esc_html_e('Select All', 'ofast-x'); ?></button>
-                                                        <button type="button" class="ofast-select-all-btn"
-                                                            id="ofast-page-deselect-all"><?php esc_html_e('Deselect All', 'ofast-x'); ?></button>
-                                                        <span class="ofast-selected-count"><span
-                                                                id="ofast-page-selected-num"><?php echo count($protected_pages_list); ?></span>
-                                                            <?php esc_html_e('selected', 'ofast-x'); ?></span>
-                                                    </div>
-
-                                                    <div class="ofast-plugin-list">
-                                                        <?php foreach ($available_pages as $page_slug => $page_label): ?>
-                                                            <label class="ofast-plugin-item ofast-page-item"
-                                                                data-plugin-name="<?php echo esc_attr(strtolower($page_label)); ?>">
-                                                                <input type="checkbox" name="ofast_protected_pages[]"
-                                                                    value="<?php echo esc_attr($page_slug); ?>" <?php checked(in_array($page_slug, $protected_pages_list)); ?> />
-                                                                <span class="ofast-plugin-checkbox-custom"></span>
-                                                                <div class="ofast-plugin-info">
-                                                                    <span
-                                                                        class="ofast-plugin-name"><?php echo esc_html($page_label); ?></span>
-                                                                    <span class="ofast-plugin-meta">
-                                                                        <span
-                                                                            class="ofast-plugin-version"><?php echo esc_html($page_slug); ?></span>
-                                                                    </span>
-                                                                </div>
-                                                            </label>
-                                                        <?php endforeach; ?>
-                                                    </div><!-- .ofast-plugin-list -->
-                                                </div><!-- .ofast-protected-pages-section -->
-                                            </div><!-- #ofast-page-protection-settings -->
-                                        </div><!-- .ofast-card-body -->
-                                    </div><!-- .ofast-card -->
-                                </div><!-- .ofast-subtab-panel page-protection -->
-
-                                <!-- Menu Editor Panel -->
-                                <div class="ofast-subtab-panel" data-subtab-panel="menu-editor">
-                                    <?php
-                                    // Embedded Menu Editor
-                                    if ($this->menu_editor) {
-                                        $this->menu_editor->render_embedded();
-                                    }
-                                    ?>
+                                                </label>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
                                 </div>
-
-                            </div><!-- .ofast-subtab-panels -->
-                        </div><!-- .ofast-subtab-layout -->
-
-                        <div class="ofast-form-actions"
-                            style="margin-top: 24px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                            <button type="submit" name="ofast_white_label_save" class="ofast-btn-primary">
-                                Save Settings
-                            </button>
-                            <button type="submit" name="ofast_white_label_reset" class="ofast-btn-reset"
-                                onclick="return confirm('Reset ALL White Label settings to defaults?');">
-                                Reset to Default
-                            </button>
+                            </div>
                         </div>
 
-                    </div>
+                        <!-- Page Protection Panel -->
+                        <div class="ofast-subtab-panel<?php echo $default_tab === 'page-protection' ? ' active' : ''; ?>" data-subtab-panel="page-protection">
 
+                            <?php
+                            // Page Protection Settings
+                            $page_protection_enabled = get_option('ofast_page_protection_enabled', 0);
+                            $super_admin_username = get_option('ofast_super_admin_username', wp_get_current_user()->user_login);
+                            $protected_pages_list = get_option('ofast_protected_pages_list', array());
+                            if (!is_array($protected_pages_list)) {
+                                $protected_pages_list = array();
+                            }
+                            $has_password_set = (bool) get_option('ofast_protection_password', '');
+                            $page_protection_timeout = absint(get_option('ofast_page_protection_timeout', self::PAGE_PROTECTION_TIMEOUT_DEFAULT));
 
+                            // Common admin pages
+                            $available_pages = array(
+                                'themes.php' => __('Appearance', 'ofast-x'),
+                                'plugins.php' => __('Plugins', 'ofast-x'),
+                                'users.php' => __('Users', 'ofast-x'),
+                                'options-general.php' => __('Settings', 'ofast-x'),
+                                'tools.php' => __('Tools', 'ofast-x'),
+                                'edit.php' => __('Posts', 'ofast-x'),
+                                'upload.php' => __('Media', 'ofast-x'),
+                                'edit.php?post_type=page' => __('Pages', 'ofast-x'),
+                                'edit-comments.php' => __('Comments', 'ofast-x'),
+                                'profile.php' => __('Profile', 'ofast-x'),
+                            );
+
+                            // Add registered admin pages dynamically
+                            global $menu;
+                            if (!empty($menu)) {
+                                foreach ($menu as $m) {
+                                    if (!empty($m[2]) && !isset($available_pages[$m[2]]) && !empty($m[0])) {
+                                        $label = wp_strip_all_tags($m[0]);
+                                        if (!empty($label)) {
+                                            $available_pages[$m[2]] = $label;
+                                        }
+                                    }
+                                }
+                            }
+                            ?>
+
+                            <div class="ofast-card ofast-main-card" style="margin-top: 20px; margin-bottom: 20px;">
+                                <div class="ofast-card-header" id="ofast-page-protection-header" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span class="dashicons dashicons-lock"></span>
+                                        <h2 style="margin: 0;"><?php esc_html_e('Page Protection', 'ofast-x'); ?></h2>
+                                    </div>
+                                    <span class="dashicons <?php echo $page_protection_enabled ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'; ?>" id="ofast-page-protection-arrow" style="font-size: 20px; color: #64748b; transition: transform 0.2s;"></span>
+                                </div>
+                                <div class="ofast-card-body" id="ofast-page-protection-body" style="<?php echo $page_protection_enabled ? '' : 'display: none;'; ?>">
+                                    <div class="ofast-field">
+                                        <label for="ofast_page_protection_enabled" class="ofast-toggle-label">
+                                            <span class="ofast-toggle-text"><?php esc_html_e('Password-Protect Admin Pages', 'ofast-x'); ?></span>
+                                            <div class="ofast-toggle-switch">
+                                                <input type="checkbox" id="ofast_page_protection_enabled" name="ofast_page_protection_enabled" value="1" <?php checked($page_protection_enabled, 1); ?> />
+                                                <span class="ofast-toggle-slider"></span>
+                                            </div>
+                                        </label>
+                                        <p class="ofast-field-hint">
+                                            <?php esc_html_e('When enabled, non-super-admin users must enter a password to access the selected pages.', 'ofast-x'); ?>
+                                        </p>
+                                    </div>
+
+                                    <div id="ofast-page-protection-settings" class="ofast-page-protection-settings" style="<?php echo $page_protection_enabled ? '' : 'display:none;'; ?>">
+
+                                        <div class="ofast-protection-fields">
+                                            <div class="ofast-form-group">
+                                                <label for="ofast_super_admin_username">
+                                                    <span class="dashicons dashicons-admin-users"></span>
+                                                    <?php esc_html_e('Super Admin Username', 'ofast-x'); ?>
+                                                </label>
+                                                <input type="text" id="ofast_super_admin_username" name="ofast_super_admin_username" value="<?php echo esc_attr($super_admin_username); ?>" placeholder="<?php esc_attr_e('e.g. admin', 'ofast-x'); ?>">
+                                                <span class="ofast-field-hint">
+                                                    <?php esc_html_e('This user will bypass protection and always have full access.', 'ofast-x'); ?>
+                                                </span>
+                                            </div>
+
+                                            <div class="ofast-form-group">
+                                                <label for="ofast_protection_password">
+                                                    <span class="dashicons dashicons-lock"></span>
+                                                    <?php esc_html_e('Protection Password', 'ofast-x'); ?>
+                                                </label>
+                                                <input type="password" id="ofast_protection_password" name="ofast_protection_password" value="" placeholder="<?php echo $has_password_set ? esc_attr__('••••••• (leave blank to keep current)', 'ofast-x') : esc_attr__('Set a password', 'ofast-x'); ?>">
+                                                <span class="ofast-field-hint">
+                                                    <?php if ($has_password_set): ?>
+                                                        <span style="color: #10b981;">✓ <?php esc_html_e('Password is set.', 'ofast-x'); ?></span>
+                                                        <?php esc_html_e('Leave blank to keep current password.', 'ofast-x'); ?>
+                                                    <?php else: ?>
+                                                        <span style="color: #ef4444;">✗ <?php esc_html_e('No password set. Feature will not work until a password is configured.', 'ofast-x'); ?></span>
+                                                    <?php endif; ?>
+                                                </span>
+                                            </div>
+
+                                            <div class="ofast-form-group">
+                                                <label for="ofast_page_protection_timeout">
+                                                    <span class="dashicons dashicons-clock"></span>
+                                                    <?php esc_html_e('Remember Access For (Minutes)', 'ofast-x'); ?>
+                                                </label>
+                                                <input type="number" id="ofast_page_protection_timeout" name="ofast_page_protection_timeout" value="<?php echo esc_attr($page_protection_timeout); ?>" min="<?php echo esc_attr(self::PAGE_PROTECTION_TIMEOUT_MIN); ?>" max="<?php echo esc_attr(self::PAGE_PROTECTION_TIMEOUT_MAX); ?>" step="5">
+                                                <span class="ofast-field-hint">
+                                                    <?php esc_html_e('Recommended: 30 minutes. Access is remembered in a signed, expiring admin cookie — not as plain text and never in the URL.', 'ofast-x'); ?>
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div class="ofast-protected-pages-section">
+                                            <h4 style="margin: 20px 0 10px; font-weight: 600; color: #1e293b;">
+                                                <span class="dashicons dashicons-shield" style="color: #6366f1; margin-right: 4px;"></span>
+                                                <?php esc_html_e('Protected Pages', 'ofast-x'); ?>
+                                            </h4>
+
+                                            <div class="ofast-plugin-search-wrap">
+                                                <span class="dashicons dashicons-search"></span>
+                                                <input type="text" id="ofast-page-search" class="ofast-plugin-search" placeholder="<?php esc_attr_e('Search pages...', 'ofast-x'); ?>" />
+                                            </div>
+
+                                            <div class="ofast-plugin-select-actions">
+                                                <button type="button" class="ofast-select-all-btn" id="ofast-page-select-all"><?php esc_html_e('Select All', 'ofast-x'); ?></button>
+                                                <button type="button" class="ofast-select-all-btn" id="ofast-page-deselect-all"><?php esc_html_e('Deselect All', 'ofast-x'); ?></button>
+                                                <span class="ofast-selected-count"><span id="ofast-page-selected-num"><?php echo count($protected_pages_list); ?></span> <?php esc_html_e('selected', 'ofast-x'); ?></span>
+                                            </div>
+
+                                            <div class="ofast-plugin-list">
+                                                <?php foreach ($available_pages as $page_slug => $page_label): ?>
+                                                    <label class="ofast-plugin-item ofast-page-item" data-plugin-name="<?php echo esc_attr(strtolower($page_label)); ?>">
+                                                        <input type="checkbox" name="ofast_protected_pages[]" value="<?php echo esc_attr($page_slug); ?>" <?php checked(in_array($page_slug, $protected_pages_list)); ?> />
+                                                        <span class="ofast-plugin-checkbox-custom"></span>
+                                                        <div class="ofast-plugin-info">
+                                                            <span class="ofast-plugin-name"><?php echo esc_html($page_label); ?></span>
+                                                            <span class="ofast-plugin-meta">
+                                                                <span class="ofast-plugin-version"><?php echo esc_html($page_slug); ?></span>
+                                                            </span>
+                                                        </div>
+                                                    </label>
+                                                <?php endforeach; ?>
+                                            </div><!-- .ofast-plugin-list -->
+                                        </div><!-- .ofast-protected-pages-section -->
+                                    </div><!-- #ofast-page-protection-settings -->
+                                </div><!-- .ofast-card-body -->
+                            </div><!-- .ofast-card -->
+                        </div><!-- .ofast-subtab-panel page-protection -->
+
+                        <!-- Menu Editor Panel -->
+                        <div class="ofast-subtab-panel<?php echo $default_tab === 'menu-editor' ? ' active' : ''; ?>" data-subtab-panel="menu-editor">
+                            <?php
+                            // Embedded Menu Editor
+                            if ($this->menu_editor) {
+                                $this->menu_editor->render_embedded();
+                            }
+                            ?>
+                        </div>
+
+                        <!-- Admin URL Panel -->
+                        <div class="ofast-subtab-panel<?php echo $default_tab === 'admin-url' ? ' active' : ''; ?>" data-subtab-panel="admin-url">
+                            <div class="ofast-card ofast-main-card" style="margin-top: 20px; margin-bottom: 20px;">
+                                <div class="ofast-card-header" id="ofast-admin-url-header" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span class="dashicons dashicons-shield"></span>
+                                        <h2 style="margin: 0;"><?php esc_html_e('Admin URL Security', 'ofast-x'); ?></h2>
+                                    </div>
+                                    <span class="dashicons <?php echo !empty($admin_tweaks['enable_admin_url']) ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'; ?>" id="ofast-admin-url-arrow" style="font-size: 20px; color: #64748b; transition: transform 0.2s;"></span>
+                                </div>
+                                <div class="ofast-card-body" id="ofast-admin-url-body" style="<?php echo !empty($admin_tweaks['enable_admin_url']) ? '' : 'display: none;'; ?>">
+                                    <div class="ofast-field" style="margin-bottom: 24px;">
+                                        <label for="ofast_enable_admin_url" class="ofast-toggle-label">
+                                            <span class="ofast-toggle-text">
+                                                Enable Admin URL Security
+                                                <span class="ofast-security-badge">Security</span>
+                                            </span>
+                                            <div class="ofast-toggle-switch">
+                                                <input type="checkbox" id="ofast_enable_admin_url" name="enable_admin_url" value="1" <?php checked(!empty($admin_tweaks['enable_admin_url'])); ?> />
+                                                <span class="ofast-toggle-slider"></span>
+                                            </div>
+                                        </label>
+                                        <p class="ofast-field-hint">Moves login access to a custom URL and blocks the default WordPress admin/login routes.</p>
+                                    </div>
+
+                                    <?php if ($this->admin_url): ?>
+                                        <div id="ofast-admin-url-settings" style="<?php echo !empty($admin_tweaks['enable_admin_url']) ? '' : 'display:none;'; ?>">
+                                            <?php $this->admin_url->render_embedded_settings(); ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+
+                                        </div><!-- .ofast-subtab-panels -->
+                
+                <div style="padding: 0 20px 20px;">
+                    <button type="submit" name="ofast_white_label_reset" class="ofast-btn-reset" onclick="return confirm('Reset ALL White Label settings to defaults?');" style="color: #ef4444; background: none; border: none; cursor: pointer; text-decoration: underline;">
+                        Reset to Default
+                    </button>
                 </div>
             </form>
-        </div>
         <?php
-    }
-}
+        Ofast_X_UI_Layout::render_end();
+    }}

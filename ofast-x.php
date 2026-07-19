@@ -90,6 +90,9 @@ function ofast_x_init_plugin()
     // Load Unified Dropdown component
     require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-dropdown.php';
 
+    // Load Reusable UI Layout component
+    require_once OFAST_X_PLUGIN_DIR . 'includes/core/class-ofast-ui-layout.php';
+
     // Load Turnstile spam protection
     require_once OFAST_X_PLUGIN_DIR . 'includes/security/class-ofast-turnstile.php';
 

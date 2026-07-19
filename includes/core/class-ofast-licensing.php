@@ -353,6 +353,17 @@ function ofast_toolkit_register_license_page()
 add_action('admin_menu', 'ofast_toolkit_register_license_page', 99);
 
 /**
+ * Enqueue CSS for the License page
+ */
+function ofast_toolkit_enqueue_license_assets($hook)
+{
+    if (strpos($hook, 'ofast-license') !== false || (isset($_GET['page']) && $_GET['page'] === 'ofast-license')) {
+        wp_enqueue_style('ofast-admin-css', OFAST_X_PLUGIN_URL . 'assets/css/ofast-admin.css', array(), OFAST_X_VERSION);
+    }
+}
+add_action('admin_enqueue_scripts', 'ofast_toolkit_enqueue_license_assets');
+
+/**
  * Handle license activation/deactivation form submissions.
  */
 function ofast_toolkit_handle_license_actions()
@@ -394,38 +405,7 @@ function ofast_toolkit_render_license_page()
         delete_transient('ofast_license_notice');
     }
     ?>
-    <style>
-        #wpcontent, #wpbody-content { padding: 0 !important; }
-        #wpfooter { display: none !important; }
-        #wpbody { background: #fcfcfd; }
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        .ofast-app-wrap { margin: 0; width: 100%; font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; box-sizing: border-box; }
-        .ofast-app-wrap * { box-sizing: border-box; }
-        .ofast-app-layout { display: flex; gap: 0; background: #fcfcfd; min-height: calc(100vh - 32px); }
-        .ofast-topbar { position: sticky; top: 32px; z-index: 100; background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
-        .ofast-logo { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 700; color: #1e293b; }
-        .ofast-sidebar { width: 220px; background: #ffffff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; padding: 24px 16px; flex-shrink: 0; position: sticky; top: 100px; height: calc(100vh - 100px); overflow-y: auto; }
-        .ofast-nav { flex-grow: 1; }
-        .nav-section { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; font-weight: 600; margin: 24px 8px 10px 8px; }
-        .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; color: #475569; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 500; transition: all 0.2s; margin-bottom: 2px; }
-        .nav-item:focus { box-shadow: none; outline: none; }
-        .nav-item .dashicons { font-size: 18px; width: 18px; height: 18px; opacity: 0.7; }
-        .nav-item:hover { background: #f1f5f9; color: #1e293b; }
-        .nav-item:hover .dashicons { opacity: 1; }
-        .nav-item.active { background: #4f46e5; color: white; }
-        .nav-item.active .dashicons { opacity: 1; }
-        .ofast-pro-card { background: linear-gradient(135deg, #312e81 0%, #4338ca 100%); border-radius: 16px; padding: 24px 20px; color: white; text-align: center; margin-top: 20px; }
-        .ofast-pro-card .pro-icon { font-size: 24px; margin-bottom: 10px; }
-        .ofast-pro-card h4 { margin: 0 0 8px 0; color: white; font-size: 16px; }
-        .ofast-pro-card p { font-size: 13px; color: #c7d2fe; margin: 0 0 16px 0; line-height: 1.4; }
-        .upgrade-btn { display: inline-block; background: rgba(255,255,255,0.2); color: white; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 14px; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.3); }
-        .upgrade-btn:hover { background: rgba(255,255,255,0.3); color: white; }
-        .ofast-main { flex-grow: 1; padding: 32px 40px; background: #fcfcfd; max-width: calc(100% - 220px); }
-        .header-actions { display: flex; gap: 12px; }
-        .action-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; color: #4f46e5; text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.2s; }
-        .action-btn:hover { background: #f8fafc; color: #4338ca; }
-        .action-btn .dashicons { font-size: 16px; width: 16px; height: 16px; }
-    </style>
+
 
     <div class="wrap ofast-app-wrap">
         <header class="ofast-topbar">

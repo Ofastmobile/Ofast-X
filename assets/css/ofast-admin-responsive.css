@@ -157,13 +157,17 @@
     }
 
     .ofast-sidebar {
+        position: static;
         width: 100%;
         order: 2;
+        height: auto;
     }
 
     .ofast-main {
+        margin-left: 0;
         order: 1;
         width: 100%;
+        max-width: 100%;
     }
 
     /* Cards full width */

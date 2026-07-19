@@ -782,13 +782,7 @@ a new key will be generated and emailed to you.
         $ip_whitelist = get_option('ofast_security_ip_whitelist', '');
         $is_enabled = $this->is_enabled();
         ?>
-        <div class="ofast-card" style="margin-top: 20px;">
-            <div class="ofast-card-header">
-                <span class="dashicons dashicons-shield"></span>
-                <h2><?php esc_html_e('Admin URL Security', 'ofast-x'); ?></h2>
-            </div>
-            <div class="ofast-card-body">
-                <?php wp_nonce_field('ofast_admin_url_save', 'admin_url_nonce'); ?>
+                        <?php wp_nonce_field('ofast_admin_url_save', 'admin_url_nonce'); ?>
                 <input type="hidden" name="protection_enabled" value="<?php echo $is_enabled ? '1' : '0'; ?>">
 
                 <p class="ofast-field-hint" style="margin-top: 0;">
@@ -804,35 +798,47 @@ a new key will be generated and emailed to you.
                     <span class="ofast-field-hint"><?php esc_html_e('Use lowercase letters, numbers, and hyphens. Leave empty to disable the custom URL.', 'ofast-x'); ?></span>
                 </div>
 
-                <?php if (!empty($custom_slug) && !empty($emergency_key)): ?>
+                                <?php if (!empty($custom_slug) && !empty($emergency_key)): ?>
                     <div class="ofast-warning-box" style="margin: 16px 0;">
-                        <p><strong><?php esc_html_e('Custom Login URL:', 'ofast-x'); ?></strong> <code><?php echo esc_html(trailingslashit($site_url) . $custom_slug); ?></code></p>
-                        <p><strong><?php esc_html_e('Emergency Bypass:', 'ofast-x'); ?></strong> <code><?php echo esc_html(wp_login_url() . '?ofast_emergency=' . $emergency_key); ?></code></p>
-                        <button type="submit" name="resend_email" class="button"><?php esc_html_e('Resend Login Details', 'ofast-x'); ?></button>
-                        <button type="submit" name="ofast_delete_custom_url" class="button" onclick="return confirm('Disable custom URL protection?');"><?php esc_html_e('Delete & Disable', 'ofast-x'); ?></button>
+                        <div style="display: flex; align-items: center; justify-content: space-between; background: #fff; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 8px;">
+                            <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                <strong><?php esc_html_e('Custom Login URL:', 'ofast-x'); ?></strong>
+                                <code style="background: none; padding: 0; margin-left: 8px;" id="ofast_custom_url_val"><?php echo esc_html(trailingslashit($site_url) . $custom_slug); ?></code>
+                            </div>
+                            <button type="button" class="" onclick="navigator.clipboard.writeText(document.getElementById('ofast_custom_url_val').innerText); alert('Copied to clipboard!');" title="Copy to clipboard" style="background: transparent; border: none; box-shadow: none; color: inherit; cursor: pointer; padding: 0 8px; flex-shrink: 0; margin-left: 12px; outline: none;"><span class="dashicons dashicons-admin-page" style="margin-top: 4px;"></span></button>
+                        </div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; background: #fff; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 12px;">
+                            <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                <strong><?php esc_html_e('Emergency Bypass:', 'ofast-x'); ?></strong>
+                                <code style="background: none; padding: 0; margin-left: 8px;" id="ofast_emergency_url_val"><?php echo esc_html(wp_login_url() . '?ofast_emergency=' . $emergency_key); ?></code>
+                            </div>
+                            <button type="button" class="" onclick="navigator.clipboard.writeText(document.getElementById('ofast_emergency_url_val').innerText); alert('Copied to clipboard!');" title="Copy to clipboard" style="background: transparent; border: none; box-shadow: none; color: inherit; cursor: pointer; padding: 0 8px; flex-shrink: 0; margin-left: 12px; outline: none;"><span class="dashicons dashicons-admin-page" style="margin-top: 4px;"></span></button>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="submit" name="resend_email" class="button"><?php esc_html_e('Resend Login Details', 'ofast-x'); ?></button>
+                            <button type="submit" name="ofast_delete_custom_url" class="button" onclick="return confirm('Disable custom URL protection?');"><?php esc_html_e('Delete & Disable', 'ofast-x'); ?></button>
+                        </div>
                     </div>
                 <?php endif; ?>
 
-                <div class="ofast-content-grid">
-                    <div class="ofast-form-group">
+                                <div class="ofast-content-grid" style="display: flex; gap: 20px; align-items: flex-start; margin-bottom: 16px;">
+                    <div class="ofast-form-group" style="flex: 1; margin: 0;">
                         <label for="ofast_max_attempts"><?php esc_html_e('Max Failed Attempts', 'ofast-x'); ?></label>
-                        <input type="number" name="max_attempts" id="ofast_max_attempts" value="<?php echo esc_attr($max_attempts); ?>" min="1" max="20">
+                        <input type="number" name="max_attempts" id="ofast_max_attempts" value="<?php echo esc_attr($max_attempts); ?>" min="1" max="20" style="width: 100%; max-width: none;">
                     </div>
-                    <div class="ofast-form-group">
+                    <div class="ofast-form-group" style="flex: 1; margin: 0;">
                         <label for="ofast_lockout_duration"><?php esc_html_e('Lockout Duration (minutes)', 'ofast-x'); ?></label>
-                        <input type="number" name="lockout_duration" id="ofast_lockout_duration" value="<?php echo esc_attr($lockout_duration); ?>" min="1" max="1440">
+                        <input type="number" name="lockout_duration" id="ofast_lockout_duration" value="<?php echo esc_attr($lockout_duration); ?>" min="1" max="1440" style="width: 100%; max-width: none;">
                     </div>
                 </div>
 
                 <div class="ofast-form-group">
                     <label for="ofast_ip_whitelist"><?php esc_html_e('IP Whitelist', 'ofast-x'); ?></label>
-                    <textarea name="ip_whitelist" id="ofast_ip_whitelist" rows="4" class="large-text code" placeholder="192.168.1.1"><?php echo esc_textarea($ip_whitelist); ?></textarea>
+                    <textarea name="ip_whitelist" id="ofast_ip_whitelist" rows="4" class="large-text code" placeholder="192.168.1.1" style="max-width: 400px;"><?php echo esc_textarea($ip_whitelist); ?></textarea>
                     <span class="ofast-field-hint"><?php esc_html_e('One IP per line. These IPs bypass login lockout.', 'ofast-x'); ?></span>
                 </div>
 
-                <button type="submit" name="ofast_save_admin_url" class="button button-primary"><?php esc_html_e('Save Admin URL Settings', 'ofast-x'); ?></button>
-            </div>
-        </div>
+                                <!-- Global save button used -->
         <?php
     }
 
@@ -1267,5 +1273,73 @@ Ofast X Security Module
 
         // Check lockout before authentication
         add_filter('authenticate', array($this, 'check_lockout_before_auth'), 30, 3);
+    }
+
+    public function delete_custom_url() {
+        delete_option('ofast_admin_custom_slug');
+        delete_option('ofast_admin_emergency_key');
+        $admin_tweaks = get_option('ofast_admin_tweaks', array());
+        if (is_array($admin_tweaks)) {
+            $admin_tweaks['enable_admin_url'] = 0;
+            update_option('ofast_admin_tweaks', $admin_tweaks);
+        }
+    }
+
+    public function resend_email() {
+        $custom_slug = get_option('ofast_admin_custom_slug', '');
+        $emergency_key = get_option('ofast_admin_emergency_key', '');
+        if (!empty($custom_slug) && !empty($emergency_key)) {
+            $this->send_admin_notification($custom_slug, $emergency_key);
+            return true;
+        }
+        return false;
+    }
+
+    public function save_settings($post_data) {
+        $old_slug = get_option('ofast_admin_custom_slug', '');
+        $new_slug = isset($post_data['custom_slug']) ? sanitize_title(wp_unslash($post_data['custom_slug'])) : '';
+
+        // Validate slug
+        $reserved = array('wp-admin', 'wp-login', 'wp-login.php', 'admin', 'login', 'dashboard', 'wp-content', 'wp-includes');
+        if (in_array($new_slug, $reserved, true)) {
+            add_settings_error('ofast_admin_url', 'reserved', __('That URL slug is reserved. Please choose another.', 'ofast-x'), 'error');
+            return;
+        }
+
+        // Check for existing content with same slug (pages, posts, etc.)
+        if (!empty($new_slug)) {
+            $existing_page = get_page_by_path($new_slug);
+            $existing_post = get_page_by_path($new_slug, OBJECT, 'post');
+            
+            if ($existing_page || $existing_post) {
+                add_settings_error('ofast_admin_url', 'collision', __('That URL already exists as a page or post. Please choose another.', 'ofast-x'), 'error');
+                return;
+            }
+        }
+
+        // Generate or keep emergency key
+        $emergency_key = get_option('ofast_admin_emergency_key');
+        if (empty($emergency_key)) {
+            $emergency_key = wp_generate_password(32, false);
+            update_option('ofast_admin_emergency_key', $emergency_key);
+        }
+
+        // Check if slug changed and send email
+        if (!empty($new_slug) && $new_slug !== $old_slug) {
+            update_option('ofast_admin_custom_slug', $new_slug);
+            $this->send_admin_notification($new_slug, $emergency_key);
+        } elseif (empty($new_slug)) {
+            delete_option('ofast_admin_custom_slug');
+        }
+
+        update_option('ofast_admin_url_enabled', isset($post_data['enable_admin_url']) ? 1 : 0);
+
+        $max_attempts = isset($post_data['max_attempts']) ? max(1, min(20, intval(wp_unslash($post_data['max_attempts'])))) : 5;
+        $lockout_duration = isset($post_data['lockout_duration']) ? max(1, min(1440, intval(wp_unslash($post_data['lockout_duration'])))) : 15;
+        $ip_whitelist = isset($post_data['ip_whitelist']) ? sanitize_textarea_field(wp_unslash($post_data['ip_whitelist'])) : '';
+
+        update_option('ofast_security_max_attempts', $max_attempts);
+        update_option('ofast_security_lockout_duration', $lockout_duration);
+        update_option('ofast_security_ip_whitelist', $ip_whitelist);
     }
 }

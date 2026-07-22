@@ -220,6 +220,11 @@ class Ofast_X_SMTP
         // Debug mode for testing (only in development)
         if (defined('OFAST_SMTP_DEBUG') && OFAST_SMTP_DEBUG && defined('WP_DEBUG') && WP_DEBUG) {
             $phpmailer->SMTPDebug = 2;
+            // SECURITY: Use custom debug output to sanitize credentials even in debug mode
+            $phpmailer->Debugoutput = function($str, $level) {
+                $sanitized = $this->sanitize_error_message($str);
+                error_log('SMTP Debug: ' . $sanitized);
+            };
         }
     }
 
@@ -290,9 +295,11 @@ class Ofast_X_SMTP
             } else {
                 global $phpmailer;
                 $error = isset($phpmailer) && $phpmailer->ErrorInfo ? $phpmailer->ErrorInfo : 'Server mail() failed';
+                // SECURITY: Sanitize error message to remove any credential leakage
+                $sanitized_error = $this->sanitize_error_message($error);
                 wp_send_json_error(array(
                     'message' => 'PHP Mail failed',
-                    'error' => $error,
+                    'error' => $sanitized_error,
                     'suggestion' => 'Your server may not support mail(). Switch to "Other SMTP" mode.'
                 ));
             }
@@ -371,10 +378,13 @@ class Ofast_X_SMTP
                 )
             ));
         } catch (Exception $e) {
+            // SECURITY: Sanitize error message to remove any credential leakage
+            $sanitized_error = $this->sanitize_error_message($mail->ErrorInfo);
+            
             wp_send_json_error(array(
                 'message' => 'SMTP connection failed',
-                'error' => $mail->ErrorInfo,
-                'suggestion' => $this->get_error_suggestion($mail->ErrorInfo)
+                'error' => $sanitized_error,
+                'suggestion' => $this->get_error_suggestion($sanitized_error)
             ));
         }
     }
@@ -401,6 +411,89 @@ class Ofast_X_SMTP
                 <p style='font-size: 14px; color: #6b7280;'>This test email confirms that your WordPress site can send emails through your configured SMTP server.</p>
             </div>
         </div>";
+    }
+
+    /**
+     * Sanitize error messages to remove sensitive information
+     * Addresses CWE-532: Insertion of Sensitive Information into Log File
+     */
+    private function sanitize_error_message($error_message)
+    {
+        if (empty($error_message) || !is_string($error_message)) {
+            return 'Connection failed';
+        }
+
+        // Limit input length to prevent ReDoS attacks
+        if (strlen($error_message) > 10000) {
+            return 'SMTP error occurred. (Message truncated for security)';
+        }
+
+        $sanitized = $error_message;
+
+        // PHASE 1: Remove known credential values (most reliable)
+        $known_secrets = array_filter(array(
+            get_option('ofast_smtp_password', ''),
+            get_option('ofast_smtp_username', ''),
+            get_option('ofast_smtp_host', '')
+        ), function($value) {
+            return !empty($value) && strlen($value) >= 3;
+        });
+
+        // Sort by length (longest first to avoid partial matches)
+        usort($known_secrets, function($a, $b) {
+            return strlen($b) - strlen($a);
+        });
+
+        foreach ($known_secrets as $secret) {
+            $sanitized = str_replace($secret, '[HIDDEN]', $sanitized);
+            // Also catch URL-encoded and Base64-encoded versions
+            $sanitized = str_replace(urlencode($secret), '[HIDDEN]', $sanitized);
+            $sanitized = str_replace(base64_encode($secret), '[HIDDEN]', $sanitized);
+        }
+
+        // PHASE 2: Pattern-based sanitization (defense in depth)
+        $patterns = array(
+            // Password patterns
+            '/(\b(?:pass(?:word)?|pwd|passwd)\s*[=:]\s*)[^\s&,;"\'\]}>]+/i',
+            
+            // Username patterns
+            '/(\b(?:user(?:name)?|login|acct|account)\s*[=:]\s*)[^\s&,;"\'\]}>]+/i',
+            
+            // API key patterns
+            '/(\b(?:api[_-]?key|apikey|secret[_-]?key|access[_-]?key|auth[_-]?key)\s*[=:]\s*)[^\s&,;"\'\]}>]+/i',
+            
+            // Token patterns
+            '/(\b(?:token|bearer|auth(?:orization)?|credential)\s*[=:]\s*)[^\s&,;"\'\]}>]+/i',
+            
+            // URL-embedded credentials
+            '/((?:smtp|smtps|ssl|tls|http|https):\/\/)[^:]+:[^@]+(@)/i',
+            
+            // AUTH PLAIN/LOGIN Base64
+            '/(AUTH\s+(?:PLAIN|LOGIN)\s+)[A-Za-z0-9+\/=]{8,}/i',
+            
+            // SendGrid API keys
+            '/\bSG\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/i',
+            
+            // JWT tokens
+            '/\beyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*/i',
+            
+            // Long Base64-looking strings
+            '/(?<=\s|^)(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=)(?=\s|$)/',
+            
+            // Long hex strings (potential keys)
+            '/\b[a-f0-9]{32,}\b/i'
+        );
+
+        foreach ($patterns as $pattern) {
+            $sanitized = preg_replace($pattern, '[HIDDEN]', $sanitized);
+        }
+
+        // Final safety check - if too many redactions, use generic message
+        if (substr_count($sanitized, '[HIDDEN]') > 3) {
+            return 'SMTP connection failed. Check your configuration settings. (Error details redacted for security)';
+        }
+
+        return $sanitized;
     }
 
     /**
@@ -639,11 +732,14 @@ class Ofast_X_SMTP
                 $error_message = $error->get_error_message() ?? 'Unknown error';
             }
 
+            // SECURITY: Sanitize error message before storing to prevent credential leakage
+            $sanitized_error = $this->sanitize_error_message($error_message);
+
             $wpdb->update(
                 $wpdb->prefix . 'ofast_smtp_log',
                 array(
                     'status' => 'failed',
-                    'error_message' => sanitize_text_field($error_message)
+                    'error_message' => sanitize_text_field($sanitized_error)
                 ),
                 array('id' => $this->current_log_id)
             );

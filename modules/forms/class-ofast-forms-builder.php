@@ -451,6 +451,35 @@ class Ofast_X_Forms_Builder
                     return allowedTypes.includes(type) ? type : 'text';
                 }
 
+                // XSS Security: Escaping functions for safe HTML generation
+                function escapeHtml(unsafe) {
+                    if (unsafe === null || unsafe === undefined) {
+                        return '';
+                    }
+                    return String(unsafe)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#x27;')
+                        .replace(/\//g, '&#x2F;');
+                }
+
+                function escapeAttribute(unsafe) {
+                    if (unsafe === null || unsafe === undefined) {
+                        return '';
+                    }
+                    var safe = escapeHtml(unsafe);
+                    return safe
+                        .replace(/`/g, '&#x60;')
+                        .replace(/=/g, '&#x3D;');
+                }
+
+                function sanitizeInputType(type) {
+                    var allowedTypes = ['text', 'email', 'password', 'number', 'tel', 'url', 'date', 'time', 'datetime-local', 'month', 'week', 'color', 'range', 'file', 'hidden', 'search', 'checkbox', 'radio'];
+                    return allowedTypes.includes(type) ? type : 'text';
+                }
+
                 // Preview functionality
                 $('#preview-form-btn').on('click', function() {
                     var previewHtml = generatePreview();
